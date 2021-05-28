@@ -12,18 +12,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.shulie.instrument.simulator.thread;
+package com.shulie.instrument.simulator.module.util;
+
+import java.security.CodeSource;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
- * @since 2021/1/22 4:48 下午
+ * @since 2020/9/24 5:47 下午
  */
-public class ThreadConstants {
-    public final static String MODULE_NAME = "thread-transform";
+public class ClassUtils {
+    public static String getCodeSource(final CodeSource cs) {
+        if (null == cs || null == cs.getLocation() || null == cs.getLocation().getFile()) {
+            return "";
+        }
 
-    public final static String DYNAMIC_FIELD_CONTEXT = "simulator_context";
-    public final static String DYNAMIC_FIELD_HAS_CONTEXT = "simulator_has_context";
-    public final static String DYNAMIC_FIELD_THREAD_ID = "simulator_threadId";
-    public final static String DYNAMIC_FIELD_CLUSTER_TEST = "simulator_cluster_test";
-    public final static String DYNAMIC_FIELD_DEBUG = "simulator_debug";
+        return cs.getLocation().getFile();
+    }
+
+    public static boolean isLambdaClass(Class<?> clazz) {
+        return clazz.getName().contains("$$Lambda$");
+    }
 }

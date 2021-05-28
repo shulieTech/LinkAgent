@@ -36,6 +36,10 @@ if [ ! -x "$AGENT_TARGET_DIR/core" ]; then
     mkdir "$AGENT_TARGET_DIR/core"
 fi
 
+if [ ! -x "$AGENT_TARGET_DIR/bootstrap" ]; then
+    mkdir "$AGENT_TARGET_DIR/bootstrap"
+fi
+
 cp *.properties ${AGENT_TARGET_DIR}/config/
 cp simulator-agent-logback.xml ${AGENT_TARGET_DIR}/config/simulator-agent-logback.xml
 
@@ -46,6 +50,7 @@ cp ../simulator-launcher-standalone/target/simulator-launcher-standalone-*-jar-w
 cp ../simulator-launcher-instrument/target/simulator-launcher-instrument-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-instrument.jar
 cp ../simulator-launcher-embedded/target/simulator-launcher-embedded-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-embedded.jar
 cp ../simulator-agent-core/target/simulator-agent-core-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/core/simulator-agent-core.jar
+cp ../simulator-bootstrap-extras/target/lib/* ${AGENT_TARGET_DIR}/bootstrap/
 
 # zip the simulator.zip
 cd ../target/

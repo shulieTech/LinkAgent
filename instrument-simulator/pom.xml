@@ -312,17 +312,12 @@
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
-                <version>8.1.2.v20120308</version>
+                <version>9.3.24.v20180605</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-servlet</artifactId>
-                <version>8.1.2.v20120308</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-websocket</artifactId>
-                <version>8.1.2.v20120308</version>
+                <version>9.3.24.v20180605</version>
             </dependency>
 
             <!-- asm -->
@@ -382,6 +377,12 @@
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-core</artifactId>
                 <version>2.13.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.shulie.security</groupId>
+                <artifactId>license-template</artifactId>
+                <version>1.0.4</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

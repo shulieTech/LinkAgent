@@ -48,7 +48,6 @@ public class UnsupportedMatcher implements Matcher {
     private boolean isUnsupportedClass(final ClassStructure classStructure) {
         return containsAny(
                 classStructure.getJavaClassName(),
-                "$$Lambda$",
                 "$$FastClassBySpringCGLIB$$",
                 "$$EnhancerBySpringCGLIB$$",
                 "$$EnhancerByCGLIB$$",

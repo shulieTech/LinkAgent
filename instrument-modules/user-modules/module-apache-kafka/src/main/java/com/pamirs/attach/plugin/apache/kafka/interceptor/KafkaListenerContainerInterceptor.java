@@ -237,7 +237,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         } catch (ReflectException e) {
         }
 
-        if (groupId != null) {
+        if (groupId != null && !Pradar.isClusterTestPrefix(groupId)) {
             try {
                 Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_GROUP_ID, Pradar.addClusterTestPrefix(groupId));
             } catch (ReflectException e) {

@@ -183,7 +183,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                         );
                     }
                 }
-                throw e;
+                //如果报错先忽略掉 TODO
             } catch (Throwable causeOfReTransform) {
                 /**
                  * retransformClasses 可能会导致 VerifyError，暂时还未找到产生这个问题的原因
@@ -206,7 +206,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                         );
                     }
                 }
-                throw causeOfReTransform;
+                //如果报错先忽略掉 TODO
             }
         }//for
 

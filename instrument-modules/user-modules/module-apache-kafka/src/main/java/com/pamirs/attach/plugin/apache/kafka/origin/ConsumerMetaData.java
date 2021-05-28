@@ -14,10 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.pradar.Pradar;
@@ -28,6 +24,10 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Node;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -48,10 +48,14 @@ public class ConsumerMetaData {
     private final String bootstrapServers;
 
     public ConsumerMetaData(Set<String> topics, String groupId, List<String> shadowTopics,
-        String bootstrapServers) {
+                            String bootstrapServers) {
         this.topics = topics;
         this.groupId = groupId;
-        this.ptGroupId = Pradar.addClusterTestPrefix(groupId);
+        if (Pradar.isClusterTestPrefix(groupId)) {
+            this.ptGroupId = groupId;
+        } else {
+            this.ptGroupId = Pradar.addClusterTestPrefix(groupId);
+        }
         this.shadowTopics = shadowTopics;
         this.hasShadow = shadowTopics.size() > 0;
         this.bootstrapServers = bootstrapServers;
@@ -86,7 +90,7 @@ public class ConsumerMetaData {
             StringBuilder sb = new StringBuilder();
             for (Node node : nodes) {
                 sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
-                    .toString()).append(",");
+                        .toString()).append(",");
             }
             return new ConsumerMetaData(topics, groupId, shadowTopic, sb.substring(0, sb.length() - 1));
         } catch (ReflectException e) {
@@ -103,7 +107,7 @@ public class ConsumerMetaData {
                  */
                 if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
                     if (GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance()
-                        .getMqWhiteList().contains(topic + '#' + groupId)) {
+                            .getMqWhiteList().contains(topic + '#' + groupId)) {
                         topicList.add(Pradar.addClusterTestPrefix(topic));
                     }
                 }

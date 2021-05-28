@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.core.manager.impl;
 
+import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.core.CoreModule;
@@ -21,7 +22,6 @@ import com.shulie.instrument.simulator.core.enhance.EventEnhancer;
 import com.shulie.instrument.simulator.core.manager.AffectStatistic;
 import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransformer;
 import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
-import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
 import com.shulie.instrument.simulator.core.util.matcher.MatchingResult;
 import com.shulie.instrument.simulator.core.util.matcher.UnsupportedMatcher;
@@ -133,7 +133,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     }
 
     private byte[] _transform(final ClassLoader loader,
-                              final String internalClassName,
+                              String internalClassName,
                               final Class<?> classBeingRedefined,
                               byte[] srcByteCodeArray) {
         // 如果未开启unsafe开关，是不允许增强来自BootStrapClassLoader的类
@@ -145,11 +145,9 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             return null;
         }
 
+        final ClassStructure classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
         if (internalClassName == null) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("SIMULATOR: transform ignore, classname is null.");
-            }
-            return null;
+            internalClassName = classStructure.getJavaClassName();
         }
 
         if (!matcher.preMatching(internalClassName.replace('/', '.'))) {
@@ -159,7 +157,6 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             return null;
         }
 
-        final ClassStructure classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
         final MatchingResult matchingResult = new UnsupportedMatcher(loader, isEnableUnsafe).and(matcher).matching(classStructure);
         final Map<String, Set<BuildingForListeners>> behaviorSignCodes = matchingResult.getBehaviorSignCodeMap();
 
@@ -180,8 +177,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
 
         // 开始进行类匹配
         try {
-            byte[] toByteCodeArray = null;
-            toByteCodeArray = new EventEnhancer().toByteCodeArray(
+            byte[] toByteCodeArray = new EventEnhancer().toByteCodeArray(
                     loader,
                     srcByteCodeArray,
                     behaviorSignCodes,

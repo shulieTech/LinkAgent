@@ -35,6 +35,13 @@ public class CallableConstructorInterceptor extends AroundInterceptor {
         if (!Pradar.isEmptyContext()) {
             manager.setDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CONTEXT, Pradar.getInvokeContextMap());
             manager.setDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_THREAD_ID, Thread.currentThread().getId());
+        } else {
+            if (Pradar.isClusterTest()) {
+                manager.setDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CLUSTER_TEST, Pradar.isClusterTest());
+            }
+            if (Pradar.isDebug()) {
+                manager.setDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_DEBUG, Pradar.isDebug());
+            }
         }
     }
 }

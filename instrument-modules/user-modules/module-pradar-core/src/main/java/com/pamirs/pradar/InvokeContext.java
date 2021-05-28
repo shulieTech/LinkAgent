@@ -15,6 +15,7 @@
 package com.pamirs.pradar;
 
 
+import com.alibaba.ttl.TransmittableThreadLocal;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
@@ -40,8 +41,8 @@ import static com.pamirs.pradar.AppNameUtils.appName;
 public final class InvokeContext extends AbstractContext {
     private final static Logger LOGGER = LoggerFactory.getLogger(InvokeContext.class);
 
-    static private final ThreadLocal<InvokeContext> threadLocal
-            = new ThreadLocal<InvokeContext>();
+    static private final TransmittableThreadLocal<InvokeContext> threadLocal
+            = new TransmittableThreadLocal<InvokeContext>();
 
     public static final String EMPTY = "";
 

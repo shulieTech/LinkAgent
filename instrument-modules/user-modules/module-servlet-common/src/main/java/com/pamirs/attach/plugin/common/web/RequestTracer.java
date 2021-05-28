@@ -304,7 +304,7 @@ public abstract class RequestTracer<REQ, RESP> {
                         .setErrorCode("agent-0008")
                         .setMessage("压测开关关闭")
                         .setDetail("data receiver filter is close!")
-                        .printFastDebugLog();
+                        .report();
                 throw new PressureMeasureError("data receiver filter is close! " + arbiterDp, isClusterTestRequest);
             }
         }

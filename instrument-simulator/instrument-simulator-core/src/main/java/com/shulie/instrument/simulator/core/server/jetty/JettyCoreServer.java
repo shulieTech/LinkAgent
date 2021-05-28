@@ -24,7 +24,7 @@ import com.shulie.instrument.simulator.core.util.Initializer;
 import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
@@ -124,12 +124,12 @@ public class JettyCoreServer implements CoreServer {
             throw new IOException("server was not bind yet.");
         }
 
-        SelectChannelConnector scc = null;
+        ServerConnector scc = null;
         final Connector[] connectorArray = httpServer.getConnectors();
         if (null != connectorArray) {
             for (final Connector connector : connectorArray) {
-                if (connector instanceof SelectChannelConnector) {
-                    scc = (SelectChannelConnector) connector;
+                if (connector instanceof ServerConnector) {
+                    scc = (ServerConnector) connector;
                     break;
                 }
             }
@@ -140,8 +140,8 @@ public class JettyCoreServer implements CoreServer {
         }
 
         return new InetSocketAddress(
-                scc.getHost(),
-                scc.getLocalPort()
+            scc.getHost(),
+            scc.getLocalPort()
         );
     }
 
@@ -183,7 +183,6 @@ public class JettyCoreServer implements CoreServer {
             ));
         }
 
-        httpServer = new Server(new InetSocketAddress(serverIp, serverPort));
         QueuedThreadPool qtp = new QueuedThreadPool();
         /**
          * jetty线程设置为daemon，防止应用启动失败进程无法正常退出
@@ -191,8 +190,14 @@ public class JettyCoreServer implements CoreServer {
         qtp.setDaemon(true);
         qtp.setName("simulator-jetty-qtp-" + qtp.hashCode());
 
-        httpServer.setThreadPool(qtp);
+        httpServer = new Server(qtp);
 
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(serverIp, serverPort);
+
+        ServerConnector connector=new ServerConnector(httpServer);
+        connector.setHost(inetSocketAddress.getHostName());
+        connector.setPort(inetSocketAddress.getPort());
+        httpServer.setConnectors(new Connector[]{connector});
 
     }
 

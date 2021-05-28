@@ -8,7 +8,7 @@
     <artifactId>simulator-agent</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0</version>
-    <name>agent ${agent.version}</name>
+    <name>agent ${agent.major.version}.${agent.minor.version}</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -25,6 +25,7 @@
         <module>simulator-launcher-instrument</module>
         <module>simulator-launcher-embedded</module>
         <module>simulator-launcher-standalone</module>
+        <module>simulator-bootstrap-extras</module>
     </modules>
 
 
@@ -135,7 +136,8 @@
                     <!--是否生成"git.properties"文件;默认值:false;-->
                     <generateGitPropertiesFile>true</generateGitPropertiesFile>
                     <!--指定"git.properties"文件的存放路径(相对于${project.basedir}的一个路径);-->
-                    <generateGitPropertiesFilename>${project.build.outputDirectory}/version.properties</generateGitPropertiesFilename>
+                    <generateGitPropertiesFilename>${project.build.outputDirectory}/version.properties
+                    </generateGitPropertiesFilename>
                     <!--".git"文件夹未找到时,构建是否失败;若设置true,则构建失败;若设置false,则跳过执行该目标;默认值:true;-->
                     <failOnNoGitDirectory>true</failOnNoGitDirectory>
                     <includeOnlyProperties>

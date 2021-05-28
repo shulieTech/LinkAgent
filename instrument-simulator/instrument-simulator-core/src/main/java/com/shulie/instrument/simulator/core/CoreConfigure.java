@@ -98,10 +98,6 @@ public class CoreConfigure {
     private static final String PROP_KEY_LOG_PATH = "SIMULATOR_LOG_PATH";
     private static final String PROP_KEY_LOG_LEVEL = "SIMULATOR_LOG_LEVEL";
 
-    /**
-     * license 文件名称
-     */
-    private static final String LICENSE_FILE_NAME = "license.lic";
 
     // 受保护key数组，在保护key范围之内，以用户传递的配置为准，系统配置不允许覆盖
     private static final String[] PROTECT_KEY_ARRAY = {KEY_NAMESPACE, KEY_SIMULATOR_HOME, KEY_LAUNCH_MODE, KEY_SERVER_IP, KEY_SERVER_PORT, KEY_SERVER_CHARSET};
@@ -141,6 +137,7 @@ public class CoreConfigure {
         }
         final Map<String, String> propertiesMap = getPropertiesMap(propertiesFilePath, appName);
         this.featureMap.putAll(merge(featureMap, propertiesMap));
+
 
         this.simulatorVersion = getVersion0();
         this.instrumentation = instrumentation;

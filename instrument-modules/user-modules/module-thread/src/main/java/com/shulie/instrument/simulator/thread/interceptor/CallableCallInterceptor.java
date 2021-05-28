@@ -33,34 +33,59 @@ public class CallableCallInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        /**
+         * 如果当前执行有上下文,则不再设置新的上下文
+         */
+        if (!Pradar.isEmptyContext()) {
+            manager.setDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_HAS_CONTEXT, true);
+            return;
+        }
         Object context = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CONTEXT);
         Object threadId = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_THREAD_ID);
+        Boolean isClusterTest = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CLUSTER_TEST);
+        Boolean isDebug = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_DEBUG);
+
+        Long tid = getThreadId(threadId);
+        if (context != null && tid != null && Thread.currentThread().getId() != tid) {
+            Pradar.setInvokeContext(context);
+        } else {
+            if (isClusterTest != null) {
+                Pradar.setClusterTest(isClusterTest);
+            }
+            if (isDebug != null) {
+                Pradar.setDebug(isDebug);
+            }
+        }
+    }
+
+    private Long getThreadId(Object threadId) {
         if (threadId == null) {
-            return;
+            return null;
         }
         if (!(threadId instanceof Long)) {
-            return;
+            return null;
         }
-        Long tid = (Long) threadId;
-        if (context != null && Thread.currentThread().getId() != tid) {
-            Pradar.setInvokeContext(context);
-        }
+        return (Long) threadId;
     }
 
     @Override
     public void doAfter(Advice advice) throws Throwable {
         try {
+            Boolean hasContext = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_HAS_CONTEXT);
+            if (hasContext != null && hasContext) {
+                return;
+            }
             Object context = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CONTEXT);
             Object threadId = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_THREAD_ID);
-            if (threadId == null) {
-                return;
-            }
-            if (!(threadId instanceof Long)) {
-                return;
-            }
-            Long tid = (Long) threadId;
-            if (context != null && Thread.currentThread().getId() != tid) {
+            Boolean isClusterTest = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CLUSTER_TEST);
+            Boolean isDebug = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_DEBUG);
+            Long tid = getThreadId(threadId);
+            if (context != null && tid != null && Thread.currentThread().getId() != tid) {
                 Pradar.clearInvokeContext();
+            } else {
+                if (isClusterTest != null || isDebug != null) {
+                    Pradar.clearInvokeContext();
+                }
             }
         } finally {
             manager.removeAll(advice.getTarget());
@@ -73,17 +98,21 @@ public class CallableCallInterceptor extends AroundInterceptor {
     @Override
     public void doException(Advice advice) throws Throwable {
         try {
+            Boolean hasContext = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_HAS_CONTEXT);
+            if (hasContext != null && hasContext) {
+                return;
+            }
             Object context = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CONTEXT);
             Object threadId = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_THREAD_ID);
-            if (threadId == null) {
-                return;
-            }
-            if (!(threadId instanceof Long)) {
-                return;
-            }
-            Long tid = (Long) threadId;
-            if (context != null && Thread.currentThread().getId() != tid) {
+            Boolean isClusterTest = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_CLUSTER_TEST);
+            Boolean isDebug = manager.getDynamicField(advice.getTarget(), ThreadConstants.DYNAMIC_FIELD_DEBUG);
+            Long tid = getThreadId(threadId);
+            if (context != null && tid != null && Thread.currentThread().getId() != tid) {
                 Pradar.clearInvokeContext();
+            } else {
+                if (isClusterTest != null || isDebug != null) {
+                    Pradar.clearInvokeContext();
+                }
             }
         } finally {
             manager.removeAll(advice.getTarget());

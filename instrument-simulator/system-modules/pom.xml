@@ -34,6 +34,7 @@
         <module>instrument-simulator-info-module</module>
         <module>instrument-simulator-profiler-module</module>
         <module>instrument-simulator-management-module</module>
+        <module>instrument-simulator-sc-module</module>
         <module>instrument-simulator-debug-model</module>
     </modules>
 

@@ -86,6 +86,9 @@ public class BytecodeDumpTransformer extends SimulatorClassFileTransformer {
         } finally {
             boolean isDumpFile = this.isDumpFile && isDumpMatches(loader, classBeingRedefined, classfileBuffer);
             if (success || isDumpFile) {
+                if (className == null) {
+                    className = ClassStructureFactory.createClassStructure(transformBytes == null ? classfileBuffer : transformBytes, loader).getJavaClassName();
+                }
                 this.bytecodeDumpService.dumpBytecode("original bytecode dump", dumpByteCodePath + File.separator + "_old", className, isDumpFile, classfileBuffer, loader);
                 if (isDumpFile && this.bytecodeDumpService.getDumpFile() != null && transformBytes == null) {
                     this.dumpResult.put(className.replace('/', '.'), this.bytecodeDumpService.getDumpFile());

@@ -14,43 +14,13 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.ErrorTypeEnum;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
-import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
@@ -71,6 +41,17 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.text.NumberFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author shiyajian
@@ -147,7 +128,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * 查询插件配置
      */
     public static final String TRO_PLUGIN_CONIFG = "/api/application/plugins/config/queryByAppName";
-
 
 
     private static final String DATA = "data";
@@ -244,7 +224,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         /**
          * 拉取插件配置
          */
-        if(getPluginConfig(troControlWebUrl,applicationConfig)){
+        if (getPluginConfig(troControlWebUrl, applicationConfig)) {
             ApplicationConfig.getPlugin = Boolean.TRUE;
         }
 
@@ -598,7 +578,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     break;
                 case PLUGIN_MAX_REDIS_EXPIRE_TIME:
                     boolean pluginConfig = getPluginConfig(troControlWebUrl, applicationConfig);
-                    if(pluginConfig){
+                    if (pluginConfig) {
                         ApplicationConfig.getPlugin = true;
                     }
                     break;
@@ -615,35 +595,35 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private boolean getPluginConfig(String troWebUrl, ApplicationConfig applicationConfig) {
         try {
             final StringBuilder url = new StringBuilder(troWebUrl)
-                .append(TRO_PLUGIN_CONIFG)
-                .append("?applicationName=")
-                .append(System.getProperty("pradar.project.name"))
-                .append("&configKey=redis_expire");
+                    .append(TRO_PLUGIN_CONIFG)
+                    .append("?applicationName=")
+                    .append(AppNameUtils.appName())
+                    .append("&configKey=redis_expire");
 
             return loadPluginConfig(url, applicationConfig);
         } catch (Throwable e) {
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取插件配置列表失败")
-                .setDetail(String.format("获取插件配置列表失败:%s", Throwables.getStackTraceAsString(e)))
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取插件配置列表失败")
+                    .setDetail(String.format("获取插件配置列表失败:%s", Throwables.getStackTraceAsString(e)))
+                    .report();
             return false;
         }
     }
 
 
     private boolean loadPluginConfig(final StringBuilder url,
-        ApplicationConfig applicationConfig) {
+                                     ApplicationConfig applicationConfig) {
         final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
         if (!httpResult.isSuccess() || !JSON.parseObject(httpResult.getResult()).getBoolean("success")) {
-            LOGGER.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url,JSON.toJSONString(httpResult));
+            LOGGER.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url, JSON.toJSONString(httpResult));
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取插件配置列表失败")
-                .setDetail(String.format("获取插件配置列表失败,接口返回值为:%s", JSON.toJSONString(httpResult)))
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取插件配置列表失败")
+                    .setDetail(String.format("获取插件配置列表失败,接口返回值为:%s", JSON.toJSONString(httpResult)))
+                    .report();
             return false;
         }
 
@@ -651,17 +631,18 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         try {
             Float maxRedisExpireTime = dataMap.getFloat(DATA);
-            if(maxRedisExpireTime != null) {
+            if (maxRedisExpireTime != null) {
                 applicationConfig.setPluginMaxRedisExpireTime(maxRedisExpireTime);
             }
         } catch (Exception e) {
-            LOGGER.error("set pluginMaxRedisExpireTime error",e);
+            LOGGER.error("set pluginMaxRedisExpireTime error", e);
         }
-        LOGGER.info("[pradar] pull pluginMaxRedisExpireTime success:{}",applicationConfig.getPluginMaxRedisExpireTime());
+        LOGGER.info("[pradar] pull pluginMaxRedisExpireTime success:{}", applicationConfig.getPluginMaxRedisExpireTime());
         return true;
     }
+
     private void getShadowEsServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
-        String appName = System.getProperty("pradar.project.name");
+        String appName = AppNameUtils.appName();
         String accessUrl = String.format("%s%s?appName=%s", troControlWebUrl, ES_SHADOW_SERVER_URL, appName);
         try {
             String response = System.getProperty("shadow.es.config");
@@ -720,8 +701,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     }
 
     private void getShadowRedisServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
-        Properties properties = System.getProperties();
-        String appName = properties.getProperty("pradar.project.name");
+        String appName = AppNameUtils.appName();
         StringBuilder builder = new StringBuilder(troControlWebUrl)
                 .append(REDIS_SHADOW_SERVER_URL)
                 .append("?appName=")
@@ -735,8 +715,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             //没有配置默认为影子表
             Map<String, ShadowRedisConfig> shadowRedisConfigMap = new HashMap<String, ShadowRedisConfig>();
-
-
             //解析装入内存
             JSONObject result = JSON.parseObject(httpResult.getResult());
 

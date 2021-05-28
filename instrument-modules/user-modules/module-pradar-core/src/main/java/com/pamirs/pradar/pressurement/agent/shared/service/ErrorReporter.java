@@ -30,8 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 用于错误信息汇报
  *
- * @author  xiaobin.zfb | xiaobin@shulie.io
- * @since  2020/7/9 1:30 下午
+ * @author xiaobin.zfb | xiaobin@shulie.io
+ * @since 2020/7/9 1:30 下午
  */
 public class ErrorReporter {
 
@@ -197,11 +197,16 @@ public class ErrorReporter {
                     PradarSwitcher.turnConfigSwitcherOff(closeConfigName);
                 }
             }
-            //打印快速调试配置日志
-            printFastDebugLog();
+            if (Pradar.isDebug()) {
+                //打印快速调试配置日志
+                printFastDebugLog();
+            }
         }
 
         public void printFastDebugLog() {
+            if (!Pradar.isDebug()) {
+                return;
+            }
             final DebugTestInfo debugTestInfo = new DebugTestInfo();
             debugTestInfo.setTraceId(Pradar.getTraceId());
             debugTestInfo.setRpcId(Pradar.getInvokeId());

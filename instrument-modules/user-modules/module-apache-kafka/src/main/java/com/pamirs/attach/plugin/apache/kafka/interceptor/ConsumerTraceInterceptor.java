@@ -48,6 +48,11 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
     private final ThreadLocal<Boolean> lastPollHasRecordsThreadLocal = new ThreadLocal<>();
 
     @Override
+    protected boolean isClient(Advice advice) {
+        return false;
+    }
+
+    @Override
     public String getPluginName() {
         return KafkaConstants.PLUGIN_NAME;
     }

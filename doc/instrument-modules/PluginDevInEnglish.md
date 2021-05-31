@@ -91,22 +91,21 @@ import-package=com.pamirs.pradar.*
 
 # define a switcher to management module load. call GlobalSwitch to change switcher status,
 # it will trigger module loading if switcher is on, multi switcher split with comma
-#依赖的开关名称，多个以逗号分隔，如果直接依赖某个模块则直接写对应的模块名称即可，则在依赖的模块激活时则将启动
-#当前模块的加载，如果需要自定义依赖开关如需要等待依赖模块中的某个逻辑执行完或者执行正确才能加载当前模块则可以自
-#定义开关名称，在依赖模块中执行完逻辑后调用 GlobalSwitch.switchOn()或者 GlobalSwitch.switchOff 来实现
-#手动开关
-switch-control=clusterTestSwitcher
 
-#当前模块支持的 simulator 框架版本号，支持版本号范围，当当前运行的框架版本号不在模块的支持之列，则会打印对应的模块
-#版本不支持,格式为  开始版本号-结束版本号,如果开始版本号不写则默认是最小版本号开始，如果结束版本号不写则默认到最大版本号
+#The names of the dependent switches are separated by commas. The name of the dependent module can be filled in. The module will start when it is activated
+#If a module needs to wait for a logic in the dependent module to be executed or executed correctly, it can be implemented by loading globalswitch. Switchon() or globalswitch. Switchoff
+#Manual switch
+switch-control=clusterTestSwitcher
+#The simulator framework version number range supported by the current module. The currently running framework version number is not included in the module's support list, and the corresponding module will be printed
+#Version is not supported, the format is: start version number-end version number, if the start version number is not written, it defaults to the minimum version number, if the end version number is not written, it defaults to the maximum version number 
 simulator-version=1.0.0-
 ```
 
-所有以上的导入、导出，在导入时需要确认依赖的模块是否已经导出了对应的类、包或者是资源，否则会找不到对应的类、包、资源
+For all the above import and export, you need to confirm whether the dependent module has got class, package or resource when importing, otherwise the class, package, resource will not be found.
 
-### 4.编码
+### 4.Encoding
 
-1.增加 ExtensionModule 的 class 声明
+1. Add ExtensionModule class declaration
 
 ![](../imgs/plugin-add-pluginclass.jpg)
 
@@ -155,7 +154,7 @@ public class TestPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 }
 ```
 
-2.添加拦截器
+2.Add interceptor
 
 拦截器是对目标类逻辑增强的实现，在这里我们实现压测标的传递，数据隔离等逻辑。
 

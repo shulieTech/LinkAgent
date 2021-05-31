@@ -1,10 +1,8 @@
 # QuickStart
 
-## 一、获取agent包
-
-下载安装包：[download](http://xxxxx)
-
-或者你可以自己构建：
+## Get AgentX package
+Download installation package : [download](http://xxxxx)
+or build your own package：
 
 see [HowToBuild](HowToBuild.md)
 

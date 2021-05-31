@@ -187,14 +187,13 @@ MILLISECONDS
 MICROSECONDS
 NANOSECONDS
 ```
-这两个参数只供开发在调试时使用，在实际的环境不建议去配置这两个参数
-虽然不指定 `simulator.agentId` 系统也会生成一个 agentId，但是为了保证唯一性和可读性，还是推荐显示指定一个 agentId(`-Dsimulator.agentId`)
+These two parameters are only for debugging. It is not recommended to modify them in the real environment. Although the simulator.agentId is not specified, the system will generate a new agentId automatically, but in order to ensure uniqueness and readability, It is still recommended to explicitly specify an agentId (-Dsimulator.agentId)
 
-> 注 
-> 1. -Djdk.attach.allowAttachSelf=true必须项，并且值必须为true 
-> 2. -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar 必须添加，防止当前环境的CLASSPATH变量有问题导致异常
+> Note 
+> 1. -Djdk.attach.allowAttachSelf=true Required items，and Its value must be true.
+> 2. -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar Required items, Prevent the situation that the environment variable CLASSPATH is modifed from causing exceptions.
 
-### 四、验证
+### Verification
 
 应用接入agent启动成功后，agent会在日志目录下输出一下日志文件
 

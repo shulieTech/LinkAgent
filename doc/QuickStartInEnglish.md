@@ -10,10 +10,10 @@ Download installation package :
 
 #### agent.properties
 
-- `simulator.zk.servers=127.0.0.1:2181`zk地址配置，改为你的zk地址
-- `simulator.log.path=/log/pradar/`日志输出路径配置
+- `simulator.zk.servers=127.0.0.1:2181` Zookeeper address configuration, change to your zookeeper address.
+- `simulator.log.path=/log/pradar/`Output address of log.
 
-agent.properties配置项含义
+agent.properties, Configuration item meaning
 
 ```
 agent.use.local - agent 是否使用本地配置，agent 设计探针包支持从远程拉取加载，如果此选项为 true 时则默认从本地加载，不再从远程拉取探针包

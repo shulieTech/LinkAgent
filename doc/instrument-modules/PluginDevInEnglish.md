@@ -156,13 +156,13 @@ public class TestPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
 2.Add interceptor
 
-拦截器是对目标类逻辑增强的实现，在这里我们实现压测标的传递，数据隔离等逻辑。
+The interceptor is the realization of the enhancement of the target class logic. We realize the logic of the transmission of the pressure test target and the data isolation.
 
-这里可以根据具体的场景选择继承不同的Interceptor基类
+We can choose to inherit different Interceptor base classes according to different scenarios
 
-- AroundInterceptor 可以同时处理方法执行前、方法执行后，方法执行异常后
+-AroundInterceptor can handle method execution before, after method execution, and after method execution exception at the same time
 
-示例：
+Example:
 ```aidl
 /**
  * AroundInterceptor 可以同时处理方法执行前、方法执行后，方法执行异常后

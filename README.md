@@ -15,7 +15,7 @@ see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrum
 
 ### instrument-simulator
 探针框架，负责整个探针和模块的生命周期管理，并且提供内置的一些工具命令
-see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/agent/doc/instrument-simulator/README.md)
+see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
 
 ### instrument-modules
 所有用户的自定义模块。所有我们支持的中间件列表全都放在这个工程目录下。

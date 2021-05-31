@@ -2,9 +2,9 @@
 
 AgentX is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
 
-It support projects:
-[DaYuX](https://github.com/shulieTech/DaYuX)
-<br/>... ...
+Supported Project List:
+- [DaYuX](https://github.com/shulieTech/DaYuX)
+- <br/>... ...
 
 ## QuickStart
 

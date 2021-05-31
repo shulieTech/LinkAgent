@@ -1,6 +1,9 @@
 # Agent
 
-DaYuX的agent探针
+AgentX is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
+
+It support projects:
+[DaYuX](https://github.com/shulieTech/DaYuX)
 
 ## QuickStart
 
@@ -25,11 +28,3 @@ see [instrument-modules](https://github.com/shulieTech/AgentX/blob/main/doc/inst
 ## 如何构建
 
 see [HowToBuild](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuild.md)
-
-## 注意事项
-
-see [Notice](Notice.md)
-
-## FQA
-
-see [FQA](FQA.md)

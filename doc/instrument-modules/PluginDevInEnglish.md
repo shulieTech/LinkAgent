@@ -68,7 +68,6 @@
 
 ### 3.Add module.config file
 
-在 resources 目录下增加一个名为 module.config 的 properties 文件
 Add a properties file named module.config in resource directory.
 
 ![](../imgs/plugin-add-config.jpg)
@@ -76,21 +75,20 @@ Add a properties file named module.config in resource directory.
 The content is as follows：
 
 ```aidl
-#模块名称，与上面的模块名称保持相同
+#Module name, same as module name above
 module-id=aerospike
-#导出的 class 名称全路径,没有则不需要，多个以逗号分隔
+#The exported class name is full path, comma separated if there are multiple paths
 #export-class=
-#导入的 class 名称全路径,没有则不需要，多个以逗号分隔，如果依赖了其他模块中的类则不仅仅是将其他模块的依赖加入到
-#pom 文件，并且需要在配置文件中导入对应的类，并且需要保证依赖的模块已经被加载，可以参考 switch-control
+#The imported class name is full path, but not required if there is no one. Multiple are separated by commas. If you rely on the classes in other modules, you will not only add the dependency of other modules to POM file, and need to import corresponding classes in the configuration file, and ensure that the dependent modules have been loaded. Please refer to switch control
 #import-class=
-#导出的包名称，多个以逗号分隔，支持匹配，如 com.pamirs.*则导出所有 com.pamirs 下面所有的类
+#The exported package name, separated by commas, supports matching. For example, com.pamirs. * export all the classes below com.pamirs
 #export-package=
-#导入的包名称,多个以逗号分隔，支持匹配，如 com.pamirs.*则导入所有 com.pamirs 下面所有的类
+#The imported package name, separated by commas, supports matching. For example, com.pamirs. * all classes under com.pamirs are imported
 import-package=com.pamirs.pradar.*
-#导出的资源列表，多个以逗号分隔
+#List of exported resources, multiple separated by commas
 #export-resource=
-#导入的资源列表，多个以逗号分隔
-#import-resource=
+#List of imported resources, multiple separated by commas
+
 # define a switcher to management module load. call GlobalSwitch to change switcher status,
 # it will trigger module loading if switcher is on, multi switcher split with comma
 #依赖的开关名称，多个以逗号分隔，如果直接依赖某个模块则直接写对应的模块名称即可，则在依赖的模块激活时则将启动

@@ -35,11 +35,11 @@ Mailing List: Mail to shulie@shulie.io<br/>
 Wechat group<br/>
 <img src="https://raw.githubusercontent.com/shulieTech/Images/main/code1.png" width="30%" height="30%">
 <br/>
-QQ group(QQ群) : **118098566**<br/>
-QR code（群二维码）：<br/>
+QQ group: **118098566**<br/>
+QR code：<br/>
 <img src="https://raw.githubusercontent.com/shulieTech/Images/main/qq_group2.png" width="30%" height="30%">
 <br/>
-WeChat Official Account（微信公众号）：<br/>
+WeChat Official Account：<br/>
 <img src="https://raw.githubusercontent.com/shulieTech/Images/main/shulie.png" width="30%" height="30%">
 
 ## Ask Questions in Official Forum

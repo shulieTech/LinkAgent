@@ -28,7 +28,8 @@ This module is agent（Probe）framework that is responsible for the life cycle 
 ### instrument-modules
 User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares. 
 
-see [instrument-modules](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/README.md)
+see [instrument-modules](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/READMEInEnglish.md)
+see [instrument-modules 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/README.md)
 
 ## How to Build
 

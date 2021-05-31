@@ -3,7 +3,8 @@
 ## Get AgentX package
 Download installation package : 
 - [download](http://xxxxx)
-<br/>Or build your own package：
+<br/>
+Or build your own package：
 - see [HowToBuild](HowToBuild.md)
 
 ### 二、配置修改

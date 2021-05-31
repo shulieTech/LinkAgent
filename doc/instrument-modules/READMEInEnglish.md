@@ -8,14 +8,16 @@
 需要注意的是此模块不能与 simulator 及扩展插件存在直接的交互，交互都必须要通过 bootstrap 中暴露的 API 来完成(不然会存在类加载不到的问题)，这个模块下的子模块在打包时都会打到biz-classloader-jars目录下，另外还需要对应的加载配置，需要在 biz-classloader-inject.properties 里面配置触发的类，classname=jar 包称,
 当指定的 classname 触发加载时则将对应 jar 包里面的内容全部注入到对应的类加载器中
 
+In some special scenarios, it need to inject the user-defined objects in the plug-in into the business. However, due to the problem of class loading, if the objects are directly injected into the business in the plug-in, there will cause problem that the class cannot be found. But it can not directly expose the implementation to bootstrap. Because there will be cases where business classes are directly referenced, a special method is needed to inject certain classes directly into the business class loader. This module is to solve this scene.
+It should be noted that this module cannot directly interact with the simulator and extension plug-ins. The interaction must be done through the API exposed in bootstrap (otherwise it will cause the problem that the class cannot be loaded). The sub-modules under this module are packaged in biz-classloader-jars directory, and the corresponding loading configuration is also required. The triggered class needs to be configured in biz-classloader-inject.properties, classname=jar package name,When the specified classname triggers loading, all the contents of the corresponding jar package are injected into the class loader
+
 ### bootstrap-inject
 
-这个模块下定义所有扩展模块需要向 bootstrap 中暴露的 API，注入到 boostrap 中则所有的类加载器都可访问。需要注意的是暴露到 bootstrap 中的 API 不能存在与 simulator 及扩展模块、业务类直接的引用(因为无法直接访问)，通常扩展模块需要向全局暴露一些能力可以通过在 bootstrap 模块中定义对应的钩子，由扩展模块实现并注入进去的方式
+This module defines APIs that all extension modules need to expose to bootstrap, which can be accessed by all class loaders injected into boostrap. It should be noted that the API exposed to bootstrap cannot have direct references to the simulator, extension modules, and business classes (because it cannot be directly accessed). Generally, extension modules need to expose some capabilities to the global module by defining corresponding hooks in the bootstrap module. , Implemented by the extension module and injected into it 
 
 ### user-modules
+User extension module, which contains a list of all currently supported middleware 
 
-用户扩展模块，这个模块下面包含所有目前已经支持的中间件列表
-
-## 插件开发指引
+## Plug-in Development Instruction
 
 see [Plug-in Development](./PluginDevInEnglish.md)

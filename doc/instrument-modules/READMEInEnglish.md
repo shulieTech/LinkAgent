@@ -18,4 +18,4 @@
 
 ## 插件开发指引
 
-see [插件开发](./PluginDev.md)
+see [Plug-in Development](./PluginDevInEnglish.md)

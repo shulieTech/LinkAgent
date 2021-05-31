@@ -195,9 +195,9 @@ public TestInterceptor extends AroundInterceptor {
 }
 ```
 
-- ParametersWrapperInterceptorAdaptor 可以修改原方法的入参
+- ParametersWrapperInterceptorAdaptor It can modify the input parameters of original functions.
 
-示例：
+Example：
 ```aidl
 public class TestInterceptor extends ParametersWrapperInterceptorAdaptor {
     public Object[] getParameter0(Advice advice) throws Throwable {
@@ -209,9 +209,9 @@ public class TestInterceptor extends ParametersWrapperInterceptorAdaptor {
 }
 ```
 
-- ResultInterceptorAdaptor 可以修改原方法的返回值
+- ResultInterceptorAdaptor It can modify the return value of original functions.
 
-示例：
+Example：
 
 ```aidl
 public class TestInterceptor extends ResultInterceptorAdaptor {
@@ -226,9 +226,9 @@ public class TestInterceptor extends ResultInterceptorAdaptor {
 }
 ```
 
-- TraceInterceptorAdaptor 实例方法埋点的环绕拦截器抽象实现,可实现追踪埋点与压测增强的混合逻辑
+- TraceInterceptorAdaptor The abstract implementation of the surrounding interceptor of the buried point of the instance method can realize the hybrid logic of tracking the buried point and enhanced pressure measurement
 
-示例：
+Example：
 
 ```aidl
 public class TestInterceptor extends TraceInterceptorAdaptor {

@@ -8,7 +8,8 @@ Supported Project List:
 
 ## QuickStart
 
-see [QuickStart](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStart.md)
+see [快速上手 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStart.md)
+see [QuickStart English](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStartInEnglish.md)
 
 ## Instruction
 

@@ -16,7 +16,9 @@ Supported Project List:
 ### simulator-agent
 This module are mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
-see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
+- see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
+- see [simulator-agent 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
+
 
 ### instrument-simulator
 This module is agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 

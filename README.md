@@ -33,7 +33,9 @@ User-defined modules and supported middleware modules are in this project direct
 
 ## How to Build
 
-see [HowToBuild](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuild.md)
+- see [HowToBuild](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuildInEnglish.md)
+- see [如何构建 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuild.md)
+
 
 # Community
 Mailing List: Mail to shulie@shulie.io<br/>

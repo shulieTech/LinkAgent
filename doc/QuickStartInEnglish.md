@@ -28,6 +28,19 @@ simulator.zk.connection.timeout.ms - zookeeper 注册中心连接超时时间，
 simulator.zk.session.timeout.ms - zookeeper 注册中心 session 超时时间,单位毫秒，默认为60000，可以不用配置
 simulator.log.path - 所有的日志路径，包括探针的日志存储路径和 trace 日志的路径，此值必须要配置
 simulator.log.level - 日志的级别，默认为 info，可以不用配置
+
+agent.use.local -  Whether the agent uses local configuration, the agent supports remote pull and load, if this option is true, it will load locally by default, and no longer pull the agent package from remote.
+agent.config.url - Configure the url of the current agent loading content configuration, such as the version number of the current agent loading, the list of modules that need to be loaded, this value is required when the agent.use.local configuration is false
+agent.processlist.url - Upload the url of all scanned process list results. This is the list of all java processes that need to be known when the agent uses the independent process mode
+agent.load.url - The download url of the probe package, it is required only when agent.use.local is false
+simulator.config.url - The address to obtain the value of the probe configuration item, if all the probe configuration items are moved to the remote, the configuration url is pulled through this configuration item configuration
+register.name - The name of the registration center, the default is zookeeper, currently only supports the zookeeper registration center, no configuration is needed for the time being
+simulator.client.zk.path - The registration path of the zookeeper registration center, the default path is /config/log/pradar/client, no need to configure
+simulator.zk.servers - Zookeeper registration center address, this value must be configured
+simulator.zk.connection.timeout.ms - Zookeeper registration center connection timeout time, in milliseconds, the default is 30000, no need to configure
+simulator.zk.session.timeout.ms - Zookeeper registration center session timeout time, in milliseconds, the default is 60000, no need to configure
+simulator.log.path - all log paths, including probe log storage path and trace log path, this value must be configured
+simulator.log.level - the level of the log, the default is info, you don’t need to configure it
 ```
 
 #### simulator.properties

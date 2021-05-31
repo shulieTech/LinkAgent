@@ -1,7 +1,7 @@
 # instrument-modules
-`instrument-modules`包含了所有用户的自定义模块，所有我们支持的中间件列表全都放在这个工程目录下。
+`instrument-modules` Contains all user-defined modules, and all the middleware lists we support are placed in this project directory.
 
-## 工程介绍
+## Project Introduction
 ### biz-classloader-inject
 
 在一些特殊场景下需要将插件中自定义的对象注入到业务中，但是由于类加载的问题，如果直接在插件中直接将自定义的对象直接注入到业务中，则会存在找不到类的问题，但是也不能直接将实现暴露到 bootstrap中因为会存在直接引用业务类的情况，所以此时就需要一种特殊的做法可以将某些类直接注入到业务类加载器中，这个模块就是为了解决这个场景而设计的。

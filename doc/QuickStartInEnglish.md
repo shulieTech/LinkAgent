@@ -195,11 +195,11 @@ These two parameters are only for debugging. It is not recommended to modify the
 
 ### Verification
 
-应用接入agent启动成功后，agent会在日志目录下输出一下日志文件
+The application is access to the agent and the start is successful, the agent will output a log file in the log directory.
 
 ![log.png](./imgs/loglist.jpg)
 
-`simulator.log` 会输出agent加载过程中的详细日志
+`simulator.log` Will output detailed logs of the agent loading process.
 
 ![log.png](./imgs/img.png)
 

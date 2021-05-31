@@ -175,9 +175,9 @@ Application access needs to add the following jvm parameters when the applicatio
 -Dsimulator.agentId=xxxx
 -Djdk.attach.allowAttachSelf=true
 ```
-agent 启动默认延迟300秒后加载，delay 默认为300，unit 默认为 SECONDS，
-如果需要自定义启动延迟时间可以通过`-Dsimulator.delay `来指定延迟时间，
-通过`-Dsimulator.unit` 来指定延迟的时间单位，目前支持以下单位：
+The agent starts loading after a default delay, the delay defaults to 300, and the time unit defaults to SECONDS.
+If you need to customize the startup delay time, you can specify the delay time through `-Dsimulator.delay`,
+Use `-Dsimulator.unit` to specify the delay time unit, currently the following units are supported: 
 ```aidl
 DAYS
 HOURS

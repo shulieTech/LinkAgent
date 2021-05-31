@@ -4,7 +4,7 @@ AgentX is a Java-based open-source agent designed to collect data and control Fu
 
 Supported Project List:
 - [DaYuX](https://github.com/shulieTech/DaYuX)
-- <br/>... ...
+- ... ...
 
 ## QuickStart
 

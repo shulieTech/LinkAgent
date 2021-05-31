@@ -22,8 +22,8 @@ This module are mainly responsible for interacting with the Control Platform, fo
 
 ### instrument-simulator
 This module is agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 
-see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
-see [instrument-simulator 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
+- see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
+- see [instrument-simulator 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
 
 ### instrument-modules
 User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares. 

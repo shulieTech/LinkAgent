@@ -1,10 +1,10 @@
 # QuickStart
 
 ## Get AgentX package
-Download installation package : [download](http://xxxxx)
+Download installation package : 
+- [download](http://xxxxx)
 or build your own package：
-
-see [HowToBuild](HowToBuild.md)
+- see [HowToBuild](HowToBuild.md)
 
 ### 二、配置修改
 

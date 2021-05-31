@@ -4,27 +4,43 @@ AgentX is a Java-based open-source agent designed to collect data and control Fu
 
 It support projects:
 [DaYuX](https://github.com/shulieTech/DaYuX)
+<br/>... ...
 
 ## QuickStart
 
 see [QuickStart](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStart.md)
 
-## 模块说明
+## Instruction
 
 ### simulator-agent
-这个项目的职责主要是负责与控制台进行交互，负责 agent 的升级、加载、卸载、模块升级等操作，需要注意的是这个模块不能直接升级，如果需要升级则需要重新安装。
+This module are mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
 see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
 
 ### instrument-simulator
-探针框架，负责整个探针和模块的生命周期管理，并且提供内置的一些工具命令
+This module is agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 
 see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
 
 ### instrument-modules
-所有用户的自定义模块。所有我们支持的中间件列表全都放在这个工程目录下。
+User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares. 
 
 see [instrument-modules](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/README.md)
 
-## 如何构建
+## How to Build
 
 see [HowToBuild](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuild.md)
+
+# Community
+Mailing List: Mail to shulie@shulie.io<br/>
+Wechat group<br/>
+<img src="https://raw.githubusercontent.com/shulieTech/Images/main/code1.png" width="30%" height="30%">
+<br/>
+QQ group(QQ群) : **118098566**<br/>
+QR code（群二维码）：<br/>
+<img src="https://raw.githubusercontent.com/shulieTech/Images/main/qq_group2.png" width="30%" height="30%">
+<br/>
+WeChat Official Account（微信公众号）：<br/>
+<img src="https://raw.githubusercontent.com/shulieTech/Images/main/shulie.png" width="30%" height="30%">
+
+# License
+DaYuX is under the Apache 2.0 license. See the [LICENSE](https://github.com/shulieTech/DaYuX/blob/main/LICENSE?_blank) file for details.

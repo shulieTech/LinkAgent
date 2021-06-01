@@ -6,7 +6,7 @@ Supported Project List:
 - [DaYuX](https://github.com/shulieTech/DaYuX)
 
 <br/>
-[中文版文档](https://github.com/shulieTech/AgentX/blob/main/READMEInChinese.md)
+[Chinese Document中文版文档](https://github.com/shulieTech/AgentX/blob/main/READMEInChinese.md)
 
 ## QuickStart
 - see [QuickStart English](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStartInEnglish.md)

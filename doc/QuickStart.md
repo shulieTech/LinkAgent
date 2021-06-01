@@ -2,7 +2,7 @@
 
 ## 一、获取agent包
 
-下载安装包：[download](http://xxxxx)
+下载安装包：[download](https://shulie-main-pass.oss-cn-hangzhou.aliyuncs.com/open-source/simulator-agent.tar)
 
 或者你可以自己构建：
 

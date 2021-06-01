@@ -2,7 +2,7 @@
 
 ## Get AgentX package
 Download installation package : 
-- [download](http://xxxxx)
+- [download](https://shulie-main-pass.oss-cn-hangzhou.aliyuncs.com/open-source/simulator-agent.tar)
 <br/>
 Or build your own package：
 - see [HowToBuild](HowToBuild.md)

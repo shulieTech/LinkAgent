@@ -19,7 +19,6 @@ import org.apache.commons.lang.StringUtils;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 public class TraceIdGenerator {
 
@@ -28,8 +27,6 @@ public class TraceIdGenerator {
     private static String PID = "0000";
     private static char PID_FLAG = 'd';
 
-    private static final String regex = "\\b((?!\\d\\d\\d)\\d+|1\\d\\d|2[0-4]\\d|25[0-5])\\.((?!\\d\\d\\d)\\d+|1\\d\\d|2[0-4]\\d|25[0-5])\\.((?!\\d\\d\\d)\\d+|1\\d\\d|2[0-4]\\d|25[0-5])\\.((?!\\d\\d\\d)\\d+|1\\d\\d|2[0-4]\\d|25[0-5])\\b";
-    private static final Pattern pattern = Pattern.compile(regex);
     private static AtomicInteger count = new AtomicInteger(1000);
 
     static {
@@ -56,8 +53,9 @@ public class TraceIdGenerator {
             pid = Integer.parseInt(strPid);
         }
         String str = Integer.toHexString(pid);
-        while (str.length() < 4)
+        while (str.length() < 4) {
             str = "0" + str;
+        }
         return str;
     }
 
@@ -92,38 +90,19 @@ public class TraceIdGenerator {
     }
 
     public static String generate(String ip) {
-        if (StringUtils.isNotBlank(ip) && validate(ip)) {
+        if (StringUtils.isNotBlank(ip)) {
             return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId());
         } else {
             return generate();
         }
     }
 
-
-    public static void main(String[] args) {
-        PradarSwitcher.setMustSamplingInterval(1000);
-        for (int i = 0; i <= 1000000; i++) {
-            String id = generate("10.230.44.5");
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            if (AbstractContext.isForceTraced(id)) {
-                System.out.println((id) + "ssss:" + (PradarSwitcher.getMustSamplingInterval()));
-            }
-
-        }
-
-    }
-
-
     public static String generateIpv4Id() {
         return IP_int;
     }
 
     public static String generateIpv4Id(String ip) {
-        if (ip != null && !ip.isEmpty() && validate(ip)) {
+        if (StringUtils.isNotBlank(ip) && validate(ip)) {
             return getIP_int(ip);
         } else {
             return IP_int;
@@ -131,11 +110,7 @@ public class TraceIdGenerator {
     }
 
     private static boolean validate(String ip) {
-        try {
-            return pattern.matcher(ip).matches();
-        } catch (Throwable e) {
-            return false;
-        }
+        return StringUtils.countMatches(ip, ".") == 3;
     }
 
     private static String getIP_16(String ip) {

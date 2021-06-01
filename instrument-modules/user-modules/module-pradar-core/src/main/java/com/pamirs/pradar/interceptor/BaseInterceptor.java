@@ -100,6 +100,9 @@ abstract class BaseInterceptor extends AdviceListener {
     }
 
     private void recordDebugInfo(final Advice advice, final String method, final Throwable t) {
+        if (!Pradar.isDebug()) {
+            return;
+        }
         DebugTestInfo debugTestInfo = buildDebugTestInfo(advice, method, t);
         if (debugTestInfo != null) {
             DebugTestInfoPusher.addDebugInfo(debugTestInfo);
@@ -107,9 +110,6 @@ abstract class BaseInterceptor extends AdviceListener {
     }
 
     private void recordDebugInfo(final DebugTestInfo debugTestInfo, final Advice advice, final String method, final Throwable t) {
-        if (!Pradar.isDebug()) {
-            return;
-        }
         if (debugTestInfo == null) {
             return;
         }
@@ -183,10 +183,6 @@ abstract class BaseInterceptor extends AdviceListener {
     }
 
     private DebugTestInfo buildDebugTestInfo(final Advice advice, final String method, final Throwable t) {
-        if (!Pradar.isDebug()) {
-            return null;
-        }
-
         DebugTestInfo debugTestInfo = new DebugTestInfo();
         debugTestInfo.setTraceId(Pradar.getTraceId());
         debugTestInfo.setRpcId(Pradar.getInvokeId());
@@ -265,6 +261,7 @@ abstract class BaseInterceptor extends AdviceListener {
 
     @Override
     public void afterReturning(Advice advice) throws Throwable {
+        boolean isDebug = Pradar.isDebug();
         recordDebugInfo(advice, "afterFirst", null);
         DebugTestInfo debugTestInfo = buildDebugTestInfo();
         Throwable throwable = null;
@@ -280,12 +277,15 @@ abstract class BaseInterceptor extends AdviceListener {
             throwable = e;
             throw e;
         } finally {
-            recordDebugInfo(debugTestInfo, advice, "afterLast", throwable);
+            if (isDebug) {
+                recordDebugInfo(debugTestInfo, advice, "afterLast", throwable);
+            }
         }
     }
 
     @Override
     public void afterThrowing(Advice advice) throws Throwable {
+        boolean isDebug = Pradar.isDebug();
         buildDebugTestInfo(advice, "exceptionFirst", null);
         DebugTestInfo debugTestInfo = buildDebugTestInfo();
         Throwable throwable = null;
@@ -297,7 +297,9 @@ abstract class BaseInterceptor extends AdviceListener {
             throwable = t;
             throw t;
         } finally {
-            recordDebugInfo(debugTestInfo, advice, "exceptionLast", throwable);
+            if (isDebug) {
+                recordDebugInfo(debugTestInfo, advice, "exceptionLast", throwable);
+            }
         }
     }
 

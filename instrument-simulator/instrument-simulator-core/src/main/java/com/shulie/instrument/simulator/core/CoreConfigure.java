@@ -90,8 +90,6 @@ public class CoreConfigure {
      */
     private static final String KEY_DISABLED_MODULES = "simulator.modules.disabled";
 
-    private static final String KEY_LICENSE_CODE = "license.code";
-
     /**
      * 写入 system property 的 key
      */
@@ -138,7 +136,6 @@ public class CoreConfigure {
         final Map<String, String> propertiesMap = getPropertiesMap(propertiesFilePath, appName);
         this.featureMap.putAll(merge(featureMap, propertiesMap));
 
-
         this.simulatorVersion = getVersion0();
         this.instrumentation = instrumentation;
         this.md5 = readMd5(getSimulatorHome() + File.separator + "simulator.md5");
@@ -170,6 +167,7 @@ public class CoreConfigure {
     public String getLogLevel() {
         return featureMap.get(KEY_LOG_LEVEL);
     }
+
 
     /**
      * 根据配置文件获取md5文件的内容

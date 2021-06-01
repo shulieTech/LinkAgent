@@ -15,7 +15,6 @@
 package com.pamirs.pradar.interceptor;
 
 
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
@@ -59,20 +58,11 @@ public class ScopedAroundInterceptor extends AroundInterceptor {
     }
 
     @Override
-    public void doBefore(Advice advice) throws Exception {
+    public void doBefore(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
         final boolean success = transaction.tryEnter(policy);
         if (success) {
-            try {
-                interceptor.doBefore(advice);
-            } catch (Throwable t) {
-                if (Pradar.isClusterTest() || InterceptorInvokerHelper.isPropagateException()) {
-                    if (transaction.canLeave(policy)) {
-                        transaction.leave(policy);
-                    }
-                }
-                InterceptorInvokerHelper.handleException(t);
-            }
+            interceptor.doBefore(advice);
         } else {
             if (logger.isDebugEnabled()) {
                 logger.debug("tryBefore() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());
@@ -81,16 +71,12 @@ public class ScopedAroundInterceptor extends AroundInterceptor {
     }
 
     @Override
-    public void doAfter(Advice advice) {
+    public void doAfter(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
         boolean success = transaction.canLeave(policy);
         try {
             if (success) {
-                try {
-                    interceptor.doAfter(advice);
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                interceptor.doAfter(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryAfter() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());
@@ -104,17 +90,13 @@ public class ScopedAroundInterceptor extends AroundInterceptor {
     }
 
     @Override
-    public void doException(Advice advice) {
+    public void doException(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
 
         boolean success = transaction.canLeave(policy);
         try {
             if (success) {
-                try {
-                    interceptor.doException(advice);
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                interceptor.doException(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("doException() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());

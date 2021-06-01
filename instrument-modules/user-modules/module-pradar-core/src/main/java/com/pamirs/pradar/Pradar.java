@@ -1363,7 +1363,7 @@ public final class Pradar {
             InvokeContext ctx = null;
             Boolean isClusterTest = null;
             Boolean isDebug = null;
-            boolean isSampleThreadId = false;
+            boolean isSameThreadId = false;
             if (invokeCtx instanceof Map) {
                 Map<String, String> invokeContextMap = (Map<String, String>) invokeCtx;
                 String threadId = invokeContextMap.get(THREAD_ID_KEY);
@@ -1371,17 +1371,19 @@ public final class Pradar {
                  * 需要如果设置到上下文中的线程 ID与当前的线程 ID一致，并且上下文不为空，则忽略此次重构上下文
                  */
                 if (threadId != null && threadId.equals(String.valueOf(Thread.currentThread().getId())) && getInvokeContext() != null) {
-                    LOGGER.warn("setInvokeContext is sample thread. will append child context auto.");
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("setInvokeContext is same thread. will append child context auto.");
+                    }
                     String identityContextId = invokeContextMap.get(IDENTITY_CONTEXT_ID);
                     //如果需要设置的目标 context 与当前的 context 是同一个，则直接忽略此次的设置上下文
                     if (identityContextId != null && InvokeContext.get() != null && identityContextId.equals(String.valueOf(InvokeContext.get().getId()))) {
                         return;
                     }
-                    isSampleThreadId = true;
+                    isSameThreadId = true;
                 }
                 ctx = InvokeContext.fromMap(invokeContextMap);
                 //如果是相同线程，则将当前设置的上下文的父上下文设置成
-                if (isSampleThreadId) {
+                if (isSameThreadId) {
                     if (InvokeContext.get() != null && ctx != null) {
                         ctx.parentInvokeContext = InvokeContext.get();
                     }

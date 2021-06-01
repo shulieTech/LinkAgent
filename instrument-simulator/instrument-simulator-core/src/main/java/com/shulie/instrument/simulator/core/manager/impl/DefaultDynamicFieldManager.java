@@ -68,6 +68,19 @@ public class DefaultDynamicFieldManager implements DynamicFieldManager {
     }
 
     @Override
+    public boolean hasDynamicField(Object target, String fieldName) {
+        if (dynamicFields == null) {
+            return false;
+        }
+
+        DynamicField dynamicField = dynamicFields.get(target);
+        if (dynamicField == null) {
+            return false;
+        }
+        return dynamicField.hasField(fieldName);
+    }
+
+    @Override
     public <T> T getDynamicField(Object target, String fieldName) {
         return getDynamicField(target, fieldName, null);
     }

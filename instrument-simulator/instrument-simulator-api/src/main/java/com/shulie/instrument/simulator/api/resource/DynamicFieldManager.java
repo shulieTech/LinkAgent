@@ -23,6 +23,15 @@ package com.shulie.instrument.simulator.api.resource;
 public interface DynamicFieldManager {
 
     /**
+     * 目标对象是否包含动态属性
+     *
+     * @param target
+     * @param fieldName
+     * @return
+     */
+    boolean hasDynamicField(Object target, String fieldName);
+
+    /**
      * 获取某个对象的动态属性值
      *
      * @param target

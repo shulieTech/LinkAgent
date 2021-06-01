@@ -96,31 +96,6 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         return spanRecord;
     }
 
-    private String toEndPoint(Object target) {
-        try {
-            final Object connection = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_CONNECTION);
-            final DefaultEndpoint endpoint = Reflect.on(connection).get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
-            if (endpoint == null) {
-                return LettuceConstants.ADDRESS_UNKNOW;
-            }
-            Channel channel = Reflect.on(endpoint).get(LettuceConstants.REFLECT_FIELD_CHANNEL);
-            if (channel == null) {
-                return LettuceConstants.ADDRESS_UNKNOW;
-            }
-            SocketAddress socketAddress = channel.remoteAddress();
-            if (socketAddress == null) {
-                return LettuceConstants.ADDRESS_UNKNOW;
-            }
-            if (!(socketAddress instanceof InetSocketAddress)) {
-                return LettuceConstants.ADDRESS_UNKNOW;
-            }
-            InetSocketAddress inetSocketAddress = (InetSocketAddress) socketAddress;
-            return inetSocketAddress.getAddress().getHostAddress() + ":" + inetSocketAddress.getPort();
-        } catch (Throwable e) {
-            return LettuceConstants.ADDRESS_UNKNOW;
-        }
-    }
-
     private void appendEndPoint(Object target, final SpanRecord spanRecord) {
         try {
             final Object connection = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_CONNECTION);

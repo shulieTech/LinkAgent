@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.shulie.instrument.simulator.core.util.collection;
+package com.shulie.instrument.simulator.api.util;
 
 /**
  * 堆栈

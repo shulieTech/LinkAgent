@@ -18,12 +18,7 @@ import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.event.*;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.api.listener.Interruptable;
-import com.shulie.instrument.simulator.api.util.BehaviorDescriptor;
-import com.shulie.instrument.simulator.api.util.CacheGet;
-import com.shulie.instrument.simulator.api.util.LazyGet;
-import com.shulie.instrument.simulator.api.util.StringUtil;
-
-import java.util.Stack;
+import com.shulie.instrument.simulator.api.util.*;
 
 /**
  * 通知监听器
@@ -301,7 +296,7 @@ public class AdviceAdapterListener implements EventListener, Interruptable {
      */
     private class OpStack {
 
-        private final Stack<WrapAdvice> adviceStack = new Stack<WrapAdvice>();
+        private final SimulatorStack<WrapAdvice> adviceStack = new ThreadUnsafeSimulatorStack<WrapAdvice>();
 
         boolean isEmpty() {
             return adviceStack.isEmpty();

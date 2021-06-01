@@ -61,18 +61,14 @@ public class ScopedResultInterceptor extends ResultInterceptor {
     }
 
     @Override
-    public Object getResult(Advice advice) {
+    public Object getResult(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
 
         Object result = advice.getReturnObj();
         try {
             final boolean success = transaction.tryEnter(policy);
             if (success) {
-                try {
-                    result = interceptor.getResult(advice);
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                return interceptor.getResult(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryAfter() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());

@@ -58,22 +58,18 @@ public class ScopedParametersWrapperInterceptor extends ParametersWrapperInterce
         if (scope != null) {
             return scope;
         }
-        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" +advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
+        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
     }
 
     @Override
-    public Object[] getParameter(Advice advice) {
+    public Object[] getParameter(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
         Object[] result = advice.getParameterArray();
 
         try {
             final boolean success = transaction.tryEnter(policy);
             if (success) {
-                try {
-                    result = interceptor.getParameter(advice);
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                return interceptor.getParameter(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryAfter() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());

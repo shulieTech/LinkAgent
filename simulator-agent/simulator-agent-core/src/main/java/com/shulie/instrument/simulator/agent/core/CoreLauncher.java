@@ -17,8 +17,8 @@ package com.shulie.instrument.simulator.agent.core;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.core.classloader.ProviderClassLoader;
 import com.shulie.instrument.simulator.agent.core.config.AgentConfigImpl;
-import com.shulie.instrument.simulator.agent.core.config.ExternalAPIImpl;
 import com.shulie.instrument.simulator.agent.core.config.CoreConfig;
+import com.shulie.instrument.simulator.agent.core.config.ExternalAPIImpl;
 import com.shulie.instrument.simulator.agent.core.exception.AgentDownloadException;
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterFactory;
@@ -58,7 +58,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2020/11/16 8:50 下午
  */
 public class CoreLauncher {
-    private final static Logger LOGGER = LoggerFactory.getLogger(CoreLauncher.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
     private AgentLauncher launcher;
     private AgentScheduler agentScheduler;
     private final CoreConfig coreConfig;

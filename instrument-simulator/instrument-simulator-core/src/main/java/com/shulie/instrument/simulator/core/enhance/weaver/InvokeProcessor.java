@@ -16,8 +16,8 @@ package com.shulie.instrument.simulator.core.enhance.weaver;
 
 import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.EventListener;
-import com.shulie.instrument.simulator.core.util.collection.SimulatorStack;
-import com.shulie.instrument.simulator.core.util.collection.ThreadUnsafeSimulatorStack;
+import com.shulie.instrument.simulator.api.util.SimulatorStack;
+import com.shulie.instrument.simulator.api.util.ThreadUnsafeSimulatorStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

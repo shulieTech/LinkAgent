@@ -290,7 +290,7 @@ public final class RedisUtils {
                     try {
                         ex = (Long)ReflectionUtils.getFieldValue(args[2], "ex");
                         px = (Long)ReflectionUtils.getFieldValue(args[2], "px");
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         LOGGER.error("get redis set params error", e);
                         return;
                     }
@@ -307,8 +307,8 @@ public final class RedisUtils {
                             pxMethod.invoke(args[2], Math.min(px,
                                 Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue()));
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    } catch (Throwable e) {
+                        LOGGER.error("get redis set params error", e);
                     }
                 }
             }

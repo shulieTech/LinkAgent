@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * 挡板的拦截器实现, 这里需要注意的是不能使用其他的拦截器实现挡板拦截器，因为档板的返回事件触发是在
  * BEFORE事件中的，框架在实现返回事件时会中断后续的事件触发，如果作用域需要依赖 BEFORE、RETURN/THROWS
  * 事件组合才实现作用域，则 RETURN/THROWS 事件后续不会再被触发，则作用域会产生问题
- *
+ * <p>
  * Created by xiaobin on 2017/1/19.
  */
 public class ScopedCutoffInterceptor extends CutoffInterceptor {
@@ -58,22 +58,18 @@ public class ScopedCutoffInterceptor extends CutoffInterceptor {
         if (scope != null) {
             return scope;
         }
-        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" +advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
+        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
     }
 
     @Override
-    public CutOffResult cutoff(Advice advice) {
+    public CutOffResult cutoff(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
 
         CutOffResult result = CutOffResult.passed();
         try {
             final boolean success = transaction.tryEnter(policy);
             if (success) {
-                try {
-                    result = interceptor.cutoff(advice);
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                return interceptor.cutoff(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryBefore() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());

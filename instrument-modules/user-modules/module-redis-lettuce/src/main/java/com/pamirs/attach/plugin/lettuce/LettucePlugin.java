@@ -290,7 +290,7 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         this.enhanceTemplate.enhance(this, "io.lettuce.core.sentinel.RedisSentinelReactiveCommandsImpl", callback);
     }
 
-    private EnhanceCallback PluginMaxRedisExpireTimeCallback = new EnhanceCallback() {
+    private EnhanceCallback pluginMaxRedisExpireTimeCallback = new EnhanceCallback() {
         @Override
         public void doEnhance(InstrumentClass target) {
 
@@ -302,28 +302,39 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         }
     };
     private void addPluginMaxRedisExpireTimeRedisCommands() {
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisAsyncCommands", PluginMaxRedisExpireTimeCallback);
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.api.sync.RedisStringCommands", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisAsyncCommands",
+            pluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.api.sync.RedisStringCommands",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisReactiveCommands", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisReactiveCommands",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisAsyncCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisAsyncCommandsImpl", pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisAdvancedClusterAsyncCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisAdvancedClusterAsyncCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisClusterPubSubAsyncCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisClusterPubSubAsyncCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.pubsub.RedisPubSubAsyncCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.pubsub.RedisPubSubAsyncCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisAdvancedClusterReactiveCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisAdvancedClusterReactiveCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisClusterPubSubReactiveCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisClusterPubSubReactiveCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.pubsub.RedisPubSubReactiveCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.pubsub.RedisPubSubReactiveCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisReactiveCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisReactiveCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
 
-        this.enhanceTemplate.enhance(this, "io.lettuce.core.sentinel.RedisSentinelReactiveCommandsImpl", PluginMaxRedisExpireTimeCallback);
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.sentinel.RedisSentinelReactiveCommandsImpl",
+            pluginMaxRedisExpireTimeCallback);
     }
 
     private EnhanceCallback callback = new EnhanceCallback() {

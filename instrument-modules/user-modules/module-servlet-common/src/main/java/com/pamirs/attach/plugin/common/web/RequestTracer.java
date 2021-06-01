@@ -224,7 +224,7 @@ public abstract class RequestTracer<REQ, RESP> {
      */
     public boolean isClusterTestRequest(REQ request) {
         String value = getProperty(request, PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY);
-        if (StringUtils.endsWith(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+        if (StringUtils.equals(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
             return true;
         }
         value = getProperty(request, PradarService.PRADAR_CLUSTER_TEST_KEY);
@@ -262,6 +262,20 @@ public abstract class RequestTracer<REQ, RESP> {
         }
 
         return null;
+    }
+
+    private Map<String, String> getContext(REQ request) {
+        Map<String, String> context = null;
+        for (String key : Pradar.getInvokeContextTransformKeys()) {
+            String value = getProperty(request, key);
+            if (StringUtils.isNotBlank(value)) {
+                if (context == null) {
+                    context = new HashMap<String, String>();
+                }
+                context.put(key, value);
+            }
+        }
+        return context;
     }
 
     /**
@@ -310,16 +324,11 @@ public abstract class RequestTracer<REQ, RESP> {
         }
 
         if (!isTraceIdBlank) {
-            Map<String, String> context = new HashMap<String, String>();
-            for (String key : Pradar.getInvokeContextTransformKeys()) {
-                String value = getProperty(request, key);
-                if (value != null) {
-                    context.put(key, value);
-                }
+            Map<String, String> context = getContext(request);
+            if (context != null) {
+                context.put(PradarService.PRADAR_TRACE_ID_KEY, traceId);
+                context.put(PradarService.PRADAR_CLUSTER_TEST_KEY, String.valueOf(isClusterTestRequest));
             }
-
-            context.put(PradarService.PRADAR_TRACE_ID_KEY, traceId);
-            context.put(PradarService.PRADAR_CLUSTER_TEST_KEY, String.valueOf(isClusterTestRequest));
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("accept web server rpcServerRecv context:{}, currentContext:{} currentMiddleware:{}", context, Pradar.getInvokeContextMap(), Pradar.getMiddlewareName());
             }

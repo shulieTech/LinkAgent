@@ -15,7 +15,6 @@
 package com.pamirs.pradar.interceptor;
 
 
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
@@ -58,25 +57,16 @@ public class ScopedModificationInterceptor extends ModificationInterceptor {
         if (scope != null) {
             return scope;
         }
-        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" +advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
+        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
     }
 
     @Override
-    public Object[] getParameter(Advice advice) {
+    public Object[] getParameter(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
 
         Object[] result = advice.getParameterArray();
         if (transaction.tryEnter(policy)) {
-            try {
-                result = interceptor.getParameter(advice);
-            } catch (Throwable t) {
-                if (Pradar.isClusterTest() || InterceptorInvokerHelper.isPropagateException()) {
-                    if (transaction.canLeave(policy)) {
-                        transaction.leave(policy);
-                    }
-                }
-                InterceptorInvokerHelper.handleException(t);
-            }
+            result = interceptor.getParameter(advice);
         } else {
             if (logger.isDebugEnabled()) {
                 logger.debug("tryBefore() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());
@@ -86,44 +76,34 @@ public class ScopedModificationInterceptor extends ModificationInterceptor {
     }
 
     @Override
-    public Object getResult(Advice advice) {
+    public Object getResult(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
 
-        final boolean success = transaction.tryEnter(policy);
-        Object returnObj = advice.getReturnObj();
+        final boolean success = transaction.canLeave(policy);
         try {
             if (success) {
-                try {
-                    returnObj = interceptor.getResult(advice);
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                return interceptor.getResult(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryAfter() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());
                 }
+                return advice.getReturnObj();
             }
         } finally {
             if (success) {
                 transaction.leave(policy);
             }
         }
-        return returnObj;
     }
 
     @Override
-    public Object getExceptionResult(Advice advice) {
+    public Object getExceptionResult(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
 
-        final boolean success = transaction.tryEnter(policy);
+        final boolean success = transaction.canLeave(policy);
         try {
             if (success) {
-                try {
-                    Object result = interceptor.getExceptionResult(advice);
-                    return result;
-                } catch (Throwable t) {
-                    InterceptorInvokerHelper.handleException(t);
-                }
+                return interceptor.getExceptionResult(advice);
             } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug("doException() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());
@@ -134,7 +114,7 @@ public class ScopedModificationInterceptor extends ModificationInterceptor {
                 transaction.leave(policy);
             }
         }
-        throw new RuntimeException(advice.getThrowable());
+        throw advice.getThrowable();
     }
 }
 

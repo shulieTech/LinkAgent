@@ -45,7 +45,7 @@ public final class ClusterTestUtils {
                 || StringUtils.equalsIgnoreCase(value, Boolean.TRUE.toString())) {
             return true;
         }
-        return StringUtils.endsWith(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX);
+        return StringUtils.equals(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX);
     }
 
     /**

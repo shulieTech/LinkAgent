@@ -101,13 +101,33 @@ mongodb322.enabled - mongdb 3.2.2版本插件是否启用，默认为 false
 
 应用接入需要在应用启动时添加如下jvm参数即可:
 
+#### jdk8启动参数
+
 ```aidl
 -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar
--javaagent:/Users/xiaobin/workspace/simulator-agent/target/simulator-agent/simulator-launcher-instrument.jar
+-javaagent:/somepath/transmittable-thread-local-2.12.1.jar
+-javaagent:/somepath/simulator-launcher-instrument.jar
 -Dpradar.project.name=xxx-test
 -Dsimulator.agentId=xxxx
 -Djdk.attach.allowAttachSelf=true
+
 ```
+#### jdk9及以上启动参数
+
+```aidl
+--add-exports=java.base/jdk.internal.loader=ALL-UNNAMED
+--add-exports=java.base/jdk.internal.module=ALL-UNNAMED
+--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar
+-javaagent:/somepath/transmittable-thread-local-2.12.1.jar
+-javaagent:/somepath/simulator-launcher-instrument.jar
+-Dpradar.project.name=xiaobin-test
+-Dsimulator.agentId=xxxx
+-Djdk.attach.allowAttachSelf=true
+```
+
+> agent使用阿里巴巴的[transmittable-thread-local](https://github.com/alibaba/transmittable-thread-local) 做跨线程的压测标传递，需要指定transmittable-thread-local-2.10.2.jar包路径在所有的 agent 前面
+
 agent 启动默认延迟300秒后加载，delay 默认为300，unit 默认为 SECONDS，
 如果需要自定义启动延迟时间可以通过`-Dsimulator.delay `来指定延迟时间，
 通过`-Dsimulator.unit` 来指定延迟的时间单位，目前支持以下单位：

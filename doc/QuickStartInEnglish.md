@@ -100,13 +100,34 @@ mongodb322.enabled - Whether the mongdb 3.2.2 version plug - in is enabled, the 
 
 Application access needs to add the following jvm parameters when the application starts:
 
+#### for jdk8
+
 ```aidl
 -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar
--javaagent:/Users/xiaobin/workspace/simulator-agent/target/simulator-agent/simulator-launcher-instrument.jar
+-javaagent:/somepath/transmittable-thread-local-2.12.1.jar
+-javaagent:/somepath/simulator-launcher-instrument.jar
 -Dpradar.project.name=xxx-test
 -Dsimulator.agentId=xxxx
 -Djdk.attach.allowAttachSelf=true
 ```
+
+#### for jdk9 and above
+
+```aidl
+--add-exports=java.base/jdk.internal.loader=ALL-UNNAMED
+--add-exports=java.base/jdk.internal.module=ALL-UNNAMED
+--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar
+-javaagent:/somepath/transmittable-thread-local-2.12.1.jar
+-javaagent:/somepath/simulator-agent/simulator-launcher-instrument.jar
+-Dpradar.project.name=xiaobin-test
+-Dsimulator.agentId=xxxx
+-Djdk.attach.allowAttachSelf=true
+```
+
+> the agent use[transmittable-thread-local](https://github.com/alibaba/transmittable-thread-local) lib from alibaba to do a cross-thread "performance test mark" pass，so you need given transmittable-thread-local-2.10.2.jar package path precedes this agent
+
+
 The agent starts loading after a default delay, the delay defaults to 300, and the time unit defaults to SECONDS.
 If you need to customize the startup delay time, you can specify the delay time through `-Dsimulator.delay`,
 Use `-Dsimulator.unit` to specify the delay time unit, currently the following units are supported: 

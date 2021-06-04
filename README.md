@@ -4,11 +4,9 @@ AgentX is a Java-based open-source agent designed to collect data and control Fu
 
 Supported Project List:
 - [DaYuX](https://github.com/shulieTech/DaYuX)
-- ... ...
+- [Chinese Document中文版文档](https://github.com/shulieTech/AgentX/blob/main/READMEInChinese.md)
 
 ## QuickStart
-
-- see [快速上手 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStart.md)
 - see [QuickStart English](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStartInEnglish.md)
 
 ## Instruction
@@ -17,24 +15,20 @@ Supported Project List:
 This module are mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
 - see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
-- see [simulator-agent 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
 
 
 ### instrument-simulator
 This module is agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 
 - see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
-- see [instrument-simulator 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/README.md)
 
 ### instrument-modules
 User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares. 
 
 - see [instrument-modules](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/READMEInEnglish.md)
-- see [instrument-modules 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/README.md)
 
 ## How to Build
 
 - see [HowToBuild](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuildInEnglish.md)
-- see [如何构建 中文版](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuild.md)
 
 
 # Community

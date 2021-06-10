@@ -5,7 +5,7 @@
 AgentX is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
 
 Supported Project List:
-- [DaYuX](https://github.com/shulieTech/DaYuX)
+- [ArchKeeper](https://github.com/shulieTech/ArchKeeper)
 
 
 中文文档：
@@ -52,4 +52,4 @@ WeChat Official Account：<br/>
 [Official Forum](https://news.shulie.io/?page_id=2477)
 
 # License
-DaYuX is under the Apache 2.0 license. See the [LICENSE](https://github.com/shulieTech/DaYuX/blob/main/LICENSE?_blank) file for details.
+This project is under the Apache 2.0 license. See the [LICENSE](https://github.com/shulieTech/DaYuX/blob/main/LICENSE?_blank) file for details.

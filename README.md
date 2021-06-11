@@ -17,7 +17,7 @@ Supported Project List:
 ## Instruction
 
 ### simulator-agent
-This module are mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
+This module is mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
 - see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
 

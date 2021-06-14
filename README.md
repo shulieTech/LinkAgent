@@ -7,9 +7,7 @@ AgentX is a Java-based open-source agent designed to collect data and control Fu
 Supported Project List:
 - [ArchGuadian](https://github.com/shulieTech/ArchGuadian)
 
-
-中文文档：
-- [Chinese Document中文版文档](https://github.com/shulieTech/AgentX/blob/main/README-zh-CN.md)
+English / [中文](README_CN.md)
 
 ## QuickStart
 - see [QuickStart English](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStartInEnglish.md)

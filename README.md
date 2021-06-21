@@ -5,7 +5,7 @@
 LinkAgent is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
 
 Supported Project List:
-- [ArchGuadian](https://github.com/shulieTech/ArchGuadian)
+- [Takin](https://github.com/shulieTech/Takin)
 
 English / [中文](README_CN.md)
 

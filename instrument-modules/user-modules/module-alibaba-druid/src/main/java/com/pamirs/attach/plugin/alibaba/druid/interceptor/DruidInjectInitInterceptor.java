@@ -21,6 +21,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 //删掉mybatis适配、jdbctemplate切点
+//TODO 这个init是否还有必要
 public class DruidInjectInitInterceptor extends AroundInterceptor {
 
     @Override

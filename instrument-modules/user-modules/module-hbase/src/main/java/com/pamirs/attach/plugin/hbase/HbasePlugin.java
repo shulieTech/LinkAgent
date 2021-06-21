@@ -420,6 +420,46 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 });
 
 
+        enhanceTemplate.enhance(this, "com.flipkart.hbaseobjectmapper.WrappedHBTable", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod instrumentMethod = target.getDeclaredMethod("getName");
+                instrumentMethod.addInterceptor(Listeners.of(WrappedHBTableGetNameInterceptor.class));
+            }
+        });
+
+
+        //=============asynchbase
+        //org.hbase.async.HBaseRpc.HBaseRpc(byte[], byte[])
+        enhanceTemplate.enhance(this, "org.hbase.async.HBaseRpc", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod constructor = target.getConstructor("byte[]", "byte[]");
+                constructor.addInterceptor(Listeners.of(AsyncHbaseTableInterceptor.class));
+            }
+        });
+
+        //org.hbase.async.Scanner.Scanner(org.hbase.async.HBaseClient,byte[])
+
+        enhanceTemplate.enhance(this, "org.hbase.async.Scanner", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod constructor = target.getConstructor("org.hbase.async.HBaseClient", "byte[]");
+                constructor.addInterceptor(Listeners.of(AsyncHbaseTableInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "org.hbase.async.HBaseClient", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+
+                InstrumentMethod method = target.getDeclaredMethod("sendRpcToRegion", "org.hbase.async.HBaseRpc");
+                method.addInterceptor(Listeners.of(AsyncHbaseMethodInterceptor.class));
+
+            }
+        });
+
+
     }
 
     public static class RpcClientImplTransform implements EnhanceCallback {

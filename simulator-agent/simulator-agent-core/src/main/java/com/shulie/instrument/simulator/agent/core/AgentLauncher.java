@@ -74,6 +74,8 @@ public class AgentLauncher {
 
     private int startMode = START_MODE_ATTACH;
 
+    private FrameworkClassLoader frameworkClassLoader;
+
     public AgentLauncher(final AgentConfig agentConfig, final Instrumentation instrumentation, final ClassLoader parent) {
         this.agentConfig = agentConfig;
         this.instrumentation = instrumentation;
@@ -415,6 +417,7 @@ public class AgentLauncher {
              */
             String heartbeatResult = HttpUtils.doGet(baseUrl + File.separator + "heartbeat?useApi=true", agentConfig.getUserAppKey());
             if (heartbeatResult == null) {
+                shutdownWithPremain();
                 if (logger.isInfoEnabled()) {
                     logger.info("shutdown agent successful.");
                 }
@@ -427,6 +430,7 @@ public class AgentLauncher {
              * 如果返回为空则视为已经停止
              */
             if (content == null) {
+                shutdownWithPremain();
                 if (logger.isInfoEnabled()) {
                     logger.info("shutdown agent successful.");
                 }
@@ -441,6 +445,7 @@ public class AgentLauncher {
                      */
                     heartbeatResult = HttpUtils.doGet(baseUrl + File.separator + "heartbeat?useApi=true", agentConfig.getUserAppKey());
                     if (heartbeatResult == null) {
+                        shutdownWithPremain();
                         if (logger.isInfoEnabled()) {
                             logger.info("shutdown agent successful.");
                         }
@@ -530,11 +535,21 @@ public class AgentLauncher {
      * @throws InvocationTargetException
      */
     private void startWithPremain(String agentJarPath, String config) throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        FrameworkClassLoader classLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()}, parent);
-        Class classOfAgentLauncher = classLoader.loadClass("com.shulie.instrument.simulator.agent.AgentLauncher");
+        this.frameworkClassLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()}, parent);
+        Class classOfAgentLauncher = frameworkClassLoader.loadClass("com.shulie.instrument.simulator.agent.AgentLauncher");
         Method premainMethod = classOfAgentLauncher.getDeclaredMethod("premain", String.class, Instrumentation.class);
         premainMethod.setAccessible(true);
         premainMethod.invoke(null, config, instrumentation);
     }
 
+    private void shutdownWithPremain() {
+        if (!usePremain) {
+            return;
+        }
+        if (this.frameworkClassLoader == null) {
+            return;
+        }
+        this.frameworkClassLoader.closeIfPossible();
+        this.frameworkClassLoader = null;
+    }
 }

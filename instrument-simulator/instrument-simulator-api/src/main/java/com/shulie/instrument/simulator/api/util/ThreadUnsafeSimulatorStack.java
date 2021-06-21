@@ -50,7 +50,9 @@ public class ThreadUnsafeSimulatorStack<E> implements SimulatorStack<E> {
     private void ensureCapacityInternal(int expectDeep) {
         final int currentStackSize = elementArray.length;
         if (elementArray.length <= expectDeep) {
-            final Object[] newElementArray = new Object[currentStackSize * 2];
+            int oldCapacity = elementArray.length;
+            int newCapacity = oldCapacity + (oldCapacity >> 1);
+            final Object[] newElementArray = new Object[newCapacity];
             arraycopy(elementArray, 0, newElementArray, 0, currentStackSize);
             this.elementArray = newElementArray;
         }

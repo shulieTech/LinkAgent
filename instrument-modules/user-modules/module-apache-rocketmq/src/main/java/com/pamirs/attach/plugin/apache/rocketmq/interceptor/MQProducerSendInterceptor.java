@@ -30,14 +30,20 @@ import java.util.Map;
 
 public class MQProducerSendInterceptor extends AroundInterceptor {
 
-    private boolean registerSendMessageHook = false;
+    private Object lock = new Object();
+
 
     @Override
     public void doBefore(Advice advice) {
-        if (advice.getTarget() instanceof DefaultMQProducerImpl && !registerSendMessageHook){
-            ((DefaultMQProducerImpl)advice.getTarget()).registerSendMessageHook(new SendMessageHookImpl());
-            registerSendMessageHook = true;
+        if (advice.getTarget() instanceof DefaultMQProducerImpl && !((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
+            synchronized (lock){
+                if (!((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
+                    ((DefaultMQProducerImpl)advice.getTarget()).registerSendMessageHook(new SendMessageHookImpl());
+                    LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
+                }
+            }
         }
+
         Object[] args = advice.getParameterArray();
         Message msg = (Message) args[0];
         if (PradarSwitcher.isClusterTestEnabled()) {

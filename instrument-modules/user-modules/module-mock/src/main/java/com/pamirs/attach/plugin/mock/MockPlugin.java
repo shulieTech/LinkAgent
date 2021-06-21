@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.mock;
 
 import com.pamirs.attach.plugin.mock.interceptor.MockAdviceListener;
+import com.pamirs.attach.plugin.mock.utils.GroovyUtils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.internal.config.MockConfig;
@@ -156,5 +157,15 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
             }
         }
         return watchers;
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
+        GroovyUtils.clearCache();
+        for (Map.Entry<String, EventWatcher> entry : this.watchers.entrySet()) {
+            entry.getValue().onUnWatched();
+        }
+        this.watchers.clear();
+        this.watchers = null;
     }
 }

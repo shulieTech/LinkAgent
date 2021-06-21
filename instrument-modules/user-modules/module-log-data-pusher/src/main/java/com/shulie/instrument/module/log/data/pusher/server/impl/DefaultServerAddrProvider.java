@@ -88,7 +88,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
             @Override
             public void run() {
                 try {
-                    collectLogServer();
+                    fetchLogServer();
                 } catch (Throwable e) {
                     LOGGER.error("write log server path err!", e);
                 }
@@ -104,7 +104,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
                         zkServerPath.startAndRefresh();
                         LOGGER.info("successfully watch log server path status from zookeeper, path={}", serverProviderOptions.getServerZkPath());
                     }
-                    collectLogServer();
+                    fetchLogServer();
                 } catch (Throwable e) {
                     LOGGER.error("fail to watch log server path status from zookeeper, path={}. retry next times.", serverProviderOptions.getServerZkPath(), e);
                     ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 3, TimeUnit.SECONDS);
@@ -114,11 +114,11 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
     }
 
     /**
-     * 收集日志服务端信息
+     * 获取日志服务端信息
      */
-    private void collectLogServer() {
+    private void fetchLogServer() {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: start collecting log servers. current servers is {}", availableNodes);
+            LOGGER.info("SIMULATOR: start fetch log servers. current servers is {}", availableNodes);
         }
 
         List<String> addChildren = this.zkServerPath.getAddChildren();
@@ -185,7 +185,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
             LOGGER.error("zkServerPath refresh error {}", e);
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: collect log servers finished. current servers is {}", availableNodes);
+            LOGGER.info("SIMULATOR: fetch log servers finished. current servers is {}", availableNodes);
         }
     }
 

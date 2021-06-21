@@ -17,8 +17,6 @@ package com.pamirs.attach.plugin.jedis.interceptor;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.Throwables;
-import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -70,19 +68,15 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
     }
 
     private void validateKeys(List<String> keys) {
-        try {
-            for (int i = 0; i < keys.size(); i++) {
-                String key = keys.get(i);
-                boolean isCluster = Pradar.isClusterTest();
-                boolean withPt = Pradar.isClusterTestPrefix(key);
-                if (isCluster && !withPt) {
-                    throw new PressureMeasureError("jedis .压测流量进入业务库...,key = " + key);
-                } else if (!isCluster && withPt) {
-                    logger.error("jedis:业务流量进入压测库,key = {}", key);
-                }
+        for (int i = 0, size = keys.size(); i < size; i++) {
+            String key = keys.get(i);
+            boolean isCluster = Pradar.isClusterTest();
+            boolean withPt = Pradar.isClusterTestPrefix(key);
+            if (isCluster && !withPt) {
+                throw new PressureMeasureError("jedis .压测流量进入业务库...,key = " + key);
+            } else if (!isCluster && withPt) {
+                logger.error("jedis:业务流量进入压测库,key = {}", key);
             }
-        } catch (Exception e) {
-            logger.error(Throwables.getStackTraceAsString(e));
         }
     }
 
@@ -101,7 +95,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
             }
         }
 
-        throw new PradarException("Jedis not support key deserialize !");
+        throw new PressureMeasureError("Jedis not support key deserialize !");
     }
 
     private String toKeyString(Object key) {
@@ -227,7 +221,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
         } else if (args[keyIndex] instanceof byte[][]) {
             return processKeyByteArray(args, whiteList, keyIndex);
         } else {
-            throw new PradarException("Jedis not support key deserialize !");
+            throw new PressureMeasureError("Jedis not support key deserialize !");
         }
     }
 
@@ -266,7 +260,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
                     } else if (data instanceof byte[]) {
                         key = new String((byte[]) data);
                     } else {
-                        throw new PradarException("redis lua not support type " + data.getClass().getName());
+                        throw new PressureMeasureError("redis lua not support type " + data.getClass().getName());
                     }
                     if (RedisUtils.IGNORE_NAME.contains(key)) {
                         continue;
@@ -332,7 +326,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
                     key = new String((byte[]) o);
                     keys.add(key);
                 } else {
-                    throw new PradarException("redis lua not support type " + o.getClass().getName());
+                    throw new PressureMeasureError("redis lua not support type " + o.getClass().getName());
                 }
             }
         }

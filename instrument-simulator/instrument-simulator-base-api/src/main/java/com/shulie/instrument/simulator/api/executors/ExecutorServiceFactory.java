@@ -252,9 +252,9 @@ public class ExecutorServiceFactory {
     private static ScheduledExecutorService getScheduledExecutorService() {
         int processors = Runtime.getRuntime().availableProcessors();
         if (processors <= 0) {
-            processors = 8;
+            processors = 4;
         }
-        return new ScheduledThreadPoolExecutor(processors * 2, new ThreadFactory() {
+        return new ScheduledThreadPoolExecutor(processors, new ThreadFactory() {
             @Override
             public Thread newThread(Runnable runnable) {
                 Thread t = new Thread(runnable, "Simulator-Pool-Schedule-Executor-Service");
@@ -278,10 +278,10 @@ public class ExecutorServiceFactory {
     private static ExecutorService getExecutorService() {
         int processors = Runtime.getRuntime().availableProcessors();
         if (processors <= 0) {
-            processors = 8;
+            processors = 4;
         }
 
-        return new ThreadPoolExecutor(processors * 2, processors * 3, 1000, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(1000), new ThreadFactory() {
+        return new ThreadPoolExecutor(processors, processors * 2, 1000, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(1000), new ThreadFactory() {
             @Override
             public Thread newThread(Runnable runnable) {
                 Thread t = new Thread(runnable, "Simulator-Pool-Executor-Service");

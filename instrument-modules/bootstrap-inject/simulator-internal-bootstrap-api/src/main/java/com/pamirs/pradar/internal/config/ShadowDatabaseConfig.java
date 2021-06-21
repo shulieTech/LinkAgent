@@ -435,7 +435,7 @@ public class ShadowDatabaseConfig {
                 ", shadowUrl='" + shadowUrl + '\'' +
                 ", shadowDriverClassName='" + shadowDriverClassName + '\'' +
                 ", shadowUsername='" + shadowUsername + '\'' +
-                ", shadowPassword=******'" + '\'' +
+                ", shadowPassword=" + shadowPassword == null ? null : "'******'" +
                 ", shadowSchema='" + shadowSchema + '\'' +
                 ", businessShadowTables=" + businessShadowTables +
                 ", properties=" + properties +

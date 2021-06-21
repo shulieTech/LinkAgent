@@ -17,6 +17,9 @@ package com.pamirs.attach.plugin.hbase.util;
 import com.pamirs.pradar.Pradar;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author: Hengyu
  * @className: HBaseUtils
@@ -27,6 +30,14 @@ public class HBaseTableNameUtils {
 
     public static final String NAMESPACE_SPLIT = ":";
     public static final String HBASE_METASPACE = "hbase";
+    public static final String HBASE_NAMESPACE = "namespace";
+    public static final String HBASE_META = "meta";
+
+    private static final List<String> excludeReplace = new ArrayList<String>(2);
+    static {
+        excludeReplace.add("namespace");
+        excludeReplace.add("meta");
+    }
 
     /**
      * 替换影子表
@@ -39,13 +50,13 @@ public class HBaseTableNameUtils {
             int index = StringUtils.indexOf(tableName, NAMESPACE_SPLIT);
             String namespace = StringUtils.substring(tableName, 0, index);
             String table = StringUtils.substring(tableName, index + 1);
-            if (!table.startsWith(HBASE_METASPACE) && !Pradar.isClusterTestPrefix(table)) {
+            if (!excludeReplace.contains(table) && !table.startsWith(HBASE_METASPACE) && !Pradar.isClusterTestPrefix(table)) {
                 table = Pradar.addClusterTestPrefix(table);
                 tableName = namespace + NAMESPACE_SPLIT + table;
                 return tableName;
             }
         } else {
-            if (!tableName.startsWith(HBASE_METASPACE) && !Pradar.isClusterTestPrefix(tableName)) {
+            if (!excludeReplace.contains(tableName) && !tableName.startsWith(HBASE_METASPACE) && !Pradar.isClusterTestPrefix(tableName)) {
                 tableName = Pradar.addClusterTestPrefix(tableName);
                 return tableName;
             }

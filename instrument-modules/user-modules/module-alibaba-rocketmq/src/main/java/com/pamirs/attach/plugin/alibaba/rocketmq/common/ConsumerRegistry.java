@@ -142,7 +142,7 @@ public final class ConsumerRegistry {
             try {
                 shadowConsumer.start();
                 businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-            } catch (MQClientException e) {
+            } catch (Throwable e) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.MQ)
                         .setErrorCode("MQ-0001")
@@ -150,6 +150,7 @@ public final class ConsumerRegistry {
                         .setDetail("subscription:" + shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner() + "||" + e.getMessage())
                         .report();
                 logger.error("Alibaba-RocketMQ: start shadow DefaultMQPushConsumer err! subscription:{}", shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner(), e);
+                caches.remove(businessConsumer);
                 return false;
             }
             /**

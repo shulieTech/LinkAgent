@@ -90,9 +90,9 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         final String fullMethodName = getMethodName(target);
         String method = fullMethodName;
         String service = "";
-        if (fullMethodName.indexOf(".") != -1) {
-            service = fullMethodName.substring(0, fullMethodName.lastIndexOf("."));
-            method = fullMethodName.substring(fullMethodName.lastIndexOf(".") + 1);
+        if (fullMethodName.indexOf("/") != -1) {
+            service = fullMethodName.substring(0, fullMethodName.lastIndexOf("/"));
+            method = fullMethodName.substring(fullMethodName.lastIndexOf("/") + 1);
         }
 
         record.setService(service);

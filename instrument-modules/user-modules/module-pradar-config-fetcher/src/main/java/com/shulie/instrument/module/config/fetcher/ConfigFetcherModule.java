@@ -51,6 +51,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     private ScheduledFuture future;
 
     private ISamplingRateConfigFetcher samplingRateConfigFetcher;
+    private ConfigManager configManager;
 
     private ZookeeperOptions buildZookeeperOptions() {
         ZookeeperOptions zookeeperOptions = new ZookeeperOptions();
@@ -73,12 +74,14 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
                 }
                 try {
                     if (StringUtils.equalsIgnoreCase(configFetchType, "zookeeper")) {
-                        ConfigManager.getInstance(buildZookeeperOptions()).initAll();
+                        configManager = ConfigManager.getInstance(buildZookeeperOptions());
+                        configManager.initAll();
                     } else {
                         int interval = simulatorConfig.getIntProperty("pradar.config.fetch.interval", 60);
                         String unit = simulatorConfig.getProperty("pradar.config.fetch.unit", "SECONDS");
                         TimeUnit timeUnit = TimeUnit.valueOf(unit);
-                        ConfigManager.getInstance(interval, timeUnit).initAll();
+                        configManager = ConfigManager.getInstance(interval, timeUnit);
+                        configManager.initAll();
                     }
                     // 采样率配置拉取
                     samplingRateConfigFetcher = SimulatorGuard.getInstance().doGuard(ISamplingRateConfigFetcher.class, new SamplingRateConfigFetcher(buildZookeeperOptions(), simulatorConfig));
@@ -96,13 +99,16 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     @Override
     public void onFrozen() throws Throwable {
         isActive = false;
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
         if (samplingRateConfigFetcher != null) {
             samplingRateConfigFetcher.stop();
         }
-        int interval = simulatorConfig.getIntProperty("config.fetch.interval", 60);
-        String unit = simulatorConfig.getProperty("config.fetch.unit", "SECONDS");
-        TimeUnit timeUnit = TimeUnit.valueOf(unit);
-        ConfigManager.getInstance(interval, timeUnit).destroy();
+        if (configManager != null) {
+            configManager.destroy();
+        }
         if (this.future != null && !this.future.isDone() && !this.future.isCancelled()) {
             this.future.cancel(true);
         }

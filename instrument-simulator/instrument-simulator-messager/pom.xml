@@ -11,13 +11,6 @@
     <artifactId>instrument-simulator-messager</artifactId>
     <name>instrument-simulator-messager ${simulator.major.version}.${simulator.minor.version}</name>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
-            <artifactId>instrument-simulator-messager-api</artifactId>
-        </dependency>
-    </dependencies>
-
     <build>
         <finalName>instrument-simulator-messager-${project.version}</finalName>
         <plugins>

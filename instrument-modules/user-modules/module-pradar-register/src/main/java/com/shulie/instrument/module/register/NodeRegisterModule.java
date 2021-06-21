@@ -85,6 +85,10 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
     @Override
     public void onFrozen() throws Throwable {
         isActive = false;
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
         if (register != null) {
             try {
                 register.stop();

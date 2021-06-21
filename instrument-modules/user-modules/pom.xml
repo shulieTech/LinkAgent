@@ -13,6 +13,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>module-log-data-pusher</module>
         <module>module-pradar-config-fetcher</module>
         <module>module-pradar-core</module>
         <module>module-pradar-register</module>

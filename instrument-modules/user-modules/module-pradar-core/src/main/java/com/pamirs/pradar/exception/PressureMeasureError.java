@@ -67,4 +67,9 @@ public class PressureMeasureError extends Error {
         super(message, cause);
         this.isClusterTest = isClusterTest;
     }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        return this;
+    }
 }

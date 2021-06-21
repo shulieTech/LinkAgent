@@ -115,6 +115,13 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         isActive = false;
     }
 
+    @Override
+    public void onUnload() throws Throwable {
+        if (dataPushManager != null) {
+            dataPushManager.stop();
+        }
+    }
+
     private void readLog(List<PullLogResponse.Log> logs, Integer batchLines, Integer lineStart, String filePath) {
         PullLogResponse.Log log = new PullLogResponse.Log();
         if (null == lineStart) {

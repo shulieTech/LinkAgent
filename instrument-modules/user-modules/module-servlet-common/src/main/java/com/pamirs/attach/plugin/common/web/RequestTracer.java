@@ -336,27 +336,27 @@ public abstract class RequestTracer<REQ, RESP> {
             setAttribute(request, "isTrace", false);
         } else {
             Pradar.clearInvokeContext();
-            Pradar.setDebug(isDebug);
             Pradar.startTrace(traceId, url, StringUtils.upperCase(getMethod(request)));
-            Pradar.setClusterTest(isClusterTestRequest);
-            Pradar.setDebug(isDebug);
             setAttribute(request, "isTrace", true);
         }
 
+        InvokeContext invokeContext = Pradar.getInvokeContext();
+        invokeContext.setClusterTest(isClusterTestRequest);
+        invokeContext.setDebug(isDebug);
         final long contentLength = getContentLength(request);
-        Pradar.requestSize(contentLength < 0 ? 0 : contentLength);
-        String remoteIp = Pradar.getRemoteIp();
+        invokeContext.setRequestSize(contentLength < 0 ? 0 : contentLength);
+        String remoteIp = invokeContext.getRemoteIp();
         if (StringUtils.isBlank(remoteIp) || "127.0.0.1".equals(remoteIp)) {
             remoteIp = getRemoteAddress(request);
         }
         if (StringUtils.isNotBlank(remoteIp)) {
-            Pradar.remoteIp(remoteIp);
+            invokeContext.setRemoteIp(remoteIp);
         }
         String port = getRemotePort(request);
         if (port != null) {
-            Pradar.remotePort(port);
+            invokeContext.setPort(port);
         }
-        Pradar.middlewareName(pluginName);
+        invokeContext.setMiddlewareName(pluginName);
     }
 
     /**

@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.interceptor;
 
+import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.TraceIdGenerator;
@@ -186,10 +187,15 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
             if (Pradar.isClusterTest()) {
                 throw e;
             }
-        } catch (Throwable e) {
+        } catch (PressureMeasureError e) {
             LOGGER.error("ReverseTraceInterceptor after exec err:{}", this.getClass().getName(), e);
             if (Pradar.isClusterTest()) {
-                throw new PradarException(e);
+                throw e;
+            }
+        } catch (Throwable e) {
+            if (Pradar.isClusterTest()) {
+                LOGGER.error("ReverseTraceInterceptor after exec err:{}", this.getClass().getName(), e);
+                throw new PressureMeasureError(e);
             }
         } finally {
             try {
@@ -233,37 +239,42 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
         } else {
             Pradar.startServerInvoke(record.getService(), record.getMethod(), null, record.getContext());
         }
+        InvokeContext invokeContext = Pradar.getInvokeContext();
+        if (invokeContext == null) {
+            return;
+        }
+
         if (record.getClusterTest() != null) {
-            Pradar.setClusterTest(record.getClusterTest());
+            invokeContext.setClusterTest(record.getClusterTest());
         }
         if (Pradar.isRequestOn()) {
-            Pradar.request(record.getRequest());
+            invokeContext.setRequest(record.getRequest());
         }
         if (Pradar.isResponseOn()) {
             if (record.getResponse() != null) {
-                Pradar.response(record.getResponse());
+                invokeContext.setResponse(record.getResponse());
             }
         }
 
         if (record.getRequestSize() != 0) {
-            Pradar.requestSize(record.getRequestSize());
+            invokeContext.setRequestSize(record.getRequestSize());
         }
 
         if (StringUtils.isNotBlank(record.getRemoteIp())) {
-            Pradar.remoteIp(record.getRemoteIp());
+            invokeContext.setRemoteIp(record.getRemoteIp());
         }
         if (StringUtils.isNotBlank(record.getPort())) {
-            Pradar.remotePort(record.getPort());
+            invokeContext.setPort(record.getPort());
         }
 
         if (record.getCallbackMsg() != null) {
-            Pradar.callBack(record.getCallbackMsg());
+            invokeContext.setCallBackMsg(record.getCallbackMsg());
         }
 
         if (record.getMiddlewareName() == null) {
-            Pradar.middlewareName(getPluginName());
+            invokeContext.setMiddlewareName(getPluginName());
         } else {
-            Pradar.middlewareName(record.getMiddlewareName());
+            invokeContext.setMiddlewareName(record.getMiddlewareName());
         }
     }
 
@@ -282,32 +293,33 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
             }
 
             Pradar.startClientInvoke(record.getService(), record.getMethod());
+            InvokeContext invokeContext = Pradar.getInvokeContext();
             if (record.getRequestSize() != 0) {
-                Pradar.requestSize(record.getRequestSize());
+                invokeContext.setRequestSize(record.getRequestSize());
             }
             if (Pradar.isRequestOn()) {
-                Pradar.request(record.getRequest());
+                invokeContext.setRequest(record.getRequest());
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
 
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
 
             if (record.getResponse() != null) {
-                Pradar.response(record.getResponse());
+                invokeContext.setResponse(record.getResponse());
             }
 
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
             if (record.getMiddlewareName() == null) {
-                Pradar.middlewareName(getPluginName());
+                invokeContext.setMiddlewareName(getPluginName());
             } else {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
         } finally {
             if (traceEnabled) {
@@ -342,8 +354,13 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
                 Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
                 return;
             }
+            InvokeContext invokeContext = Pradar.getInvokeContext();
+            if (invokeContext == null) {
+                return;
+            }
+
             if (record.getResponseSize() != 0) {
-                Pradar.responseSize(record.getResponseSize());
+                invokeContext.setResponseSize(record.getResponseSize());
             }
             Object response = record.getResponse();
             if (response != null) {
@@ -351,22 +368,22 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
                     advice.attach(response);
                 }
                 if (Pradar.isResponseOn()) {
-                    Pradar.response(response);
+                    invokeContext.setResponse(response);
                 }
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
 
             if (record.getMiddlewareName() != null) {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
             Pradar.endClientInvoke(record.getResultCode(), getPluginType());
@@ -400,28 +417,33 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
                 }
                 return;
             }
+
+            InvokeContext invokeContext = Pradar.getInvokeContext();
+            if (invokeContext == null) {
+                return;
+            }
             if (record.getResponseSize() != 0) {
-                Pradar.responseSize(record.getResponseSize());
+                invokeContext.setResponseSize(record.getResponseSize());
             }
             Object response = record.getResponse();
             if (response instanceof Throwable) {
                 advice.attach(response);
             }
             if (Pradar.isResponseOn()) {
-                Pradar.response(response);
+                invokeContext.setResponse(response);
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
             if (record.getMiddlewareName() != null) {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
             if (isTrace) {
@@ -469,10 +491,15 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
             if (Pradar.isClusterTest()) {
                 throw e;
             }
-        } catch (Throwable e) {
+        } catch (PressureMeasureError e) {
             LOGGER.error("ReverseTraceInterceptor before exec err:{}", this.getClass().getName(), e);
             if (Pradar.isClusterTest()) {
-                throw new PradarException(e);
+                throw e;
+            }
+        } catch (Throwable e) {
+            if (Pradar.isClusterTest()) {
+                LOGGER.error("ReverseTraceInterceptor before exec err:{}", this.getClass().getName(), e);
+                throw new PressureMeasureError(e);
             }
         } finally {
             try {

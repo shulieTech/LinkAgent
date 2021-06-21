@@ -74,15 +74,15 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
                 new Routing(
                         ModuleClassLoader.class.getClassLoader(),
                         //声明所有模块需要找框架加载的类列表,模块类加载会优先从这份列表中加载
-                        "^com\\.shulie\\.instrument\\.simulator\\.api\\..*",
-                        "^com\\.shulie\\.instrument\\.simulator\\.spi\\..*",
-                        "^org\\.apache\\.commons\\.lang\\..*",
-                        "^org\\.codehaus\\.groovy\\..*",
-                        "^groovy\\..*",
-                        "^org\\.slf4j\\..*",
-                        "^ch\\.qos\\.logback\\..*",
-                        "^org\\.objectweb\\.asm\\..*",
-                        "^javax\\.annotation\\.Resource.*$"
+                        "com.shulie.instrument.simulator.api.*",
+                        "com.shulie.instrument.simulator.spi.*",
+                        "org.apache.commons.lang.*",
+                        "org.codehaus.groovy.*",
+                        "groovy.*",
+                        "org.slf4j.*",
+                        "ch.qos.logback.*",
+                        "org.objectweb.asm.*",
+                        "javax.annotation.Resource*"
                 )
         );
         this.checksumCRC32 = FileUtils.checksumCRC32(moduleJarFile);
@@ -202,18 +202,6 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
 
         }
 
-    }
-
-    @Override
-    protected Class<?> loadClassInternal(String name, boolean resolve) throws ClassNotFoundException {
-        if (classLoaderService.isSunReflectClass(name)) {
-            throw new ModuleLoaderException(
-                    String
-                            .format(
-                                    "[ModuleClassLoader] %s : can not load class: %s, this class can only be loaded by sun.reflect.DelegatingClassLoader",
-                                    moduleId, name));
-        }
-        return super.loadClassInternal(name, resolve);
     }
 
     public File getModuleJarFile() {

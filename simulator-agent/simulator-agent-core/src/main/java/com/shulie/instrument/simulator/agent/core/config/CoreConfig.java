@@ -161,9 +161,9 @@ public class CoreConfig {
              */
             if (StringUtils.isNotBlank(appName) && StringUtils.indexOf(cpath, "/" + appName + "/") == -1) {
                 cpath += appName;
-                return isMultiAppSwitch() ? cpath + '/' + PidUtils.getPid() : cpath;
+                return isMultiAppSwitch() ? cpath + '/' + AddressUtils.getLocalAddress() + '/' + PidUtils.getPid() : cpath;
             }
-            return isMultiAppSwitch() ? path + '/' + PidUtils.getPid() : path;
+            return isMultiAppSwitch() ? path + '/' + AddressUtils.getLocalAddress() + '/' + PidUtils.getPid() : path;
         }
         String value = System.getProperty("user.home") + File.separator + "pradarlogs" + File.separator + getAppName();
         if (isMultiAppSwitch()) {

@@ -54,6 +54,15 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         return KafkaConstants.PLUGIN_TYPE;
     }
 
+    /**
+     * 是否是调用端
+     *
+     * @return
+     */
+    @Override
+    public boolean isClient(Advice advice) {
+        return false;
+    }
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {

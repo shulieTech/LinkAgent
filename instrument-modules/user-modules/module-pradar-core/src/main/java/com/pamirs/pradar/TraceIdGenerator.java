@@ -90,7 +90,7 @@ public class TraceIdGenerator {
     }
 
     public static String generate(String ip) {
-        if (StringUtils.isNotBlank(ip)) {
+        if (StringUtils.isNotBlank(ip) && validate(ip)) {
             return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId());
         } else {
             return generate();

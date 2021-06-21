@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -90,8 +91,9 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         }
 
         if (container == null) {
+            container = externalContainer;
             logger.warn("SIMULATOR: kafka consumer register error. field {} is null. {}", KafkaConstants.REFLECT_FIELD_CONTAINER, externalContainer.getClass().getName());
-            return;
+//            return;
         }
 
         Object containerProperties = null;
@@ -157,6 +159,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         try {
             concurrency = Reflect.on(container).call(KafkaConstants.REFLECT_METHOD_GET_CONCURRENCY).get();
         } catch (ReflectException e) {
+            //低版本spring-kafka无法获取到该值,TODO 考虑是否通过配置的方式
+            concurrency = 1;
         }
 
         Object consumerFactory = null;
@@ -169,7 +173,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             return;
         }
 
-        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(container.getClass())
+        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ConcurrentMessageListenerContainer.class)
                 .setInitMethodName("doStart")
                 .addConstructorArgValue(consumerFactory)
                 .addConstructorArgValue(ptObject)

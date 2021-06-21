@@ -83,7 +83,7 @@ public class Reflect {
             Field field = field0(name);
             field.set(object, unwrap(value));
             return this;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }
@@ -157,7 +157,7 @@ public class Reflect {
         try {
             Field field = field0(name);
             return field(field);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }
@@ -165,7 +165,7 @@ public class Reflect {
     public Reflect field(Field field) throws ReflectException {
         try {
             return on(field.get(object));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }
@@ -216,11 +216,7 @@ public class Reflect {
     }
 
     public Reflect call(Method method, Object... args) throws ReflectException {
-        try {
-            return on(method, object, args);
-        } catch (ReflectException e) {
-            throw new ReflectException(e);
-        }
+        return on(method, object, args);
     }
 
     public Reflect call(String name, Object... args) throws ReflectException {
@@ -404,7 +400,7 @@ public class Reflect {
     private static Reflect on(Constructor<?> constructor, Object... args) throws ReflectException {
         try {
             return on(accessible(constructor).newInstance(args));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }
@@ -419,7 +415,7 @@ public class Reflect {
             } else {
                 return on(method.invoke(object, args));
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }
@@ -450,7 +446,7 @@ public class Reflect {
     private static Class<?> forName(String name) throws ReflectException {
         try {
             return Class.forName(name);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }
@@ -458,7 +454,7 @@ public class Reflect {
     private static Class<?> forName(String name, ClassLoader classLoader) throws ReflectException {
         try {
             return Class.forName(name, true, classLoader);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ReflectException(e);
         }
     }

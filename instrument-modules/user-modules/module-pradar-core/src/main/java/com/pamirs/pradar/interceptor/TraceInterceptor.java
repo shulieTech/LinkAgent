@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.interceptor;
 
+import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.TraceIdGenerator;
@@ -216,10 +217,15 @@ abstract class TraceInterceptor extends BaseInterceptor {
             if (Pradar.isClusterTest()) {
                 throw e;
             }
-        } catch (Throwable e) {
+        } catch (PressureMeasureError e) {
             LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
             if (Pradar.isClusterTest()) {
-                throw new PradarException(e);
+                throw e;
+            }
+        } catch (Throwable e) {
+            if (Pradar.isClusterTest()) {
+                LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
+                throw new PressureMeasureError(e);
             }
         } finally {
             try {
@@ -270,32 +276,37 @@ abstract class TraceInterceptor extends BaseInterceptor {
         } else {
             Pradar.startServerInvoke(record.getService(), record.getMethod(), null, record.getContext());
         }
+
+        InvokeContext invokeContext = Pradar.getInvokeContext();
+        if (invokeContext == null) {
+            return;
+        }
         if (record.getClusterTest() != null) {
-            Pradar.setClusterTest(record.getClusterTest());
+            invokeContext.setClusterTest(record.getClusterTest());
         }
         if (Pradar.isRequestOn()) {
-            Pradar.request(record.getRequest());
+            invokeContext.setRequest(record.getRequest());
         }
         advice.mark(BEFORE_TRACE_SUCCESS);
         if (record.getRequestSize() != 0) {
-            Pradar.requestSize(record.getRequestSize());
+            invokeContext.setRequestSize(record.getRequestSize());
         }
 
         if (StringUtils.isNotBlank(record.getRemoteIp())) {
-            Pradar.remoteIp(record.getRemoteIp());
+            invokeContext.setRemoteIp(record.getRemoteIp());
         }
         if (StringUtils.isNotBlank(record.getPort())) {
-            Pradar.remotePort(record.getPort());
+            invokeContext.setPort(record.getPort());
         }
 
         if (record.getCallbackMsg() != null) {
-            Pradar.callBack(record.getCallbackMsg());
+            invokeContext.setCallBackMsg(record.getCallbackMsg());
         }
 
         if (record.getMiddlewareName() == null) {
-            Pradar.middlewareName(getPluginName());
+            invokeContext.setMiddlewareName(getPluginName());
         } else {
-            Pradar.middlewareName(record.getMiddlewareName());
+            invokeContext.setMiddlewareName(record.getMiddlewareName());
         }
     }
 
@@ -314,26 +325,32 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
 
             Pradar.startClientInvoke(record.getService(), record.getMethod());
+            InvokeContext invokeContext = Pradar.getInvokeContext();
             advice.mark(BEFORE_TRACE_SUCCESS);
+            if (invokeContext == null) {
+                return;
+            }
             if (record.getRequestSize() != 0) {
-                Pradar.requestSize(record.getRequestSize());
+                invokeContext.setRequestSize(record.getRequestSize());
             }
             if (Pradar.isRequestOn()) {
-                Pradar.request(record.getRequest());
+                invokeContext.setRequest(record.getRequest());
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
-            Pradar.remotePort(record.getPort());
+            if (StringUtils.isNotBlank(record.getPort())) {
+                invokeContext.setPort(record.getPort());
+            }
 
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
             if (record.getMiddlewareName() == null) {
-                Pradar.middlewareName(getPluginName());
+                invokeContext.setMiddlewareName(getPluginName());
             } else {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
         } finally {
             if (traceEnabled) {
@@ -370,29 +387,33 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
                 return;
             }
+            InvokeContext invokeContext = Pradar.getInvokeContext();
+            if (invokeContext == null) {
+                return;
+            }
             if (record.getResponseSize() != 0) {
-                Pradar.responseSize(record.getResponseSize());
+                invokeContext.setResponseSize(record.getResponseSize());
             }
             Object response = record.getResponse();
             if (response instanceof Throwable) {
                 advice.attach(response);
             }
             if (Pradar.isResponseOn()) {
-                Pradar.response(response);
+                invokeContext.setResponse(response);
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
 
             if (record.getMiddlewareName() != null) {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
             Pradar.endClientInvoke(record.getResultCode(), getPluginType());
@@ -422,6 +443,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
         try {
             SpanRecord record = afterTrace(advice);
             if (record == null) {
+                if (!Pradar.hasInvokeContext() || Pradar.getInvokeContext().isEmpty()) {
+                    return;
+                }
                 //如果上下文开始了，但是这里没有，则需要强制结束
                 if (isTrace) {
                     Pradar.endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
@@ -430,28 +454,32 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 }
                 return;
             }
+            InvokeContext invokeContext = Pradar.getInvokeContext();
+            if (invokeContext == null) {
+                return;
+            }
             if (record.getResponseSize() != 0) {
-                Pradar.responseSize(record.getResponseSize());
+                invokeContext.setResponseSize(record.getResponseSize());
             }
             Object response = record.getResponse();
             if (response instanceof Throwable) {
                 advice.attach(response);
             }
             if (Pradar.isResponseOn()) {
-                Pradar.response(response);
+                invokeContext.setResponse(response);
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
             if (record.getMiddlewareName() != null) {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
             if (isTrace) {
@@ -501,10 +529,15 @@ abstract class TraceInterceptor extends BaseInterceptor {
             if (Pradar.isClusterTest()) {
                 throw e;
             }
-        } catch (Throwable e) {
+        } catch (PressureMeasureError e) {
             LOGGER.error("TraceInterceptor after exec err:{}", this.getClass().getName(), e);
             if (Pradar.isClusterTest()) {
-                throw new PradarException(e);
+                throw e;
+            }
+        } catch (Throwable e) {
+            if (Pradar.isClusterTest()) {
+                LOGGER.error("TraceInterceptor after exec err:{}", this.getClass().getName(), e);
+                throw new PressureMeasureError(e);
             }
         } finally {
             try {
@@ -554,10 +587,15 @@ abstract class TraceInterceptor extends BaseInterceptor {
             if (Pradar.isClusterTest()) {
                 throw e;
             }
-        } catch (Throwable e) {
+        } catch (PressureMeasureError e) {
             LOGGER.error("TraceInterceptor exception exec err:{}", this.getClass().getName(), e);
             if (Pradar.isClusterTest()) {
-                throw new PradarException(e);
+                throw e;
+            }
+        } catch (Throwable e) {
+            if (Pradar.isClusterTest()) {
+                LOGGER.error("TraceInterceptor exception exec err:{}", this.getClass().getName(), e);
+                throw new PressureMeasureError(e);
             }
         } finally {
             try {
@@ -595,26 +633,30 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
                 return;
             }
+            InvokeContext invokeContext = Pradar.getInvokeContext();
+            if (invokeContext == null) {
+                return;
+            }
             Object response = record.getResponse();
             if (response != null && response instanceof Throwable) {
                 advice.attach(response);
             }
             if (Pradar.isResponseOn()) {
-                Pradar.response(response);
+                invokeContext.setResponse(response);
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
 
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
 
             if (record.getMiddlewareName() != null) {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
             Pradar.endClientInvoke(record.getResultCode(), getPluginType());
         } catch (Throwable e) {
@@ -641,27 +683,31 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 }
                 return;
             }
+            InvokeContext invokeContext = Pradar.getInvokeContext();
+            if (invokeContext == null) {
+                return;
+            }
             Object response = record.getResponse();
             if (response != null && response instanceof Throwable) {
                 advice.attach(response);
             }
 
             if (Pradar.isExceptionOn()) {
-                Pradar.response(response);
+                invokeContext.setResponse(response);
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
-                Pradar.remoteIp(record.getRemoteIp());
+                invokeContext.setRemoteIp(record.getRemoteIp());
             }
 
             if (StringUtils.isNotBlank(record.getPort())) {
-                Pradar.remotePort(record.getPort());
+                invokeContext.setPort(record.getPort());
             }
 
             if (record.getMiddlewareName() != null) {
-                Pradar.middlewareName(record.getMiddlewareName());
+                invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
             if (record.getCallbackMsg() != null) {
-                Pradar.callBack(record.getCallbackMsg());
+                invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
             if (isTrace) {
                 Pradar.endTrace(record.getResultCode(), getPluginType());

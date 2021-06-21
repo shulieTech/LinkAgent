@@ -14,9 +14,6 @@
  */
 package com.pamirs.pradar.interceptor;
 
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.exception.PradarException;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,25 +36,7 @@ public abstract class ModificationInterceptorAdaptor extends ModificationInterce
      */
     @Override
     public final Object[] getParameter(Advice advice) throws Throwable {
-        try {
-            return getParameter0(advice);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (Throwable t) {
-            LOGGER.error("", t);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(t);
-            }
-        }
-        return advice.getParameterArray();
+        return getParameter0(advice);
     }
 
     public Object[] getParameter0(Advice advice) throws Throwable {
@@ -73,30 +52,12 @@ public abstract class ModificationInterceptorAdaptor extends ModificationInterce
      */
     @Override
     public final Object getResult(Advice advice) throws Throwable {
-        try {
-            return getResult0(advice);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (Throwable t) {
-            LOGGER.error("", t);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(t);
-            }
-        }
-        return advice.getReturnObj();
+        return getResult0(advice);
     }
 
     public Object getResult0(Advice advice) throws Throwable {
         if (advice.getThrowable() != null) {
-            throw new RuntimeException(advice.getThrowable());
+            throw advice.getThrowable();
         } else {
             return advice.getReturnObj();
         }
@@ -109,28 +70,6 @@ public abstract class ModificationInterceptorAdaptor extends ModificationInterce
      */
     @Override
     public final Object getExceptionResult(Advice advice) throws Throwable {
-        try {
-            return getResult0(advice);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (Throwable t) {
-            LOGGER.error("", t);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(t);
-            }
-        }
-        if (advice.getThrowable() != null) {
-            throw new RuntimeException(advice.getThrowable());
-        } else {
-            throw new RuntimeException();
-        }
+        return getResult0(advice);
     }
 }

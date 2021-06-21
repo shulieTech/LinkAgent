@@ -16,8 +16,8 @@ package com.pamirs.pradar.utils;
 
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarAppender;
 import com.pamirs.pradar.PradarCoreUtils;
+import com.pamirs.pradar.PradarSwitcher;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -46,7 +46,6 @@ import java.util.concurrent.TimeUnit;
 public class MonitorCollector {
 
     private final static Logger logger = LoggerFactory.getLogger(MonitorCollector.class.getName());
-    private static PradarAppender monitorAppender = Pradar.getServerMonitorAppender();
 
     private static final ThreadLocal<DecimalFormat> decimalFormatThreadLocal = new ThreadLocal<DecimalFormat>() {
         @Override
@@ -74,6 +73,9 @@ public class MonitorCollector {
         future = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (!PradarSwitcher.isMonitorEnabled()) {
+                    return;
+                }
                 try {
                     long timeStamp = System.currentTimeMillis() / 1000;
                     String ip = PradarCoreUtils.getLocalAddress();
@@ -108,7 +110,7 @@ public class MonitorCollector {
                             .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|')
                             .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
                             .append(PradarCoreUtils.NEWLINE);
-                    monitorAppender.append(stringBuilder.toString());
+                    Pradar.commitMonitorLog(stringBuilder.toString());
                 } catch (Throwable e) {
                     if (printLogCount > 0) {
                         printLogCount--;
@@ -303,7 +305,7 @@ public class MonitorCollector {
             while ((line = in1.readLine()) != null) {
                 line = line.trim();
                 if (line.startsWith("Speed:")) {
-                    String[] temp = org.apache.commons.lang.StringUtils.split(line,' ');
+                    String[] temp = org.apache.commons.lang.StringUtils.split(line, ' ');
                     speed = temp[1];
                     break;
                 }

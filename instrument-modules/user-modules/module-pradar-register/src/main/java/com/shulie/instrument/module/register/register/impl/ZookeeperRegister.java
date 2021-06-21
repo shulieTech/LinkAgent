@@ -341,7 +341,6 @@ public class ZookeeperRegister implements Register {
                 LOGGER.error("[pradar-register] unregister node to zk for heartbeat node err: {}!", heartbeatPath, e);
             }
         }
-        this.zkClient.deleteQuietly(this.heartbeatPath);
         try {
             this.zkClient.stop();
         } catch (Throwable e) {

@@ -25,7 +25,6 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -36,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * @since 2020/8/17 10:13 上午
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "dbcp2", version = "1.0.0", author = "xiaobin@shulie.io",description = "dbcp2数据源")
+@ModuleInfo(id = "dbcp2", version = "1.0.0", author = "xiaobin@shulie.io", description = "dbcp2数据源")
 public class Dbcp2Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static Logger logger = LoggerFactory.getLogger(Dbcp2Plugin.class);
 
@@ -53,12 +52,10 @@ public class Dbcp2Plugin extends ModuleLifecycleAdapter implements ExtensionModu
 
             }
         });
+    }
 
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                DataSourceWrapUtil.destroy();
-            }
-        });
+    @Override
+    public void onUnload() throws Throwable {
+        DataSourceWrapUtil.destroy();
     }
 }

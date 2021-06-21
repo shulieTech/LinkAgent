@@ -43,7 +43,7 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
     }
 
     @Override
-    public void onFrozen() throws Throwable {
+    public void onUnload() throws Throwable {
         ConfigCache.clear();
     }
 
@@ -203,8 +203,12 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
                 startMethod.addInterceptor(Listeners.of(KafkaListenerContainerInterceptor.class));
 
+                //高版本
                 target.getDeclaredMethods("pollAndInvoke").addInterceptor(Listeners.of(
                     SpringKafkaPollAndInvokeInterceptor.class));
+                //低版本
+                target.getDeclaredMethods("processSeeks").addInterceptor(Listeners.of(
+                        SpringKafkaProcessSeeksInterceptor.class));
             }
         });
     }

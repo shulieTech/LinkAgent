@@ -318,7 +318,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             PradarSwitcher.clusterTestReady();
         } else {
             // 本次配置没有成功拉取 并且 历史无成功拉取配置
-            // 中断压测
+            // 中断压测,配置如果从未成功过，会导致module模块无法加载，所有模块无法生效
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info("SIMULATOR: failed to fetched config.");
             }

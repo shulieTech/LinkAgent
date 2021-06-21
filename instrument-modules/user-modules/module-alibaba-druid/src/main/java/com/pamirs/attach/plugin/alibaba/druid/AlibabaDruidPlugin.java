@@ -26,7 +26,6 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 
@@ -36,7 +35,7 @@ import org.kohsuke.MetaInfServices;
  * @author vincent
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "alibaba-druid", version = "1.0.0", author = "xiaobin@shulie.io",description = "阿里巴巴 druid 数据源")
+@ModuleInfo(id = "alibaba-druid", version = "1.0.0", author = "xiaobin@shulie.io", description = "阿里巴巴 druid 数据源")
 public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
@@ -62,14 +61,10 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
             }
         });
 
-        /**
-         * 添加可释放资源
-         */
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                DataSourceWrapUtil.destroy();
-            }
-        });
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
+        DataSourceWrapUtil.destroy();
     }
 }

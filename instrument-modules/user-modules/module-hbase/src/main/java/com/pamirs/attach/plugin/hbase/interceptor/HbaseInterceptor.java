@@ -99,6 +99,9 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
      * @param tableName
      */
     private void check(String tableName) {
+        if (tableName.equals("hbase:meta")){
+            return;
+        }
         tableName = HBaseTableNameUtils.getTableNameNoContainsNameSpace(tableName);
         if (GlobalConfig.getInstance().isShadowHbaseServer()) {
             return;

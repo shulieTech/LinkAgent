@@ -14,11 +14,14 @@
  */
 package com.pamirs.attach.plugin.grpc.interceptor;
 
+import javax.annotation.Resource;
+
+import com.pamirs.attach.plugin.grpc.GrpcConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
-import com.pamirs.pradar.pressurement.agent.shared.constant.DataConstants;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.grpc.Metadata;
 
 /**
@@ -30,7 +33,8 @@ import io.grpc.Metadata;
  * @Date 2020-05-14 22:26
  */
 public class ServerPressurePassInterceptor extends AroundInterceptor {
-
+    @Resource
+    protected DynamicFieldManager manager;
     @Override
     public void doBefore(Advice advice) {
         Object[] args = advice.getParameterArray();
@@ -38,9 +42,12 @@ public class ServerPressurePassInterceptor extends AroundInterceptor {
             if (PradarSwitcher.isClusterTestEnabled()) {
                 if (args[1] instanceof io.grpc.Metadata) {
                     io.grpc.Metadata metadata = (Metadata) args[1];
-                    final String useragent = metadata.get(Metadata.Key.of(DataConstants.GRPC_HEADER, Metadata.ASCII_STRING_MARSHALLER));
-                    if (null != useragent && useragent.startsWith(DataConstants.HTTP_USER_AGENT_SUFFIX)) {
+                    Metadata.Key<String> key = Metadata.Key.of("p-pradar-cluster-test",
+                        Metadata.ASCII_STRING_MARSHALLER);
+                    String pt = metadata.get(key);
+                    if("1".equals(pt) || "true".equals(pt)){
                         Pradar.setClusterTest(true);
+                        manager.setDynamicField(advice.getTarget(), GrpcConstants.DYNAMIC_FIELD_IS_CLUSTER_TEST, true);
                     }
                 }
             }

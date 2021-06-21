@@ -226,6 +226,10 @@ public final class InvokeContext extends AbstractContext {
         return parentInvokeContext;
     }
 
+    public void setParentInvokeContext(InvokeContext invokeContext) {
+        this.parentInvokeContext = invokeContext;
+    }
+
     /**
      * 外置的 Pradar 埋点逻辑，方便在不同的中间件做埋点
      */

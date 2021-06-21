@@ -39,15 +39,22 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         /* *****GRPC client**** */
         enhanceNewCall("io.grpc.internal.ManagedChannelImpl$RealChannel");
         enhanceNewCall("io.grpc.internal.OobChannel");
+        enhanceNewCall("io.grpc.internal.ManagedChannelImpl");
+        enhanceNewCall("io.grpc.internal.ForwardingManagedChannel");
+        enhanceNewCall("io.grpc.internal.ManagedChannelOrphanWrapper");
         enhanceClientCallStart("io.grpc.internal.ClientCallImpl");
         /* *****GRPC client**** */
 
         /* *****GRPC server**** */
-        enhanceServerStreamCreated("io.grpc.internal.ServerImpl$ServerTransportListenerImpl");
+//        enhanceServerStreamCreated("io.grpc.internal.ServerImpl$ServerTransportListenerImpl");
         //压测标传递
-        enhanceServerPressurePass("io.grpc.stub.ServerCalls$UnaryServerCallHandler");
+//        enhanceServerPressurePass("io.grpc.stub.ServerCalls$UnaryServerCallHandler");
         //压测标重置
-        enhanceServerPressureReset("io.grpc.stub.ServerCalls$UnaryServerCallHandler$UnaryServerCallListener");
+//        enhanceServerPressureReset("io.grpc.stub.ServerCalls$UnaryServerCallHandler$UnaryServerCallListener");
+        //io.grpc.internal.ServerImpl.ServerTransportListenerImpl.startCall
+        enhanceServerTransportListenerImplStartCall("io.grpc.internal.ServerImpl$ServerTransportListenerImpl");
+        enhanceServerStreamListenerImplHalfClosed("io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl");
+
         /* *****GRPC server**** */
     }
 
@@ -67,6 +74,30 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod startMethod = target.getDeclaredMethod("start", "io.grpc.ClientCall$Listener", "io.grpc.Metadata");
                 startMethod.addInterceptor(Listeners.of(ClientCallStartInterceptor.class));
+            }
+        });
+    }
+
+    private void enhanceServerTransportListenerImplStartCall(String className) {
+        enhanceTemplate.enhance(this, className, new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("startCall",
+                        "io.grpc.internal.ServerStream", "java.lang.String",
+                        "io.grpc.ServerMethodDefinition", "io.grpc.Metadata", "io.grpc.Context$CancellableContext",
+                        "io.grpc.internal.StatsTraceContext");
+                streamCreatedMethod.addInterceptor(Listeners.of(ServerTransportListenerImplStartCallInterceptor.class));
+            }
+        });
+    }
+
+    private void enhanceServerStreamListenerImplHalfClosed(String className) {
+        enhanceTemplate.enhance(this, className, new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("halfClosed"
+                        );
+                streamCreatedMethod.addInterceptor(Listeners.of(ServerStreamListenerImplHalfClosedInterceptor.class));
             }
         });
     }

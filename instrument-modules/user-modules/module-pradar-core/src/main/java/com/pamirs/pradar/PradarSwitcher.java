@@ -56,6 +56,26 @@ public class PradarSwitcher {
     private static boolean isTraceEnabled = getTraceEnabled();
 
     /**
+     * 是否支持 monitor
+     */
+    private static boolean isMonitorEnabled = getMonitorEnabled();
+
+    /**
+     * RPC 日志开关，关闭之后不会记录 rpc 日志，但是会照生成 Pradar 上下文
+     */
+    static private boolean rpcStatus = getRpcStatus();
+
+    /**
+     * monitor 日志开关，关闭之后不会记录 monitor 日志,但是 monitor 日志还是会获取
+     */
+    static private boolean monitorStatus = getMonitorStatus();
+
+    /**
+     * 数据透传开关，关闭之后不会透传任何数据
+     */
+    static private boolean userDataEnabled = getUserDataEnabled();
+
+    /**
      * 是否支持压测
      */
     private static boolean isClusterTestEnabled = getPressEnabled();
@@ -93,25 +113,6 @@ public class PradarSwitcher {
      * -pradar.localip.use = false 返回是否使用本地IP的配置参数,默认false
      */
     static public final boolean USE_LOCAL_IP = Boolean.valueOf(getUseLocalIp());
-    /**
-     * 数据透传开关，关闭之后不会透传任何数据
-     */
-    static private AtomicBoolean userDataEnabled = new AtomicBoolean(true);
-
-    /**
-     * 参数 DUMP 开关，关闭之后不会再打印 DUMP 日志
-     */
-    static private AtomicBoolean logDumpEnabled = new AtomicBoolean(true);
-
-    /**
-     * RPC 日志开关，关闭之后不会记录 rpc 日志，但是会照生成 Pradar 上下文
-     */
-    static private AtomicBoolean rpcRecord = new AtomicBoolean(true);
-
-    /**
-     * BIZ 日志开关，关闭之后不会记录 biz 日志
-     */
-    static private AtomicBoolean bizRecord = new AtomicBoolean(true);
 
     /**
      * 采样频率 1/x，有效范围在 [1, 9999] 之间，超出范围的数值都作为全采样处理。
@@ -403,123 +404,76 @@ public class PradarSwitcher {
         if (interval < 1 || interval > 9999) {
             interval = 1;
         }
-        LOGGER.info("setSamplingInterval={}" , interval);
+        LOGGER.info("setSamplingInterval={}", interval);
         samplingInterval = interval;
-    }
-
-    static public final boolean turnLogDumpOn() {
-        LOGGER.info("turnLogDumpOn");
-        return logDumpEnabled.compareAndSet(false, true);
-    }
-
-    static public final boolean turnLogDumpOff() {
-        LOGGER.info("turnLogDumpOff");
-        return logDumpEnabled.compareAndSet(true, false);
-    }
-
-    /**
-     * 检查是否开启日志 DUMP 功能
-     */
-    static public final boolean isLogDumpEnabled() {
-        return logDumpEnabled.get();
-    }
-
-    static public boolean turnUserDataOn() {
-        boolean compareAndSet = userDataEnabled.compareAndSet(false, true);
-        if (compareAndSet) {
-            LOGGER.info("turnUserDataOn");
-        }
-        return compareAndSet;
-    }
-
-    static public boolean turnUserDataOff() {
-        boolean compareAndSet = userDataEnabled.compareAndSet(true, false);
-        if (compareAndSet) {
-            LOGGER.info("turnUserDataOff");
-        }
-        return compareAndSet;
     }
 
     /**
      * 检查是否透传
      */
     static public final boolean isUserDataEnabled() {
-        return userDataEnabled.get();
+        return userDataEnabled;
     }
 
-    /**
-     * rpc 日志记录开关
-     */
-    static public boolean turnRpcOn() {
-        boolean compareAndSet = rpcRecord.compareAndSet(false, true);
-        if (compareAndSet) {
-            LOGGER.info("turnRpcOn");
-        }
-        return compareAndSet;
+    static public final boolean getRpcStatus() {
+        Boolean flag = Boolean.valueOf(getSystemProperty("pradar.rpc.switch", "true"));
+        LOGGER.info("pradar.rpc.switch={}", flag);
+        return flag;
     }
 
-    static public boolean turnRpcOff() {
-        boolean compareAndSet = rpcRecord.compareAndSet(true, false);
-        if (compareAndSet) {
-            LOGGER.info("turnRpcOff");
-        }
-        return compareAndSet;
+    static public final boolean getMonitorStatus() {
+        Boolean flag = Boolean.valueOf(getSystemProperty("pradar.monitor.switch", "true"));
+        LOGGER.info("pradar.monitor.switch={}", flag);
+        return flag;
+    }
+
+    static public final boolean getUserDataEnabled() {
+        Boolean flag = Boolean.valueOf(getSystemProperty("pradar.user.data.switch", "true"));
+        LOGGER.info("pradar.user.data.switch={}", flag);
+        return flag;
     }
 
     static public final boolean isRpcOff() {
-        return !rpcRecord.get();
+        return !rpcStatus;
     }
 
-    /**
-     * 业务日志记录开关
-     */
-    static public boolean turnBizOn() {
-        boolean compareAndSet = bizRecord.compareAndSet(false, true);
-        if (compareAndSet) {
-            LOGGER.info("turnBizOn");
-        }
-        return compareAndSet;
-    }
-
-    static public boolean turnBizOff() {
-        boolean compareAndSet = bizRecord.compareAndSet(true, false);
-        if (compareAndSet) {
-            LOGGER.info("turnBizOff");
-        }
-        return compareAndSet;
-    }
-
-    static public final boolean isBizOff() {
-        return !bizRecord.get();
+    static public final boolean isMonitorOff() {
+        return !monitorStatus;
     }
 
     private static Boolean getPressEnabled() {
         Boolean flag = Boolean.valueOf(getSystemProperty("pradar.switcher.press", "true"));
-        LOGGER.info("pradar.switcher.press={}" , flag);
+        LOGGER.info("pradar.switcher.press={}", flag);
         return flag;
     }
 
     private static boolean getKafkaMessageHeadersEnabled() {
         Boolean flag = Boolean.valueOf(getSystemProperty("is.kafka.message.headers", "false"));
-        LOGGER.info("is.kafka.shadow.message={}" , flag);
+        LOGGER.info("is.kafka.shadow.message={}", flag);
         return flag;
     }
 
     private static boolean getRabbitmqRoutingkeyEnabled() {
         Boolean flag = Boolean.valueOf(getSystemProperty("is.rabbitmq.routingkey", "true"));
-        LOGGER.info("is.rabbitmq.routingkey.enable={}" , flag);
+        LOGGER.info("is.rabbitmq.routingkey.enable={}", flag);
         return flag;
     }
 
     private static Boolean getPradarLogDaemonEnabled() {
         Boolean flag = Boolean.valueOf(getSystemProperty("pradar.switcher.log.daemon", "true"));
-        LOGGER.info("pradar.switcher.log.daemon={}" , flag);
+        LOGGER.info("pradar.switcher.log.daemon={}", flag);
         return flag;
     }
 
     private static Boolean getTraceEnabled() {
         Boolean flag = Boolean.valueOf(getSystemProperty("pradar.switcher.trace", "true"));
-        LOGGER.info("pradar.switcher.trace={}" , flag);
+        LOGGER.info("pradar.switcher.trace={}", flag);
+        return flag;
+    }
+
+    private static Boolean getMonitorEnabled() {
+        Boolean flag = Boolean.valueOf(getSystemProperty("pradar.switcher.monitor", "true"));
+        LOGGER.info("pradar.switcher.monitor={}", flag);
         return flag;
     }
 
@@ -538,6 +492,15 @@ public class PradarSwitcher {
      */
     public static boolean isTraceEnabled() {
         return isTraceEnabled && isValid;
+    }
+
+    /**
+     * 判断 monitor 是否可用
+     *
+     * @return
+     */
+    public static boolean isMonitorEnabled() {
+        return isMonitorEnabled && isValid;
     }
 
     /**

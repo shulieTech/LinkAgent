@@ -32,7 +32,6 @@ public class PluginMaxRedisExpireTimeInterceptor extends ParametersWrapperInterc
             return args;
         }
         RedisUtils.setMaxRedisExpireTime(advice.getBehavior().getName(),args);
-        LOGGER.error("------jedis----PluginMaxRedisExpireTimeInterceptor");
         return args;
     }
 }

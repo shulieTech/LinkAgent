@@ -110,7 +110,7 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
     }
 
     @Override
-    public void onFrozen() throws Throwable {
+    public void onUnload() throws Throwable {
         EventRouter.router().shutdown();
         AgentOnlineUploader.getInstance().shutdown();
         MonitorCollector.shutdown();

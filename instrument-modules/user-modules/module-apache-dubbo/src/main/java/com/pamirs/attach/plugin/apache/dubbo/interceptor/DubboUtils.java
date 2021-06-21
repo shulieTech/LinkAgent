@@ -79,7 +79,7 @@ class DubboUtils {
                     || rpcException.getCode() == com.alibaba.dubbo.rpc.RpcException.TIMEOUT_EXCEPTION) {
                 return ResultCode.INVOKE_RESULT_TIMEOUT;
             } else if (rpcException.getCode() == RpcException.BIZ_EXCEPTION) {
-                return ResultCode.INVOKE_RESULT_DUBBO_ERR;
+                return ResultCode.INVOKE_RESULT_BIZ_ERR;
             } else {
                 return ResultCode.INVOKE_RESULT_FAILED;
             }
@@ -100,7 +100,7 @@ class DubboUtils {
             if (clazz == null) {
                 continue;
             }
-            builder.append(clazz.getSimpleName()).append(',');
+            builder.append(clazz.getName()).append(',');
         }
         if (builder.length() > 1) {
             builder.deleteCharAt(builder.length() - 1);

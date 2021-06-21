@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 package com.pamirs.attach.plugin.grpc.interceptor;
-
 import com.pamirs.attach.plugin.grpc.GrpcConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarCoreUtils;
@@ -21,21 +20,23 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.grpc.Metadata;
+import io.grpc.internal.ServerStreamListener;
 import org.apache.commons.lang.StringUtils;
 
+import javax.annotation.Resource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * GRPC服务端接收处理请求
- *
- * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
- * @package: com.pamirs.attach.plugin.grpc.interceptor
- * @Date 2020-03-13 15:44
+ * @author angju
+ * @date 2021/6/17 16:37
  */
-public class ServerStreamCreatedInterceptor extends TraceInterceptorAdaptor {
+public class ServerTransportListenerImplStartCallInterceptor extends TraceInterceptorAdaptor{
+    @Resource
+    protected DynamicFieldManager manager;
 
     @Override
     public String getPluginName() {
@@ -58,82 +59,82 @@ public class ServerStreamCreatedInterceptor extends TraceInterceptorAdaptor {
     }
 
     @Override
+    public void beforeFirst(Advice advice) {
+
+    }
+
+    @Override
+    public void beforeLast(Advice advice) {
+
+    }
+
+    @Override
     public SpanRecord beforeTrace(Advice advice) {
-        Object[] args = advice.getParameterArray();
-        if (!validate(args)) {
-            return null;
-        }
+        final String fullMethodName = (String) advice.getParameterArray()[1];
+        Metadata headers = (Metadata) advice.getParameterArray()[3];
         SpanRecord record = new SpanRecord();
 
-        Metadata metadata = (Metadata) args[2];
 
+        record.setContext(generateInvokeContext(headers));
+
+        String method = fullMethodName;
+        String service = "";
+        if (fullMethodName.indexOf("/") != -1) {
+            service = fullMethodName.substring(0, fullMethodName.lastIndexOf("/"));
+            method = fullMethodName.substring(fullMethodName.lastIndexOf("/") + 1);
+        }
+        record.setMethod(method);
+        record.setService(service);
+        return record;
+    }
+
+    private Map<String, String> generateInvokeContext(Metadata headers){
         List<String> traceKeys = Pradar.getInvokeContextTransformKeys();
         Map<String, String> context = new HashMap<String, String>(traceKeys.size());
         for (String traceKey : traceKeys) {
-            final String value = metadata.get(Metadata.Key.of(traceKey, Metadata.ASCII_STRING_MARSHALLER));
+            final String value = headers.get(Metadata.Key.of(traceKey, Metadata.ASCII_STRING_MARSHALLER));
             if (StringUtils.isNotBlank(value)) {
                 context.put(traceKey, value);
             }
         }
-        record.setContext(context);
+        return context;
+    }
 
-        final String fullMethodName = String.valueOf(args[1]);
-        String method = fullMethodName;
-        String service = "";
-        if (fullMethodName.indexOf(".") != -1) {
-            service = fullMethodName.substring(0, fullMethodName.lastIndexOf("."));
-            method = fullMethodName.substring(fullMethodName.lastIndexOf(".") + 1);
-        }
-        record.setMethod(method);
-        record.setService(service);
-        record.setRequest(metadata);
-        String remoteIp = Pradar.getRemoteIp();
-        if (remoteIp == null) {
-            remoteIp = PradarCoreUtils.getLocalAddress();
-        }
+    @Override
+    public void afterFirst(Advice advice) {
 
-        record.setRemoteIp(remoteIp);
-        return record;
+    }
+
+    @Override
+    public void afterLast(Advice advice) {
+        final String fullMethodName = (String) advice.getParameterArray()[1];
+        Metadata headers = (Metadata) advice.getParameterArray()[3];
+        ServerStreamListener serverStreamListener = (ServerStreamListener) advice.getReturnObj();
+        manager.setDynamicField(serverStreamListener, GrpcConstants.DYNAMIC_FIELD_INVOKE_CONTEXT, generateInvokeContext(headers));
+        manager.setDynamicField(serverStreamListener, GrpcConstants.DYNAMIC_FIELD_FULL_METHOD_NAME, fullMethodName);
     }
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        Object[] args = advice.getParameterArray();
-        Object result = advice.getReturnObj();
-        if (!validate(args)) {
-            return null;
-        }
         SpanRecord record = new SpanRecord();
-        record.setResponse(result);
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         return record;
     }
 
     @Override
-    public SpanRecord exceptionTrace(Advice advice) {
-        Object[] args = advice.getParameterArray();
-        if (!validate(args)) {
-            return null;
-        }
-        SpanRecord record = new SpanRecord();
-        record.setResponse(advice.getThrowable());
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
-        return record;
+    public void exceptionFirst(Advice advice) {
+
     }
 
-    boolean validate(Object[] args) {
-        if (args.length == 3) {
-            if (!(args[0] instanceof io.grpc.internal.ServerStream)) {
-                return false;
-            }
-            if (!(args[1] instanceof String)) {
-                return false;
-            }
-            if (!(args[2] instanceof io.grpc.Metadata)) {
-                return false;
-            }
-            return true;
-        }
-        return false;
+    @Override
+    public void exceptionLast(Advice advice) {
+
+    }
+
+    @Override
+    public SpanRecord exceptionTrace(Advice advice) {
+        SpanRecord record = new SpanRecord();
+        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        return record;
     }
 }

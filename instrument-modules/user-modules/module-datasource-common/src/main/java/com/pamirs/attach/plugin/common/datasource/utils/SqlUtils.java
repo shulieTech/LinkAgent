@@ -18,6 +18,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.TableParserResult;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * @Description
@@ -71,6 +72,14 @@ public class SqlUtils {
         }
 
         for (String table : sqlResult.getTables()) {
+            /**
+             * 处理表名前面有scheme或者用户名的情况，取真实的表名
+             */
+            if(table.contains(".")){
+                final String[] tableSplit = StringUtils.split(table, ".");
+                table = tableSplit[tableSplit.length - 1];
+            }
+
             if (!Pradar.isClusterTestPrefix(table)) {
                 return table;
             }

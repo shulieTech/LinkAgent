@@ -14,9 +14,6 @@
  */
 package com.pamirs.pradar.interceptor;
 
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.exception.PradarException;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,25 +33,7 @@ public abstract class ResultInterceptorAdaptor extends ResultInterceptor {
      */
     @Override
     public final Object getResult(Advice advice) throws Throwable {
-        try {
-            return getResult0(advice);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (Throwable t) {
-            LOGGER.error("", t);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(t);
-            }
-        }
-        return advice.getReturnObj();
+        return getResult0(advice);
     }
 
     protected Object getResult0(Advice advice) {

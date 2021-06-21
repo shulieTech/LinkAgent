@@ -73,11 +73,18 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
                 ErrorReporter.Error error = ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0001")
-                        .setMessage("数据源获取链接失败！" + (Pradar.isClusterTest() ? "(压测流量)" : ""))
-                        .setDetail("get connection failed by dbMediatorDataSource, message: " + e.getMessage() + "\r\n" + printStackTrace(e));
+                        .setMessage("数据源获取链接失败！" + ((Pradar.isClusterTest() ? "(压测流量)" : "") + ", url="
+                                + dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()
+                                + ", username=" + dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()))
+                        .setDetail("get connection failed by dbMediatorDataSource, url="
+                                + dataSourceBusiness == null ? null : dataSourceBusiness.getUrl() +
+                                ", username=" + dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()
+                                + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
 //                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
-                throw new PressureMeasureError("get connection failed by dbMediatorDataSource.", e);
+                throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
+                        + dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()
+                        + ", username=" + dataSourceBusiness == null ? null : dataSourceBusiness.getUsername(), e);
             }
         } else {
             final DruidPooledConnection connection = dataSourceBusiness.getConnection();

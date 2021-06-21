@@ -17,7 +17,7 @@ package com.pamirs.attach.plugin.jedis.interceptor;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -182,7 +182,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             }
         }
 
-        throw new PradarException("Jedis not support key deserialize !");
+        throw new PressureMeasureError("Jedis not support key deserialize !");
     }
 
     private Object[] processIndex(Object[] args, Collection<String> whiteList, int keyIndex) {
@@ -195,7 +195,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         } else if (args[keyIndex] instanceof byte[][]) {
             return processKeyByteArray(args, whiteList, keyIndex);
         } else {
-            throw new PradarException("Jedis not support key deserialize !");
+            throw new PressureMeasureError("Jedis not support key deserialize !");
         }
     }
 
@@ -287,7 +287,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                     } else if (data instanceof byte[]) {
                         key = new String((byte[]) data);
                     } else {
-                        throw new PradarException("redis lua not support type " + data.getClass().getName());
+                        throw new PressureMeasureError("redis lua not support type " + data.getClass().getName());
                     }
                     if (RedisUtils.IGNORE_NAME.contains(key)) {
                         continue;
@@ -364,7 +364,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         ptList.add(key.getBytes());
                     }
                 } else {
-                    throw new PradarException("redis lua not support type " + o.getClass().getName());
+                    throw new PressureMeasureError("redis lua not support type " + o.getClass().getName());
                 }
             }
             args[1] = ptList;

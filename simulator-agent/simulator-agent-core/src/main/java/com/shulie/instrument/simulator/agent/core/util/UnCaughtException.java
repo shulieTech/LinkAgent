@@ -12,30 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.pradar.exception;
+package com.shulie.instrument.simulator.agent.core.util;
 
 /**
- * Created by xiaobin on 2017/1/19.
+ * 未捕获异常
+ * 用来封装不希望抛出的异常
  */
-@SuppressWarnings("serial")
-public class PradarException extends RuntimeException {
-    public PradarException() {
-    }
+public class UnCaughtException extends RuntimeException {
 
-    public PradarException(String message) {
-        super(message);
-    }
-
-    public PradarException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public PradarException(Throwable cause) {
+    public UnCaughtException(Throwable cause) {
         super(cause);
-    }
-
-    @Override
-    public Throwable fillInStackTrace() {
-        return this;
     }
 }

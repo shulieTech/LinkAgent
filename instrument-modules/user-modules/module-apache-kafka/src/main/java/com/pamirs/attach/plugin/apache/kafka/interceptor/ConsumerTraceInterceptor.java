@@ -14,11 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.util.Iterator;
-import java.util.Map;
-
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderGetter;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
@@ -35,6 +30,10 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+
+import javax.annotation.Resource;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author jirenhe | jirenhe@shulie.io

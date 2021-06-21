@@ -158,9 +158,9 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             }
 
             if (instrumentClasses.isEmpty()) {
-                String errorMsg = "can't found class:" + classPattern + ".";
+                String errorMsg = "can't found class:" + classPattern;
                 if (foundInterface) {
-                    errorMsg = "can't found impl class with interface:" + classPattern + ".";
+                    errorMsg = "can't found impl class with interface:" + classPattern;
                 } else if (foundEnum) {
                     errorMsg = "can't trace class because of it is a enum:" + classPattern;
                 } else if (foundAnnotation) {

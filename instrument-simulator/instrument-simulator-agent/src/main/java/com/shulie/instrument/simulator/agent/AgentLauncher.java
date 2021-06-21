@@ -206,7 +206,7 @@ public class AgentLauncher {
     }
 
     /**
-     * 动态加载
+     * 动态加载 启动入口
      *
      * @param featureString 启动参数
      *                      [namespace,token,ip,port,prop]

@@ -25,13 +25,11 @@ import com.shulie.instrument.simulator.api.util.Sequencer;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.manager.CoreLoadedClassDataSource;
+import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransformer;
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.GroupMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
 import org.apache.commons.collections.CollectionUtils;
-
-import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransformer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,7 +99,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private void reTransformClasses(
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
-            final Progress progress) throws Throwable {
+            final Progress progress) {
         reTransformClasses(watchId, waitingReTransformClasses, progress, false);
     }
 
@@ -111,7 +109,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private void reTransformClasses(
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
-            final Progress progress, boolean delete) throws Throwable {
+            final Progress progress, boolean delete) {
         // 需要形变总数
         final int total = waitingReTransformClasses.size();
 
@@ -183,13 +181,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                         );
                     }
                 }
-                //如果报错先忽略掉 TODO
             } catch (Throwable causeOfReTransform) {
-                /**
-                 * retransformClasses 可能会导致 VerifyError，暂时还未找到产生这个问题的原因
-                 * 先屏蔽忽略这个问题，后续再查产生这个问题的原因
-                 * TODO
-                 */
                 LOGGER.warn("SIMULATOR: watch={} in module={} single reTransform {} failed, at index={};total={}. ignore this class.",
                         watchId, coreModule.getModuleId(), waitingReTransformClass,
                         index - 1, total,
@@ -239,7 +231,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         // 注册到CoreModule中
         coreModule.getSimulatorClassFileTransformers().add(proxy);
 
-        //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer
+        //这里addTransformer后，接下来引起的类加载都会经过simulatorClassFileTransformer
         inst.addTransformer(proxy, true);
 
 
@@ -260,20 +252,12 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         try {
 
             // 应用JVM
-            try {
-                reTransformClasses(watchId, waitingReTransformClasses, progress);
-            } catch (Throwable throwable) {
-                //ignore
-                /**
-                 * retransformClasses 可能会导致 VerifyError，暂时还未找到产生这个问题的原因
-                 * 先屏蔽忽略这个问题，后续再查产生这个问题的原因
-                 * TODO
-                 */
-            }
-
+            reTransformClasses(watchId, waitingReTransformClasses, progress);
             // 计数
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
             effectMethodCount += proxy.getAffectStatistic().getEffectMethodCount();
+        } catch (Throwable e) {
+            LOGGER.error("dump class error. matcher={}, waitingReTransformClasses={}", matcher, waitingReTransformClasses, e);
         } finally {
             finishProgress(progress, effectClassCount, effectMethodCount);
         }
@@ -298,7 +282,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         // 注册到CoreModule中
         coreModule.getSimulatorClassFileTransformers().add(proxy);
 
-        //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer
+        //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer 每个enhanceTemplate.enhance都是单独的一个transformer
         inst.addTransformer(proxy, true);
 
         // 查找需要渲染的类集合
@@ -318,16 +302,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         try {
 
             // 应用JVM
-            try {
-                reTransformClasses(watchId, waitingReTransformClasses, progress);
-            } catch (Throwable throwable) {
-                //ignore
-                /**
-                 * retransformClasses 可能会导致 VerifyError，暂时还未找到产生这个问题的原因
-                 * 先屏蔽忽略这个问题，后续再查产生这个问题的原因
-                 * TODO
-                 */
-            }
+            reTransformClasses(watchId, waitingReTransformClasses, progress);
 
             // 计数
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
@@ -345,6 +320,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                 }
             }
 
+        } catch (Throwable e) {
+            LOGGER.error("watch class error. waitingReTransformClasses={}, matchers={}", waitingReTransformClasses, matcher, e);
         } finally {
             finishProgress(progress, effectClassCount, effectMethodCount);
         }
@@ -406,16 +383,9 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         beginProgress(progress, waitingReTransformClasses.size());
         try {
             // 应用JVM
-            try {
-                reTransformClasses(watcherId, waitingReTransformClasses, progress, true);
-            } catch (Throwable throwable) {
-                //ignore
-                /**
-                 * retransformClasses 可能会导致 VerifyError，暂时还未找到产生这个问题的原因
-                 * 先屏蔽忽略这个问题，后续再查产生这个问题的原因
-                 * TODO
-                 */
-            }
+            reTransformClasses(watcherId, waitingReTransformClasses, progress, true);
+        } catch (Throwable e) {
+            LOGGER.error("delete transformer error. watcherId={}, waitingReTransformClasses={}", watcherId, waitingReTransformClasses, e);
         } finally {
             finishProgress(progress, cCnt, mCnt);
         }

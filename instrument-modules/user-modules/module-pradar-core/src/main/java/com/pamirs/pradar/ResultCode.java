@@ -33,9 +33,9 @@ public final class ResultCode {
     static public final String INVOKE_RESULT_FAILED = "01";
 
     /**
-     * 返回DUBBO错误
+     * 返回业务错误
      */
-    static public final String INVOKE_RESULT_DUBBO_ERR = "02";
+    static public final String INVOKE_RESULT_BIZ_ERR = "02";
 
     /**
      * 返回超时错误
@@ -46,6 +46,11 @@ public final class ResultCode {
      * 未知
      */
     static public final String INVOKE_RESULT_UNKNOWN = "04";
+
+    /**
+     * 断言失败
+     */
+    static public final String INVOKE_ASSERT_RESULT_FAILED = "05";
 
     /**
      * 判断结果码是否是成功

@@ -304,25 +304,6 @@ public class RoutingURLClassLoader extends URLClassLoader {
         return null;
     }
 
-    /**
-     * Load class from context class loader
-     *
-     * @param name    className
-     * @param resolve 是否resolve
-     * @return resolved
-     */
-    protected Class<?> resolveCurrentClass(final String name, final boolean resolve) {
-        try {
-            return Thread.currentThread().getContextClassLoader().loadClass(name);
-        } catch (Throwable e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("can't resolve class {} from with context classloader {}.", name, this, e);
-            }
-            // ignore
-        }
-        return null;
-    }
-
     @Override
     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
         return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
@@ -399,7 +380,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
         protected boolean isHit(final String javaClassName) {
             for (final String regexExpress : regexExpresses) {
                 try {
-                    if (javaClassName.matches(regexExpress)) {
+                    if (matching(javaClassName, regexExpress)) {
                         return true;
                     }
                 } catch (Throwable cause) {
@@ -409,6 +390,117 @@ public class RoutingURLClassLoader extends URLClassLoader {
             return false;
         }
 
+        /**
+         * 通配符表达式匹配
+         * <p>
+         * 通配符是一种特殊语法，主要有星号(*)和问号(?)组成，在Simulator中主要用来模糊匹配类名和方法名。
+         * 比如：java.lang.String，可以被"*String"所匹配
+         * </p>
+         * <ul>
+         * <li>(null) matching (null) == false</li>
+         * <li>    ANY matching ("*") == true</li>
+         * </ul>
+         *
+         * @param string   目标字符串
+         * @param wildcard 通配符匹配模版
+         * @return true:目标字符串符合匹配模版;false:目标字符串不符合匹配模版
+         */
+        private static boolean matching(final String string, final String wildcard) {
+            if ("*".equals(wildcard)) {
+                return true;
+            }
+            if (wildcard == null || string == null) {
+                return false;
+            }
+            /**
+             * 如果没有通配符则全匹配
+             */
+            if (wildcard.indexOf("*") == -1) {
+                return wildcard.equals(string);
+            }
+            return null != wildcard
+                    && null != string
+                    && matching(string, wildcard, 0, 0);
+        }
+
+        /**
+         * Internal matching recursive function.
+         */
+        private static boolean matching(String string, String wildcard, int stringStartNdx, int patternStartNdx) {
+            int pNdx = patternStartNdx;
+            int sNdx = stringStartNdx;
+            int pLen = wildcard.length();
+            if (pLen == 1) {
+                if (wildcard.charAt(0) == '*') {     // speed-up
+                    return true;
+                }
+            }
+            int sLen = string.length();
+            boolean nextIsNotWildcard = false;
+
+            while (true) {
+
+                // check if end of string and/or pattern occurred
+                if ((sNdx >= sLen)) {   // end of string still may have pending '*' callback pattern
+                    while ((pNdx < pLen) && (wildcard.charAt(pNdx) == '*')) {
+                        pNdx++;
+                    }
+                    return pNdx >= pLen;
+                }
+                if (pNdx >= pLen) {         // end of pattern, but not end of the string
+                    return false;
+                }
+                char p = wildcard.charAt(pNdx);    // pattern char
+
+                // perform logic
+                if (!nextIsNotWildcard) {
+
+                    if (p == '\\') {
+                        pNdx++;
+                        nextIsNotWildcard = true;
+                        continue;
+                    }
+                    if (p == '?') {
+                        sNdx++;
+                        pNdx++;
+                        continue;
+                    }
+                    if (p == '*') {
+                        char pnext = 0;           // next pattern char
+                        if (pNdx + 1 < pLen) {
+                            pnext = wildcard.charAt(pNdx + 1);
+                        }
+                        if (pnext == '*') {         // double '*' have the same effect as one '*'
+                            pNdx++;
+                            continue;
+                        }
+                        int i;
+                        pNdx++;
+
+                        // find recursively if there is any substring from the end of the
+                        // line that matches the rest of the pattern !!!
+                        for (i = string.length(); i >= sNdx; i--) {
+                            if (matching(string, wildcard, i, pNdx)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                } else {
+                    nextIsNotWildcard = false;
+                }
+
+                // check if pattern char and string char are equals
+                if (p != string.charAt(sNdx)) {
+                    return false;
+                }
+
+                // everything matches for now, continue
+                sNdx++;
+                pNdx++;
+            }
+        }
     }
+
 
 }

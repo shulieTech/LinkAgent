@@ -33,17 +33,15 @@ public class ProviderClassLoader extends RoutingURLClassLoader {
                 new URL[]{new URL("file:" + providerJarFile.getCanonicalPath())},
                 new Routing(
                         simulatorClassLoader,
-                        "^com\\.shulie\\.instrument\\.simulator\\.api\\..*",
-                        "^com\\.shulie\\.instrument\\.simulator\\.spi\\..*",
-                        "^com\\.alibaba\\.fastjson\\..*",
-                        "^com\\.google\\.common\\..*",
-                        "^org\\.apache\\.commons\\.lang3\\..*",
-                        "^org\\.codehaus\\.groovy\\..*",
-                        "^groovy\\..*",
-                        "^org\\.slf4j\\..*",
-                        "^ch\\.qos\\.logback\\..*",
-                        "^org\\.objectweb\\.asm\\..*",
-                        "^javax\\.annotation\\.Resource.*$"
+                        "com.shulie.instrument.simulator.api.*",
+                        "com.shulie.instrument.simulator.spi.*",
+                        "org.apache.commons.lang.*",
+                        "org.codehaus.groovy.*",
+                        "groovy.*",
+                        "org.slf4j.*",
+                        "ch.qos.logback.*",
+                        "org.objectweb.asm.*",
+                        "javax.annotation.Resource*"
                 )
         );
     }

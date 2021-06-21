@@ -25,7 +25,6 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * @Date 2020/8/17 10:13 上午
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "c3p0", version = "1.0.0", author = "xiaobin@shulie.io",description = "c3p0数据源")
+@ModuleInfo(id = "c3p0", version = "1.0.0", author = "xiaobin@shulie.io", description = "c3p0数据源")
 public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static Logger logger = LoggerFactory.getLogger(C3p0Plugin.class);
 
@@ -55,12 +54,10 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
 
             }
         });
+    }
 
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                DataSourceWrapUtil.destroy();
-            }
-        });
+    @Override
+    public void onUnload() throws Throwable {
+        DataSourceWrapUtil.destroy();
     }
 }

@@ -28,7 +28,6 @@ import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.pamirs.pradar.AppNameUtils.appName;
@@ -258,10 +257,6 @@ public final class Pradar {
     static public final char ENTRY_SEPARATOR = (char) 0x12;
     static public final char KV_SEPARATOR = (char) 0x1;   // METAQ 不允许使用的分隔符，不能在 UserData 中使用
     static public final char KV_SEPARATOR2 = (char) 0x14;
-
-    static final ConcurrentHashMap<String, String> indexes = new ConcurrentHashMap<String, String>();
-
-    public static final ThreadLocal<Boolean> isDebug = new ThreadLocal<Boolean>();
 
     /**
      * 用于记录当前时段内是否有压测流量请求
@@ -627,6 +622,17 @@ public final class Pradar {
      */
     public static AsyncAppender getServerMonitorAppender() {
         return serverMonitorAppender;
+    }
+
+    /**
+     * 提交 monitor 日志
+     *
+     * @param monitorLog monitor log
+     */
+    public static void commitMonitorLog(String monitorLog) {
+        if (!PradarSwitcher.isMonitorOff()) {
+            serverMonitorAppender.append(monitorLog);
+        }
     }
 
     /**
@@ -1064,7 +1070,6 @@ public final class Pradar {
      * @param b
      */
     public static void setDebug(boolean b) {
-        isDebug.set(b);
         InvokeContext ctx = InvokeContext.get();
         if (ctx != null) {
             ctx.setDebug(b);
@@ -1085,9 +1090,9 @@ public final class Pradar {
     static public boolean isDebug() {
         InvokeContext ctx = InvokeContext.get();
         if (ctx != null) {
-            return ctx.isDebug() || (null != isDebug.get() && isDebug.get());
+            return ctx.isDebug();
         }
-        return null != isDebug.get() && isDebug.get();
+        return false;
     }
 
     /**
@@ -1308,6 +1313,9 @@ public final class Pradar {
         return RPC_TRANSFORM_KEYS;
     }
 
+    static public String getInvokeIdKey(){
+        return PradarService.PRADAR_INVOKE_ID_KEY;
+    }
     /**
      * 设置rpc上下文，如果当前上下文中有父上下文则保持父上下文
      *
@@ -1474,6 +1482,12 @@ public final class Pradar {
      * @see #getInvokeContext() 直接获取 InvokeContext 对象
      */
     static public void setInvokeContext(InvokeContext context) {
+        /**
+         * 如果相同则忽略
+         */
+        if (context != null && getInvokeContext() != null && context.getId() == getInvokeContext().getId()) {
+            return;
+        }
         InvokeContext.set(context);
     }
 

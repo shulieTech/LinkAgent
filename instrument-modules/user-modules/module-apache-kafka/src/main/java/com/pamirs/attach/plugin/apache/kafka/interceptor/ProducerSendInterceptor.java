@@ -14,6 +14,10 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.Map;
+
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderSetter;
@@ -34,10 +38,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Headers;
-
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
 
 /**
  * send方法增强类
@@ -104,6 +104,9 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     public void beforeFirst(Advice advice) {
         Object[] args = advice.getParameterArray();
         ClusterTestUtils.validateClusterTest();
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
         try {
             final Callback callback = (Callback) advice.getParameterArray()[1];
             final Map<String, String> context = Pradar.getInvokeContextMap();
@@ -111,13 +114,10 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
                 advice.changeParameter(1, new Callback() {
                     @Override
                     public void onCompletion(RecordMetadata metadata, Exception exception) {
-                        boolean clear = false;
-                        if (PradarService.getInvokeContext().isEmpty()) {
+                        try {
                             PradarInternalService.setInvokeContext(context);
-                            clear = true;
-                        }
-                        callback.onCompletion(metadata, exception);
-                        if (clear) {
+                            callback.onCompletion(metadata, exception);
+                        } finally {
                             PradarInternalService.clearInvokeContext();
                         }
                     }

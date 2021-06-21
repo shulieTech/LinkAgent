@@ -24,7 +24,6 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -35,7 +34,7 @@ import org.slf4j.LoggerFactory;
  * @date 2020/8/11 15:01
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = ApacheTomcatJdbcConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "tomcat jdbc 数据源")
+@ModuleInfo(id = ApacheTomcatJdbcConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "tomcat jdbc 数据源")
 public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static Logger logger = LoggerFactory.getLogger(ApacheTomcatJdbcPlugin.class);
 
@@ -57,13 +56,10 @@ public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements Ex
 
             }
         });
-
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                DataSourceWrapUtil.destroy();
-            }
-        });
     }
 
+    @Override
+    public void onUnload() throws Throwable {
+        DataSourceWrapUtil.destroy();
+    }
 }

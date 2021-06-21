@@ -28,6 +28,7 @@ import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.json.ResultSerializer;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.druid.DbType;
 import com.shulie.druid.sql.SQLUtils;
 import com.shulie.druid.sql.ast.SQLStatement;
 import com.shulie.druid.sql.ast.statement.*;
@@ -88,6 +89,7 @@ public class SqlParser {
     }
 
     private static TableParserResult parseTables(String sql, String dbTypeName) throws SQLException {
+        DbType dbType = DbType.of(dbTypeName);
         boolean isSelect = true;
         List<String> tables = new ArrayList<String>();
         SQLStatementParser parser = SQLParserUtils.createSQLStatementParser(sql, dbTypeName);
@@ -106,8 +108,8 @@ public class SqlParser {
                 if (!(sqlStatement instanceof SQLSelectStatement)) {
                     isSelect = false;
                 }
-                SQLASTOutputVisitor visitor = SQLUtils.createOutputVisitor(val, dbTypeName);
-                SchemaStatVisitor visitor2 = SQLUtils.createSchemaStatVisitor(dbTypeName);
+                SQLASTOutputVisitor visitor = SQLUtils.createOutputVisitor(val, dbType);
+                SchemaStatVisitor visitor2 = SQLUtils.createSchemaStatVisitor(dbType);
                 sqlStatement.accept(visitor2);
                 final Map<TableStat.Name, TableStat> map2 = visitor2.getTables();
                 for (final TableStat.Name name : map2.keySet()) {
@@ -297,7 +299,7 @@ public class SqlParser {
     }
 
     private static String toShadowTable(String table) {
-        if (!Pradar.isShadowDatabaseWithShadowTable()){
+        if (!Pradar.isShadowDatabaseWithShadowTable()) {
             return table;
         }
         if (PradarInternalService.isClusterTestPrefix(table)) {
@@ -343,6 +345,7 @@ public class SqlParser {
         if (config == null) {
             return sql;
         }
+        DbType dbType = DbType.of(dbTypeName);
         // new MySQL Parser
         SQLStatementParser parser = SQLParserUtils.createSQLStatementParser(sql, dbTypeName);
         if (parser == null) {
@@ -357,8 +360,8 @@ public class SqlParser {
             final List<SQLStatement> sqlStatements = parser.parseStatementList();
 
             for (final SQLStatement sqlStatement : sqlStatements) {
-                SQLASTOutputVisitor visitor = SQLUtils.createOutputVisitor(val, dbTypeName);
-                SchemaStatVisitor visitor2 = SQLUtils.createSchemaStatVisitor(dbTypeName);
+                SQLASTOutputVisitor visitor = SQLUtils.createOutputVisitor(val, dbType);
+                SchemaStatVisitor visitor2 = SQLUtils.createSchemaStatVisitor(dbType);
                 sqlStatement.accept(visitor2);
                 final Map<TableStat.Name, TableStat> map2 = visitor2.getTables();
                 Map<String, String> map = new HashMap<String, String>();
@@ -406,6 +409,7 @@ public class SqlParser {
     }
 
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName) throws SQLException {
+        DbType dbType = DbType.of(dbTypeName);
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {
             Map<String, String> mappingTableLower = new HashMap<String, String>();
@@ -426,14 +430,15 @@ public class SqlParser {
             }
             throw new SQLException("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql);
         }
+
         // 使用Parser解析生成AST，这里SQLStatement就是AST
         final StringWriter val = new StringWriter();
         try {
             final List<SQLStatement> sqlStatements = parser.parseStatementList();
 
             for (final SQLStatement sqlStatement : sqlStatements) {
-                SQLASTOutputVisitor visitor = SQLUtils.createOutputVisitor(val, dbTypeName);
-                SchemaStatVisitor visitor2 = SQLUtils.createSchemaStatVisitor(dbTypeName);
+                SQLASTOutputVisitor visitor = SQLUtils.createOutputVisitor(val, dbType);
+                SchemaStatVisitor visitor2 = SQLUtils.createSchemaStatVisitor(dbType);
                 sqlStatement.accept(visitor2);
                 final Map<TableStat.Name, TableStat> map2 = visitor2.getTables();
 
@@ -511,13 +516,13 @@ public class SqlParser {
                     || sqlStatement instanceof SQLDropTableStatement
                     || sqlStatement instanceof SQLCreateTableStatement
                     || sqlStatement instanceof MySqlRenameTableStatement) {
-                SchemaStatVisitor visitor = SQLUtils.createSchemaStatVisitor(dbTypeName);
+                SchemaStatVisitor visitor = SQLUtils.createSchemaStatVisitor(dbType);
                 sqlStatement.accept(visitor);
 
                 final Map<TableStat.Name, TableStat> map = visitor.getTables();
                 for (final TableStat.Name name : map.keySet()) {
                     boolean passThisTable = false;
-                    String nameTemp = SQLUtils.normalize(name.getName(), dbTypeName);
+                    String nameTemp = SQLUtils.normalize(name.getName(), dbType);
                     if (nameTemp != null && StringUtils.contains(nameTemp, ".")) {
                         nameTemp = StringUtils.substringAfter(nameTemp, ".");
                     }

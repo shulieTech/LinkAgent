@@ -17,8 +17,6 @@ package com.pamirs.attach.plugin.mock.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ref.WeakReference;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,31 +27,33 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GroovyCache<T> {
     private static Logger LOGGER = LoggerFactory.getLogger(GroovyCache.class);
 
-    private static Map<String, WeakReference<Object>> localMemoryCache =
-            new ConcurrentHashMap<String, WeakReference<Object>>();
-    private final static Object NULL = new Object();
-
+    private static ConcurrentHashMap<String, Object> localMemoryCache =
+            new ConcurrentHashMap<String, Object>();
 
     public static String GROOVY_SHELL_KEY_PREFIX = "GROOVY_SHELL#";
 
     public static <T> T getValue(String key, Callable<Object> load) {
-
         try {
-            WeakReference<Object> value = localMemoryCache.get(key);
-            if (value == null || value.get() == null) {
-                Object object = load.call();
-                if (object == null) {
-                    localMemoryCache.put(key, new WeakReference<Object>(NULL));
-                } else {
-                    localMemoryCache.put(key, new WeakReference<Object>(object));
+            Object value = localMemoryCache.get(key);
+            if (value == null) {
+                synchronized (key) {
+                    value = localMemoryCache.get(key);
+                    if (value == null) {
+                        Object object = load.call();
+                        if (object == null) {
+                            return null;
+                        }
+                        Object ret = localMemoryCache.putIfAbsent(key, object);
+                        if (ret != null) {
+                            return (T) ret;
+                        }
+                        return (T) object;
+                    }
                 }
-                return (T) object;
-            } else if (value.get() == NULL) {
-                return null;
             }
-            return (T) value.get();
+            return (T) value;
         } catch (Throwable ex) {
-            LOGGER.error("获取缓存异常,key:{} ", key, ex);
+            LOGGER.error("get groovy cache error, key:{} ", key, ex);
         }
         return null;
     }

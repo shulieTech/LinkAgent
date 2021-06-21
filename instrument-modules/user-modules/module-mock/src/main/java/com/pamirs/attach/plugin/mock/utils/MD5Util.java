@@ -14,6 +14,9 @@
  */
 package com.pamirs.attach.plugin.mock.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.security.MessageDigest;
 
 /**
@@ -21,6 +24,7 @@ import java.security.MessageDigest;
  * @since 2020/11/12 11:37 上午
  */
 public class MD5Util {
+    private final static Logger LOGGER = LoggerFactory.getLogger(MD5Util.class);
 
     private static final String hexDigits[] = {"0", "1", "2", "3", "4", "5",
             "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"};
@@ -72,8 +76,9 @@ public class MD5Util {
             byte[] bytesResult = md.digest();
             // 4,将字节数组转换为16进制位
             resultString = byteArrayToHexString(bytesResult);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable e) {
+            LOGGER.error("execute md5 error. instead of origin return. {}", origin, e);
+            return origin;
         }
         // 统一返回大写形式的字符串摘要
         return resultString.toUpperCase();
@@ -85,17 +90,5 @@ public class MD5Util {
      */
     public static String MD5_16(String origin, String charsetname) {
         return MD5_32(origin, charsetname).substring(8, 24);
-    }
-
-    public static void main(String[] args) {
-        String origin = "1234567890";
-
-        // 默认MD5计算得到128 bit的摘要，即32个 16进制位
-        String result_32 = MD5_32(origin, "utf-8");
-        System.out.println(result_32);  // E807F1FCF82D132F9BB018CA6738A19F
-
-        // 默认MD5计算得到即16个 16进制位
-        String result_16 = MD5_16(origin, "utf-8");
-        System.out.println(result_16);  // F82D132F9BB018CA
     }
 }

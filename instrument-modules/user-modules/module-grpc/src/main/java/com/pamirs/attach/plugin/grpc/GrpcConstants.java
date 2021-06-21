@@ -31,4 +31,6 @@ public final class GrpcConstants {
     public final static String DYNAMIC_FIELD_REMOTE_ADDRESS = "remoteAddress";
     public final static String DYNAMIC_FIELD_METHOD_NAME = "methodName";
     public final static String DYNAMIC_FIELD_IS_CLUSTER_TEST = "isClusterTest";
+    public final static String DYNAMIC_FIELD_INVOKE_CONTEXT = "invokeContext";
+    public final static String DYNAMIC_FIELD_FULL_METHOD_NAME = "fullMethodName";
 }

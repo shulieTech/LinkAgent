@@ -23,12 +23,11 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.kafka.clients.consumer.Consumer;
 
 /**
- * @author jirenhe | jirenhe@shulie.io
- * @since 2021/05/12 4:08 下午
- * 高版本支持spring-kafka
+ * @author angju
+ * @date 2021/6/7 11:52
+ * spring-kafka低版本的方法
  */
-public class SpringKafkaPollAndInvokeInterceptor extends AroundInterceptor {
-
+public class SpringKafkaProcessSeeksInterceptor extends AroundInterceptor {
     @Override
     public void doBefore(Advice advice) throws Throwable {
         try {

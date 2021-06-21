@@ -10,28 +10,28 @@ Supported Project List:
 English / [中文](README_CN.md)
 
 ## QuickStart
-- see [QuickStart English](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStartInEnglish.md)
+- see [QuickStart English](doc/QuickStartInEnglish.md)
 
 ## Instruction
 
 ### simulator-agent
 This module is mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
-- see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
+- see [simulator-agent](doc/instrument-simulator/READMEInEnglish.md)
 
 
 ### instrument-simulator
 This module is agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 
-- see [instrument-simulator](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
+- see [instrument-simulator](doc/instrument-simulator/READMEInEnglish.md)
 
 ### instrument-modules
 User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares. 
 
-- see [instrument-modules](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-modules/READMEInEnglish.md)
+- see [instrument-modules](doc/instrument-modules/READMEInEnglish.md)
 
 ## How to Build
 
-- see [HowToBuild](https://github.com/shulieTech/AgentX/blob/main/doc/HowToBuildInEnglish.md)
+- see [HowToBuild](doc/HowToBuildInEnglish.md)
 
 
 # Community

@@ -50,4 +50,4 @@ WeChat Official Account：<br/>
 [Official Forum](https://news.shulie.io/?page_id=2477)
 
 # License
-This project is under the Apache 2.0 license. See the [LICENSE](https://github.com/shulieTech/DaYuX/blob/main/LICENSE?_blank) file for details.
+This project is under the Apache 2.0 license. See the [LICENSE](LICENSE) file for details.

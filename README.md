@@ -1,10 +1,13 @@
 # Agent
-
+[![LICENSE](https://img.shields.io/github/license/pingcap/tidb.svg)](https://github.com/pingcap/tidb/blob/master/LICENSE)
+[![Language](https://img.shields.io/badge/Language-Java-blue.svg)](https://www.java.com/)
+<br/>
 AgentX is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
 
 Supported Project List:
-- [DaYuX](https://github.com/shulieTech/DaYuX)
-- [Chinese Document中文版文档](https://github.com/shulieTech/AgentX/blob/main/READMEInChinese.md)
+- [ArchGuadian](https://github.com/shulieTech/ArchGuadian)
+
+English / [中文](README_CN.md)
 
 ## QuickStart
 - see [QuickStart English](https://github.com/shulieTech/AgentX/blob/main/doc/QuickStartInEnglish.md)
@@ -12,7 +15,7 @@ Supported Project List:
 ## Instruction
 
 ### simulator-agent
-This module are mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
+This module is mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
 - see [simulator-agent](https://github.com/shulieTech/AgentX/blob/main/doc/instrument-simulator/READMEInEnglish.md)
 
@@ -47,4 +50,4 @@ WeChat Official Account：<br/>
 [Official Forum](https://news.shulie.io/?page_id=2477)
 
 # License
-DaYuX is under the Apache 2.0 license. See the [LICENSE](https://github.com/shulieTech/DaYuX/blob/main/LICENSE?_blank) file for details.
+This project is under the Apache 2.0 license. See the [LICENSE](https://github.com/shulieTech/DaYuX/blob/main/LICENSE?_blank) file for details.

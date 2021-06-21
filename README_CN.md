@@ -1,6 +1,6 @@
-# AgentX
+# LinkAgent
 
-AgentX是一个基于Java的开源agent，旨在通过JVM字节码增强，实现对Java应用程序的数据收集和逻辑控制，而无需修改应用程序代码。AgentX会把数据和控制接口开放出来，提供给外部第三方程序使用。
+LinkAgent是一个基于Java的开源agent，旨在通过JVM字节码增强，实现对Java应用程序的数据收集和逻辑控制，而无需修改应用程序代码。AgentX会把数据和控制接口开放出来，提供给外部第三方程序使用。
 
 已支持的项目列表:
 - [ArchGuadian](https://github.com/shulieTech/ArchGuadian)

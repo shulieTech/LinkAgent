@@ -15,7 +15,7 @@
 ```
 2.添加如下依赖
 
-```aidl
+```
 <dependency>
     <groupId>com.shulie.instrument.simulator</groupId>
     <artifactId>instrument-simulator-api</artifactId>
@@ -74,7 +74,7 @@
 
 内容如下：
 
-```aidl
+```
 #模块名称，与上面的模块名称保持相同
 module-id=aerospike
 #导出的 class 名称全路径,没有则不需要，多个以逗号分隔
@@ -111,7 +111,7 @@ simulator-version=1.0.0-
 
 ![](../imgs/plugin-add-pluginclass.jpg)
 
-```aidl
+```
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -165,7 +165,7 @@ public class TestPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 - AroundInterceptor 可以同时处理方法执行前、方法执行后，方法执行异常后
 
 示例：
-```aidl
+```
 /**
  * AroundInterceptor 可以同时处理方法执行前、方法执行后，方法执行异常后
  *
@@ -200,7 +200,7 @@ public TestInterceptor extends AroundInterceptor {
 - ParametersWrapperInterceptorAdaptor 可以修改原方法的入参
 
 示例：
-```aidl
+```
 public class TestInterceptor extends ParametersWrapperInterceptorAdaptor {
     public Object[] getParameter0(Advice advice) throws Throwable {
         //获取到方法的参数,需要注意的是方法参数不能减少或者增加，并且也不能改变类型，只可以改变其中的一个值
@@ -215,7 +215,7 @@ public class TestInterceptor extends ParametersWrapperInterceptorAdaptor {
 
 示例：
 
-```aidl
+```
 public class TestInterceptor extends ResultInterceptorAdaptor {
     public Object getResult0(Advice advice) throws Throwable {
         //不能修改结果的类型
@@ -232,7 +232,7 @@ public class TestInterceptor extends ResultInterceptorAdaptor {
 
 示例：
 
-```aidl
+```
 public class TestInterceptor extends TraceInterceptorAdaptor {
     //记录的 trace 日志是否是调用端，日志分为调用端和服务端,如果为 true 为调用端，false 为服务端，默认true
     @Override

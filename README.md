@@ -1,8 +1,8 @@
-# Agent
+# LinkAgent
 [![LICENSE](https://img.shields.io/github/license/pingcap/tidb.svg)](https://github.com/pingcap/tidb/blob/master/LICENSE)
 [![Language](https://img.shields.io/badge/Language-Java-blue.svg)](https://www.java.com/)
 <br/>
-AgentX is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
+LinkAgent is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
 
 Supported Project List:
 - [ArchGuadian](https://github.com/shulieTech/ArchGuadian)

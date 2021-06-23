@@ -37,7 +37,7 @@ User-defined modules and supported middleware modules are in this project direct
 # Community
 Mailing List: Mail to shulie@shulie.io<br/>
 Wechat group<br/>
-<img src="https://raw.githubusercontent.com/shulieTech/Images/main/code1.png" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/shulieTech/Images/main/wx_4.png" width="30%" height="30%">
 <br/>
 QQ group: **118098566**<br/>
 QR code：<br/>

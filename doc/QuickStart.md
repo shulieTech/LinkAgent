@@ -103,7 +103,7 @@ mongodb322.enabled - mongdb 3.2.2版本插件是否启用，默认为 false
 
 #### jdk8启动参数
 
-```aidl
+```
 -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar
 -javaagent:/somepath/transmittable-thread-local-2.12.1.jar
 -javaagent:/somepath/simulator-launcher-instrument.jar
@@ -114,7 +114,7 @@ mongodb322.enabled - mongdb 3.2.2版本插件是否启用，默认为 false
 ```
 #### jdk9及以上启动参数
 
-```aidl
+```
 --add-exports=java.base/jdk.internal.loader=ALL-UNNAMED
 --add-exports=java.base/jdk.internal.module=ALL-UNNAMED
 --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED

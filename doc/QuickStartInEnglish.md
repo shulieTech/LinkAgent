@@ -52,7 +52,7 @@ simulator.dump.class.list - whitelist of dump classes, separated by commas, the 
 simulator.cost.dump - Whether to output the enhancement time of each enhancement interceptor, after enabling it, the time consumption of each enhancement will be output in the log
 module.repository.mode - module repository mode, the default is local, this reserved configuration (no need to specify)
 module.remote.repository.addr - remote extension warehouse address, this does not need to be configured, the attribute reservation configuration (does not need to be specified)
-tro.web.url - The address of the tro console. This address is used to pull various configurations of the agent, such as data source configuration, whitelist, etc. (this must be configured)
+tro.web.url - The address of the tro console. This address is used to pull various configurations of the agent, such as data source configuration, whitelist, etc. (this must be configured) for example：http://127.0.0.1:8080/tro-web
 pradar.charset - configure the encoding format of the specified output trace and other log files, the default is UTF - 8
 pradar.data.pusher - log push type, the default is tcp, currently only this type is supported
 pradar.server.zk.path - the zk registration path of the remote log service, the zk address is the address configured in agent.properties

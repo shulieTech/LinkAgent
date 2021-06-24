@@ -53,7 +53,7 @@ simulator.dump.class.list - dump class 的白名单，多个以逗号分隔，�
 simulator.cost.dump - 是否输出每个增强拦截器的增强耗时，开启后会在日志中输出每一个增强的耗时
 module.repository.mode - 模块仓库模式，默认是本地，这个保留配置（不需要指定）
 module.remote.repository.addr - 远程扩展仓库地址,这个不需要配置，属性保留配置 (不需要指定)
-tro.web.url - tro 控制台的地址，根本这个地址来拉取 agent的各种配置如数据源配置、白名单等等 (这个是一定要配置的)
+tro.web.url - tro 控制台的地址，根据这个地址来拉取 agent的各种配置如数据源配置、白名单等等 (这个是一定要配置的) 例如：http://127.0.0.1:8080/tro-web
 pradar.charset - 配置指定输出的trace 等日志文件的编码格式,默认 UTF-8
 pradar.data.pusher - 日志推送类型，默认为 tcp，目前也仅支持这一种类型
 pradar.server.zk.path - 远程日志服务的zk 注册路径,zk 地址为 agent.properties 中配置的地址

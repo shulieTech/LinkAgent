@@ -34,7 +34,7 @@ import javax.annotation.Resource;
 /**
  * 命令管道插件，负责与控制台之前的命令下发与执行
  *
- * @author wangjian
+ * @Author: Hengyu
  * @since 2021/1/5 11:26
  */
 @MetaInfServices(ExtensionModule.class)

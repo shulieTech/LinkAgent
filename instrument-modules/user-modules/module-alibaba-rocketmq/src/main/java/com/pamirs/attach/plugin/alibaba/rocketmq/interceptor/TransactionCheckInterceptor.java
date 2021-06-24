@@ -24,7 +24,7 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
- * @Author: guohz
+ * @Author: Hengyu
  * @ClassName: TransactionCheckInterceptor
  * @Package: com.pamirs.attach.plugin.aliyun.rocketmq.interceptor
  * @Date: 2019/10/24 11:31 下午

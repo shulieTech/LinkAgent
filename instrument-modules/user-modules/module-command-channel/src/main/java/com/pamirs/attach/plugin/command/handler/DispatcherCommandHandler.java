@@ -28,7 +28,7 @@ import java.util.Map;
 /**
  * 与控制台交互的日志拉取命令处理器
  *
- * @author wangjian
+ * @Author: Hengyu
  * @since 2021/1/5 19:18
  */
 public class DispatcherCommandHandler implements CommandHandler {

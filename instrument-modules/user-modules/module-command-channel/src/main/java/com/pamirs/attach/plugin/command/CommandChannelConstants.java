@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.command;
 
 /**
- * @author xiaobin.zfb|xiaobin@shulie.io
+ * @Author: Hengyu
  * @since 2021/1/20 3:13 下午
  */
 public final class CommandChannelConstants {

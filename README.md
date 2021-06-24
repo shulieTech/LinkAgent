@@ -17,7 +17,7 @@ English / [中文](README_CN.md)
 ### simulator-agent
 This module is mainly responsible for interacting with the Control Platform, for agent upgrade, loading, unloading, module upgrade and other operations. It cannot be upgraded directly and can only be reinstalled.
 
-- see [simulator-agent](doc/simulator-agent/READMEInEnglish.md)
+- see [simulator-agent](doc/simulator-agent/README.md)
 
 
 ### instrument-simulator

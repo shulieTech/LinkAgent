@@ -8,7 +8,7 @@
     <version>1.0.1</version>
     <packaging>pom</packaging>
 
-    <name>simulator ${project.version}</name>
+    <name>simulator</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

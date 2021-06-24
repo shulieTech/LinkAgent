@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-hbase</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-hbase</name>
 
     <properties>
         <module-name>hbase</module-name>

@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-management-provider</artifactId>
-    <name>instrument-simulator-management-provider ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-management-provider</name>
     <build>
         <finalName>instrument-simulator-management-provider-${project.version}</finalName>
         <plugins>

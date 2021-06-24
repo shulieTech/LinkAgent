@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-api</artifactId>
-    <name>instrument-simulator-api ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-api</name>
 
     <dependencies>
         <dependency>

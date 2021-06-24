@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-core</artifactId>
-    <name>instrument-simulator-core ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-core</name>
 
     <profiles>
         <profile>

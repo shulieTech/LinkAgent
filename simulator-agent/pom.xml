@@ -8,7 +8,7 @@
     <artifactId>simulator-agent</artifactId>
     <packaging>pom</packaging>
     <version>1.0.0</version>
-    <name>agent ${agent.major.version}.${agent.minor.version}</name>
+    <name>simulator-agent</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

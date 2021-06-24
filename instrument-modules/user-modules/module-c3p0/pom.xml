@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-c3p0</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-c3p0</name>
 
     <properties>
         <module-name>c3p0</module-name>

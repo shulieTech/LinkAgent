@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-alibaba-rocketmq</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-alibaba-rocketmq</name>
 
     <properties>
         <module-name>alibaba-rocketmq</module-name>

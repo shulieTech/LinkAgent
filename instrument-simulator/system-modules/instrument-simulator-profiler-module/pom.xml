@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-profiler-module</artifactId>
-    <name>instrument-simulator-profiler-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-profiler-module</name>
 
     <build>
         <finalName>instrument-simulator-profiler-module-${project.version}</finalName>

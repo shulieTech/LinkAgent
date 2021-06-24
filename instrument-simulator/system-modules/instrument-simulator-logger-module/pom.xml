@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-logger-module</artifactId>
-    <name>instrument-simulator-logger-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-logger-module</name>
 
     <build>
         <finalName>instrument-simulator-logger-module-${project.version}</finalName>

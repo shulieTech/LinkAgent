@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-base-api</artifactId>
-    <name>instrument-simulator-base-api ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-base-api</name>
     <dependencies>
         <dependency>
             <groupId>javax.annotation</groupId>

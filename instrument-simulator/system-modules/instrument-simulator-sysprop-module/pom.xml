@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-sysprop-module</artifactId>
-    <name>instrument-simulator-sysprop-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-sysprop-module</name>
 
     <build>
         <finalName>instrument-simulator-sysprop-module-${project.version}</finalName>

@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-heartbeat-module</artifactId>
-    <name>instrument-simulator-heartbeat-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-heartbeat-module</name>
 
     <build>
         <finalName>instrument-simulator-heartbeat-module-${project.version}</finalName>

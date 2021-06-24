@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-apache-dubbo</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-apache-dubbo</name>
 
     <properties>
         <module-name>apache-dubbo</module-name>

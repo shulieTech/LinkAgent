@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-ognl-module</artifactId>
-    <name>instrument-simulator-ognl-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-ognl-module</name>
 
     <build>
         <finalName>instrument-simulator-ognl-module-${project.version}</finalName>

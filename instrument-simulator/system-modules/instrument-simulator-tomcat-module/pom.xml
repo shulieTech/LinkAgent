@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-tomcat-module</artifactId>
-    <name>instrument-simulator-tomcat-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-tomcat-module</name>
 
     <build>
         <finalName>instrument-simulator-tomcat-module-${project.version}</finalName>

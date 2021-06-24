@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>module-ehcache</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-ehcache</name>
 
     <properties>
         <module-name>ehcache</module-name>

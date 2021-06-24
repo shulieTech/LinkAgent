@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>instrument-simulator-debug-model</artifactId>
-    <name>instrument-simulator-debug-model ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-debug-model</name>
 
     <dependencies>
         <dependency>

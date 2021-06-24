@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-thread-module</artifactId>
-    <name>instrument-simulator-thread-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-thread-module</name>
 
     <build>
         <finalName>instrument-simulator-thread-module-${project.version}</finalName>

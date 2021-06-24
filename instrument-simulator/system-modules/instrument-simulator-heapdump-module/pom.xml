@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-heapdump-module</artifactId>
-    <name>instrument-simulator-heapdump-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-heapdump-module</name>
 
     <build>
         <finalName>instrument-simulator-heapdump-module-${project.version}</finalName>

@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-gc-module</artifactId>
-    <name>instrument-simulator-gc-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-gc-module</name>
 
     <build>
         <finalName>instrument-simulator-gc-module-${project.version}</finalName>

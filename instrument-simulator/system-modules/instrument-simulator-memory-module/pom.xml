@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-memory-module</artifactId>
-    <name>instrument-simulator-memory-module ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-memory-module</name>
 
     <build>
         <finalName>instrument-simulator-memory-module-${project.version}</finalName>

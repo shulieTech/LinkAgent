@@ -9,7 +9,7 @@
         <version>1.0.1</version>
     </parent>
     <artifactId>instrument-simulator-messager</artifactId>
-    <name>instrument-simulator-messager ${simulator.major.version}.${simulator.minor.version}</name>
+    <name>instrument-simulator-messager</name>
 
     <build>
         <finalName>instrument-simulator-messager-${project.version}</finalName>

@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-mock</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-mock</name>
 
     <properties>
         <module-name>mock</module-name>

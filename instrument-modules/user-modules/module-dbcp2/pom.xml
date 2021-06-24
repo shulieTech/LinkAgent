@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-dbcp2</artifactId>
-    <name>${project.artifactId} ${project.version}</name>
+    <name>module-dbcp2</name>
 
     <properties>
         <module-name>dbcp2</module-name>

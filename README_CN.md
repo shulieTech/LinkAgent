@@ -13,7 +13,7 @@ LinkAgent是一个基于Java的开源agent，旨在通过JVM字节码增强，�
 ### simulator-agent
 该模块主要负责与控制平台交互，负责agent的升级、加载、卸载等操作。agent通常不能直接升级，只能重新安装并重启。
 
-- see [simulator-agent 中文版](doc/instrument-simulator/README.md)
+- see [simulator-agent 中文版](doc/simulator-agent/README.md)
 
 
 ### instrument-simulator

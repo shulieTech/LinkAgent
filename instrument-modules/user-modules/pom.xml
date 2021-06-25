@@ -45,7 +45,6 @@
         <module>module-redis-redisson</module>
         <module>module-undertow</module>
         <module>module-command-channel</module>
-        <module>module-thread</module>
         <module>module-google-guava</module>
         <module>module-httpserver</module>
     </modules>

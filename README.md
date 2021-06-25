@@ -2,7 +2,7 @@
 [![LICENSE](https://img.shields.io/github/license/pingcap/tidb.svg)](https://github.com/pingcap/tidb/blob/master/LICENSE)
 [![Language](https://img.shields.io/badge/Language-Java-blue.svg)](https://www.java.com/)
 <br/>
-LinkAgent is a Java-based open-source agent designed to collect data and control Functions for Java applications through JVM bytecode, without modifying applications codes.
+LinkAgent is a Java-based open-source agent designed to collect data and control functions for Java applications through JVM bytecode, without modifying application codes.
 
 Supported Project List:
 - [Takin](https://github.com/shulieTech/Takin)
@@ -21,11 +21,11 @@ This module is mainly responsible for interacting with the Control Platform, for
 
 
 ### instrument-simulator
-This module is agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 
+This module is an agent（Probe）framework that is responsible for the life cycle management, and provides some built-in command tools. 
 - see [instrument-simulator](doc/instrument-simulator/READMEInEnglish.md)
 
 ### instrument-modules
-User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares. 
+User-defined modules and supported middleware modules are in this project directory. Users can develop new modules for various Java middlewares in this directory. 
 
 - see [instrument-modules](doc/instrument-modules/READMEInEnglish.md)
 

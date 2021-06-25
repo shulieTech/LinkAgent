@@ -26,7 +26,13 @@ export JAVA_9_HOME
 
 JAVA_HOME must be configured. If you have JDK 1.6 then configure it to JDK 1.6， if not, you can use JDK8 instead.
 
-## Packaging
+## Shell Packaging
+
+1. Enter project `bin` directory ，Excute script`release.sh`
+2. Enter project `deploy` directory ，Get the packaged file `simulator-agent.tar.gz`
+
+
+## Manual Packaging
 
 1. Enter project `simulator-agent` directory `bin`，Excute script`agent-packages.sh`
 2. Enter project  `simulator-agent`directory`bin`，Excute script`agent-packages.sh`

@@ -27,6 +27,11 @@ JAVA_HOME也必须要配置，如果有1.6版本的 jdk 请配置成1.6版本的
 
 ## 二、打包
 
+### shell一键打包
+1. 进入工程`bin`目录，执行脚本`release.sh`
+2. 进入工程`deploy`目录，获取打包完成的文件`simulator-agent.tar.gz`
+
+### 手工打包
 1. 进入工程`simulator-agent`目录`bin`，执行脚本`agent-packages.sh`
 2. 进入工程`simulator-agent`目录`bin`，执行脚本`agent-packages.sh`
 3. 进入工程`instrument-simulator`目录`bin`，执行脚本`simulator-packages.sh`

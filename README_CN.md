@@ -31,7 +31,7 @@ LinkAgent是一个基于Java的开源agent，旨在通过JVM字节码增强，�
 # 社区
 邮件地址: Mail to shulie@shulie.io<br/>
 微信群<br/>
-<img src="https://raw.githubusercontent.com/shulieTech/Images/main/wx_4.png" width="30%" height="30%">
+<img src="https://raw.githubusercontent.com/shulieTech/Images/main/wx_5.png" width="30%" height="30%">
 <br/>
 QQ群: **118098566**<br/>
 群二维码：<br/>

@@ -224,9 +224,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         /**
          * 拉取插件配置
          */
-        if (getPluginConfig(troControlWebUrl, applicationConfig)) {
+        /*if (getPluginConfig(troControlWebUrl, applicationConfig)) {
             ApplicationConfig.getPlugin = Boolean.TRUE;
-        }
+        }*/
 
         boolean isSuccess;
         if (whiteListPullSwitch.get()) {

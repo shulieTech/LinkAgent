@@ -27,6 +27,10 @@ LinkAgent是一个基于Java的开源agent，旨在通过JVM字节码增强，�
 ## 如何构建
 - see [如何构建 中文版](doc/HowToBuild.md)
 
+## 常见问题
+
+- see [FAQ](doc/FAQ.md)
+
 
 # 社区
 邮件地址: Mail to shulie@shulie.io<br/>

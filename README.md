@@ -33,6 +33,10 @@ User-defined modules and supported middleware modules are in this project direct
 
 - see [HowToBuild](doc/HowToBuildInEnglish.md)
 
+## FAQ
+
+- see [FAQ](doc/FAQEnglish.md)
+
 
 # Community
 Mailing List: Mail to shulie@shulie.io<br/>

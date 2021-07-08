@@ -9,7 +9,7 @@ cd ${HOME}/instrument-modules/bin/
 ./packages.sh
 
 
-cd ${HOME}t/simulator-agent/bin/
+cd ${HOME}/simulator-agent/bin/
 sh agent-packages.sh
 
 

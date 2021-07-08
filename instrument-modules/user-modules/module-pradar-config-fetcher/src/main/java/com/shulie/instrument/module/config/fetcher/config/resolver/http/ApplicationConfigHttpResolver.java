@@ -1190,7 +1190,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             return loadList(url, applicationConfig);
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
+            LOGGER.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", url, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")

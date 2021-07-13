@@ -26,6 +26,11 @@ export JAVA_9_HOME
 
 JAVA_HOME must be configured. If you have JDK 1.6 then configure it to JDK 1.6， if not, you can use JDK8 instead.
 
+### 1.3 takin depenencies
+Before you build LinkAgent package ,you must build takin jar depenencies first.
+1. Enter takin project, Execute script `mvn clean install -DskipTests`
+
+
 ## Shell Packaging
 
 1. Enter project `bin` directory ，Excute script`release.sh`

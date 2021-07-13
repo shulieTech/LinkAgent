@@ -125,7 +125,7 @@ public class MonitorCollector {
     public static long[] getFileSystem() {
         try {
             FileSystem fileSystem = si.getOperatingSystem().getFileSystem();
-            List<OSFileStore> fileStores = fileSystem.getFileStores();
+            OSFileStore[] fileStores = fileSystem.getFileStores();
             long totalSpace = 0L;
             long useSpace = 0L;
             for (OSFileStore store : fileStores) {
@@ -147,7 +147,7 @@ public class MonitorCollector {
      */
     public static long[] getDisk(HardwareAbstractionLayer hal) {
         try {
-            List<HWDiskStore> diskStores = hal.getDiskStores();
+            HWDiskStore[] diskStores = hal.getDiskStores();
             long readBytes = 0L;
             long writeBytes = 0L;
             for (HWDiskStore hwDiskStore : diskStores) {
@@ -173,7 +173,7 @@ public class MonitorCollector {
      * 网络带宽以及带宽使用率
      */
     private static Map<String, Object> getNetwork(HardwareAbstractionLayer hal, String serverIp) {
-        List<NetworkIF> networkIFsBefore = hal.getNetworkIFs();
+        NetworkIF[] networkIFsBefore = hal.getNetworkIFs();
         long beforeBytesRecv = 0;
         long beforeBytesSend = 0;
         String name = null;
@@ -194,7 +194,7 @@ public class MonitorCollector {
             }
         }
         Util.sleep(450);
-        List<NetworkIF> networkIFsAfter = hal.getNetworkIFs();
+        NetworkIF[] networkIFsAfter = hal.getNetworkIFs();
         long afterBytesRecv = 0;
         long afterBytesSend = 0;
         for (NetworkIF networkIF : networkIFsAfter) {

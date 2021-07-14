@@ -25,6 +25,11 @@ export JAVA_9_HOME
 
 JAVA_HOME也必须要配置，如果有1.6版本的 jdk 请配置成1.6版本的，如果没有也可以使用 jdk8来替代
 
+### 1.3 takin依赖
+LinkAgent依赖Takin的本地包
+1. 进入takin项目目录执行 `mvn clean install -DskipTests`
+
+
 ## 二、打包
 
 ### shell一键打包

@@ -38,7 +38,7 @@ import io.shulie.tro.web.config.entity.ShadowDB;
 import io.shulie.tro.web.config.entity.ShadowJob;
 import io.shulie.tro.web.config.enums.AllowListType;
 import io.shulie.tro.web.config.enums.BlockListType;
-import io.shulie.tro.web.config.enums.ShadowDBType;
+import io.shulie.tro.web.config.enums.ShadowDSType;
 import io.shulie.tro.web.config.sync.zk.constants.ZkConfigPathConstants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -477,8 +477,8 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
             ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
             shadowDatabaseConfig.setUrl(shadowDB.getBizJdbcUrl());
             shadowDatabaseConfig.setUsername(shadowDB.getBizUserName());
-            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDBType.SCHEMA ? 0 : 1);
-            if (shadowDB.getType() == ShadowDBType.SCHEMA) {
+            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDSType.SCHEMA ? 0 : 1);
+            if (shadowDB.getType() == ShadowDSType.SCHEMA) {
                 shadowDatabaseConfig.setShadowSchema(shadowDB.getShadowSchemaConfig().getSchema());
                 shadowDatabaseConfig.setShadowDriverClassName(shadowDB.getShadowSchemaConfig().getDriverClassName());
                 shadowDatabaseConfig.setShadowUsername(shadowDB.getShadowSchemaConfig().getUsername());
@@ -576,8 +576,8 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                             ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
                             shadowDatabaseConfig.setUrl(shadowDB.getBizJdbcUrl());
                             shadowDatabaseConfig.setUsername(shadowDB.getBizUserName());
-                            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDBType.SCHEMA ? 0 : 1);
-                            if (shadowDB.getType() == ShadowDBType.SCHEMA) {
+                            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDSType.SCHEMA ? 0 : 1);
+                            if (shadowDB.getType() == ShadowDSType.SCHEMA) {
                                 shadowDatabaseConfig.setShadowSchema(shadowDB.getShadowSchemaConfig().getSchema());
                                 shadowDatabaseConfig.setShadowDriverClassName(shadowDB.getShadowSchemaConfig().getDriverClassName());
                                 shadowDatabaseConfig.setShadowUsername(shadowDB.getShadowSchemaConfig().getUsername());

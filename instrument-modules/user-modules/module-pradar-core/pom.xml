@@ -92,9 +92,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.oshi</groupId>
+            <groupId>io.shulie</groupId>
             <artifactId>oshi-core</artifactId>
-            <version>5.2.2</version>
+            <version>1.0.0</version>
         </dependency>
 
         <dependency>

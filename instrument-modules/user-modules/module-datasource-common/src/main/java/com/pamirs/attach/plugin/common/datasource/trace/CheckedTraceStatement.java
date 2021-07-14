@@ -1,28 +1,14 @@
-/**
- * Copyright 2021 Shulie Technology, Co.Ltd
- * Email: shulie@shulie.io
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.pamirs.attach.plugin.common.datasource.trace;
 
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.debug.DebugTestInfoPusher;
+import com.pamirs.pradar.debug.model.DebugTestInfo;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.InterceptorInvokerHelper;
 import com.pamirs.pradar.json.ResultSerializer;
-import com.pamirs.pradar.debug.DebugTestInfoPusher;
-import com.pamirs.pradar.debug.model.DebugTestInfo;
 import com.pamirs.pradar.pressurement.datasource.util.SqlMetaData;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -59,39 +45,43 @@ public class CheckedTraceStatement implements Statement {
             return;
         }
 
-        DebugTestInfo debugTestInfo = new DebugTestInfo();
-        debugTestInfo.setTraceId(traceId);
-        debugTestInfo.setRpcId(rpcId);
-        debugTestInfo.setLogType(logType);
-        debugTestInfo.setAgentId(Pradar.getAgentId());
-        debugTestInfo.setAppName(AppNameUtils.appName());
-        debugTestInfo.setLogCallback(new DebugTestInfo.LogCallback() {
-            @Override
-            public DebugTestInfo.Log getLog() {
-                String parameterArray = serializeObject(params);
-                DebugTestInfo.Log log = new DebugTestInfo.Log();
-                if (returnObj != null && returnObj instanceof Throwable) {
-                    log.setLevel("ERROR");
-                    log.setContent(String.format("%s, targetClass: %s, classLoader: %s, parameterArray: %s, throwable: %s",
-                            method,
-                            getClass().getName(),
-                            getClass().getClassLoader().toString(),
-                            parameterArray,
-                            serializeObject(returnObj)
-                    ));
-                } else {
-                    log.setLevel("INFO");
-                    log.setContent(String.format("%s,targetClass: %s, classLoader: %s, parameterArray: %s, returnObj: %s",
-                            method,
-                            getClass().getName(),
-                            getClass().getClassLoader().toString(),
-                            parameterArray,
-                            returnObj));
+        try {
+            DebugTestInfo debugTestInfo = new DebugTestInfo();
+            debugTestInfo.setTraceId(traceId);
+            debugTestInfo.setRpcId(rpcId);
+            debugTestInfo.setLogType(logType);
+            debugTestInfo.setAgentId(Pradar.getAgentId());
+            debugTestInfo.setAppName(AppNameUtils.appName());
+            debugTestInfo.setLogCallback(new DebugTestInfo.LogCallback() {
+                @Override
+                public DebugTestInfo.Log getLog() {
+                    String parameterArray = serializeObject(params);
+                    DebugTestInfo.Log log = new DebugTestInfo.Log();
+                    if (returnObj != null && returnObj instanceof Throwable) {
+                        log.setLevel("ERROR");
+                        log.setContent(String.format("%s, targetClass: %s, classLoader: %s, parameterArray: %s, throwable: %s",
+                                method,
+                                getClass().getName(),
+                                getClass().getClassLoader().toString(),
+                                parameterArray,
+                                serializeObject(returnObj)
+                        ));
+                    } else {
+                        log.setLevel("INFO");
+                        log.setContent(String.format("%s,targetClass: %s, classLoader: %s, parameterArray: %s, returnObj: %s",
+                                method,
+                                getClass().getName(),
+                                getClass().getClassLoader().toString(),
+                                parameterArray,
+                                returnObj));
+                    }
+                    return log;
                 }
-                return log;
-            }
-        });
-        DebugTestInfoPusher.addDebugInfo(debugTestInfo);
+            });
+            DebugTestInfoPusher.addDebugInfo(debugTestInfo);
+        } catch (Throwable e) {
+            LOGGER.warn("record debug flow error.", e);
+        }
     }
 
     private void check() {
@@ -192,15 +182,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).execute(sql);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String rpcId = Pradar.getInvokeId();
-        String traceId = Pradar.getTraceId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -236,15 +229,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).execute(sql, autoGeneratedKeys);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -280,15 +276,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).execute(sql, columnIndexes);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -324,15 +323,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).execute(sql, columnNames);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -368,15 +370,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).executeBatch();
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeBatchFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -412,15 +417,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).executeQuery(sql);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeQueryFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -456,15 +464,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).executeUpdate(sql);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeUpdateFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -500,15 +511,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).executeUpdate(sql, autoGeneratedKeys);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeUpdateFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -544,15 +558,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).executeUpdate(sql, columnIndexes);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeUpdateFirst");
         boolean isException = false;
         Object ex = null;
         try {
@@ -588,15 +605,18 @@ public class CheckedTraceStatement implements Statement {
             return (targetStatement).executeUpdate(sql, columnNames);
         }
         boolean isStartSuccess = false;
+        String rpcId = null;
+        String traceId = null;
+        Integer logType = null;
         try {
             isStartSuccess = PradarHelper.startRpc(sqlMetaData, sql);
+            traceId = Pradar.getTraceId();
+            rpcId = Pradar.getInvokeId();
+            logType = Pradar.getLogType();
+            recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeFirst");
         } catch (Throwable e) {
             LOGGER.error("[jdbc] startRpc err!", e);
         }
-        String traceId = Pradar.getTraceId();
-        String rpcId = Pradar.getInvokeId();
-        int logType = Pradar.getLogType();
-        recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), null, "executeUpdateFirst");
         boolean isException = false;
         Object ex = null;
         try {

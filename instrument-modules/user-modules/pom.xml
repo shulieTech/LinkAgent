@@ -47,6 +47,11 @@
         <module>module-command-channel</module>
         <module>module-google-guava</module>
         <module>module-httpserver</module>
+        <module>module-jetty</module>
+        <module>module-mongodb</module>
+        <module>module-hikariCP</module>
+        <module>module-hystrix</module>
+        <module>module-logback</module>
     </modules>
 
     <build>

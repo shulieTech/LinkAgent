@@ -20,7 +20,7 @@
         <profile>
             <id>default</id>
             <properties>
-                <tools-jar>${java.home}/../lib/tools.jar</tools-jar>
+                <tools-jar>${env.JAVA_8_HOME}/../lib/tools.jar</tools-jar>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>

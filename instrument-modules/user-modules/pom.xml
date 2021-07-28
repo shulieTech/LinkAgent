@@ -52,6 +52,7 @@
         <module>module-hikariCP</module>
         <module>module-hystrix</module>
         <module>module-logback</module>
+        <module>module-perf</module>
     </modules>
 
     <build>

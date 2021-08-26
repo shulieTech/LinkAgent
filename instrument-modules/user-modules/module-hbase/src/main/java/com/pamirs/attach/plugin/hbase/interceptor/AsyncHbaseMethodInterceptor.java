@@ -16,10 +16,12 @@ package com.pamirs.attach.plugin.hbase.interceptor;
 
 
 import com.pamirs.attach.plugin.hbase.HbaseConstants;
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.hbase.async.*;
 
@@ -28,6 +30,7 @@ import org.hbase.async.*;
  * @Date: 2020/7/26 12:53
  * @Description:trace
  */
+@Destroyable(HbaseDestroyed.class)
 public class AsyncHbaseMethodInterceptor extends TraceInterceptorAdaptor {
 
     private boolean sended;
@@ -89,7 +92,7 @@ public class AsyncHbaseMethodInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         getRequest(request, record);
         record.setRequest(request.toString());
-        if (advice.getReturnObj() != null){
+        if (advice.getReturnObj() != null) {
             record.setResponse(advice.getReturnObj().toString());
         }
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
@@ -106,5 +109,4 @@ public class AsyncHbaseMethodInterceptor extends TraceInterceptorAdaptor {
         record.setResponse(advice.getThrowable());
         return record;
     }
-
 }

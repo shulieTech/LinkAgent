@@ -86,12 +86,12 @@ public class UndertowRequestTracer extends RequestTracer<HttpServerExchange, Htt
 
     @Override
     public void setAttribute(HttpServerExchange request, String key, Object value) {
-
+        request.getRequestHeaders().add(new HttpString("pradar-" + key), value.toString());
     }
 
     @Override
     public Object getAttribute(HttpServerExchange request, String key) {
-        return null;
+        return request.getRequestHeaders().get(new HttpString("pradar-" + key));
     }
 
     @Override

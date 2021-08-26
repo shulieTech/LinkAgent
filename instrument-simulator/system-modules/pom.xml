@@ -3,9 +3,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>com.shulie.instrument.simulator</groupId>
+        <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>simulator</artifactId>
-        <version>1.0.1</version>
+        <version>5.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -16,7 +16,6 @@
         <module>instrument-simulator-env-module</module>
         <module>instrument-simulator-gc-module</module>
         <module>instrument-simulator-heapdump-module</module>
-        <module>instrument-simulator-heartbeat-module</module>
         <module>instrument-simulator-jad-module</module>
         <module>instrument-simulator-logger-module</module>
         <module>instrument-simulator-memory-module</module>
@@ -30,18 +29,18 @@
         <module>instrument-simulator-trace-module</module>
         <module>instrument-simulator-vmoption-module</module>
         <module>instrument-simulator-watch-module</module>
-        <module>instrument-simulator-control-module</module>
         <module>instrument-simulator-info-module</module>
         <module>instrument-simulator-profiler-module</module>
         <module>instrument-simulator-management-module</module>
         <module>instrument-simulator-sc-module</module>
         <module>instrument-simulator-debug-model</module>
+        <module>instrument-simulator-stack-trace-module</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.shulie.instrument.simulator</groupId>
+                <groupId>io.shulie.instrument.simulator</groupId>
                 <artifactId>instrument-simulator-debug-model</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -50,7 +49,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-api</artifactId>
             <scope>provided</scope>
         </dependency>

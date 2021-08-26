@@ -4,12 +4,12 @@
          xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.shulie.instrument.simulator</groupId>
+        <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>system-modules</artifactId>
-        <version>1.0.1</version>
+        <version>5.0.0</version>
     </parent>
     <artifactId>instrument-simulator-env-module</artifactId>
-    <name>instrument-simulator-env-module</name>
+    <name>instrument-simulator-env-module ${simulator.major.version}</name>
 
     <build>
         <finalName>instrument-simulator-env-module-${project.version}</finalName>
@@ -61,13 +61,13 @@
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-debug-model</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-messager</artifactId>
             <scope>provided</scope>
         </dependency>

@@ -15,9 +15,11 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.shadowserver.LettuceFactory;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +29,7 @@ import org.slf4j.LoggerFactory;
  * @package: com.pamirs.attach.plugin.lettuce.interceptor
  * @Date 2020/11/26 3:47 下午
  */
+@Destroyable(LettuceDestroy.class)
 public class RedisClientPerformanceInterceptor extends ResultInterceptorAdaptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisClientPerformanceInterceptor.class.getName());

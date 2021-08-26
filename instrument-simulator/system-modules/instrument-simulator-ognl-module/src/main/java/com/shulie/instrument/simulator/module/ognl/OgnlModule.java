@@ -40,7 +40,7 @@ import java.util.Map;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "ognl", version = "1.0.0", author = "xiaobin@shulie.io", description = "ognl 模块")
 public class OgnlModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(OgnlModule.class);
+    private final Logger logger = LoggerFactory.getLogger(OgnlModule.class);
     @Resource
     private SimulatorConfig simulatorConfig;
 

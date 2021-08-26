@@ -19,6 +19,7 @@ import com.pamirs.pradar.JvmUtils;
 import com.shulie.instrument.module.register.register.Register;
 import com.shulie.instrument.module.register.register.RegisterFactory;
 import com.shulie.instrument.module.register.register.RegisterOptions;
+import com.shulie.instrument.module.register.zk.impl.NetflixCuratorZkClientFactory;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -49,7 +50,7 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
          * 激活时初始化
          */
         JvmUtils.writePidFile();
-        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 if (!isActive) {
@@ -60,10 +61,10 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
                     register = SimulatorGuard.getInstance().doGuard(Register.class, RegisterFactory.getRegister(registerOptions.getRegisterName()));
                     register.init(registerOptions);
                     register.start();
-                    logger.info("SIMULATOR: Register start success. register to {}", register.getPath());
+                    logger.info("SIMULATOR: Register start successful. register to {}", register.getPath());
                 } catch (Throwable e) {
                     logger.warn("SIMULATOR: Register start failed. ", e);
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                    ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 }
             }
         }, 0, TimeUnit.SECONDS);
@@ -85,10 +86,6 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
     @Override
     public void onFrozen() throws Throwable {
         isActive = false;
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
         if (register != null) {
             try {
                 register.stop();
@@ -96,5 +93,11 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
                 logger.error("[register] Register stop failed.");
             }
         }
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
+        RegisterFactory.release();
+        NetflixCuratorZkClientFactory.release();
     }
 }

@@ -27,18 +27,27 @@ import org.slf4j.LoggerFactory;
  */
 public class MaxRedisExpireTime implements IChange<Float, ApplicationConfig> {
     private static final Logger LOGGER = LoggerFactory.getLogger(MaxRedisExpireTime.class.getName());
-    private static final MaxRedisExpireTime INSTANCE = new MaxRedisExpireTime();
-
-    private MaxRedisExpireTime() {
-    }
+    private static MaxRedisExpireTime INSTANCE;
 
     public static MaxRedisExpireTime getInstance() {
+        if (INSTANCE == null) {
+            synchronized (MaxRedisExpireTime.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new MaxRedisExpireTime();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig, Float newValue) {
         GlobalConfig.getInstance().setMaxRedisExpireTime(newValue);
+        LOGGER.info("publish max redis expire time config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 }

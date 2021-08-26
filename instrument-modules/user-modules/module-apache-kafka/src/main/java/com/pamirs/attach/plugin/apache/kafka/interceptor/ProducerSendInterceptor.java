@@ -14,13 +14,10 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
-import com.pamirs.attach.plugin.apache.kafka.header.HeaderSetter;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -30,6 +27,7 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -39,6 +37,10 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Headers;
 
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.Map;
+
 /**
  * send方法增强类
  *
@@ -46,6 +48,7 @@ import org.apache.kafka.common.header.Headers;
  * @package: com.pamirs.attach.plugin.apache.kafka.interceptor
  * @Date 2019-08-05 19:25
  */
+@Destroyable(KafkaDestroy.class)
 public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     private Field topicField;
     private Field producerConfigField;
@@ -201,8 +204,8 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
             return new ContextTransfer() {
                 @Override
                 public void transfer(String key, String value) {
-                    HeaderSetter headerSetter = HeaderProvider.getHeaderSetter(producerRecord);
-                    headerSetter.setHeader(producerRecord);
+                    HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
+                    headerProcessor.setHeader(producerRecord, key, value);
                 }
             };
         }

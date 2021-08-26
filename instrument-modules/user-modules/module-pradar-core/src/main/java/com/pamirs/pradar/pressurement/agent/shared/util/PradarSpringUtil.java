@@ -26,6 +26,10 @@ public class PradarSpringUtil {
 
     private static volatile DefaultListableBeanFactory defaultListableBeanFactory;
 
+    public static void release() {
+        defaultListableBeanFactory = null;
+    }
+
     public static void refreshBeanFactory(ApplicationContext applicationContextParam) throws BeansException {
         if (applicationContextParam == null) {
             return;

@@ -35,9 +35,16 @@ public class AgentUpdateStatusUploader extends HttpScheduledUploader<String> {
         super(UPLOADER_NAME, POST_URL, UPLOAD_PERIOD_SECOND);
     }
 
-    private final static AgentUpdateStatusUploader INSTANCE = new AgentUpdateStatusUploader();
+    private static AgentUpdateStatusUploader INSTANCE;
 
     public static AgentUpdateStatusUploader getInstance() {
+        if (INSTANCE == null) {
+            synchronized (AgentUpdateStatusUploader.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new AgentUpdateStatusUploader();
+                }
+            }
+        }
         return INSTANCE;
     }
 

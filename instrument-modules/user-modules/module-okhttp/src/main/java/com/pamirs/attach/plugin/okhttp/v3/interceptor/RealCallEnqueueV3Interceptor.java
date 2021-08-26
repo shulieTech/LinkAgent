@@ -14,13 +14,24 @@
  */
 package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 
+import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import okhttp3.Call;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import okhttp3.*;
+import okhttp3.internal.http.RealResponseBody;
+import okio.Buffer;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+
+import java.io.IOException;
 
 /**
  * @Description
@@ -37,6 +48,52 @@ public class RealCallEnqueueV3Interceptor extends TraceInterceptorAdaptor {
     @Override
     public int getPluginType() {
         return OKHttpConstants.PLUGIN_TYPE;
+    }
+
+    @Override
+    public void beforeFirst(Advice advice) throws ProcessControlException {
+        Object target = advice.getTarget();
+        final Call call = (Call) target;
+        HttpUrl httpUrl = call.request().url();
+        String url = OKHttpConstants.getService(httpUrl.scheme(), httpUrl.host(), httpUrl.port(), httpUrl.encodedPath());
+
+        final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        String check = call.request().header(OKHttpConstants.DYNAMIC_FIELD_HEADER);
+        config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, check);
+        config.addArgs("url", url);
+        config.addArgs("isInterface", Boolean.FALSE);
+
+        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+            @Override
+            public Object forward(Object param) throws ProcessControlException {
+                HttpUrl httpUrl = HttpUrl.parse(config.getForwarding());
+                Reflect.on(call.request()).set("url", httpUrl);
+                return null;
+            }
+
+            @Override
+            public Object call(Object param) {
+                Headers header = new Headers.Builder().build();
+                Buffer buffer = new Buffer();
+
+                try {
+                    if (param instanceof String) {
+                        buffer.write(String.valueOf(param).getBytes("UTF-8"));
+                    } else {
+                        buffer.write(JSONObject.toJSONBytes(param));
+                    }
+
+                } catch (IOException e) {
+                }
+
+                return new Response.Builder().code(200)
+                        .body(new RealResponseBody(header,buffer))
+                        .request(call.request())
+                        .protocol(Protocol.HTTP_1_0)
+                        .message("OK")
+                        .build();
+            }
+        });
     }
 
     @Override

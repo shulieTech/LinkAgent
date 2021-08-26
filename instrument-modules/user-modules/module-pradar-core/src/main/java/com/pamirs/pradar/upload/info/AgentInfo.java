@@ -142,9 +142,16 @@ public class AgentInfo {
         this.programLanguage = "Java";
     }
 
-    private final static transient AgentInfo INSTANCE = new AgentInfo();
+    private static transient AgentInfo INSTANCE;
 
     public static AgentInfo getInstance() {
+        if (INSTANCE == null) {
+            synchronized (AgentInfo.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new AgentInfo();
+                }
+            }
+        }
         return INSTANCE;
     }
 
@@ -162,7 +169,7 @@ public class AgentInfo {
 
     private Long initPid() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
-        String[] split = StringUtils.split(name,'@');
+        String[] split = StringUtils.split(name, '@');
         if (split.length == 2) {
             return Long.valueOf(split[0]);
         }
@@ -171,7 +178,7 @@ public class AgentInfo {
 
     private String initHostName() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
-        String[] split = StringUtils.split(name,'@');
+        String[] split = StringUtils.split(name, '@');
         if (split.length == 2) {
             return split[1];
         }

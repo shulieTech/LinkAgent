@@ -30,10 +30,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessControlContext;
 import java.security.ProtectionDomain;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.ServiceLoader;
-import java.util.Set;
+import java.util.*;
 import java.util.jar.JarFile;
 
 import static com.shulie.instrument.simulator.api.util.StringUtil.getJavaClassName;
@@ -77,8 +74,6 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
                         "com.shulie.instrument.simulator.api.*",
                         "com.shulie.instrument.simulator.spi.*",
                         "org.apache.commons.lang.*",
-                        "org.codehaus.groovy.*",
-                        "groovy.*",
                         "org.slf4j.*",
                         "ch.qos.logback.*",
                         "org.objectweb.asm.*",
@@ -115,7 +110,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
                 acc
         );
 
-        // remove ProtectionDomain which loader is ModuleJarClassLoader
+        // remove ProtectionDomain which loader is ModuleClassLoader
         final Set<ProtectionDomain> cleanProtectionDomainSet = new LinkedHashSet<ProtectionDomain>();
         if (ArrayUtils.isNotEmpty(protectionDomainArray)) {
             for (final ProtectionDomain protectionDomain : protectionDomainArray) {
@@ -162,8 +157,15 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
                 try {
                     ((Closeable) this).close();
                 } catch (Throwable cause) {
-                    logger.warn("SIMULATOR: close ModuleJarClassLoader[file={}] failed. JDK7+", moduleJarFile, cause);
+                    logger.warn("SIMULATOR: close ModuleClassLoader[file={}] failed. JDK7+", moduleJarFile, cause);
                 }
+                if (routingArray != null) {
+                    for (Routing routing : routingArray) {
+                        routing.clean();
+                    }
+                    routingArray = null;
+                }
+                releaseClasses();
                 return;
             }
 
@@ -191,17 +193,37 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
                     }
                 }
 
+                if (routingArray != null) {
+                    for (Routing routing : routingArray) {
+                        routing.clean();
+                    }
+                    routingArray = null;
+                }
+                releaseClasses();
             } catch (Throwable cause) {
-                logger.warn("SIMULATOR: close ModuleJarClassLoader[file={}] failed. probably not a HOTSPOT VM", moduleJarFile, cause);
+                logger.warn("SIMULATOR: close ModuleClassLoader[file={}] failed. probably not a HOTSPOT VM", moduleJarFile, cause);
             }
 
         } finally {
 
             // 在这里删除掉临时文件
             FileUtils.deleteQuietly(tempModuleJarFile);
-
+            classLoadingLock.release();
         }
+    }
 
+    private void releaseClasses() {
+        try {
+            final Object classes = ReflectUtils.getDeclaredJavaFieldValueUnCaught(ClassLoader.class, "classes", this);
+            if (classes == null) {
+                return;
+            }
+            if (!(classes instanceof Vector)) {
+                return;
+            }
+            ((Vector) classes).clear();
+        } catch (Throwable e) {
+        }
     }
 
     public File getModuleJarFile() {

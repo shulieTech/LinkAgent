@@ -40,6 +40,7 @@ import com.shulie.instrument.simulator.message.DestroyHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,7 +50,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/26 10:56 下午
  */
-public final class ConsumerRegistry {
+public class ConsumerRegistry {
     private final static Logger logger = LoggerFactory.getLogger(ConsumerRegistry.class);
     private final static Object EMPTY = new Object();
 
@@ -62,6 +63,8 @@ public final class ConsumerRegistry {
     });
     private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
     private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners = new ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener>();
+    private static Set<DefaultMQPushConsumer/*shadow consumer*/> businessConsumerHookedSet
+        = new HashSet<DefaultMQPushConsumer>();
 
     public static void destroy() {
         for (Map.Entry<DefaultMQPushConsumer, DefaultMQPushConsumer> entry : caches.entrySet()) {
@@ -74,6 +77,8 @@ public final class ConsumerRegistry {
         }
         caches.clear();
         shadowConsumers.clear();
+        listeners.clear();
+        businessConsumerHookedSet.clear();
     }
 
     public static DefaultMQPushConsumer getConsumer(Object target) {
@@ -127,6 +132,14 @@ public final class ConsumerRegistry {
      * @return 返回注册是否成功, 如果
      */
     public static boolean registerConsumer(DefaultMQPushConsumer businessConsumer) {
+        if (!businessConsumerHookedSet.contains(businessConsumer)) {
+            synchronized (ConsumerRegistry.class) {
+                if (!businessConsumerHookedSet.contains(businessConsumer)) {
+                    businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
+                    businessConsumerHookedSet.add(businessConsumer);
+                }
+            }
+        }
         DefaultMQPushConsumer shadowConsumer = caches.get(businessConsumer);
         if (shadowConsumer != null) {
             return false;
@@ -141,7 +154,6 @@ public final class ConsumerRegistry {
         } else {
             try {
                 shadowConsumer.start();
-                businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
             } catch (Throwable e) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.MQ)
@@ -333,7 +345,7 @@ public final class ConsumerRegistry {
     private static boolean isPermitInitConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         String key = topic + "#" + businessConsumer.getConsumerGroup();
-        if (!mqWhiteList.contains(key) && !mqWhiteList.contains(topic)) {
+        if (PradarSwitcher.whiteListSwitchOn() && !mqWhiteList.contains(key) && !mqWhiteList.contains(topic)) {
             return false;
         }
         return true;

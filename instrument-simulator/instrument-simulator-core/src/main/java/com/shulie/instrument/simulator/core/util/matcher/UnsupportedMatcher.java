@@ -149,7 +149,7 @@ public class UnsupportedMatcher implements Matcher {
                 || isInstrumentSimulatorClass(classStructure)
                 || isFromStealthClassLoader()
                 || isStealthClass(classStructure)) {
-            return MatchingResult.UN_MATCHED;
+            return MatchingResult.unMatched();
         }
 
         final MatchingResult result = new MatchingResult(true);

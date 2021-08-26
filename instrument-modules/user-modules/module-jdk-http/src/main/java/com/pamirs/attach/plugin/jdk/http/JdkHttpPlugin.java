@@ -43,7 +43,7 @@ public class JdkHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 final InstrumentMethod connectMethod = target.getDeclaredMethod("connect");
                 connectMethod.addInterceptor(Listeners.of(HttpURLConnectionInterceptor.class, "JDK_HTTP_HTTPURLCONNECTION_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
-//
+
                 final InstrumentMethod getInputStreamMethod = target.getDeclaredMethod("getInputStream");
                 getInputStreamMethod.addInterceptor(Listeners.of(HttpURLConnectionInterceptor.class, "JDK_HTTP_HTTPURLCONNECTION_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
@@ -52,6 +52,14 @@ public class JdkHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+        enhanceTemplate.enhance(this, "sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.includeBootstrap();
+                final InstrumentMethod connectMethod = target.getDeclaredMethod("connect");
+                connectMethod.addInterceptor(Listeners.of(HttpURLConnectionInterceptor.class, "JDK_HTTP_HTTPS_URLCONNECTION_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            }
+        });
 
         enhanceTemplate.enhance(this, "sun.net.www.http.HttpClient", new EnhanceCallback() {
             @Override

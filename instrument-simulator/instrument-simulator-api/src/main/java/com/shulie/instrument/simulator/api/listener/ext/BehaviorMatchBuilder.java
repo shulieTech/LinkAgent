@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.api.listener.ext;
 
 import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
 import java.util.ArrayList;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Set;
 
 import static com.shulie.instrument.simulator.api.event.EventType.*;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
 import static java.util.regex.Pattern.quote;
 
 /**
@@ -35,7 +38,7 @@ import static java.util.regex.Pattern.quote;
 class BehaviorMatchBuilder implements IBehaviorMatchBuilder {
 
     private final ClassMatchBuilder bfClass;
-    private final PatternType patternType;
+    private final int patternType;
     private final String[] pattern;
     private int withAccess = 0;
     private boolean withNot;
@@ -44,10 +47,10 @@ class BehaviorMatchBuilder implements IBehaviorMatchBuilder {
     private final PatternGroupList hasExceptionTypes = new PatternGroupList();
     private final PatternGroupList hasAnnotationTypes = new PatternGroupList();
     private final List<BuildingForListeners> listeners = new ArrayList<BuildingForListeners>();
-    private final Set<EventType> eventEventTypeSet = new HashSet<EventType>();
+    private final Set<Integer> eventEventTypeSet = new HashSet<Integer>();
 
     BehaviorMatchBuilder(final ClassMatchBuilder bfClass,
-                         final PatternType patternType,
+                         final int patternType,
                          final String... pattern) {
         this.bfClass = bfClass;
         this.patternType = patternType;
@@ -243,7 +246,7 @@ class BehaviorMatchBuilder implements IBehaviorMatchBuilder {
 
     @Override
     public IBehaviorMatchBuilder onListener(Listeners listener) {
-        BuildingForListeners buildingForListeners = new BuildingForListeners(listener, eventEventTypeSet.toArray(EMPTY));
+        BuildingForListeners buildingForListeners = new BuildingForListeners(listener, ArrayUtils.toPrimitive(eventEventTypeSet.toArray(EMPTY)));
         this.listeners.add(buildingForListeners);
         return this;
     }
@@ -254,22 +257,22 @@ class BehaviorMatchBuilder implements IBehaviorMatchBuilder {
     }
 
     @Override
-    public IBehaviorMatchBuilder onListener(Listeners listener, EventType... eventEventTypeArray) {
+    public IBehaviorMatchBuilder onListener(Listeners listener, int... eventEventTypeArray) {
 
-        Set<EventType> eventTypes = new HashSet<EventType>();
+        Set<Integer> eventTypes = new HashSet<Integer>();
         if (eventEventTypeArray != null) {
-            for (EventType eventType : eventEventTypeArray) {
+            for (int eventType : eventEventTypeArray) {
                 eventTypes.add(eventType);
             }
         }
         eventTypes.addAll(this.eventEventTypeSet);
-        BuildingForListeners buildingForListeners = new BuildingForListeners(listener, eventTypes.toArray(EMPTY));
+        BuildingForListeners buildingForListeners = new BuildingForListeners(listener, ArrayUtils.toPrimitive(eventTypes.toArray(EMPTY)));
         this.listeners.add(buildingForListeners);
         return this;
     }
 
     @Override
-    public void onWatching(Listeners listeners, WatchCallback watchCallback, EventType... eventEventTypeArray) throws Throwable {
+    public void onWatching(Listeners listeners, WatchCallback watchCallback, int... eventEventTypeArray) throws Throwable {
         IWatchingMatchBuilder buildingForWatching = new WatchingMatchBuilder(bfClass, bfClass.getModuleEventWatcher(), watchCallback, patternType);
         buildingForWatching.onWatching(listeners, eventEventTypeArray);
     }

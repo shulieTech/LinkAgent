@@ -4,19 +4,24 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>system-modules</artifactId>
-        <groupId>com.shulie.instrument.simulator</groupId>
-        <version>1.0.1</version>
+        <groupId>io.shulie.instrument.simulator</groupId>
+        <version>5.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>instrument-simulator-debug-model</artifactId>
-    <name>instrument-simulator-debug-model</name>
+    <name>instrument-simulator-debug-model ${simulator.major.version}</name>
 
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
         </dependency>
 
         <dependency>

@@ -35,11 +35,11 @@ class ModuleLibLoader {
     private final ModuleSpec moduleSpec;
 
     // 仿真器加载模式
-    private final LoadMode loadMode;
+    private final int loadMode;
     private final ClassLoaderService classLoaderService;
 
     ModuleLibLoader(final ModuleSpec moduleSpec,
-                    final LoadMode loadMode,
+                    final int loadMode,
                     final ClassLoaderService classLoaderService) {
         this.moduleSpec = moduleSpec;
         this.loadMode = loadMode;

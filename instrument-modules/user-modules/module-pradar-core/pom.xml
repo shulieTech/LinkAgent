@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>com.shulie.instrument.module</groupId>
+        <groupId>io.shulie.instrument.module</groupId>
         <artifactId>user-modules</artifactId>
         <version>1.0.0</version>
     </parent>
@@ -19,7 +19,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>
@@ -30,14 +30,9 @@
             <version>2.10.2</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.29</version>
-        </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>
@@ -46,7 +41,7 @@
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>druid</artifactId>
-            <version>1.2.5</version>
+            <version>1.2.5.3</version>
         </dependency>
 
         <dependency>
@@ -54,12 +49,6 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.29</version>
             <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy</artifactId>
-            <version>3.0.4</version>
         </dependency>
 
         <dependency>
@@ -98,9 +87,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-debug-model</artifactId>
-            <version>1.0.1</version>
+            <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -109,6 +98,12 @@
             <artifactId>spring-webmvc</artifactId>
             <version>4.3.27.RELEASE</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.beanshell</groupId>
+            <artifactId>bsh</artifactId>
+            <version>2.0b5</version>
         </dependency>
     </dependencies>
 </project>

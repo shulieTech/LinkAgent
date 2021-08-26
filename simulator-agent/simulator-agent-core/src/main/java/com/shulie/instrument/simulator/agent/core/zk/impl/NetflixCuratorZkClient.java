@@ -15,9 +15,9 @@
 package com.shulie.instrument.simulator.agent.core.zk.impl;
 
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.recipes.locks.InterProcessMutex;
-import com.netflix.curator.utils.ZKPaths;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.locks.InterProcessMutex;
+import org.apache.curator.utils.ZKPaths;
 import com.shulie.instrument.simulator.agent.core.zk.*;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -178,7 +178,7 @@ public class NetflixCuratorZkClient implements ZkClient {
     public byte[] getDataQuietly(String path) {
         try {
             return getData(path);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return null;
         }
     }
@@ -187,7 +187,7 @@ public class NetflixCuratorZkClient implements ZkClient {
     public byte[] getDecompressedDataQuietly(String path) {
         try {
             return getDecompressedData(path);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return null;
         }
     }
@@ -201,7 +201,7 @@ public class NetflixCuratorZkClient implements ZkClient {
     public List<String> listChildrenQuietly(String path) {
         try {
             return listChildren(path);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return Collections.EMPTY_LIST;
         }
     }
@@ -220,7 +220,7 @@ public class NetflixCuratorZkClient implements ZkClient {
         try {
             delete(path, recursive);
             return true;
-        } catch (Exception e) {
+        } catch (Throwable e) {
 
             return false;
         }
@@ -231,7 +231,7 @@ public class NetflixCuratorZkClient implements ZkClient {
         try {
             delete(path, true);
             return true;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         }
     }
@@ -244,7 +244,7 @@ public class NetflixCuratorZkClient implements ZkClient {
                 delete(path + "/" + child, true);
             }
             return true;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         }
     }

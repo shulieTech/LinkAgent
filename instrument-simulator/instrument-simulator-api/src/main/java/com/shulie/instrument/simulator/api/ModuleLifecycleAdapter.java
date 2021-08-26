@@ -19,12 +19,8 @@ import com.shulie.instrument.simulator.api.resource.ModuleController;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
-import com.shulie.instrument.simulator.message.Action;
-import com.shulie.instrument.simulator.message.Messager;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 模块生命周期适配器，用于简化接口实现
@@ -42,8 +38,6 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
     @Resource
     protected ModuleController moduleController;
 
-    protected Map<String, Action> actions = new HashMap<String, Action>();
-
     protected String moduleName;
 
     public void setModuleName(String moduleName) {
@@ -52,10 +46,6 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
 
     public void addReleaseResource(ReleaseResource releaseResource) {
         this.moduleController.addReleaseResource(releaseResource);
-    }
-
-    protected void registerAction(String actionName, Action action) {
-        this.actions.put(actionName, action);
     }
 
     /**
@@ -120,25 +110,8 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
     public void onFrozen() throws Throwable {
     }
 
-    /**
-     * 默认的模块加载完成后的操作，每个模块可以向全局注册一些动作，这种实现
-     * 通常是为了解决模块之前无法直接交互的情况，可能会由于类加载相关的原因导致的
-     * 所有重写该方法的都需要调用super.loadCompleted()
-     */
     @Override
     public void loadCompleted() {
-        if (!actions.isEmpty()) {
-            Messager.registerAction(moduleName, new Action() {
-                @Override
-                public Object onAction(String action, Object... args) {
-                    if (!actions.containsKey(action)) {
-                        return Action.ACTION_NOT_FOUND;
-                    }
-                    Action action1 = actions.get(action);
-                    return action1.onAction(action, args);
-                }
-            });
-        }
     }
 
 }

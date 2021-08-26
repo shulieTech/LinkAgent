@@ -14,9 +14,11 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.attach.plugin.hbase.util.SocketAddressUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,7 @@ import java.net.InetSocketAddress;
  * @package: com.pamirs.attach.plugin.redis.interceptor
  * @Date 2019-09-11 21:33
  */
+@Destroyable(HbaseDestroyed.class)
 public class HbaseClientMethodInterceptor extends AroundInterceptor {
     private final static Logger LOGGER = LoggerFactory.getLogger(HbaseClientMethodInterceptor.class.getName());
 

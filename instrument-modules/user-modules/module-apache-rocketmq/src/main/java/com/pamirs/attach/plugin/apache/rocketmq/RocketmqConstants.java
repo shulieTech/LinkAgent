@@ -29,4 +29,5 @@ public final class RocketmqConstants {
     public final static String DYNAMIC_FIELD_IS_CLUSTER_TEST_CONSUMER = "isClusterTestConsumer";
     public static final String RETRYSTR = "%RETRY%";
     public static final String DLQSTR = "%DLQ%";
+    public static final String NAME_SERVER_ADDRESS = "p-pradar-nameServerAddress";
 }

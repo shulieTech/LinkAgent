@@ -31,10 +31,11 @@ public class PtDataflowJob implements DataflowJob {
     @Override
     public List fetchData(ShardingContext shardingContext) {
         PradarInternalService.startTrace(null, dataflowJob.getClass().getName(), "fetchData");
+        PradarInternalService.middlewareName("elastic-job");
         PradarInternalService.setClusterTest(true);
         List result = dataflowJob.fetchData(shardingContext);
         PradarInternalService.setClusterTest(false);
-        PradarInternalService.endTrace();
+        PradarInternalService.endTrace(null, 7);
         return result;
     }
 
@@ -42,10 +43,11 @@ public class PtDataflowJob implements DataflowJob {
     public void processData(ShardingContext shardingContext, List data) {
         String traceId = PradarInternalService.getTraceId();
         PradarInternalService.startTrace(traceId, dataflowJob.getClass().getName(), "processData");
+        PradarInternalService.middlewareName("elastic-job");
         PradarInternalService.setClusterTest(true);
         dataflowJob.processData(shardingContext, data);
         PradarInternalService.setClusterTest(false);
-        PradarInternalService.endTrace();
+        PradarInternalService.endTrace(null, 7);
     }
 
     public void setDataflowJob(DataflowJob dataflowJob){

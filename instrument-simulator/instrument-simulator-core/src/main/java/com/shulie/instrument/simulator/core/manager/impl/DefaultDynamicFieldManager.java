@@ -20,6 +20,8 @@ import com.shulie.instrument.simulator.message.DestroyHook;
 
 import java.io.Closeable;
 import java.io.Serializable;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -146,6 +148,12 @@ public class DefaultDynamicFieldManager implements DynamicFieldManager {
     public void destroy() {
         if (dynamicFields == null) {
             return;
+        }
+        Iterator<Map.Entry<Object, DynamicField>> it = dynamicFields.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Object,DynamicField> entry = it.next();
+            it.remove();
+            entry.getValue().close();
         }
         dynamicFields.clear();
     }

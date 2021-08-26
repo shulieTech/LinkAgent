@@ -4,12 +4,16 @@
          xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.shulie.instrument.simulator</groupId>
+        <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>simulator</artifactId>
-        <version>1.0.1</version>
+        <version>5.0.0</version>
     </parent>
     <artifactId>instrument-simulator-core</artifactId>
-    <name>instrument-simulator-core</name>
+    <name>instrument-simulator-core ${simulator.major.version}</name>
+    <properties>
+        <!--suppress UnresolvedMavenProperty -->
+        <build.time>${timestamp}</build.time>
+    </properties>
 
     <profiles>
         <profile>
@@ -109,6 +113,22 @@
                     <forkMode>once</forkMode>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <version>1.4</version>
+                <configuration>
+                    <timestampFormat>yyyyMMddHHmmss</timestampFormat>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>create-timestamp</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <inherited>false</inherited>
+            </plugin>
         </plugins>
     </build>
 
@@ -123,9 +143,8 @@
         <dependency>
             <groupId>com.sun</groupId>
             <artifactId>tools</artifactId>
-            <version>1.8</version>
             <scope>system</scope>
-            <systemPath>${java.home}/lib/tools.jar</systemPath>
+            <systemPath>${jdk.8.home}/lib/tools.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -138,20 +157,20 @@
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-spi</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-messager</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-jdk-impl</artifactId>
         </dependency>
 
@@ -203,11 +222,6 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-all</artifactId>
         </dependency>
 
         <dependency>

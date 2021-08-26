@@ -14,16 +14,22 @@
  */
 package com.pamirs.attach.plugin.google.httpclient.interceptor;
 
+import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpResponse;
 import com.pamirs.attach.plugin.google.httpclient.HttpClientConstants;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.Collections;
@@ -44,12 +50,32 @@ public class HttpRequestExecuteMethodInterceptor extends TraceInterceptorAdaptor
     }
 
     @Override
-    public void afterFirst(Advice advice) {
+    public void afterFirst(Advice advice) throws ProcessControlException {
         Object target = advice.getTarget();
         final HttpRequest request = (HttpRequest) target;
         String url = request.getUrl().build();
 
-        ClusterTestUtils.validateHttpClusterTest(url);
+        String whiteList = request.getHeaders().getFirstHeaderStringValue(PradarService.PRADAR_WHITE_LIST_CHECK);
+        final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, whiteList);
+        config.addArgs("url", url);
+
+        config.addArgs("request", request);
+        config.addArgs("method", url);
+        config.addArgs("isInterface", Boolean.FALSE);
+        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+            @Override
+            public Object forward(Object param) throws ProcessControlException {
+                GenericUrl url1 = new GenericUrl(config.getForwarding());
+                Reflect.on(request).set("url", url1);
+                return null;
+            }
+
+            @Override
+            public Object call(Object param) throws ProcessControlException {
+                return param;
+            }
+        });
     }
 
     @Override

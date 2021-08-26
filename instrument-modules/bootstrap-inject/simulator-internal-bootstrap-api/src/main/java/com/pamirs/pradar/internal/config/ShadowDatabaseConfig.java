@@ -181,8 +181,7 @@ public class ShadowDatabaseConfig {
         } else if (rawUrl.startsWith("jdbc:mariadb:")) {
             return MARIADB_DRIVER;
         } else if (rawUrl.startsWith("jdbc:oracle:") //
-                || rawUrl.startsWith("JDBC:oracle:")
-        ) {
+                || rawUrl.startsWith("JDBC:oracle:")) {
             return ORACLE_DRIVER;
         } else if (rawUrl.startsWith("jdbc:alibaba:oracle:")) {
             return ALI_ORACLE_DRIVER;
@@ -234,7 +233,11 @@ public class ShadowDatabaseConfig {
             return "ca.edbc.jdbc.EdbcDriver";
         } else if (rawUrl.startsWith("jdbc:mimer:multi1:")) {
             return "com.mimer.jdbc.Driver";
-        } else {
+        } else if (rawUrl.startsWith("jdbc:polardb:")) {
+            return "com.aliyun.polardb.Driver";
+        } else if (rawUrl.startsWith("mongodb:")) {
+            return "mongodb";
+        }  else {
             throw new SQLException("unkow jdbc driver : " + rawUrl);
         }
     }

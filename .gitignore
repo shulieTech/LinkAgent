@@ -20,5 +20,6 @@ logs
 hadoop
 
 .DS_Store
-
+``
 local*.sh
+local*.groovy

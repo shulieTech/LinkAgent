@@ -24,7 +24,9 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * ClassLoader Service Implementation
  */
 public class DefaultClassLoaderService implements ClassLoaderService {
-    private final static Logger logger = LoggerFactory.getLogger(DefaultClassLoaderService.class);
+    private final Logger logger = LoggerFactory.getLogger(DefaultClassLoaderService.class);
 
     private static final List<String> SUN_REFLECT_GENERATED_ACCESSOR = new ArrayList<String>();
 
@@ -50,8 +52,9 @@ public class DefaultClassLoaderService implements ClassLoaderService {
     private ConcurrentHashMap<String, ModuleSpec> moduleSpecMap = new ConcurrentHashMap<String, ModuleSpec>();
     private ConcurrentHashMap<String, ClassLoaderFactory> moduleClassLoaderMap = new ConcurrentHashMap<String, ClassLoaderFactory>();
 
-    private ClassLoader simulatorClassLoader;
-    private ClassLoader systemClassLoader;
+    private WeakReference<ClassLoader> simulatorClassLoader;
+    private WeakReference<ClassLoader> systemClassLoader;
+    private volatile boolean isDisposed;
 
     static {
         SUN_REFLECT_GENERATED_ACCESSOR.add("sun.reflect.GeneratedMethodAccessor");
@@ -198,6 +201,9 @@ public class DefaultClassLoaderService implements ClassLoaderService {
 
     @Override
     public boolean isClassInImport(String moduleName, String className) {
+        if (isDisposed) {
+            return false;
+        }
         ModuleSpec moduleSpec = moduleSpecMap.get(moduleName);
         if (moduleSpec == null) {
             logger.warn("SIMULATOR: invoke module {} isClassImport {} error cause by moduleSpec is not found. default return false.", moduleName, className);
@@ -234,6 +240,9 @@ public class DefaultClassLoaderService implements ClassLoaderService {
 
     @Override
     public ClassLoaderFactory findExportClassLoaderFactory(String className) {
+        if (isDisposed) {
+            return null;
+        }
         ClassLoaderFactory exportClassLoaderFactory = exportExactlyClassesClassLoaderMap.get(className);
         String packageName = ClassUtils.getPackageName(className);
         if (exportClassLoaderFactory == null) {
@@ -256,6 +265,9 @@ public class DefaultClassLoaderService implements ClassLoaderService {
 
     @Override
     public boolean isResourceInImport(String moduleName, String resourceName) {
+        if (isDisposed) {
+            return false;
+        }
         ModuleSpec moduleSpec = moduleSpecMap.get(moduleName);
         if (moduleSpec == null) {
             logger.warn("SIMULATOR: invoke module {} isResourceInImport error cause by moduleSpec is not found. default return false.");
@@ -285,7 +297,9 @@ public class DefaultClassLoaderService implements ClassLoaderService {
 
     @Override
     public List<ClassLoaderFactory> findExportResourceClassLoadersInOrder(String resourceName) {
-
+        if (isDisposed) {
+            return Collections.EMPTY_LIST;
+        }
         if (exportExactlyResourceClassLoaderMap.containsKey(resourceName)) {
             return exportExactlyResourceClassLoaderMap.get(resourceName);
         }
@@ -306,27 +320,31 @@ public class DefaultClassLoaderService implements ClassLoaderService {
 
     @Override
     public ClassLoader getSimulatorClassLoader() {
-        return simulatorClassLoader;
+        return simulatorClassLoader == null ? null : simulatorClassLoader.get();
     }
 
     @Override
     public ClassLoader getSystemClassLoader() {
-        return systemClassLoader;
+        return systemClassLoader == null ? null : systemClassLoader.get();
     }
 
     @Override
     public ClassLoaderFactory getModuleClassLoaderFactory(String moduleName) {
+        if (isDisposed) {
+            return null;
+        }
         return this.moduleClassLoaderMap.get(moduleName);
     }
 
     @Override
     public void init() throws ModuleRuntimeException {
-        simulatorClassLoader = this.getClass().getClassLoader();
-        systemClassLoader = ClassLoader.getSystemClassLoader();
+        simulatorClassLoader = new WeakReference<ClassLoader>(this.getClass().getClassLoader());
+        systemClassLoader = new WeakReference<ClassLoader>(ClassLoader.getSystemClassLoader());
     }
 
     @Override
     public void dispose() throws ModuleRuntimeException {
+        isDisposed = true;
         SUN_REFLECT_GENERATED_ACCESSOR.clear();
 
         exportExactlyClassesClassLoaderMap.clear();
@@ -339,7 +357,7 @@ public class DefaultClassLoaderService implements ClassLoaderService {
         exportPrefixPackagesClassLoaderMap = null;
 
         exportSuffixPackagesClassLoaderMap.clear();
-        exportExactlyClassesClassLoaderMap = null;
+        exportSuffixPackagesClassLoaderMap = null;
 
         exportExactlyResourceClassLoaderMap.clear();
         exportExactlyResourceClassLoaderMap = null;
@@ -355,5 +373,8 @@ public class DefaultClassLoaderService implements ClassLoaderService {
 
         moduleClassLoaderMap.clear();
         moduleClassLoaderMap = null;
+
+        simulatorClassLoader = null;
+        systemClassLoader = null;
     }
 }

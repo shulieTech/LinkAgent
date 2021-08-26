@@ -18,8 +18,10 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
 
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -28,6 +30,7 @@ import org.apache.kafka.common.TopicPartition;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/05/13 10:30 上午
  */
+@Destroyable(KafkaDestroy.class)
 public class ConsumerCommitSyncInterceptor extends AbstractProxiedConsumerInterceptor {
 
     @Override

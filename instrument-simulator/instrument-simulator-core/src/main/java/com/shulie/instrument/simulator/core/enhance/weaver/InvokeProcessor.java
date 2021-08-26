@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.core.enhance.weaver;
 
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.api.util.SimulatorStack;
 import com.shulie.instrument.simulator.api.util.ThreadUnsafeSimulatorStack;
@@ -30,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 class InvokeProcessor {
 
-    private final static Logger logger = LoggerFactory.getLogger(InvokeProcessor.class);
+    private final Logger logger = LoggerFactory.getLogger(InvokeProcessor.class);
     /**
      * 事件监听器 ID
      */
@@ -42,17 +41,12 @@ class InvokeProcessor {
     /**
      * 需要支持的事件类型列表
      */
-    final EventType[] eventEventTypes;
+    final int[] eventEventTypes;
 
     /**
      * 调用流程的 ThreadLocal，这个地方需要使用实例变量，因为需要根据按照线程和 {@link InvokeProcessor} 来隔离调用流程
      */
-    final ThreadLocal<InvokeProcess> processRef = new ThreadLocal<InvokeProcess>() {
-        @Override
-        protected InvokeProcess initialValue() {
-            return new InvokeProcess();
-        }
-    };
+    private final ThreadLocal<InvokeProcess> processRef = new ThreadLocal<InvokeProcess>();
 
     /**
      * 调用流程处理器的运行状态¬
@@ -68,7 +62,7 @@ class InvokeProcessor {
      */
     InvokeProcessor(final int listenerId,
                     final EventListener listener,
-                    final EventType[] eventEventTypes) {
+                    final int[] eventEventTypes) {
 
         this.listenerId = listenerId;
         this.eventEventTypes = eventEventTypes;
@@ -93,6 +87,32 @@ class InvokeProcessor {
         }
         listener.clean();
         processRef.remove();
+    }
+
+    InvokeProcess getOrCreate() {
+        InvokeProcess invokeProcess = processRef.get();
+        if (invokeProcess == null) {
+            invokeProcess = new InvokeProcess();
+            processRef.set(invokeProcess);
+        }
+        return invokeProcess;
+    }
+
+    InvokeProcess get() {
+        return processRef.get();
+    }
+
+    /**
+     * clean if empty
+     */
+    void cleanIfEmpty() {
+        InvokeProcess process = get();
+        if (process == null) {
+            return;
+        }
+        if (process.isEmptyStack()) {
+            processRef.remove();
+        }
     }
 
     /**

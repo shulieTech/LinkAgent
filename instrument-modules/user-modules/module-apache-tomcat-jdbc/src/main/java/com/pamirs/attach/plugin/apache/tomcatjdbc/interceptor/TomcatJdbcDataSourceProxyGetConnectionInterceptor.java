@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor;
 
+import com.pamirs.attach.plugin.apache.tomcatjdbc.destroy.TomcatJdbcDestroy;
 import com.pamirs.attach.plugin.apache.tomcatjdbc.obj.TomcatJdbcMediatorDataSource;
 import com.pamirs.attach.plugin.apache.tomcatjdbc.util.DataSourceWrapUtil;
 import com.pamirs.pradar.CutOffResult;
@@ -30,6 +31,7 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tomcat.jdbc.pool.DataSource;
@@ -47,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author angju
  * @date 2020/8/11 20:27
  */
+@Destroyable(TomcatJdbcDestroy.class)
 public class TomcatJdbcDataSourceProxyGetConnectionInterceptor extends CutoffInterceptorAdaptor {
     private final static Logger logger = LoggerFactory.getLogger(TomcatJdbcDataSourceProxyGetConnectionInterceptor.class.getName());
 

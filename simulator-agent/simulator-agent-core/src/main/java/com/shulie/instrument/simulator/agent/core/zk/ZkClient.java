@@ -15,7 +15,7 @@
 package com.shulie.instrument.simulator.agent.core.zk;
 
 
-import com.netflix.curator.framework.recipes.locks.InterProcessMutex;
+import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 
 import java.util.List;
 

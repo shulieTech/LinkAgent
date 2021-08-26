@@ -14,12 +14,12 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.header;
 
-import com.pamirs.attach.plugin.apache.kafka.header.impl.DefaultHeaderGetter;
-import com.pamirs.attach.plugin.apache.kafka.header.impl.DefaultHeaderSetter;
-import com.pamirs.attach.plugin.apache.kafka.header.impl.DisabledHeaderGetter;
-import com.pamirs.attach.plugin.apache.kafka.header.impl.DisabledHeaderSetter;
+import com.pamirs.attach.plugin.apache.kafka.header.impl.DefaultHeaderProcessor;
+import com.pamirs.attach.plugin.apache.kafka.header.impl.DisabledHeaderProcessor;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * @Description
@@ -28,29 +28,37 @@ import java.lang.reflect.Method;
  * @Date 2020/7/10 7:57 下午
  */
 public class HeaderProvider {
-    public final static HeaderGetter getHeaderGetter(Object record) {
+    private static ConcurrentMap<Class, HeaderProcessor> builders = new ConcurrentHashMap<Class, HeaderProcessor>();
+
+    private static HeaderProcessor buildHeaderProcessor(Class clazz) {
         try {
-            final Class<?> aClass = record.getClass();
-            final Method method = aClass.getMethod("headers");
+            final Method method = clazz.getMethod("headers");
             if (method != null) {
-                return new DefaultHeaderGetter();
+                return new DefaultHeaderProcessor();
             }
-        } catch (NoSuchMethodException e) {
-            // ignore
+        } catch (Throwable e) {
         }
-        return new DisabledHeaderGetter();
+        return new DisabledHeaderProcessor();
     }
 
-    public final static HeaderSetter getHeaderSetter(Object record) {
-        try {
-            final Class<?> aClass = record.getClass();
-            final Method method = aClass.getMethod("headers");
-            if (method != null) {
-                return new DefaultHeaderSetter();
-            }
-        } catch (NoSuchMethodException e) {
-            // ignore
+    public final static HeaderProcessor getHeaderProcessor(Object record) {
+        final Class<?> clazz = record.getClass();
+        HeaderProcessor headerProcessor = builders.get(clazz);
+        if (headerProcessor != null) {
+            return headerProcessor;
         }
-        return new DisabledHeaderSetter();
+        synchronized (builders) {
+            headerProcessor = builders.get(clazz);
+            if (headerProcessor != null) {
+                return headerProcessor;
+            }
+            headerProcessor = buildHeaderProcessor(clazz);
+            builders.putIfAbsent(clazz, headerProcessor);
+        }
+        return headerProcessor;
+    }
+
+    public static void clear() {
+        builders.clear();
     }
 }

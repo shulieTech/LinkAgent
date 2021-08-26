@@ -25,10 +25,6 @@ import java.util.List;
  */
 public class TroEntity {
 
-    /**
-     * SimpleExceptions : [{"exceptionType":"org.elasticsearch.index.IndexNotFoundException","message":"no such index","stackTraceElement":[{"fileName":"IndexNameExpressionResolver.java","nativeMethod":false,"methodName":"infe","className":"org.elasticsearch.cluster.metadata.IndexNameExpressionResolver$WildcardExpressionResolver","lineNumber":676},{"fileName":"IndexNameExpressionResolver.java","nativeMethod":false,"methodName":"innerResolve","className":"org.elasticsearch.cluster.metadata.IndexNameExpressionResolver$WildcardExpressionResolver","lineNumber":630},{"fileName":"IndexNameExpressionResolver.java","nativeMethod":false,"methodName":"resolve","className":"org.elasticsearch.cluster.metadata.IndexNameExpressionResolver$WildcardExpressionResolver","lineNumber":578},{"fileName":"IndexNameExpressionResolver.java","nativeMethod":false,"methodName":"concreteIndices","className":"org.elasticsearch.cluster.metadata.IndexNameExpressionResolver","lineNumber":168},{"fileName":"IndexNameExpressionResolver.java","nativeMethod":false,"methodName":"concreteIndices","className":"org.elasticsearch.cluster.metadata.IndexNameExpressionResolver","lineNumber":140}]}]
-     */
-
     private DefaultMessage defaultMessage;
     private List<SimpleExceptions> simpleExceptions;
 
@@ -50,9 +46,11 @@ public class TroEntity {
 
     public static class DefaultMessage {
         /**
+         * agentId : es-server@10.10.101.107:28081
          * aliveTrace : 1
          * msgType : 0
          * methodName : doFilter
+         * traceMessages : [{"sqls":["select admin0_.id as id1_2_0_, admin0_.address as address2_2_0_, admin0_.adminiconurl as adminico3_2_0_, admin0_.adminname as adminnam4_2_0_, admin0_.alipay as alipay5_2_0_, admin0_.cash_password as cash_pas6_2_0_, admin0_.client_icon as client_i7_2_0_, admin0_.client_qr_url as client_q8_2_0_, admin0_.clienturl as clientur9_2_0_, admin0_.id_code as id_code10_2_0_, admin0_.idcode_url as idcode_11_2_0_, admin0_.is_set_password as is_set_12_2_0_, admin0_.name as name13_2_0_, admin0_.nickname as nicknam14_2_0_, admin0_.password as passwor15_2_0_, admin0_.phone as phone16_2_0_, admin0_.register_date as registe17_2_0_, admin0_.sell_url as sell_ur18_2_0_, admin0_.status as status19_2_0_, admin0_.store_info_secrecy as store_i20_2_0_, admin0_.store_url1 as store_u21_2_0_, admin0_.store_url2 as store_u22_2_0_, admin0_.store_url3 as store_u23_2_0_, admin0_.train_url as train_u24_2_0_, admin0_.wei_chat as wei_cha25_2_0_ from admin admin0_ where admin0_.id=2"],"msgType":"2","methodName":"executeQuery","className":"com.mysql.jdbc.PreparedStatement","interval":592999,"startTime":"2018-05-22 14:19:14","url":"jdbc:mysql://127.0.0.10:3306/dbtest1?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull"},{"sqls":["select count(*) from user where store_id = 'ds2'"],"msgType":"2","methodName":"executeQuery","className":"com.mysql.jdbc.PreparedStatement","interval":449021,"startTime":"2018-05-22 14:19:14","url":"jdbc:mysql://127.0.0.10:3306/dbtest1?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull"}]
          * className : org.springframework.web.filter.OncePerRequestFilter
          * parentSpanId : -1
          * sampleRate : 1.0
@@ -219,6 +217,7 @@ public class TroEntity {
              * className : com.mysql.jdbc.PreparedStatement
              * interval : 592999
              * startTime : 2018-05-22 14:19:14
+             * url : jdbc:mysql://127.0.0.10:3306/dbtest1?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull
              */
 
             private String msgType;

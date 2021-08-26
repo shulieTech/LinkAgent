@@ -19,8 +19,6 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowRedisServerDisableE
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,15 +33,21 @@ import java.util.Map;
 public class RedisShadowServerConfig implements IChange<Map<String
         , ShadowRedisConfig>, ApplicationConfig> {
 
-    Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static RedisShadowServerConfig INSTANCE;
 
-    public RedisShadowServerConfig() {
+    public static RedisShadowServerConfig getINSTANCE() {
+        if (INSTANCE == null) {
+            synchronized (RedisShadowServerConfig.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new RedisShadowServerConfig();
+                }
+            }
+        }
+        return INSTANCE;
     }
 
-    private static RedisShadowServerConfig instance = new RedisShadowServerConfig();
-
-    public static RedisShadowServerConfig getInstance() {
-        return instance;
+    public static void release() {
+        INSTANCE = null;
     }
 
 

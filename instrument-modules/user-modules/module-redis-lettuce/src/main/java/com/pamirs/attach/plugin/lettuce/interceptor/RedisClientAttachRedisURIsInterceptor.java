@@ -15,7 +15,9 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -36,6 +38,7 @@ import java.util.List;
  * @mail xiaobin@shulie.io
  * @Date 2020/9/7 11:44 上午
  */
+@Destroyable(LettuceDestroy.class)
 public class RedisClientAttachRedisURIsInterceptor extends AroundInterceptor {
     @Resource
     protected DynamicFieldManager manager;

@@ -19,6 +19,7 @@ import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -60,6 +61,8 @@ public abstract class HttpOnceUploader<T> extends HttpUploader<T> {
 
     protected ScheduledFuture future;
 
+    private Future taskFuture;
+
     public HttpOnceUploader(String name, String postUrl, long retryMaxTimes, int retrySecond) {
         super(name, postUrl);
         this.isUploaded = false;
@@ -81,7 +84,7 @@ public abstract class HttpOnceUploader<T> extends HttpUploader<T> {
             return;
         }
         isUploaded = true;
-        ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE.submit(new Runnable() {
+        taskFuture = ExecutorServiceFactory.getFactory().submit(new Runnable() {
             @Override
             public void run() {
                 HttpUtils.HttpResult httpResult = innerUpload();
@@ -101,10 +104,13 @@ public abstract class HttpOnceUploader<T> extends HttpUploader<T> {
         if (future != null && !future.isDone() && !future.isCancelled()) {
             future.cancel(true);
         }
+        if (taskFuture != null && !taskFuture.isDone() && !taskFuture.isCancelled()) {
+            taskFuture.cancel(true);
+        }
     }
 
     private void retry() {
-        future = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 // 不重试

@@ -40,6 +40,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,13 +56,14 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
 
     private DataPushManager dataPushManager;
     private boolean isActive;
+    private ScheduledFuture future;
 
     @Override
     public void onActive() throws Throwable {
         isActive = true;
         final PusherOptions pusherOptions = buildPusherOptions();
 
-        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+        future = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 if (!isActive) {
@@ -76,7 +78,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
                     logger.info("SIMULATOR: Data push Manager start success.");
                 } catch (Throwable e) {
                     logger.warn("SIMULATOR: Data Push Manager start failed. log data can't push to the server.", e);
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                    future = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 }
             }
         }, 0, TimeUnit.SECONDS);
@@ -113,10 +115,9 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
     @Override
     public void onFrozen() throws Throwable {
         isActive = false;
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
+        if (future != null && !future.isCancelled() && !future.isDone()) {
+            future.cancel(true);
+        }
         if (dataPushManager != null) {
             dataPushManager.stop();
         }

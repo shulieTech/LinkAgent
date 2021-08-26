@@ -15,8 +15,8 @@
 package com.pamirs.pradar.pressurement;
 
 import com.pamirs.pradar.*;
-import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.json.ResultSerializer;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
@@ -77,37 +77,27 @@ public final class ClusterTestUtils {
     }
 
     /**
-     * rpc的压测流量验证
+     * rpc的压测流量验证, 使用类名+方法名的组合方式,如果方法为空则单独匹配 className
+     * 会匹配白名单中匹配的 className 和 className#methodName 的名单
      *
-     * @param className
+     * @param className  类名
+     * @param methodName 方法名称
      */
-    public final static void validateRpcClusterTest(String className) {
+    public final static MatchConfig validateRpcClusterTest(String className, String methodName) {
         validateClusterTest();
         try {
             /**
              * 如果是压测流量则需要验证 rpc 的白名单,不在白名单中则报错
              */
             if (Pradar.isClusterTest()) {
-                boolean isPassed = ArbiterHttpExit.shallWePassRpc(className);
-
-                if (!isPassed) {
-                    throw new PressureMeasureError("WhiteListError: [" + AppNameUtils.appName() + "] no interface name found in WhiteList : " + className);
+                MatchConfig matchConfig = ArbiterHttpExit.shallWePassRpc(className, methodName);
+                if (!matchConfig.isSuccess()) {
+                    throw new PressureMeasureError("WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#" + methodName + "] is not allowed in WhiteList.");
                 }
+                return matchConfig;
             }
         } catch (PressureMeasureError e) {
-            String message = "WhiteListError: [" + AppNameUtils.appName() + "] no interface name found in WhiteList : " + className;
-            LOGGER.error(message, e);
-            if (Pradar.isClusterTest()) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.AgentError)
-                        .setErrorCode("whiteList-0001")
-                        .setMessage(message + "|url:" + className)
-                        .setDetail(ResultSerializer.serializeObject(e, 2))
-                        .report();
-                throw e;
-            }
-        } catch (Throwable e) {
-            String message = "WhiteListError: [" + AppNameUtils.appName() + "] validateRpcClusterTest err!";
+            String message = "WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#" + methodName + "] is not allowed in WhiteList.";
             LOGGER.error(message, e);
             if (Pradar.isClusterTest()) {
                 ErrorReporter.buildError()
@@ -115,10 +105,25 @@ public final class ClusterTestUtils {
                         .setErrorCode("whiteList-0001")
                         .setMessage(message)
                         .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
+                        .report();
+                throw e;
+            }
+        } catch (Throwable e) {
+            String message = "WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#" + methodName + "] is not allowed in WhiteList.";
+            LOGGER.error(message, e);
+            if (Pradar.isClusterTest()) {
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("whiteList-0001")
+                        .setMessage(message)
+                        .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
                         .report();
                 throw new PressureMeasureError(message, e);
             }
         }
+        return ArbiterHttpExit.failure();
     }
 
     /**
@@ -128,96 +133,43 @@ public final class ClusterTestUtils {
      * @param className  类名
      * @param methodName 方法名称
      */
-    public final static void validateRpcClusterTest(String className, String methodName) {
+    public final static MatchConfig rpcClusterTest(String className, String methodName) {
         validateClusterTest();
         try {
             /**
              * 如果是压测流量则需要验证 rpc 的白名单,不在白名单中则报错
              */
             if (Pradar.isClusterTest()) {
-                boolean isPassed = ArbiterHttpExit.shallWePassRpc(className, methodName);
-
-                if (!isPassed) {
-                    throw new PressureMeasureError("WhiteListError: [" + AppNameUtils.appName() + "] no interface name found in WhiteList : " + className + "#" + methodName);
-                }
+                return ArbiterHttpExit.shallWePassRpc(className, methodName);
             }
         } catch (PressureMeasureError e) {
-            String message = "WhiteListError: [" + AppNameUtils.appName() + "] no interface name found in WhiteList : " + className + "#" + methodName;
+            String message = "WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#" + methodName + "] is not allowed in WhiteList.";
             LOGGER.error(message, e);
             if (Pradar.isClusterTest()) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("whiteList-0001")
-                        .setMessage(message + "|url:" + className + "#" + methodName)
+                        .setMessage(message)
                         .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
                         .report();
                 throw e;
             }
         } catch (Throwable e) {
-            String message = "WhiteListError: [" + AppNameUtils.appName() + "] validateRpcClusterTest err! WhiteList: " + className + "#" + methodName;
+            String message = "WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#" + methodName + "] is not allowed in WhiteList.";
             LOGGER.error(message, e);
             if (Pradar.isClusterTest()) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("whiteList-0001")
-                        .setMessage(message + "|url:" + className + "#" + methodName)
+                        .setMessage(message)
                         .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
                         .report();
                 throw new PressureMeasureError(message, e);
             }
         }
-    }
-
-    /**
-     * 验证压测流量的有效性,如果是压测流量但是压测未开启则直接报错
-     * 百世XingNg的rpc url
-     */
-    public final static void validateXingNgRpcClusterTest(String url) {
-        validateClusterTest();
-        try {
-            if (Pradar.isClusterTest()) {
-                boolean arbiterAllowRequest = ArbiterHttpExit.shallWePassHttpString(url);
-                if (!arbiterAllowRequest) {
-                    throw new PressureMeasureError(" WhiteListError: url [" + url + "] is not allowed in WhiteList.");
-                }
-            }
-        } catch (PradarException e) {
-            String message = "WhiteListError: {}";
-            LOGGER.error(message, e);
-            if (Pradar.isClusterTest()) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.AgentError)
-                        .setErrorCode("whiteList-0001")
-                        .setMessage(message)
-                        .setDetail(ResultSerializer.serializeObject(e, 2))
-                        .report();
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            String message = "WhiteListError:  url [" + url + "] is not allowed in WhiteList.";
-            LOGGER.error(message, e);
-            if (Pradar.isClusterTest()) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.AgentError)
-                        .setErrorCode("whiteList-0001")
-                        .setMessage(message + "|url:" + url)
-                        .setDetail(ResultSerializer.serializeObject(e, 2))
-                        .report();
-                throw e;
-            }
-        } catch (Throwable e) {
-            String message = "WhiteListError: [" + AppNameUtils.appName() + "] validateRpcClusterTest err!";
-            LOGGER.error(message, e);
-            if (Pradar.isClusterTest()) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.AgentError)
-                        .setErrorCode("whiteList-0001")
-                        .setMessage(message)
-                        .setDetail(ResultSerializer.serializeObject(e, 2))
-                        .report();
-                throw new PressureMeasureError(e);
-            }
-        }
+        return ArbiterHttpExit.failure();
     }
 
     private static void reportFastDebugErrorInfo(String code, Throwable e, String message) {
@@ -234,14 +186,15 @@ public final class ClusterTestUtils {
     /**
      * 验证压测流量的有效性,如果是压测流量但是压测未开启则直接报错
      */
-    public final static void validateHttpClusterTest(String url) {
+    public final static MatchConfig validateHttpClusterTest(String url) {
         validateClusterTest();
         try {
             if (Pradar.isClusterTest()) {
-                boolean arbiterAllowRequest = ArbiterHttpExit.shallWePassHttpString(url);
-                if (!arbiterAllowRequest) {
+                MatchConfig matchConfig = ArbiterHttpExit.shallWePassHttpString(url);
+                if (!matchConfig.isSuccess()) {
                     throw new PressureMeasureError("WhiteListError: [" + AppNameUtils.appName() + "] url [" + url + "] is not allowed in WhiteList.");
                 }
+                return matchConfig;
             }
         } catch (PressureMeasureError e) {
             String message = "WhiteListError: [" + AppNameUtils.appName() + "] url [" + url + "] is not allowed in WhiteList.";
@@ -250,8 +203,9 @@ public final class ClusterTestUtils {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("whiteList-0001")
-                        .setMessage(message + "|url:" + url)
+                        .setMessage(message)
                         .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
                         .report();
                 throw e;
             }
@@ -262,12 +216,53 @@ public final class ClusterTestUtils {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("whiteList-0001")
-                        .setMessage(message + "|url:" + url)
+                        .setMessage(message)
                         .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
                         .report();
                 throw new PressureMeasureError(message, e);
             }
         }
+        return ArbiterHttpExit.failure();
+    }
+
+    /**
+     * 验证压测流量的有效性,如果是压测流量但是压测未开启则直接报错
+     */
+    public final static MatchConfig httpClusterTest(String url) {
+        validateClusterTest();
+        try {
+            if (Pradar.isClusterTest()) {
+                return ArbiterHttpExit.shallWePassHttpString(url);
+            }
+        } catch (PressureMeasureError e) {
+            String message = "WhiteListError: [" + AppNameUtils.appName() + "] url [" + url + "] is not allowed in WhiteList.";
+            LOGGER.error(message, e);
+            if (Pradar.isClusterTest()) {
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("whiteList-0001")
+                        .setMessage(message)
+                        .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
+                        .report();
+                throw e;
+            }
+        } catch (Throwable e) {
+            String message = "WhiteListError: [" + AppNameUtils.appName() + "] url [" + url + "] is not allowed in WhiteList.";
+            LOGGER.error(message, e);
+            if (Pradar.isClusterTest()) {
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("whiteList-0001")
+                        .setMessage(message)
+                        .setDetail(ResultSerializer.serializeObject(e, 2))
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
+                        .report();
+                throw new PressureMeasureError(message, e);
+            }
+        }
+        return ArbiterHttpExit.failure();
     }
 
     /**
@@ -279,7 +274,7 @@ public final class ClusterTestUtils {
                 return;
             }
             if (!PradarSwitcher.isClusterTestEnabled() && isClusterTestRequest) {
-                throw new PressureMeasureError("ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] " + PradarSwitcher.PRADAR_SWITCHER_OFF, isClusterTestRequest);
+                throw new PressureMeasureError("ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] " + PradarSwitcher.getErrorCode() + " " + PradarSwitcher.getErrorMsg(), true);
             }
         } catch (PressureMeasureError e) {
             String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] validateClusterTest err!";
@@ -307,7 +302,7 @@ public final class ClusterTestUtils {
                 return;
             }
             if (!PradarSwitcher.isClusterTestEnabled() && Pradar.isClusterTest()) {
-                throw new PressureMeasureError("ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] " + PradarSwitcher.PRADAR_SWITCHER_OFF);
+                throw new PressureMeasureError("ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] " + PradarSwitcher.getErrorCode() + " " + PradarSwitcher.getErrorMsg());
             }
         } catch (PressureMeasureError e) {
             String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] validateClusterTest err!";
@@ -338,17 +333,17 @@ public final class ClusterTestUtils {
             }
             boolean isClusterTestRequest = isClusterTestRequest(context);
             if (isClusterTestRequest && !PradarSwitcher.isClusterTestEnabled()) {
-                throw new PressureMeasureError("ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] pradar switch is closed ,pressure request rejected !");
+                throw new PressureMeasureError("ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] " + PradarSwitcher.getErrorCode() + " " + PradarSwitcher.getErrorMsg());
             }
         } catch (PressureMeasureError e) {
-            String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] pradar switch is closed ,pressure request rejected !";
+            String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] validateClusterTest err!";
             LOGGER.error(message, e);
             if (Pradar.isClusterTest()) {
                 reportFastDebugErrorInfo("agent-0008", e, message);
                 throw e;
             }
         } catch (Throwable t) {
-            String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] pradar switch is closed ,pressure request rejected !";
+            String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] validateClusterTest err!";
             LOGGER.error(message, t);
             if (Pradar.isClusterTest()) {
                 reportFastDebugErrorInfo("agent-0008", t, message);

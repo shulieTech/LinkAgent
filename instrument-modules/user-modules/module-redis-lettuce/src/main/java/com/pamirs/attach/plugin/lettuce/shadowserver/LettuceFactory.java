@@ -24,7 +24,6 @@ import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -51,19 +50,32 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
 
     private final static Logger LOGGER = LoggerFactory.getLogger(LettuceFactory.class);
 
-    private static final LettuceFactory factory = new LettuceFactory();
+    private static LettuceFactory factory;
 
     private LettuceFactory() {
         super(new LettuceNodesStrategy());
     }
 
     public static LettuceFactory getFactory() {
+        if (factory == null) {
+            synchronized (LettuceFactory.class) {
+                if (factory == null) {
+                    factory = new LettuceFactory();
+                }
+            }
+        }
         return factory;
     }
 
     private final List<Object> lettucePools = new ArrayList<Object>();
 
     private final Map<Object, Object> connectionMap = new ConcurrentHashMap<Object, Object>();
+
+
+    public static void release() {
+        LettuceFactory.destroy();
+        factory = null;
+    }
 
     @Override
     public <T> T security(T client) {
@@ -218,8 +230,9 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         RedisURI newRedisUri = new RedisURI();
         if (null != redisURI && null != nodes) {
             String node = nodes.get(index);
-            String host = node.substring(0, node.indexOf(":"));
-            int port = Integer.parseInt(node.substring(node.indexOf(":") + 1));
+            final int endIndex = node.indexOf(":");
+            String host = node.substring(0, endIndex);
+            int port = Integer.parseInt(node.substring(endIndex + 1));
             newRedisUri.setHost(host);
             newRedisUri.setPort(port);
             newRedisUri.setPassword(password == null ? "" : password);

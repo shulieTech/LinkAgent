@@ -15,11 +15,11 @@
 package com.pamirs.attach.plugin.command.handler;
 
 import com.shulie.instrument.simulator.api.resource.ModuleCommandInvoker;
-import io.shulie.tro.channel.bean.CommandPacket;
-import io.shulie.tro.channel.bean.CommandResponse;
-import io.shulie.tro.channel.bean.CommandSend;
-import io.shulie.tro.channel.bean.CommandStatus;
-import io.shulie.tro.channel.handler.CommandHandler;
+import io.shulie.takin.channel.bean.CommandPacket;
+import io.shulie.takin.channel.bean.CommandResponse;
+import io.shulie.takin.channel.bean.CommandSend;
+import io.shulie.takin.channel.bean.CommandStatus;
+import io.shulie.takin.channel.handler.CommandHandler;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.HashMap;
@@ -28,7 +28,7 @@ import java.util.Map;
 /**
  * 与控制台交互的日志拉取命令处理器
  *
- * @Author: Hengyu
+ * @author wangjian
  * @since 2021/1/5 19:18
  */
 public class DispatcherCommandHandler implements CommandHandler {

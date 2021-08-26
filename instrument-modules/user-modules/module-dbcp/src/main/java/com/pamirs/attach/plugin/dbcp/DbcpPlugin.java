@@ -17,7 +17,6 @@ package com.pamirs.attach.plugin.dbcp;
 
 import com.pamirs.attach.plugin.dbcp.interceptor.DataSourceGetConnectionCutoffArgsInterceptor;
 import com.pamirs.attach.plugin.dbcp.interceptor.DataSourceGetConnectionCutoffInterceptor;
-import com.pamirs.attach.plugin.dbcp.utils.DataSourceWrapUtil;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -54,10 +53,5 @@ public class DbcpPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 getConnection0.addInterceptor(Listeners.of(DataSourceGetConnectionCutoffArgsInterceptor.class, "Dbcp_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
-        DataSourceWrapUtil.destroy();
     }
 }

@@ -145,69 +145,6 @@ public class BehaviorDescriptor {
         // public
         private static final int METHOD = 11;
 
-        /**
-         * The <tt>void</tt> eventType.
-         */
-        // public
-        private static final Type VOID_TYPE = new Type(VOID, null, ('V' << 24)
-                | (5 << 16) | (0 << 8) | 0, 1);
-
-        /**
-         * The <tt>boolean</tt> eventType.
-         */
-        // public
-        private static final Type BOOLEAN_TYPE = new Type(BOOLEAN, null, ('Z' << 24)
-                | (0 << 16) | (5 << 8) | 1, 1);
-
-        /**
-         * The <tt>char</tt> eventType.
-         */
-        // public
-        private static final Type CHAR_TYPE = new Type(CHAR, null, ('C' << 24)
-                | (0 << 16) | (6 << 8) | 1, 1);
-
-        /**
-         * The <tt>byte</tt> eventType.
-         */
-        // public
-        private static final Type BYTE_TYPE = new Type(BYTE, null, ('B' << 24)
-                | (0 << 16) | (5 << 8) | 1, 1);
-
-        /**
-         * The <tt>short</tt> eventType.
-         */
-        // public
-        private static final Type SHORT_TYPE = new Type(SHORT, null, ('S' << 24)
-                | (0 << 16) | (7 << 8) | 1, 1);
-
-        /**
-         * The <tt>int</tt> eventType.
-         */
-        // public
-        private static final Type INT_TYPE = new Type(INT, null, ('I' << 24)
-                | (0 << 16) | (0 << 8) | 1, 1);
-
-        /**
-         * The <tt>float</tt> eventType.
-         */
-        // public
-        private static final Type FLOAT_TYPE = new Type(FLOAT, null, ('F' << 24)
-                | (2 << 16) | (2 << 8) | 1, 1);
-
-        /**
-         * The <tt>long</tt> eventType.
-         */
-        // public
-        private static final Type LONG_TYPE = new Type(LONG, null, ('J' << 24)
-                | (1 << 16) | (1 << 8) | 2, 1);
-
-        /**
-         * The <tt>double</tt> eventType.
-         */
-        // public
-        private static final Type DOUBLE_TYPE = new Type(DOUBLE, null, ('D' << 24)
-                | (3 << 16) | (3 << 8) | 2, 1);
-
         // ------------------------------------------------------------------------
         // Fields
         // ------------------------------------------------------------------------
@@ -299,23 +236,32 @@ public class BehaviorDescriptor {
             int len;
             switch (buf[off]) {
                 case 'V':
-                    return VOID_TYPE;
+                    return new Type(VOID, null, ('V' << 24)
+                            | (5 << 16) | (0 << 8) | 0, 1);
                 case 'Z':
-                    return BOOLEAN_TYPE;
+                    return new Type(BOOLEAN, null, ('Z' << 24)
+                            | (0 << 16) | (5 << 8) | 1, 1);
                 case 'C':
-                    return CHAR_TYPE;
+                    return new Type(CHAR, null, ('C' << 24)
+                            | (0 << 16) | (6 << 8) | 1, 1);
                 case 'B':
-                    return BYTE_TYPE;
+                    return new Type(BYTE, null, ('B' << 24)
+                            | (0 << 16) | (5 << 8) | 1, 1);
                 case 'S':
-                    return SHORT_TYPE;
+                    return new Type(SHORT, null, ('S' << 24)
+                            | (0 << 16) | (7 << 8) | 1, 1);
                 case 'I':
-                    return INT_TYPE;
+                    return new Type(INT, null, ('I' << 24)
+                            | (0 << 16) | (0 << 8) | 1, 1);
                 case 'F':
-                    return FLOAT_TYPE;
+                    return new Type(FLOAT, null, ('F' << 24)
+                            | (2 << 16) | (2 << 8) | 1, 1);
                 case 'J':
-                    return LONG_TYPE;
+                    return new Type(LONG, null, ('J' << 24)
+                            | (1 << 16) | (1 << 8) | 2, 1);
                 case 'D':
-                    return DOUBLE_TYPE;
+                    return new Type(DOUBLE, null, ('D' << 24)
+                            | (3 << 16) | (3 << 8) | 2, 1);
                 case '[':
                     len = 1;
                     while (buf[off + len] == '[') {

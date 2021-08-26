@@ -19,7 +19,6 @@ import com.pamirs.attach.plugin.common.datasource.WrappedDbMediatorDataSource;
 import com.pamirs.attach.plugin.common.datasource.biz.BizConnection;
 import com.pamirs.attach.plugin.common.datasource.normal.NormalConnection;
 import com.pamirs.attach.plugin.common.datasource.pressure.PressureConnection;
-import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -70,17 +69,24 @@ public class TomcatJdbcMediatorDataSource extends WrappedDbMediatorDataSource<or
                     if (dataSourcePerformanceTest == null) {
                         throw new PressureMeasureError("Performance dataSource is null.");
                     }
-                    return new PressureConnection(dataSourceBusiness, dataSourcePerformanceTest.getConnection(), dataSourcePerformanceTest.getUrl(), dataSourcePerformanceTest.getUsername(),dbConnectionKey, dbType);
+                    return new PressureConnection(dataSourceBusiness, dataSourcePerformanceTest.getConnection(), dataSourcePerformanceTest.getUrl(), dataSourcePerformanceTest.getUsername(), dbConnectionKey, dbType);
                 }
             } catch (Throwable e) {
                 ErrorReporter.Error error = ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0001")
-                        .setMessage("数据源获取链接失败！" + (Pradar.isClusterTest() ? "(压测流量)" : ""))
-                        .setDetail("get connection failed by dbMediatorDataSource, message: " + e.getMessage() + "\r\n" + printStackTrace(e));
+                        .setMessage("数据源获取链接失败！" + ((Pradar.isClusterTest() ? "(压测流量)" : "") + ", url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                                + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())))
+                        .setDetail("get connection failed by dbMediatorDataSource, url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()) +
+                                ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())
+                                + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
 //                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
-                throw new PressureMeasureError("tomcat jdbc get connection failed by dbMediatorDataSource");
+                throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
+                        + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                        + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()), e);
             }
         } else {
             String dbType = JdbcUtils.getDbType(dataSourceBusiness.getUrl(), JdbcUtils.getDriverClassName(dataSourceBusiness.getUrl()));

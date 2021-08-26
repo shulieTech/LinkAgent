@@ -14,15 +14,18 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.shadowserver.LettuceFactory;
 import com.pamirs.attach.plugin.lettuce.shadowserver.LettuceMasterSlaveFactory;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/3/1 5:18 下午
  */
+@Destroyable(LettuceDestroy.class)
 public class LettuceMethodShutdownInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {

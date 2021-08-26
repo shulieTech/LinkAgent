@@ -63,7 +63,7 @@ public abstract class GroupMatcher implements Matcher {
         @Override
         public MatchingResult matching(final ClassStructure classStructure) {
             if (ArrayUtils.isEmpty(matcherArray)) {
-                return MatchingResult.UN_MATCHED;
+                return MatchingResult.unMatched();
             }
 
             final MatchingResult result = new MatchingResult(true);
@@ -73,7 +73,7 @@ public abstract class GroupMatcher implements Matcher {
 
                 // 只要有一次匹配失败，剩下的是取交集运算，所以肯定也没戏，就不用花这个计算了
                 if (!subResult.isMatched()) {
-                    return MatchingResult.UN_MATCHED;
+                    return MatchingResult.unMatched();
                 }
 
                 for (Map.Entry<BehaviorStructure, Set<BuildingForListeners>> entry : subResult.getBehaviorStructureListMap().entrySet()) {
@@ -128,14 +128,14 @@ public abstract class GroupMatcher implements Matcher {
             boolean isFirst = true;
             final Map<BehaviorStructure, Set<BuildingForListeners>> found = new HashMap<BehaviorStructure, Set<BuildingForListeners>>();
             if (ArrayUtils.isEmpty(matcherArray)) {
-                return MatchingResult.UN_MATCHED;
+                return MatchingResult.unMatched();
             }
             for (final Matcher subMatcher : matcherArray) {
                 final MatchingResult subResult = subMatcher.matching(classStructure);
 
                 // 只要有一次匹配失败，剩下的是取交集运算，所以肯定也没戏，就不用花这个计算了
                 if (!subResult.isMatched()) {
-                    return MatchingResult.UN_MATCHED;
+                    return MatchingResult.unMatched();
                 }
 
                 if (isFirst) {

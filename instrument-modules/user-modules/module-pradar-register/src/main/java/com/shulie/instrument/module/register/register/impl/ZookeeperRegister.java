@@ -14,16 +14,38 @@
  */
 package com.shulie.instrument.module.register.register.impl;
 
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.alibaba.fastjson.JSON;
+
+import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.ScanJarPomUtils;
+import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.common.HttpUtils.HttpResult;
 import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.event.ErrorEvent;
 import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
 import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.register.register.Register;
 import com.shulie.instrument.module.register.register.RegisterOptions;
 import com.shulie.instrument.module.register.zk.ZkClient;
@@ -36,14 +58,6 @@ import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Description
@@ -63,6 +77,8 @@ public class ZookeeperRegister implements Register {
     private Set<String> jars;
     private AtomicBoolean isStarted = new AtomicBoolean(false);
     private final RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+    private ScheduledFuture scanJarFuture;
+    private ScheduledFuture syncStatusFuture;
 
     /**
      * 获取agentId
@@ -72,7 +88,8 @@ public class ZookeeperRegister implements Register {
     public String getAgentId() {
         String agentId = simulatorConfig.getAgentId();
         if (StringUtils.isBlank(agentId)) {
-            return new StringBuilder(PradarCoreUtils.getLocalAddress()).append("-").append(RuntimeUtils.getPid()).toString();
+            return new StringBuilder(PradarCoreUtils.getLocalAddress()).append("-").append(RuntimeUtils.getPid())
+                .toString();
         } else {
             Properties properties = new Properties();
             properties.setProperty("pid", String.valueOf(RuntimeUtils.getPid()));
@@ -95,7 +112,9 @@ public class ZookeeperRegister implements Register {
         map.put("md5", md5);
         map.put("agentStatus", "INSTALLED");
         //服务的 url
-        String serviceUrl = "http://" + simulatorConfig.getServerAddress().getAddress().getHostAddress() + ":" + simulatorConfig.getServerAddress().getPort() + "/simulator/" + this.simulatorConfig.getNamespace() + "/module/http";
+        String serviceUrl = "http://" + simulatorConfig.getServerAddress().getAddress().getHostAddress() + ":"
+            + simulatorConfig.getServerAddress().getPort() + "/simulator/" + this.simulatorConfig.getNamespace()
+            + "/module/http";
         map.put("service", serviceUrl);
         map.put("port", String.valueOf(simulatorConfig.getServerAddress().getPort()));
         map.put("status", String.valueOf(PradarSwitcher.isClusterTestEnabled()));
@@ -189,8 +208,8 @@ public class ZookeeperRegister implements Register {
              * 如果 jar包是这一些打头的，也过滤掉
              */
             if (StringUtils.startsWith(file, "pradar-")
-                    || StringUtils.startsWith(file, "simulator-")
-                    || StringUtils.startsWith(file, "module-")) {
+                || StringUtils.startsWith(file, "simulator-")
+                || StringUtils.startsWith(file, "module-")) {
                 continue;
             }
             list.add(file);
@@ -237,6 +256,12 @@ public class ZookeeperRegister implements Register {
             LOGGER.error("[register] ensureDirectoryExists err:{}", registerBasePath, e);
         }
         this.heartbeatPath = registerBasePath + '/' + client;
+        try {
+            if (this.zkClient.exists(this.heartbeatPath)) {
+                this.zkClient.deleteQuietly(this.heartbeatPath);
+            }
+        } catch (Throwable e) {
+        }
         cleanExpiredNodes(registerBasePath);
         this.heartbeatNode = this.zkClient.createHeartbeatNode(this.heartbeatPath);
         PradarSwitcher.registerListener(new PradarSwitcher.PradarSwitcherListener() {
@@ -267,6 +292,10 @@ public class ZookeeperRegister implements Register {
         }
         try {
             this.jars = loadAllJars();
+            this.pushMiddlewareJarInfo();
+            if (zkClient.exists(heartbeatPath)) {
+                zkClient.deleteQuietly(heartbeatPath);
+            }
             this.heartbeatNode.start();
             this.heartbeatNode.setData(getHeartbeatDatas());
             if (LOGGER.isInfoEnabled()) {
@@ -276,7 +305,7 @@ public class ZookeeperRegister implements Register {
             LOGGER.error("[pradar-register] register node to zk for heartbeat node err: {}!", heartbeatPath, e);
         }
         //5秒扫描一次当前应用所有加载的jar列表
-        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+        scanJarFuture = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 if (!isStarted.get()) {
@@ -286,7 +315,7 @@ public class ZookeeperRegister implements Register {
                  * 如果还未启动则下次再执行
                  */
                 if (!heartbeatNode.isAlive() || !heartbeatNode.isRunning()) {
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                    scanJarFuture = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                     return;
                 }
 
@@ -307,12 +336,40 @@ public class ZookeeperRegister implements Register {
                 } catch (Throwable e) {
                     LOGGER.error("[pradar-register] update heartbeat node agent data err: {}!", heartbeatPath, e);
                 }
-                ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 10, TimeUnit.SECONDS);
+                scanJarFuture = ExecutorServiceFactory.getFactory().schedule(this, 10, TimeUnit.SECONDS);
             }
         }, 5, TimeUnit.SECONDS);
         isStarted.compareAndSet(false, true);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("[pradar-register] start to register zookeeper node successful. {}", getAgentId());
+        }
+    }
+
+    private static final String PUSH_MIDDLEWARE_URL = "/agent/push/application/middleware";
+
+    private void pushMiddlewareJarInfo() {
+
+        String body = "";
+        try {
+            String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
+
+            final Set<String> jarInfoSet = ScanJarPomUtils.scanByJarPaths(jars);
+            final ArrayList<MiddlewareRequest> middlewareList = new ArrayList<MiddlewareRequest>();
+            for (String jarInfoStr : jarInfoSet) {
+                final String[] split = jarInfoStr.split(":");
+                middlewareList.add(new MiddlewareRequest(split[1], split[0], split[2]));
+            }
+            final PushMiddlewareVO pushMiddlewareVO = new PushMiddlewareVO(AppNameUtils.appName(), middlewareList);
+            body = JSON.toJSONString(pushMiddlewareVO);
+            final HttpResult httpResult = HttpUtils.doPost(troControlWebUrl + PUSH_MIDDLEWARE_URL,
+                body);
+            if (httpResult.isSuccess()) {
+                LOGGER.info(String.format("中间件信息上报成功,body:%s,返回结果：%s", body, httpResult.getResult()));
+            } else {
+                LOGGER.info(String.format("中间件信息上报失败,body:%s,失败信息：%s", body, httpResult.getResult()));
+            }
+        } catch (Exception e) {
+            LOGGER.error(String.format("中间件信息上报异常。body:%s", body), e);
         }
     }
 
@@ -334,9 +391,18 @@ public class ZookeeperRegister implements Register {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("[pradar-register] prepare to stop register zookeeper node. {}", getAgentId());
         }
+        if (scanJarFuture != null && !scanJarFuture.isCancelled() && !scanJarFuture.isDone()) {
+            scanJarFuture.cancel(true);
+        }
+        if (syncStatusFuture != null && !syncStatusFuture.isCancelled() && !syncStatusFuture.isDone()) {
+            syncStatusFuture.cancel(true);
+        }
+
         if (this.heartbeatNode != null) {
             try {
-                this.heartbeatNode.stop();
+                if (this.heartbeatNode.isRunning()) {
+                    this.heartbeatNode.stop();
+                }
             } catch (Throwable e) {
                 LOGGER.error("[pradar-register] unregister node to zk for heartbeat node err: {}!", heartbeatPath, e);
             }
@@ -363,14 +429,15 @@ public class ZookeeperRegister implements Register {
                 LOGGER.error("[pradar-register] refresh node data to zk for heartbeat node err: {}!", heartbeatPath, e);
             }
         } else {
-            ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+            syncStatusFuture = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         heartbeatNode.setData(getHeartbeatDatas());
                     } catch (Throwable e) {
-                        LOGGER.error("[pradar-register] refresh node data to zk for heartbeat node err: {}!", heartbeatPath, e);
-                        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                        LOGGER.error("[pradar-register] refresh node data to zk for heartbeat node err: {}!",
+                            heartbeatPath, e);
+                        syncStatusFuture = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                     }
                 }
             }, 0, TimeUnit.SECONDS);
@@ -379,5 +446,48 @@ public class ZookeeperRegister implements Register {
             LOGGER.info("[pradar-register] refresh register zookeeper node successful. {}", getAgentId());
         }
 
+    }
+
+    private class MiddlewareRequest {
+        private final String artifactId;
+        private final String groupId;
+        private final String version;
+
+        public MiddlewareRequest(String artifactId, String groupId, String version) {
+            this.artifactId = artifactId;
+            this.groupId = groupId;
+            this.version = version;
+        }
+
+        public String getArtifactId() {
+            return artifactId;
+        }
+
+        public String getGroupId() {
+            return groupId;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+    }
+
+    private class PushMiddlewareVO {
+        private final String applicationName;
+        private final List<MiddlewareRequest> middlewareList;
+
+        public PushMiddlewareVO(String applicationName,
+            List<MiddlewareRequest> middlewareList) {
+            this.applicationName = applicationName;
+            this.middlewareList = middlewareList;
+        }
+
+        public String getApplicationName() {
+            return applicationName;
+        }
+
+        public List<MiddlewareRequest> getMiddlewareList() {
+            return middlewareList;
+        }
     }
 }

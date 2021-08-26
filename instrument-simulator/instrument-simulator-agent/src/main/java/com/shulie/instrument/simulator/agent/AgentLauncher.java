@@ -14,18 +14,26 @@
  */
 package com.shulie.instrument.simulator.agent;
 
-import com.shulie.instrument.simulator.agent.utils.ModuleUtils;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.shulie.instrument.simulator.agent.utils.ModuleUtils;
 
 import static java.lang.String.format;
 
@@ -41,15 +49,15 @@ public class AgentLauncher {
 
     // Simulator默认主目录
     private static final String DEFAULT_SIMULATOR_HOME
-            = new File(AgentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-            .getParent();
+        = new File(AgentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
+        .getParent();
 
     private static final String SIMULATOR_USER_MODULE_PATH
-            = DEFAULT_SIMULATOR_HOME
-            + File.separator + "modules";
+        = DEFAULT_SIMULATOR_HOME
+        + File.separator + "modules";
 
     private static final String SIMULATOR_CLASSLOADER_JAR_PATH = DEFAULT_SIMULATOR_HOME
-            + File.separator + "biz-classloader-jars";
+        + File.separator + "biz-classloader-jars";
 
     // 启动模式: agent方式加载
     private static final String LAUNCH_MODE_AGENT = "agent";
@@ -62,11 +70,11 @@ public class AgentLauncher {
 
     // agentmain上来的结果输出到文件${HOME}/.simulator.token
     private static final String RESULT_FILE_PATH = System.getProperties().getProperty("user.home")
-            + File.separator + "%s" + File.separator + ".simulator.token";
+        + File.separator + "%s" + File.separator + "%s" + File.separator + ".simulator.token";
 
     // 全局持有ClassLoader用于隔离Simulator实现
     private static volatile Map<String/*NAMESPACE*/, SimulatorClassLoader> simulatorClassLoaderMap
-            = new ConcurrentHashMap<String, SimulatorClassLoader>();
+        = new ConcurrentHashMap<String, SimulatorClassLoader>();
 
     private static final Pattern SIMULATOR_HOME_PATTERN = Pattern.compile("(?i)^[/\\\\]([a-z])[/\\\\]");
 
@@ -111,6 +119,15 @@ public class AgentLauncher {
 
     private static final String KEY_AGENT_VERSION = "agentVersion";
     private static final String DEFAULT_AGENT_VERSION = "1.0.0.1";
+
+    private static final String KEY_USER_APP_KEY = "userAppKey";
+    private static final String DEFAULT_USER_APP_KEY = "";
+
+    private static final String KEY_USER_ID = "userId";
+    private static final String DEFAULT_USER_ID = "";
+
+    private static final String KEY_TRO_WEB_URL = "troWebUrl";
+    private static final String DEFAULT_TRO_WEB_URL = "";
 
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
@@ -161,8 +178,10 @@ public class AgentLauncher {
             return;
         }
         try {
-            Class moduleBootLoaderOfClass = classLoader.loadClass("com.shulie.instrument.simulator.agent.utils.BootResourceLoader");
-            Method loadModuleSupportOfMethod = moduleBootLoaderOfClass.getDeclaredMethod("addResource", java.util.List.class);
+            Class moduleBootLoaderOfClass = classLoader.loadClass(
+                "com.shulie.instrument.simulator.agent.utils.BootResourceLoader");
+            Method loadModuleSupportOfMethod = moduleBootLoaderOfClass.getDeclaredMethod("addResource",
+                java.util.List.class);
             loadModuleSupportOfMethod.invoke(null, Collections.emptyList());
         } catch (Throwable e) {
             LOGGER.error("SIMULATOR: add resource to boot class path err...", e);
@@ -171,35 +190,28 @@ public class AgentLauncher {
     }
 
     /**
-     * 启动加载
+     * start with start opts
      *
-     * @param featureString 启动参数
+     * @param featureString start params
      *                      [namespace,prop]
      * @param inst          inst
      */
     public static void premain(String featureString, Instrumentation inst) {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: agent starting with agent mode. args=" + featureString == null ? "" : featureString);
+            LOGGER.info("SIMULATOR: agent starting with agent mode. args=" + (featureString == null ? "" : featureString));
         }
         LAUNCH_MODE = LAUNCH_MODE_AGENT;
         try {
             final Map<String, String> featureMap = toFeatureMap(featureString);
+            String appName = featureMap.get(KEY_APP_NAME);
             writeAttachResult(
-                    getNamespace(featureMap),
-                    getToken(featureMap),
-                    install(featureMap, inst)
+                appName,
+                getNamespace(featureMap),
+                getToken(featureMap),
+                install(featureMap, inst)
             );
-            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        uninstall(getNamespace(featureMap));
-                    } catch (Throwable e) {
-                        LOGGER.error("SIMULATOR: premain execute uninstall error!", e);
-                    }
-                }
-            }));
         } catch (Throwable e) {
+            System.out.println("========" + e.getMessage());
             e.printStackTrace();
             LOGGER.error("SIMULATOR: premain execute error!", e);
         }
@@ -207,33 +219,26 @@ public class AgentLauncher {
 
     /**
      * 动态加载 启动入口
+     * attach agent
      *
-     * @param featureString 启动参数
+     * @param featureString start params
      *                      [namespace,token,ip,port,prop]
      * @param inst          inst
      */
     public static void agentmain(String featureString, Instrumentation inst) {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: agent starting with attach mode. args=" + featureString == null ? "" : featureString);
+            LOGGER.info("SIMULATOR: agent starting with attach mode. args=" + (featureString == null ? "" : featureString));
         }
         try {
             LAUNCH_MODE = LAUNCH_MODE_ATTACH;
             final Map<String, String> featureMap = toFeatureMap(featureString);
+            String appName = featureMap.get(KEY_APP_NAME);
             writeAttachResult(
-                    getNamespace(featureMap),
-                    getToken(featureMap),
-                    install(featureMap, inst)
+                appName,
+                getNamespace(featureMap),
+                getToken(featureMap),
+                install(featureMap, inst)
             );
-            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        uninstall(getNamespace(featureMap));
-                    } catch (Throwable e) {
-                        LOGGER.error("SIMULATOR: agentmain execute uninstall error!", e);
-                    }
-                }
-            }));
         } catch (Throwable e) {
             e.printStackTrace();
             LOGGER.error("SIMULATOR: agentmain execute error!", e);
@@ -241,23 +246,24 @@ public class AgentLauncher {
     }
 
     /**
-     * 写入本次attach的结果
+     * write start result file
      * <p>
      * NAMESPACE;TOKEN;IP;PORT
      * </p>
      *
-     * @param namespace 命名空间
-     * @param token     操作TOKEN
-     * @param local     服务器监听[IP:PORT]
+     * @param appName
+     * @param namespace   namespace
+     * @param token       token
+     * @param installInfo listen server[IP:PORT]
      */
-    private static synchronized void writeAttachResult(final String namespace,
-                                                       final String token,
-                                                       final InetSocketAddress local) {
-        String path = String.format(RESULT_FILE_PATH, namespace);
+    private static synchronized void writeAttachResult(String appName, final String namespace,
+        final String token,
+        final InstallInfo installInfo) {
+        String path = String.format(RESULT_FILE_PATH, namespace, appName);
         final File file = new File(path);
         if (file.exists()
-                && (!file.isFile()
-                || !file.canWrite())) {
+            && (!file.isFile()
+            || !file.canWrite())) {
 
             throw new RuntimeException("write to result file : " + file + " failed.");
         } else {
@@ -268,12 +274,13 @@ public class AgentLauncher {
             try {
                 fw = new FileWriter(file, false);
                 fw.append(
-                        format("%s;%s;%s;%s\n",
-                                namespace,
-                                token,
-                                local.getHostName(),
-                                local.getPort()
-                        )
+                    format("%s;%s;%s;%s;%s\n",
+                        namespace,
+                        token,
+                        installInfo.inetSocketAddress.getHostName(),
+                        installInfo.inetSocketAddress.getPort(),
+                        installInfo.installVersion
+                    )
                 );
                 fw.flush();
             } catch (IOException e) {
@@ -291,15 +298,13 @@ public class AgentLauncher {
         file.deleteOnExit();
     }
 
-
     private static synchronized ClassLoader loadOrDefineClassLoader(final String namespace,
-                                                                    final String coreJar) throws Throwable {
+        final String coreJar) throws Throwable {
 
         final SimulatorClassLoader classLoader;
-
         // 如果已经被启动则返回之前启动的ClassLoader
         if (simulatorClassLoaderMap.containsKey(namespace)
-                && null != simulatorClassLoaderMap.get(namespace)) {
+            && null != simulatorClassLoaderMap.get(namespace)) {
             classLoader = simulatorClassLoaderMap.get(namespace);
         }
 
@@ -313,10 +318,10 @@ public class AgentLauncher {
     }
 
     /**
-     * 删除指定命名空间下的jvm-simulator
+     * delete simulator with namespace
      *
-     * @param namespace 指定命名空间
-     * @throws Throwable 删除失败
+     * @param namespace namespace
+     * @throws Throwable throws Throwable when uninstall failed.
      */
     @SuppressWarnings("unused")
     public static synchronized void uninstall(final String namespace) throws Throwable {
@@ -328,7 +333,7 @@ public class AgentLauncher {
         // 关闭服务器
         final Class<?> classOfProxyServer = simulatorClassLoader.loadClass(CLASS_OF_PROXY_CORE_SERVER);
         classOfProxyServer.getMethod("destroy")
-                .invoke(classOfProxyServer.getMethod("getInstance").invoke(null));
+            .invoke(classOfProxyServer.getMethod("getInstance").invoke(null));
 
         // 关闭SimulatorClassLoader
         simulatorClassLoader.closeIfPossible();
@@ -345,14 +350,14 @@ public class AgentLauncher {
     }
 
     /**
-     * 在当前JVM安装jvm-simulator
+     * install simulator with current VM
      *
-     * @param featureMap 启动参数配置
+     * @param featureMap start params
      * @param inst       inst
-     * @return 服务器IP:PORT
+     * @return serverIP :PORT
      */
-    private static synchronized InetSocketAddress install(final Map<String, String> featureMap,
-                                                          final Instrumentation inst) {
+    private static synchronized InstallInfo install(final Map<String, String> featureMap,
+        final Instrumentation inst) {
 
         final String namespace = getNamespace(featureMap);
         final String propertiesFilePath = getPropertiesFilePath(featureMap);
@@ -363,14 +368,25 @@ public class AgentLauncher {
             // 将bootstrap下所有的jar注入到BootstrapClassLoader
             List<File> bootstrapFiles = getSimulatorBootstrapJars(home);
             for (File file : bootstrapFiles) {
+                if (file.isHidden()) {
+                    LOGGER.warn(
+                        "prepare to append bootstrap file " + file.getAbsolutePath() + " but found a hidden file. skip it.");
+                    continue;
+                }
+                if (!file.isFile()) {
+                    LOGGER.warn("prepare to append bootstrap file " + file.getAbsolutePath()
+                        + " but found a directory file. skip it.");
+                    continue;
+                }
+                LOGGER.info("append bootstrap file=" + file.getAbsolutePath());
                 inst.appendToBootstrapClassLoaderSearch(new JarFile(file));
             }
 
             // 构造自定义的类加载器，尽量减少Simulator对现有工程的侵蚀
             final ClassLoader simulatorClassLoader = loadOrDefineClassLoader(
-                    namespace,
-                    getSimulatorCoreJarPath(home)
-                    // SIMULATOR_CORE_JAR_PATH
+                namespace,
+                getSimulatorCoreJarPath(home)
+                // SIMULATOR_CORE_JAR_PATH
             );
 
             /**
@@ -393,39 +409,43 @@ public class AgentLauncher {
                 final Class<?> classOfConfigure = simulatorClassLoader.loadClass(CLASS_OF_CORE_CONFIGURE);
 
                 // 反序列化成CoreConfigure类实例
-                final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", String.class, String.class, Instrumentation.class)
-                        .invoke(null, coreFeatureString, propertiesFilePath, inst);
+                final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", Class.class, String.class,
+                        String.class, Instrumentation.class)
+                    .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, inst);
 
                 // CoreServer类定义
                 final Class<?> classOfProxyServer = simulatorClassLoader.loadClass(CLASS_OF_PROXY_CORE_SERVER);
 
                 // 获取CoreServer单例
                 final Object objectOfProxyServer = classOfProxyServer
-                        .getMethod("getInstance")
-                        .invoke(null);
+                    .getMethod("getInstance")
+                    .invoke(null);
 
                 // CoreServer.isBind()
-                final boolean isBind = (Boolean) classOfProxyServer.getMethod("isBind").invoke(objectOfProxyServer);
+                final boolean isBind = (Boolean)classOfProxyServer.getMethod("isBind").invoke(objectOfProxyServer);
 
                 // 如果未绑定,则需要绑定一个地址
                 if (!isBind) {
                     try {
                         classOfProxyServer
-                                .getMethod("bind", classOfConfigure, Instrumentation.class)
-                                .invoke(objectOfProxyServer, objectOfCoreConfigure, inst);
+                            .getMethod("bind", classOfConfigure, Instrumentation.class)
+                            .invoke(objectOfProxyServer, objectOfCoreConfigure, inst);
                     } catch (Throwable t) {
+                        LOGGER.error("AGENT: agent bind error {}", t);
                         classOfProxyServer.getMethod("destroy").invoke(objectOfProxyServer);
                         throw t;
                     }
 
                 } else {
-                    LOGGER.info("AGENT: agent start already. skip it. " + namespace);
+                    LOGGER.warn("AGENT: agent start already. skip it. " + namespace);
                 }
 
                 // 返回服务器绑定的地址
-                return (InetSocketAddress) classOfProxyServer
-                        .getMethod("getLocal")
-                        .invoke(objectOfProxyServer);
+                InetSocketAddress inetSocketAddress = (InetSocketAddress)classOfProxyServer
+                    .getMethod("getLocal")
+                    .invoke(objectOfProxyServer);
+                String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure).toString();
+                return new InstallInfo(inetSocketAddress, version);
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
@@ -433,16 +453,19 @@ public class AgentLauncher {
         } catch (Throwable cause) {
             //如果是agent模式则不阻塞应用正常启动,但是会将错误打印出来,
             //如果是attach模式则直接将异常抛至上层调用方
+            try {
+                uninstall(namespace);
+            } catch (Throwable ignore) {
+            }
             throw new RuntimeException("simulator attach failed.", cause);
         }
 
     }
 
-
     private static boolean isNotBlank(final String string) {
         return null != string
-                && string.length() > 0
-                && !string.matches("^\\s*$");
+            && string.length() > 0
+            && !string.matches("^\\s*$");
     }
 
     private static boolean isBlank(final String string) {
@@ -451,8 +474,8 @@ public class AgentLauncher {
 
     private static String getDefault(final String string, final String defaultString) {
         return isNotBlank(string)
-                ? string
-                : defaultString;
+            ? string
+            : defaultString;
     }
 
     private static Map<String, String> toFeatureMap(final String featureString) {
@@ -475,8 +498,8 @@ public class AgentLauncher {
             }
             final String[] kvSegmentArray = kvPairSegmentString.split("=");
             if (kvSegmentArray.length != 2
-                    || isBlank(kvSegmentArray[0])
-                    || isBlank(kvSegmentArray[1])) {
+                || isBlank(kvSegmentArray[0])
+                || isBlank(kvSegmentArray[1])) {
                 continue;
             }
             featureMap.put(decode(kvSegmentArray[0]), decode(kvSegmentArray[1]));
@@ -495,9 +518,9 @@ public class AgentLauncher {
 
     private static String getDefault(final Map<String, String> map, final String key, final String defaultValue) {
         return null != map
-                && !map.isEmpty()
-                ? getDefault(map.get(key), defaultValue)
-                : defaultValue;
+            && !map.isEmpty()
+            ? getDefault(map.get(key), defaultValue)
+            : defaultValue;
     }
 
     private static String OS = System.getProperty("os.name").toLowerCase();
@@ -558,6 +581,18 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_AGENT_VERSION, DEFAULT_AGENT_VERSION);
     }
 
+    private static String getUserAppKey(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_USER_APP_KEY, DEFAULT_USER_APP_KEY);
+    }
+
+    private static String getUserId(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_USER_ID, DEFAULT_USER_ID);
+    }
+
+    private static String getTroWebUrl(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_TRO_WEB_URL, DEFAULT_TRO_WEB_URL);
+    }
+
     private static String getAppName(final Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_APP_NAME, DEFAULT_APP_NAME);
     }
@@ -577,18 +612,18 @@ public class AgentLauncher {
     // 获取容器配置文件路径
     private static String getPropertiesFilePath(final Map<String, String> featureMap) {
         return getDefault(
-                featureMap,
-                KEY_PROPERTIES_FILE_PATH,
-                getSimulatorPropertiesPath(getSimulatorHome(featureMap))
-                // SIMULATOR_PROPERTIES_PATH
+            featureMap,
+            KEY_PROPERTIES_FILE_PATH,
+            getSimulatorPropertiesPath(getSimulatorHome(featureMap))
+            // SIMULATOR_PROPERTIES_PATH
         );
     }
 
     // 如果featureMap中有对应的key值，则将featureMap中的[K,V]对合并到builder中
     private static void appendFromFeatureMap(final StringBuilder builder,
-                                             final Map<String, String> featureMap,
-                                             final String key,
-                                             final String defaultValue) {
+        final Map<String, String> featureMap,
+        final String key,
+        final String defaultValue) {
         if (featureMap.containsKey(key)) {
             builder.append(format("%s=%s;", key, getDefault(featureMap, key, defaultValue)));
         }
@@ -598,41 +633,50 @@ public class AgentLauncher {
     private static String toFeatureString(final Map<String, String> featureMap) {
         final String simulatorHome = getSimulatorHome(featureMap);
         final StringBuilder builder = new StringBuilder(
-                format(
-                        ";app_name=%s;agentId=%s;config=%s;system_module=%s;mode=%s;simulator_home=%s;user_module=%s;classloader_jars=%s;provider=%s;namespace=%s;module_repository_mode=%s;module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s",
-                        getAppName(featureMap),
-                        getAgentId(featureMap),
-                        getSimulatorConfigPath(simulatorHome),
-                        // SIMULATOR_CONFIG_PATH,
-                        getSimulatorModulePath(simulatorHome),
-                        // SIMULATOR_MODULE_PATH,
-                        LAUNCH_MODE,
-                        simulatorHome,
-                        // SIMULATOR_HOME,
-                        SIMULATOR_USER_MODULE_PATH,
-                        SIMULATOR_CLASSLOADER_JAR_PATH,
-                        getSimulatorProviderPath(simulatorHome),
-                        // SIMULATOR_PROVIDER_LIB_PATH,
-                        getNamespace(featureMap),
-                        // REPOSITORY MODE (local/remote)
-                        getRepositoryMode(featureMap),
-                        // REPOSITORY REMOTE ADDR
-                        getRemoteRepositoryAddr(featureMap),
-                        // LOG PATH
-                        getLogPath(featureMap),
-                        //LOG LEVEL
-                        getLogLevel(featureMap),
-                        // ZK SERVERS
-                        getZkServers(featureMap),
-                        // REGISTER PATH
-                        getRegisterPath(featureMap),
-                        // ZK CONNECTION TIMEOUT
-                        getZkConnectionTimeout(featureMap),
-                        // ZK SESSION TIMEOUT
-                        getZkSessionTimeout(featureMap),
-                        // AGENT VERSION
-                        getAgentVersion(featureMap)
-                )
+            format(
+                ";app_name=%s;agentId=%s;config=%s;system_module=%s;mode=%s;simulator_home=%s;user_module=%s;"
+                    + "classloader_jars=%s;provider=%s;namespace=%s;module_repository_mode=%s;module_repository_addr=%s;"
+                    + "log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;zk_connection_timeout=%s;"
+                    + "zk_session_timeout=%s;agent_version=%s;user.app.key=%s;pradar.user.id=%s;tro.web.url=%s",
+                getAppName(featureMap),
+                getAgentId(featureMap),
+                getSimulatorConfigPath(simulatorHome),
+                // SIMULATOR_CONFIG_PATH,
+                getSimulatorModulePath(simulatorHome),
+                // SIMULATOR_MODULE_PATH,
+                LAUNCH_MODE,
+                simulatorHome,
+                // SIMULATOR_HOME,
+                SIMULATOR_USER_MODULE_PATH,
+                SIMULATOR_CLASSLOADER_JAR_PATH,
+                getSimulatorProviderPath(simulatorHome),
+                // SIMULATOR_PROVIDER_LIB_PATH,
+                getNamespace(featureMap),
+                // REPOSITORY MODE (local/remote)
+                getRepositoryMode(featureMap),
+                // REPOSITORY REMOTE ADDR
+                getRemoteRepositoryAddr(featureMap),
+                // LOG PATH
+                getLogPath(featureMap),
+                //LOG LEVEL
+                getLogLevel(featureMap),
+                // ZK SERVERS
+                getZkServers(featureMap),
+                // REGISTER PATH
+                getRegisterPath(featureMap),
+                // ZK CONNECTION TIMEOUT
+                getZkConnectionTimeout(featureMap),
+                // ZK SESSION TIMEOUT
+                getZkSessionTimeout(featureMap),
+                // AGENT VERSION
+                getAgentVersion(featureMap),
+                //User APP KEY
+                getUserAppKey(featureMap),
+                //USE ID
+                getUserId(featureMap),
+                //TRO WEB
+                getTroWebUrl(featureMap)
+            )
         );
 
         // 合并IP(如有)
@@ -642,6 +686,18 @@ public class AgentLauncher {
         appendFromFeatureMap(builder, featureMap, KEY_SERVER_PORT, DEFAULT_PORT);
 
         return builder.toString();
+    }
+
+    private static class InstallInfo {
+
+        private final InetSocketAddress inetSocketAddress;
+
+        private final String installVersion;
+
+        private InstallInfo(InetSocketAddress inetSocketAddress, String installVersion) {
+            this.inetSocketAddress = inetSocketAddress;
+            this.installVersion = installVersion;
+        }
     }
 
 }

@@ -16,8 +16,9 @@ package com.pamirs.pradar.scope;
 
 
 import com.shulie.instrument.simulator.api.scope.AttachmentFactory;
-import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import com.shulie.instrument.simulator.api.scope.InterceptorScopeInvocation;
+
+import static com.shulie.instrument.simulator.api.scope.ExecutionPolicy.*;
 
 /**
  * Created by xiaobin on 2017/1/19.
@@ -28,9 +29,11 @@ public class DefaultInterceptorScopeInvocation implements InterceptorScopeInvoca
 
     private int depth = 0;
     private int skippedBoundary = 0;
+    private Runnable releaseCallback;
 
-    public DefaultInterceptorScopeInvocation(String name) {
+    public DefaultInterceptorScopeInvocation(String name, Runnable releaseCallback) {
         this.name = name;
+        this.releaseCallback = releaseCallback;
     }
 
     @Override
@@ -39,7 +42,7 @@ public class DefaultInterceptorScopeInvocation implements InterceptorScopeInvoca
     }
 
     @Override
-    public boolean tryEnter(ExecutionPolicy point) {
+    public boolean tryEnter(int point) {
         switch (point) {
             case ALWAYS:
                 depth++;
@@ -65,8 +68,8 @@ public class DefaultInterceptorScopeInvocation implements InterceptorScopeInvoca
     }
 
     @Override
-    public boolean canLeave(ExecutionPolicy point) {
-        switch (point) {
+    public boolean canLeave(int policy) {
+        switch (policy) {
             case ALWAYS:
                 return true;
             case BOUNDARY:
@@ -79,17 +82,17 @@ public class DefaultInterceptorScopeInvocation implements InterceptorScopeInvoca
             case INTERNAL:
                 return depth > 1;
             default:
-                throw new IllegalArgumentException("Unexpected: " + point);
+                throw new IllegalArgumentException("Unexpected: " + policy);
         }
     }
 
     @Override
-    public void leave(ExecutionPolicy point) {
+    public void leave(int policy) {
         if (depth == 0) {
             throw new IllegalStateException();
         }
 
-        switch (point) {
+        switch (policy) {
             case ALWAYS:
                 break;
 
@@ -106,11 +109,14 @@ public class DefaultInterceptorScopeInvocation implements InterceptorScopeInvoca
                 break;
 
             default:
-                throw new IllegalArgumentException("Unexpected: " + point);
+                throw new IllegalArgumentException("Unexpected: " + policy);
         }
 
         if (--depth == 0) {
             attachment = null;
+            if (releaseCallback != null) {
+                releaseCallback.run();
+            }
         }
     }
 

@@ -26,6 +26,7 @@ import com.shulie.instrument.module.config.fetcher.config.resolver.zk.Applicatio
 import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ClusterTestConfigZkResolver;
 import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ZookeeperOptions;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,18 +46,18 @@ public final class ConfigManager {
     private static ConfigManager INSTANCE;
     private ZookeeperOptions zookeeperOptions;
 
-    private ConfigManager(int interval, TimeUnit timeUnit) {
+    private ConfigManager(SwitcherManager switcherManager, int interval, TimeUnit timeUnit) {
         /**
          * 只需要你保护 ConfigResolver 下所有的操作不被其他插件增强即可
          */
-        this.applicationConfig = new ApplicationConfig(SimulatorGuard.getInstance().doGuard(ConfigResolver.class, new ApplicationConfigHttpResolver(interval, timeUnit)));
+        this.applicationConfig = new ApplicationConfig(SimulatorGuard.getInstance().doGuard(ConfigResolver.class, new ApplicationConfigHttpResolver(switcherManager, interval, timeUnit)));
         this.clusterTestConfig = new ClusterTestConfig(SimulatorGuard.getInstance().doGuard(ConfigResolver.class, new ClusterTestConfigHttpResolver(interval, timeUnit)));
         initAll();
     }
 
-    private ConfigManager(ZookeeperOptions zookeeperOptions) {
+    private ConfigManager(SwitcherManager switcherManager, ZookeeperOptions zookeeperOptions) {
         this.zookeeperOptions = zookeeperOptions;
-        this.applicationConfig = new ApplicationConfig(new ApplicationConfigZkResolver(zookeeperOptions));
+        this.applicationConfig = new ApplicationConfig(new ApplicationConfigZkResolver(switcherManager, zookeeperOptions));
         this.clusterTestConfig = new ClusterTestConfig(new ClusterTestConfigZkResolver(zookeeperOptions));
         initAll();
     }
@@ -68,6 +69,8 @@ public final class ConfigManager {
         if (this.clusterTestConfig != null) {
             this.clusterTestConfig.destroy();
         }
+        listenerHolder.clear();
+        INSTANCE = null;
     }
 
     /**
@@ -77,11 +80,11 @@ public final class ConfigManager {
      * @param timeUnit 拉取配置的间隔时间单位
      * @return
      */
-    public static ConfigManager getInstance(int interval, TimeUnit timeUnit) {
+    public static ConfigManager getInstance(SwitcherManager switcherManager, int interval, TimeUnit timeUnit) {
         if (INSTANCE == null) {
             synchronized (ConfigManager.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new ConfigManager(interval, timeUnit);
+                    INSTANCE = new ConfigManager(switcherManager, interval, timeUnit);
                 }
             }
         }
@@ -103,11 +106,11 @@ public final class ConfigManager {
      * @param zookeeperOptions zk 配置
      * @return
      */
-    public static ConfigManager getInstance(ZookeeperOptions zookeeperOptions) {
+    public static ConfigManager getInstance(SwitcherManager switcherManager, ZookeeperOptions zookeeperOptions) {
         if (INSTANCE == null) {
             synchronized (ConfigManager.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new ConfigManager(zookeeperOptions);
+                    INSTANCE = new ConfigManager(switcherManager, zookeeperOptions);
                 }
             }
         }
@@ -120,7 +123,7 @@ public final class ConfigManager {
     }
 
     public synchronized <T extends AbstractConfig<T>> void subscribeConfigEvent(ConfigEvent<T> configEvent, ConfigListener listener) {
-        String listenerKey = getListenerKey(configEvent.getType().getName(), configEvent.getField().getFileName(), configEvent.getEvent().name());
+        String listenerKey = getListenerKey(configEvent.getType().getName(), configEvent.getField().getConfigName(), configEvent.getEvent().name());
         List<ConfigListener> configListeners = listenerHolder.get(listenerKey);
         if (configListeners == null) {
             configListeners = new ArrayList<ConfigListener>();

@@ -16,11 +16,10 @@ package com.shulie.instrument.module.config.fetcher.config.event.model;
 
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
-import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import org.apache.commons.lang.ObjectUtils;
 
 import java.util.Set;
 
@@ -28,24 +27,32 @@ import java.util.Set;
  * @author: wangjian
  * @since : 2020/9/8 17:02
  */
-public class UrlWhiteList implements IChange<Set<String>, ApplicationConfig> {
+public class UrlWhiteList implements IChange<Set<MatchConfig>, ApplicationConfig> {
 
-    private static final UrlWhiteList INSTANCE = new UrlWhiteList();
-
-    private UrlWhiteList() {
-    }
+    private static UrlWhiteList INSTANCE;
 
     public static UrlWhiteList getInstance() {
+        if (INSTANCE == null) {
+            synchronized (UrlWhiteList.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new UrlWhiteList();
+                }
+            }
+        }
         return INSTANCE;
     }
 
+    public static void release() {
+        INSTANCE = null;
+    }
+
     @Override
-    public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig, Set<String> newValue) {
-        Set<String> urlWhiteList = GlobalConfig.getInstance().getUrlWhiteList();
-        if (ObjectUtils.equals(urlWhiteList.size(), newValue.size())
-                && CollectionUtils.equals(urlWhiteList, newValue)) {
-            return Boolean.FALSE;
-        }
+    public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig, Set<MatchConfig> newValue) {
+//        Set<MatchConfig> urlWhiteList = GlobalConfig.getInstance().getUrlWhiteList();
+//        if (ObjectUtils.equals(urlWhiteList.size(), newValue.size())
+//                && CollectionUtils.equals(urlWhiteList, newValue)) {
+//            return Boolean.FALSE;
+//        }
         // 变更后配置更新到内存
         applicationConfig.setUrlWhiteList(newValue);
         GlobalConfig.getInstance().setUrlWhiteList(newValue);

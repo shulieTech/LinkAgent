@@ -34,4 +34,9 @@ public interface InterceptorScope {
      * @return
      */
     InterceptorScopeInvocation getCurrentInvocation();
+
+    /**
+     * remove current invocation
+     */
+    void remove();
 }

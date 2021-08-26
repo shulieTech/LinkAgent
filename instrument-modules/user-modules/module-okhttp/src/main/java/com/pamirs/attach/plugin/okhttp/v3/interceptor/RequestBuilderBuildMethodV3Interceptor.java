@@ -17,11 +17,15 @@ package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.Request;
 
@@ -42,23 +46,6 @@ public class RequestBuilderBuildMethodV3Interceptor extends TraceInterceptorAdap
     @Override
     public int getPluginType() {
         return MiddlewareType.TYPE_RPC;
-    }
-
-    private static String getService(String schema, String host, int port, String path) {
-        String url = schema + "://" + host;
-        if (port != -1 && port != 80) {
-            url = url + ':' + port;
-        }
-        return url + path;
-    }
-
-    @Override
-    public void beforeFirst(Advice advice) {
-        Object target = advice.getTarget();
-        Request.Builder builder = (Request.Builder) target;
-        HttpUrl httpUrl = Reflect.on(builder).get(OKHttpConstants.DYNAMIC_FIELD_URL);
-        String url = getService(httpUrl.scheme(), httpUrl.host(), httpUrl.port(), httpUrl.encodedPath());
-        ClusterTestUtils.validateHttpClusterTest(url);
     }
 
     @Override

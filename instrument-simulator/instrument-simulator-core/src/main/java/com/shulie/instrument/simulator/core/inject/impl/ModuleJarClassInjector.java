@@ -18,6 +18,7 @@ import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.core.exception.SimulatorException;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.ModuleClassInjector;
+import com.shulie.instrument.simulator.jdk.impl.boot.BootLoaderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +79,14 @@ public class ModuleJarClassInjector implements ModuleClassInjector {
             logger.warn("SIMULATOR: Failed to load plugin class {} with classLoader {}", className, classLoader, e);
             throw new SimulatorException("Failed to load plugin class " + className + " with classLoader " + classLoader, e);
         }
+    }
+
+    @Override
+    public void destroy() {
+        bootstrapClassLoaderHandler.destroy();
+        urlClassLoaderHandler.destroy();
+        plainClassLoaderHandler.destroy();
+        BootLoaderFactory.release();
     }
 
 }

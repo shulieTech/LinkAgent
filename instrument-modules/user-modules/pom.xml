@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>instrument-modules</artifactId>
-        <groupId>com.shulie.instrument.module</groupId>
+        <groupId>io.shulie.instrument.module</groupId>
         <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -19,40 +19,65 @@
         <module>module-pradar-register</module>
         <module>module-servlet-common</module>
         <module>module-datasource-common</module>
-
+        <module>module-async-httpclient</module>
+        <module>module-aerospike</module>
         <module>module-alibaba-druid</module>
         <module>module-catalina</module>
         <module>module-alibaba-rocketmq</module>
         <module>module-hbase</module>
+        <module>module-apache-hbase</module>
         <module>module-apache-dubbo</module>
         <module>module-apache-kafka</module>
         <module>module-apache-rocketmq</module>
         <module>module-apache-tomcat-jdbc</module>
+        <module>module-atomikos</module>
         <module>module-c3p0</module>
         <module>module-dbcp</module>
         <module>module-dbcp2</module>
         <module>module-elasticsearch</module>
         <module>module-google-httpclient</module>
         <module>module-grpc</module>
+        <module>module-hessian</module>
+        <module>module-hikariCP</module>
         <module>module-httpclient</module>
         <module>module-jdk-http</module>
+        <module>module-jetcache</module>
         <module>module-ehcache</module>
         <module>module-oscache</module>
+        <module>module-jetty</module>
         <module>module-mock</module>
+        <module>module-mongodb</module>
+<!--        和mongodb 会有冲突， 暂时注释-->
+<!--        <module>module-mongodb4</module>-->
+        <module>module-motan</module>
+        <module>module-mule</module>
+        <module>module-mybatis</module>
+        <module>module-neo4j</module>
         <module>module-okhttp</module>
+        <module>module-pulsar</module>
+        <module>module-rabbitmq</module>
         <module>module-redis-jedis</module>
         <module>module-redis-lettuce</module>
         <module>module-redis-redisson</module>
+        <module>module-resin</module>
+        <module>module-saturn</module>
+        <module>module-shadow-job</module>
+        <module>module-spring-cache</module>
         <module>module-undertow</module>
+        <module>module-xmemcached</module>
+        <module>module-websphere</module>
         <module>module-command-channel</module>
-        <module>module-google-guava</module>
-        <module>module-httpserver</module>
-        <module>module-jetty</module>
-        <module>module-mongodb</module>
-        <module>module-hikariCP</module>
-        <module>module-hystrix</module>
-        <module>module-logback</module>
         <module>module-perf</module>
+        <module>module-google-guava</module>
+        <module>module-hystrix</module>
+        <module>module-httpserver</module>
+        <module>module-caffeine</module>
+        <module>module-proxool</module>
+        <module>module-logback</module>
+        <module>module-apache-kafka-stream</module>
+        <module>module-akka</module>
+        <module>module-feign</module>
+        <module>module-webflux</module>
     </modules>
 
     <build>

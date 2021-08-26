@@ -16,12 +16,14 @@ package com.pamirs.attach.plugin.c3p0.interceptor;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.pamirs.attach.plugin.c3p0.ListenerRegisterStatus;
+import com.pamirs.attach.plugin.c3p0.destroy.C3p0Destroy;
 import com.pamirs.attach.plugin.c3p0.utils.C3p0MediaDataSource;
 import com.pamirs.attach.plugin.c3p0.utils.DataSourceWrapUtil;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
@@ -30,8 +32,8 @@ import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -49,6 +51,7 @@ import java.util.Set;
  * @mail xiaobin@shulie.io
  * @Date 2020/8/17 10:13 上午
  */
+@Destroyable(C3p0Destroy.class)
 public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorAdaptor {
     private final static Logger logger = LoggerFactory.getLogger(DataSourceGetConnectionCutoffInterceptor.class.getName());
 
@@ -154,4 +157,5 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
             }
         });
     }
+
 }

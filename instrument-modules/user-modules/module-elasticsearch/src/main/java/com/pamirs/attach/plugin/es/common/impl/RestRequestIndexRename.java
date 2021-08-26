@@ -48,9 +48,10 @@ public class RestRequestIndexRename extends AbstractWriteRequestIndexRename {
         }
         String end = "";
         String index = "";
-        if (StringUtils.indexOf(endpoint, '/') != -1) {
-            index = StringUtils.substring(endpoint, 0, StringUtils.indexOf(endpoint, '/'));
-            end = StringUtils.substring(endpoint, StringUtils.indexOf(endpoint, '/'));
+        final int indexOfSlash = StringUtils.indexOf(endpoint, '/');
+        if (indexOfSlash != -1) {
+            index = StringUtils.substring(endpoint, 0, indexOfSlash);
+            end = StringUtils.substring(endpoint, indexOfSlash);
         } else {
             index = endpoint;
         }
@@ -79,8 +80,9 @@ public class RestRequestIndexRename extends AbstractWriteRequestIndexRename {
             endpoint = endpoint.substring(1);
         }
         String index = endpoint;
-        if (StringUtils.indexOf(endpoint, '/') != -1) {
-            index = StringUtils.substring(endpoint, 0, StringUtils.indexOf(endpoint, '/'));
+        final int indexOfSlash = StringUtils.indexOf(endpoint, '/');
+        if (indexOfSlash != -1) {
+            index = StringUtils.substring(endpoint, 0, indexOfSlash);
         }
         if (StringUtils.startsWith(index, "_")) {
             return Collections.EMPTY_LIST;

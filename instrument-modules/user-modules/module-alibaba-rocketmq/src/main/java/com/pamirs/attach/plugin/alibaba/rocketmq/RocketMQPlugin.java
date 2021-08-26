@@ -24,25 +24,18 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import org.kohsuke.MetaInfServices;
 
 /**
  * @author vincent
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "阿里巴巴rocketmq消息中间件")
+@ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "阿里巴巴rocketmq消息中间件")
 public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
     public void onActive() throws Throwable {
         addHookRegisterInterceptor();
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                ConsumerRegistry.destroy();
-            }
-        });
     }
 
     private void addHookRegisterInterceptor() {

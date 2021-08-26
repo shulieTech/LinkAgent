@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class CostDumpTransformer extends SimulatorClassFileTransformer {
 
     public final static String ENABLED_COST_DUMP = "simulator.cost.dump";
-    private final static Logger logger = LoggerFactory.getLogger(CostDumpTransformer.class.getName());
+    private final Logger logger = LoggerFactory.getLogger(CostDumpTransformer.class.getName());
     private final static long refreshInterval = 10000L;
     private final SimulatorClassFileTransformer delegate;
 

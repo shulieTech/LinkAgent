@@ -14,15 +14,24 @@
  */
 package com.pamirs.pradar.pressurement.datasource;
 
+import java.io.StringWriter;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.debug.DebugTestInfoPusher;
-import com.pamirs.pradar.debug.model.DebugTestInfo;
+import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.json.ResultSerializer;
@@ -31,19 +40,23 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.druid.DbType;
 import com.shulie.druid.sql.SQLUtils;
 import com.shulie.druid.sql.ast.SQLStatement;
-import com.shulie.druid.sql.ast.statement.*;
+import com.shulie.druid.sql.ast.statement.SQLAlterTableStatement;
+import com.shulie.druid.sql.ast.statement.SQLCreateTableStatement;
+import com.shulie.druid.sql.ast.statement.SQLDeleteStatement;
+import com.shulie.druid.sql.ast.statement.SQLDropTableStatement;
+import com.shulie.druid.sql.ast.statement.SQLInsertStatement;
+import com.shulie.druid.sql.ast.statement.SQLSelectStatement;
+import com.shulie.druid.sql.ast.statement.SQLUpdateStatement;
 import com.shulie.druid.sql.dialect.mysql.ast.statement.MySqlRenameTableStatement;
 import com.shulie.druid.sql.parser.SQLParserUtils;
 import com.shulie.druid.sql.parser.SQLStatementParser;
 import com.shulie.druid.sql.visitor.SQLASTOutputVisitor;
 import com.shulie.druid.sql.visitor.SchemaStatVisitor;
 import com.shulie.druid.stat.TableStat;
+import com.shulie.druid.util.JdbcUtils;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.StringWriter;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>{@code } instances should NOT be constructed in
@@ -52,13 +65,8 @@ import java.util.concurrent.TimeUnit;
  * instance to operate.</p>
  */
 public class SqlParser {
+    private final static Logger LOGGER = LoggerFactory.getLogger(SqlParser.class);
     public static String lowerCase;
-
-    public static void clear() {
-        cacheSchemaModeBuilder.invalidateAll();
-        cacheTableModeBuilder.invalidateAll();
-    }
-
     private static LoadingCache<String, TableParserResult> cacheSqlTablesBuilder = CacheBuilder.newBuilder()
             .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
@@ -77,6 +85,47 @@ public class SqlParser {
                     }
 
             );
+    private static LoadingCache<String, String> cacheTableModeBuilder = CacheBuilder.newBuilder()
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+
+                    new CacheLoader<String, String>() {
+                        @Override
+                        public String load(String name) throws Exception {
+                            String[] args = StringUtils.split(name, "$$$$");
+                            String sql = args[0];
+                            String key = args[1];
+                            String dbType = args[2];
+                            return parseAndReplaceTableNames(sql, key, dbType);
+                        }
+                    }
+
+            );
+    private static LoadingCache<String, String> cacheSchemaModeBuilder = CacheBuilder.newBuilder()
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+
+                    new CacheLoader<String, String>() {
+                        @Override
+                        public String load(String name) throws Exception {
+                            String[] args = StringUtils.split(name, "$$$$");
+                            String sql = args[0];
+                            String key = args[1];
+                            String dbType = args[2];
+                            return parseAndReplaceSchema(sql, key, dbType);
+                        }
+                    }
+
+            );
+
+    public static void clear() {
+        cacheSchemaModeBuilder.invalidateAll();
+        cacheTableModeBuilder.invalidateAll();
+    }
+
+    public static void release() {
+        cacheSchemaModeBuilder.invalidateAll();
+        cacheTableModeBuilder.invalidateAll();
+        cacheSqlTablesBuilder.invalidateAll();
+    }
 
     public static TableParserResult getTables(String sql, String dbType) {
         String innerDbtype = dbType;
@@ -84,6 +133,7 @@ public class SqlParser {
         try {
             return cacheSqlTablesBuilder.get(sql + "$$$$" + innerDbtype);
         } catch (Throwable e) {
+            LOGGER.error("parse sql tables error. sql={}, dbType={}", sql, dbType, e);
             return TableParserResult.EMPTY;
         }
     }
@@ -150,6 +200,7 @@ public class SqlParser {
         try {
             return cacheTableModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype);
         } catch (Throwable e) {
+            LOGGER.error("replace table to shadow table error. sql={}, key={}, dbType={}", sql, dbConnectionKey, dbType, e);
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
             }
@@ -161,7 +212,7 @@ public class SqlParser {
             } else {
                 exception = new SQLException(e);
             }
-            recordDebugFlow(Pradar.getTraceId(), Pradar.getInvokeId(), Pradar.getLogType(), sql, e, "replaceTable");
+            recordDebugFlow(sql, e, "replaceTable");
             throw exception;
         }
     }
@@ -176,11 +227,12 @@ public class SqlParser {
         try {
             return cacheSchemaModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype);
         } catch (Throwable e) {
+            LOGGER.error("replace schema to shadow schema error. sql={}, key={}, dbType={}", sql, dbConnectionKey, dbType, e);
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
             }
             SQLException exception = new SQLException(e);
-            recordDebugFlow(Pradar.getTraceId(), Pradar.getInvokeId(), Pradar.getLogType(), sql, exception, "replaceSchema");
+            recordDebugFlow(sql, exception, "replaceSchema");
             throw exception;
         }
     }
@@ -196,78 +248,27 @@ public class SqlParser {
         }
     }
 
-    private static void recordDebugFlow(final String traceId, final String rpcId, final int logType, final Object params, final Object returnObj, final String method) {
+    private static void recordDebugFlow(final Object params, final Object returnObj, final String method) {
         if (!Pradar.isDebug()) {
             return;
         }
-
-        DebugTestInfo debugTestInfo = new DebugTestInfo();
-        debugTestInfo.setTraceId(traceId);
-        debugTestInfo.setRpcId(rpcId);
-        debugTestInfo.setLogType(logType);
-        debugTestInfo.setAgentId(Pradar.getAgentId());
-        debugTestInfo.setAppName(AppNameUtils.appName());
-        debugTestInfo.setLogCallback(new DebugTestInfo.LogCallback() {
-            @Override
-            public DebugTestInfo.Log getLog() {
-                String parameterArray = serializeObject(params);
-                DebugTestInfo.Log log = new DebugTestInfo.Log();
-                if (returnObj != null && returnObj instanceof Throwable) {
-                    log.setLevel("ERROR");
-                    log.setContent(String.format("%s, targetClass: %s, classLoader: %s, parameterArray: %s, throwable: %s",
-                            method,
-                            getClass().toString(),
-                            getClass().getClassLoader().toString(),
-                            parameterArray,
-                            serializeObject(returnObj)
-                    ));
-                } else {
-                    log.setLevel("INFO");
-                    log.setContent(String.format("%s,targetClass: %s, classLoader: %s, parameterArray: %s, returnObj: %s",
-                            method,
-                            getClass().toString(),
-                            getClass().getClassLoader().toString(),
-                            parameterArray,
-                            returnObj));
-                }
-                return log;
-            }
-        });
-        DebugTestInfoPusher.addDebugInfo(debugTestInfo);
+        String level;
+        String pattern;
+        Object return2log;
+        String parameterArray = serializeObject(params);
+        if (returnObj instanceof Throwable) {
+            level = "ERROR";
+            pattern = "%s, targetClass: %s, classLoader: %s, parameterArray: %s, throwable: %s";
+            return2log = serializeObject(returnObj);
+        } else {
+            level = "INFO";
+            pattern = "%s,targetClass: %s, classLoader: %s, parameterArray: %s, returnObj: %s";
+            return2log = returnObj;
+        }
+        String content = String.format(pattern, method, SqlParser.class, SqlParser.class.getClassLoader().toString(),
+            parameterArray, return2log);
+        DebugHelper.addDebugInfo(level, content);
     }
-
-    private static LoadingCache<String, String> cacheTableModeBuilder = CacheBuilder.newBuilder()
-            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
-
-                    new CacheLoader<String, String>() {
-                        @Override
-                        public String load(String name) throws Exception {
-                            String[] args = StringUtils.split(name, "$$$$");
-                            String sql = args[0];
-                            String key = args[1];
-                            String dbType = args[2];
-                            return parseAndReplaceTableNames(sql, key, dbType);
-                        }
-                    }
-
-            );
-
-    private static LoadingCache<String, String> cacheSchemaModeBuilder = CacheBuilder.newBuilder()
-            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
-
-                    new CacheLoader<String, String>() {
-                        @Override
-                        public String load(String name) throws Exception {
-                            String[] args = StringUtils.split(name, "$$$$");
-                            String sql = args[0];
-                            String key = args[1];
-                            String dbType = args[2];
-                            return parseAndReplaceSchema(sql, key, dbType);
-                        }
-                    }
-
-            );
-
 
     private static void resetMappingTables(String key, Map<String, String> mappings) {
         if (GlobalConfig.getInstance().containsShadowDatabaseConfig(key)) {
@@ -331,6 +332,7 @@ public class SqlParser {
         return schema;
     }
 
+
     /**
      * 替换 schema
      *
@@ -374,12 +376,13 @@ public class SqlParser {
                         continue;
                     }
                     String table = null, schema = null;
-                    if (StringUtils.indexOf(fullTable, '.') == -1) {
+                    final int indexOfDot = StringUtils.indexOf(fullTable, '.');
+                    if (indexOfDot == -1) {
                         schema = null;
                         table = fullTable;
                     } else {
-                        schema = StringUtils.substring(fullTable, 0, StringUtils.indexOf(fullTable, '.'));
-                        table = StringUtils.substring(fullTable, StringUtils.indexOf(fullTable, '.') + 1);
+                        schema = StringUtils.substring(fullTable, 0, indexOfDot);
+                        table = StringUtils.substring(fullTable, indexOfDot + 1);
                     }
 
                     String shadowSchema = toShadowSchema(schema, config);
@@ -388,6 +391,7 @@ public class SqlParser {
                         map.put(fullTable, shadowTable);
                     } else {
                         map.put(fullTable, shadowSchema + '.' + shadowTable);
+                        map.put(schema, shadowSchema);
                     }
                 }
                 visitor.setTableMapping(map);
@@ -403,16 +407,11 @@ public class SqlParser {
         return val.toString();
     }
 
-    public static void main(String[] args) throws SQLException {
-        String sql = "insert into \"C##PYT_TEST\".M_USER(id,name,age) values(?,?,?)";
-        System.out.println(parseAndReplaceSchema(sql, "aaa", "oracle"));
-    }
-
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName) throws SQLException {
         DbType dbType = DbType.of(dbTypeName);
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {
-            Map<String, String> mappingTableLower = new HashMap<String, String>();
+            Map<String, String> mappingTableLower = new ConcurrentHashMap<String, String>();
             Set<String> keys = mappingTable.keySet();
             for (String tableName : keys) {
                 String value = mappingTable.get(tableName);
@@ -541,20 +540,41 @@ public class SqlParser {
                         if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                             GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
                         }
+                        String url = key;
+                        if (url.indexOf('|') != -1) {
+                            url = url.substring(0, url.indexOf('|'));
+                        }
+
                         ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.DataSource)
-                                .setErrorCode("datasource-0004")
-                                .setMessage("没有配置对应的影子表!url:" + key + ",table:" + name.getName())
-                                .setDetail("The business table [" + name.getName() + "] doesn't has shadow mapping table: [sql] "
-                                        + sql + " [new sql] " + val.toString())
-                                .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                                .report();
-                        throw new SQLException("The business table [" + name.getName() + "] doesn't has shadow mapping table: [sql] "
-                                + sql + " [new sql] " + val.toString());
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0004")
+                            .setMessage(String
+                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s", url, name.getName(),
+                                    getDriverClassName(url), dbType))
+                            .setDetail(
+                                String.format(
+                                    "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
+                                        + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
+                                    name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql,
+                                    val.toString()))
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
+                        throw new SQLException(String.format(
+                            "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
+                                + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
+                            name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql, val.toString()));
                     }
                 }
             }
         }
         return val.toString();
+    }
+
+    private static String getDriverClassName(String url) {
+        try {
+            return JdbcUtils.getDriverClassName(url);
+        } catch (SQLException e) {
+            return "unknow";
+        }
     }
 }

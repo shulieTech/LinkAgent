@@ -38,18 +38,53 @@ public enum DbType {
                     mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
                 } else {
                     host = mainUrl;
+                    mainUrl = null;
                 }
-                int port = 3306;
+                String port = "3306";
                 if (null != mainUrl && !"".equals(mainUrl)) {
                     try {
-                        port = Integer.valueOf(mainUrl);
+                        port = mainUrl;
                     } catch (NumberFormatException e) {
                     }
                 }
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.MYSQL);
                 sqlMetaData.setHost(host);
-                sqlMetaData.setPort(String.valueOf(port));
+                sqlMetaData.setPort(port);
+                sqlMetaData.setDbName(StringUtils.lowerCase(dbName));
+                sqlMetaData.setUrl(url);
+                return sqlMetaData;
+            } catch (Throwable e) {
+                return null;
+            }
+        }
+    },
+    OCEANBASE("jdbc:oceanbase://") {
+        @Override
+        public SqlMetaData readMetaData(String url) {
+            String mainUrl = getMainUrl(url);
+            String dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
+            mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
+            try {
+                String host = null;
+                if (mainUrl.indexOf(':') != -1) {
+                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
+                    mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
+                } else {
+                    host = mainUrl;
+                    mainUrl = null;
+                }
+                String port = "2883";
+                if (null != mainUrl && !"".equals(mainUrl)) {
+                    try {
+                        port = mainUrl;
+                    } catch (NumberFormatException e) {
+                    }
+                }
+                SqlMetaData sqlMetaData = new SqlMetaData();
+                sqlMetaData.setDbType(DbType.MYSQL);
+                sqlMetaData.setHost(host);
+                sqlMetaData.setPort(port);
                 sqlMetaData.setDbName(StringUtils.lowerCase(dbName));
                 sqlMetaData.setUrl(url);
                 return sqlMetaData;
@@ -266,6 +301,40 @@ public enum DbType {
             }
         }
     },
+    POLARDB("jdbc:polardb://") {
+        @Override
+        SqlMetaData readMetaData(String url) {
+            String mainUrl = getMainUrl(url);
+            String dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
+            mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
+            try {
+                String host = null;
+                if (mainUrl.indexOf(':') != -1) {
+                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
+                    mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
+                } else {
+                    host = mainUrl;
+                    mainUrl = null;
+                }
+                String port = "1521";
+                if (null != mainUrl && !"".equals(mainUrl)) {
+                    try {
+                        port = mainUrl;
+                    } catch (NumberFormatException e) {
+                    }
+                }
+                SqlMetaData sqlMetaData = new SqlMetaData();
+                sqlMetaData.setDbType(DbType.POLARDB);
+                sqlMetaData.setHost(host);
+                sqlMetaData.setPort(port);
+                sqlMetaData.setDbName(StringUtils.lowerCase(dbName));
+                sqlMetaData.setUrl(url);
+                return sqlMetaData;
+            } catch (Throwable e) {
+                return null;
+            }
+        }
+    },
     HIVE("jdbc:hive2://") {
         @Override
         SqlMetaData readMetaData(String url) {
@@ -345,7 +414,7 @@ public enum DbType {
                 return null;
             }
         }
-    };
+    },;
 
 
     protected String[] prefixs;
@@ -361,19 +430,10 @@ public enum DbType {
     abstract SqlMetaData readMetaData(String url);
 
     public SqlMetaData sqlMetaData(String url) {
-        SqlMetaData sqlMetaData = null;
-        try {
-            sqlMetaData = readMetaData(url);
-            if (sqlMetaData != null) {
-                sqlMetaData.setDbType(this);
-            }
-            if (sqlMetaData == null) {
-                System.out.println("sqlmetadata is null null null:" + url);
-            } else {
-                sqlMetaData.setUrl(url);
-            }
-        } catch (Throwable e) {
-            //ignore;
+        SqlMetaData sqlMetaData = SqlMetadataParser.parse(this, url);
+        if (sqlMetaData != null) {
+            sqlMetaData.setDbType(this);
+            sqlMetaData.setUrl(url);
         }
         return sqlMetaData;
     }

@@ -16,31 +16,40 @@ package com.shulie.instrument.simulator.module.express;
 
 import ognl.ClassResolver;
 
+import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- *
  * @see ognl.DefaultClassResolver
  */
 public class ClassLoaderClassResolver implements ClassResolver {
 
-    private ClassLoader classLoader;
+    private WeakReference<ClassLoader> classLoader;
 
     private Map<String, Class<?>> classes = new ConcurrentHashMap<String, Class<?>>(101);
 
     public ClassLoaderClassResolver(ClassLoader classLoader) {
-        this.classLoader = classLoader;
+        if (classLoader != null) {
+            this.classLoader = new WeakReference<ClassLoader>(classLoader);
+        }
+    }
+
+    private ClassLoader getClassLoader() {
+        return classLoader == null ? null : classLoader.get();
     }
 
     @Override
     public Class<?> classForName(String className, @SuppressWarnings("rawtypes") Map context)
-                    throws ClassNotFoundException {
+            throws ClassNotFoundException {
         Class<?> result = null;
 
         if ((result = classes.get(className)) == null) {
             try {
-                result = classLoader.loadClass(className);
+                ClassLoader classLoader = getClassLoader();
+                if (classLoader != null) {
+                    result = classLoader.loadClass(className);
+                }
             } catch (ClassNotFoundException ex) {
                 if (className.indexOf('.') == -1) {
                     result = Class.forName("java.lang." + className);

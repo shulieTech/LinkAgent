@@ -16,19 +16,29 @@ package com.pamirs.attach.plugin.apache.dubbo.interceptor;
 
 import com.pamirs.attach.plugin.apache.dubbo.DubboConstants;
 import com.pamirs.pradar.PradarCoreUtils;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.ExecutionCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.rpc.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author vincent
  */
 public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
+    private static final Logger logger = LoggerFactory.getLogger(DubboConsumerInterceptor.class);
+
     public void initConsumer(Invoker<?> invoker, Invocation invocation) {
         RpcContext.getContext()
                 .setInvoker(invoker)
@@ -60,13 +70,44 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeFirst(Advice advice) {
+    public void beforeFirst(Advice advice) throws ProcessControlException {
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
         String interfaceName = getInterfaceName(invocation);
-        RpcContext context = RpcContext.getContext();
-        String methodName = context.getMethodName();
-        ClusterTestUtils.validateRpcClusterTest(interfaceName, methodName);
-
+        String methodName = invocation.getMethodName();
+        MatchConfig config = ClusterTestUtils.rpcClusterTest(interfaceName, methodName);
+        invocation.setAttachment(PradarService.PRADAR_WHITE_LIST_CHECK, String.valueOf(config.isSuccess()));
+        config.addArgs("args", advice.getParameterArray());
+        config.addArgs("url", interfaceName.concat("#").concat(methodName));
+        config.addArgs("isInterface", Boolean.TRUE);
+        config.addArgs("class", interfaceName);
+        config.addArgs("method", methodName);
+        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+            @Override
+            public Object call(Object param) {
+                try {
+                    //for 2.8.4
+                    return Reflect.on("org.apache.dubbo.rpc.RpcResult").create(param).get();
+                } catch (Exception e) {
+                    logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
+                    //
+                }
+                try {
+                    Reflect reflect = Reflect.on("org.apache.dubbo.rpc.AsyncRpcResult");
+                    try {
+                        //for 2.7.5
+                        java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
+                        future.complete(new AppResponse(param));
+                        return reflect.create(future, invocation);
+                    } catch (ReflectException e) {
+                        //for 2.7.3
+                        return reflect.create(invocation);
+                    }
+                } catch (Exception e) {
+                    logger.error("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);
+                    throw new ReflectException("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);
+                }
+            }
+        });
     }
 
     private String getInterfaceName(Invocation invocation) {
@@ -114,6 +155,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        logger.info("debug: start DubboConsumerInterceptor beforeTrace {}",advice.getTarget());
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
         Invoker<?> invoker = (Invoker<?>) advice.getTarget();
         if (isMonitorService(invoker)) {
@@ -137,6 +179,8 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                 + DubboUtils.getParameterTypesString(context.getParameterTypes()));
         record.setRequestSize(DubboUtils.getRequestSize());
         record.setRequest(invocation.getArguments());
+        record.setPassedCheck(Boolean.parseBoolean(invocation.getAttachment(PradarService.PRADAR_WHITE_LIST_CHECK)));
+        logger.info("debug: beforeTrace {}", record.getService() + "." + record.getMethod());
         return record;
     }
 
@@ -150,6 +194,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
             record.setResultCode(DubboUtils.getResultCode(result.getException()));
             record.setResponse(result.getException());
         }
+        logger.info("debug: afterTrace {}", record.getResponse(), RpcContext.getContext().getMethodName());
         return record;
     }
 

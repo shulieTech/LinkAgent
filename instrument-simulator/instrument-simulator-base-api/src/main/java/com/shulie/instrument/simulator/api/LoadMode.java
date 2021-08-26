@@ -20,14 +20,14 @@ package com.shulie.instrument.simulator.api;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/9/19 4:40 上午
  */
-public enum LoadMode {
+public interface LoadMode {
     /**
      * 通过agent方式加载
      */
-    AGENT,
+    int AGENT = 1;
 
     /**
      * 通过attach方式加载
      */
-    ATTACH,
+    int ATTACH = 2;
 }

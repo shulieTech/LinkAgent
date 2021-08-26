@@ -14,28 +14,28 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.util.List;
-
 import com.pamirs.attach.plugin.es.ElasticsearchConstants;
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
+import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.MiddlewareType;
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
-import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RestClient;
+
+import java.util.List;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
  * @package: com.pamirs.attach.plugin.es6.interceptor
  * @Date 2020-07-02 17:03
  */
+@Destroyable(ElasticSearchDestroy.class)
 public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
 
     @Override

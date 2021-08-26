@@ -179,6 +179,8 @@ public final class EventRouter {
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
         }
-        this.service.shutdown();
+        this.service.shutdownNow();
+        this.listeners.clear();
+        this.queue.clear();
     }
 }

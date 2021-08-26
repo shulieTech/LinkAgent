@@ -46,28 +46,31 @@ import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
  * 默认模块事件观察者实现
  */
 public class DefaultModuleEventWatcher implements ModuleEventWatcher {
-    private final static Logger LOGGER = LoggerFactory.getLogger(DefaultModuleEventWatcher.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(DefaultModuleEventWatcher.class);
 
-    private final Instrumentation inst;
-    private final CoreLoadedClassDataSource classDataSource;
-    private final CoreModule coreModule;
+    private Instrumentation inst;
+    private CoreLoadedClassDataSource classDataSource;
+    private CoreModule coreModule;
     private final boolean isEnableUnsafe;
     private final String namespace;
 
     // 观察ID序列生成器
     private final Sequencer watchIdSequencer = new Sequencer();
+    private EventListenerHandler eventListenerHandler;
 
 
     DefaultModuleEventWatcher(final Instrumentation inst,
                               final CoreLoadedClassDataSource classDataSource,
                               final CoreModule coreModule,
                               final boolean isEnableUnsafe,
-                              final String namespace) {
+                              final String namespace,
+                              final EventListenerHandler eventListenerHandler) {
         this.inst = inst;
         this.classDataSource = classDataSource;
         this.coreModule = coreModule;
         this.isEnableUnsafe = isEnableUnsafe;
         this.namespace = namespace;
+        this.eventListenerHandler = eventListenerHandler;
     }
 
     // 开始进度
@@ -314,8 +317,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                 List<BuildingForListeners> listeners = proxy.getAllListeners();
                 if (CollectionUtils.isNotEmpty(listeners)) {
                     for (BuildingForListeners buildingForListeners : listeners) {
-                        EventListenerHandler.getSingleton()
-                                .active(buildingForListeners.getListenerId(), proxy.getEventListeners().get(buildingForListeners.getListenerId()), buildingForListeners.getEventTypes());
+                        eventListenerHandler.active(buildingForListeners.getListenerId(), proxy.getEventListeners().get(buildingForListeners.getListenerId()), buildingForListeners.getEventTypes());
                     }
                 }
             }
@@ -346,8 +348,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                 if (CollectionUtils.isNotEmpty(listeners)) {
                     for (BuildingForListeners buildingForListeners : listeners) {
                         // 冻结所有关联代码增强
-                        EventListenerHandler.getSingleton()
-                                .frozen(buildingForListeners.getListenerId());
+                        eventListenerHandler.frozen(buildingForListeners.getListenerId());
                     }
                 }
 
@@ -403,6 +404,10 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
     @Override
     public void close() {
+        eventListenerHandler = null;
+        inst = null;
+        classDataSource = null;
+        coreModule = null;
     }
 
 

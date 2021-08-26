@@ -15,9 +15,12 @@
 package com.shulie.instrument.simulator.core.server.jetty.servlet;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
+
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.resource.ReleaseResource;
+import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
@@ -55,17 +58,22 @@ public class ModuleHttpServlet extends HttpServlet {
 
     private final CoreConfigure config;
     private final CoreModuleManager coreModuleManager;
+    private final DeploymentManager deploymentManager;
     /**
      * 是否在销毁中
      */
     private boolean isDestroying;
     private String heartbeatPath;
+    private String shutdownPath;
 
     public ModuleHttpServlet(final CoreConfigure config,
-                             final CoreModuleManager coreModuleManager) {
+                             final CoreModuleManager coreModuleManager,
+                             final DeploymentManager deploymentManager) {
         this.config = config;
         this.coreModuleManager = coreModuleManager;
+        this.deploymentManager = deploymentManager;
         this.heartbeatPath = "/heartbeat";
+        this.shutdownPath = "/control/shutdown";
     }
 
     public void prepareDestroy() {
@@ -89,7 +97,7 @@ public class ModuleHttpServlet extends HttpServlet {
         PrintWriter writer = resp.getWriter();
         try {
             if (Boolean.valueOf(useApi)) {
-                String json = JSON.toJSONString(content);
+                String json = JSON.toJSONString(content, SerializerFeature.DisableCircularReferenceDetect);
                 resp.setContentType("application/json");
                 writer.write(json);
                 writer.flush();
@@ -112,7 +120,36 @@ public class ModuleHttpServlet extends HttpServlet {
     }
 
     private void doHeartbeat(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
-        doResponse(true, req, resp);
+        doResponse(CommandResponse.success("shut down success"), req, resp);
+    }
+
+    private void uninstall() throws Throwable {
+        deploymentManager.uninstall(config.getNamespace());
+    }
+
+    private void doShutdown(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
+        // 关闭HTTP服务器
+        final Thread shutdownInstrumentSimulatorHook = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // can't get simulatorConfig after uninstall because of set simulatorConfig is null when uninstalling
+                String namespace = config.getNamespace();
+                try {
+                    logger.info("instrument-simulator[{}] prepare to shutdown.", namespace);
+                    /**
+                     * 先悠着点，防止请求没返回之前就被卸载了，导致响应无法收到
+                     */
+                    Thread.sleep(100L);
+                    uninstall();
+                    logger.info("instrument-simulator[{}] shutdown finished.", namespace);
+                } catch (Throwable cause) {
+                    logger.warn("SIMULATOR: shutdown instrument-simulator[{}] failed.", namespace, cause);
+                }
+            }
+        }, String.format("shutdown-instrument-simulator-%s-hook", config.getNamespace()));
+        shutdownInstrumentSimulatorHook.setDaemon(true);
+        shutdownInstrumentSimulatorHook.start();
+        doResponse(CommandResponse.success(true), req, resp);
     }
 
     private void doMethod(final HttpServletRequest req,
@@ -123,6 +160,10 @@ public class ModuleHttpServlet extends HttpServlet {
         //如果心跳则直接回复，不经过命令
         if (heartbeatPath.equals(path)) {
             doHeartbeat(req, resp);
+            return;
+        }
+        if (shutdownPath.equals(path)) {
+            doShutdown(req, resp);
             return;
         }
 
@@ -206,6 +247,7 @@ public class ModuleHttpServlet extends HttpServlet {
             if (logger.isDebugEnabled()) {
                 logger.debug("SIMULATOR: path={} invoke module {} method {} success.", path, moduleId, method.getName());
             }
+            Thread.currentThread().setContextClassLoader(currentClassLoader); //do response之前
             doResponse(value, req, resp);
         } catch (IllegalAccessException iae) {
             logger.warn("SIMULATOR: path={} invoke module {} method {} occur access denied.", path, moduleId, method.getName(), iae);

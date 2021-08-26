@@ -16,19 +16,34 @@ package com.shulie.instrument.simulator.api.listener;
 
 import com.shulie.instrument.simulator.api.event.Event;
 
+import java.lang.ref.WeakReference;
+
 /**
  * 事件监听器
  * 类增强的实现只是给类插了几个固定事件的桩，当对应的桩被执行后，才会产生对应的事件，所有的事件的处理都需要
  * 依赖事件监听器。通知监听器则是在事件监听器基础上封装出来的，对于对事件的转化封装出来通知
  * 这样设计的好处在于最大的限度防止在增强业务类时污染业务类
  *
+ * @author xiaobin.zfb|xiaobin@shulie.io
  * @see com.shulie.instrument.simulator.api.listener.ext.AdviceListener
  * @see com.shulie.instrument.simulator.message.Messager
- *
- * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public interface EventListener {
+public abstract class EventListener implements BizClassLoaderWrapper {
+
+    private WeakReference<ClassLoader> bizClassLoaderHolder;
+
+    @Override
+    public void setBizClassLoader(ClassLoader classLoader) {
+        if (classLoader != null) {
+            bizClassLoaderHolder = new WeakReference<ClassLoader>(classLoader);
+        }
+    }
+
+    @Override
+    public ClassLoader getBizClassLoader() {
+        return bizClassLoaderHolder == null ? null : bizClassLoaderHolder.get();
+    }
 
     /**
      * 触发事件处理
@@ -63,11 +78,15 @@ public interface EventListener {
      * @param event 触发事件
      * @throws Throwable 处理异常
      */
-    void onEvent(Event event) throws Throwable;
+    public void onEvent(Event event) throws Throwable {
+
+    }
 
     /**
      * 清理 EventListener
      */
-    void clean();
+    public void clean() {
+
+    }
 
 }

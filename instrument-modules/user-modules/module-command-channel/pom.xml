@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>user-modules</artifactId>
-        <groupId>com.shulie.instrument.module</groupId>
+        <groupId>io.shulie.instrument.module</groupId>
         <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -17,15 +17,27 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <artifactId>tro-command-channel</artifactId>
-            <groupId>io.shulie.tro</groupId>
-            <version>1.0.0-SNAPSHOT</version>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-common-command-channel</artifactId>
+            <version>common-1.7.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>zookeeper</artifactId>
+                    <groupId>org.apache.zookeeper</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -41,9 +53,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-debug-model</artifactId>
-            <version>1.0.1</version>
+            <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

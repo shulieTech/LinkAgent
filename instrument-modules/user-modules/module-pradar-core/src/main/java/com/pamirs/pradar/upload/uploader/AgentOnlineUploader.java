@@ -37,9 +37,16 @@ public class AgentOnlineUploader extends HttpOnceUploader<String> {
         super(UPLOADER_NAME, POST_URL, RETRY_TIMES, RETRY_SECOND);
     }
 
-    private final static AgentOnlineUploader INSTANCE = new AgentOnlineUploader();
+    private static AgentOnlineUploader INSTANCE;
 
     public static AgentOnlineUploader getInstance() {
+        if (INSTANCE == null) {
+            synchronized (AgentOnlineUploader.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new AgentOnlineUploader();
+                }
+            }
+        }
         return INSTANCE;
     }
 

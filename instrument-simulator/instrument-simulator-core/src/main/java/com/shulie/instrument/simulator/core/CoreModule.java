@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.core;
 
 import com.shulie.instrument.simulator.api.*;
+import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.resource.*;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
@@ -41,7 +42,7 @@ public class CoreModule {
     /**
      * 模块描述
      */
-    private final ModuleSpec moduleSpec;
+    private ModuleSpec moduleSpec;
 
     /**
      * 模块归属的jar
@@ -131,6 +132,11 @@ public class CoreModule {
     private DynamicFieldManager dynamicFieldManager;
 
     /**
+     * 扩展模板
+     */
+    private ExtensionTemplate extensionTemplate;
+
+    /**
      * 模块业务对象
      *
      * @param moduleSpec         模块描述
@@ -218,7 +224,7 @@ public class CoreModule {
     /**
      * 获取对应的ModuleJarClassLoader
      *
-     * @return ModuleJarClassLoader
+     * @return ModuleClassLoader
      */
     public ClassLoaderFactory getClassLoaderFactory() {
         return classLoaderFactory;
@@ -247,7 +253,7 @@ public class CoreModule {
      *
      * @return 获取启动类型
      */
-    public LoadMode[] getSupportedModes() {
+    public int[] getSupportedModes() {
         return moduleSpec.getSupportedModes();
     }
 
@@ -418,23 +424,23 @@ public class CoreModule {
                     }
                 }
             }
-            /**
-             * 如果是远程模块仓库，释放资源时删除掉对应的jar文件
-             */
-            if (this.simulatorConfig.getModuleRepositoryMode() == ModuleRepositoryMode.REMOTE) {
-                this.jarFile.delete();
-            }
+            this.simulatorClassFileTransformers.clear();
             this.coreModuleManager = null;
             this.coreLoadedClassDataSource = null;
+            this.moduleEventWatcher.close();
             this.moduleEventWatcher = null;
             this.enhanceTemplate = null;
             this.moduleController = null;
             this.moduleManager = null;
+            this.classInjector = null;
             this.dynamicFieldManager.destroy();
             this.dynamicFieldManager = null;
             this.simulatorConfig = null;
-            this.classLoaderFactory.release();
             this.classLoaderFactory = null;
+            this.moduleSpec.clear();
+            this.moduleSpec = null;
+            this.isLoaded = false;
+            this.isActivated = false;
         }
     }
 
@@ -531,5 +537,13 @@ public class CoreModule {
 
     public void setDynamicFieldManager(DynamicFieldManager dynamicFieldManager) {
         this.dynamicFieldManager = dynamicFieldManager;
+    }
+
+    public void setExtensionTemplate(ExtensionTemplate extensionTemplate) {
+        this.extensionTemplate = extensionTemplate;
+    }
+
+    public ExtensionTemplate getExtensionTemplate() {
+        return extensionTemplate;
     }
 }

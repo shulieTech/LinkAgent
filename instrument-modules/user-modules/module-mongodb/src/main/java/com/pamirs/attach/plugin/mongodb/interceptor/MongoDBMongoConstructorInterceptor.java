@@ -1,12 +1,28 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.mongodb.interceptor;
 
 import com.mongodb.*;
 import com.pamirs.attach.plugin.mongodb.common.MongoClientHolder;
 import com.pamirs.attach.plugin.mongodb.common.MongoClientPtCreate;
+import com.pamirs.attach.plugin.mongodb.destroy.MogoDestroyed;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 
@@ -16,6 +32,7 @@ import java.util.*;
  * @author angju
  * @date 2020/8/6 23:23
  */
+@Destroyable(MogoDestroyed.class)
 public class MongoDBMongoConstructorInterceptor extends AroundInterceptor {
 
     @Override
@@ -81,7 +98,7 @@ public class MongoDBMongoConstructorInterceptor extends AroundInterceptor {
         String database = s[1];
         String[] connectionInfo = StringUtils.split(s[0], '@');
         String[] accountInfo = StringUtils.split(connectionInfo[0], ':');
-        String[] addressInfo = StringUtils.split(connectionInfo[1], ':');
+        String[] addressInfo = StringUtils.split(connectionInfo[1],':');
         String username = accountInfo[0];
         String password = accountInfo[1];
         String host = addressInfo[0];

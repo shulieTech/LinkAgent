@@ -27,14 +27,6 @@ import java.util.List;
  * @since 2020/11/23 7:13 下午
  */
 public interface ExternalAPI {
-    /**
-     * 下载 agent包
-     *
-     * @param downloadPath 下载地址
-     * @param targetPath   下载后存放的目录
-     * @return 返回 agent 包的文件
-     */
-    File downloadAgent(String downloadPath, String targetPath);
 
     /**
      * 下载模块包
@@ -44,14 +36,6 @@ public interface ExternalAPI {
      * @return
      */
     File downloadModule(String downloadPath, String targetPath);
-
-    /**
-     * 获取 app 配置
-     *
-     * @return
-     * @throws RuntimeException 如果获取不到配置或者解析配置失败，则会抛出 RuntimeException
-     */
-    AppConfig getAppConfig() throws RuntimeException;
 
     /**
      * 获取当前最新的命令包

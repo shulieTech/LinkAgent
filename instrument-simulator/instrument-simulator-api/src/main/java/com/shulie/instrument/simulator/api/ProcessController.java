@@ -14,9 +14,7 @@
  */
 package com.shulie.instrument.simulator.api;
 
-import static com.shulie.instrument.simulator.api.ProcessControlException.State.*;
-import static com.shulie.instrument.simulator.api.ProcessControlException.throwReturnImmediately;
-import static com.shulie.instrument.simulator.api.ProcessControlException.throwThrowsImmediately;
+import static com.shulie.instrument.simulator.api.ProcessControlException.*;
 
 /**
  * 流程控制
@@ -72,19 +70,13 @@ public final class ProcessController {
         throw new ProcessControlException(true, THROWS_IMMEDIATELY, throwable);
     }
 
-    private static final ProcessControlException noneImmediatelyException
-            = new ProcessControlException(NONE_IMMEDIATELY, null);
-
-    private static final ProcessControlException noneImmediatelyWithIgnoreProcessEventException
-            = new ProcessControlException(true, NONE_IMMEDIATELY, null);
-
     /**
      * 不干预当前处理流程
      *
      * @throws ProcessControlException 抛出不干预流程处理异常
      */
     public static void noneImmediately() throws ProcessControlException {
-        throw noneImmediatelyException;
+        throw new ProcessControlException(NONE_IMMEDIATELY, null);
     }
 
     /**
@@ -93,7 +85,7 @@ public final class ProcessController {
      * @throws ProcessControlException 抛出不干预流程处理异常
      */
     public static void noneImmediatelyWithIgnoreProcessEvent() throws ProcessControlException {
-        throw noneImmediatelyWithIgnoreProcessEventException;
+        throw new ProcessControlException(true, NONE_IMMEDIATELY, null);
     }
 
 }

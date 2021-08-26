@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -170,6 +171,11 @@ class EmptyClassStructure implements ClassStructure {
     public Access getAccess() {
         return new AccessImplByAsm(0);
     }
+
+    @Override
+    public void release() {
+
+    }
 }
 
 /**
@@ -183,21 +189,11 @@ class PrimitiveClassStructure extends EmptyClassStructure {
         this.primitive = primitive;
     }
 
-    public enum Primitive {
-        BOOLEAN("boolean", boolean.class),
-        CHAR("char", char.class),
-        BYTE("byte", byte.class),
-        INT("int", int.class),
-        SHORT("short", short.class),
-        LONG("long", long.class),
-        FLOAT("float", float.class),
-        DOUBLE("double", double.class),
-        VOID("void", void.class);
-
+    public static class Primitive {
         private final String type;
         private final Access access;
 
-        Primitive(final String type, final Class<?> clazz) {
+        public Primitive(final String type, final Class<?> clazz) {
             this.type = type;
             this.access = new AccessImplByJDKClass(clazz);
         }
@@ -214,10 +210,24 @@ class PrimitiveClassStructure extends EmptyClassStructure {
     }
 
     static Primitive mappingPrimitiveByJavaClassName(final String javaClassName) {
-        for (final Primitive primitive : Primitive.values()) {
-            if (primitive.type.equals(javaClassName)) {
-                return primitive;
-            }
+        if ("byte".equals(javaClassName)) {
+            return new Primitive("byte", byte.class);
+        } else if ("short".equals(javaClassName)) {
+            return new Primitive("short", short.class);
+        } else if ("int".equals(javaClassName)) {
+            return new Primitive("int", int.class);
+        } else if ("long".equals(javaClassName)) {
+            return new Primitive("long", long.class);
+        } else if ("float".equals(javaClassName)) {
+            return new Primitive("float", float.class);
+        } else if ("double".equals(javaClassName)) {
+            return new Primitive("double", double.class);
+        } else if ("char".equals(javaClassName)) {
+            return new Primitive("char", char.class);
+        } else if ("boolean".equals(javaClassName)) {
+            return new Primitive("boolean", boolean.class);
+        } else if ("void".equals(javaClassName)) {
+            return new Primitive("void", void.class);
         }
         return null;
     }
@@ -226,7 +236,7 @@ class PrimitiveClassStructure extends EmptyClassStructure {
 
 class ArrayClassStructure extends EmptyClassStructure {
 
-    private final ClassStructure elementClassStructure;
+    private ClassStructure elementClassStructure;
 
     ArrayClassStructure(ClassStructure elementClassStructure) {
         this.elementClassStructure = elementClassStructure;
@@ -236,6 +246,11 @@ class ArrayClassStructure extends EmptyClassStructure {
     public String getJavaClassName() {
         return elementClassStructure.getJavaClassName() + "[]";
     }
+
+    @Override
+    public void release() {
+        elementClassStructure = null;
+    }
 }
 
 /**
@@ -244,9 +259,9 @@ class ArrayClassStructure extends EmptyClassStructure {
 public class ClassStructureImplByAsm extends FamilyClassStructure {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final ClassReader classReader;
-    private final ClassLoader loader;
-    private final Access access;
+    private ClassReader classReader;
+    private WeakReference<ClassLoader> loader;
+    private Access access;
 
     ClassStructureImplByAsm(final InputStream classInputStream,
                             final ClassLoader loader) throws IOException {
@@ -256,7 +271,9 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
     ClassStructureImplByAsm(final byte[] classByteArray,
                             final ClassLoader loader) {
         this.classReader = new ClassReader(classByteArray);
-        this.loader = loader;
+        if (loader != null) {
+            this.loader = new WeakReference<ClassLoader>(loader);
+        }
         this.access = fixAccess();
     }
 
@@ -280,7 +297,7 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
     }
 
     private boolean isBootstrapClassLoader() {
-        return null == loader;
+        return null == getClassLoader();
     }
 
     // 获取资源数据流
@@ -289,7 +306,7 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
     private InputStream getResourceAsStream(final String resourceName) {
         return isBootstrapClassLoader()
                 ? Object.class.getResourceAsStream("/" + resourceName)
-                : loader.getResourceAsStream(resourceName);
+                : (getClassLoader() == null ? null : getClassLoader().getResourceAsStream(resourceName));
     }
 
     // 将内部类名称转换为资源名称
@@ -297,8 +314,21 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
         return internalClassName + ".class";
     }
 
-    private final static Cache<Pair, ClassStructure> classStructureCache
+    private static Cache<Pair, ClassStructure> classStructureCache
             = CacheBuilder.newBuilder().maximumSize(1024).build();
+
+    /**
+     * clear all caches
+     */
+    public static void clear() {
+        Map<Pair, ClassStructure> map = classStructureCache.asMap();
+        for (Map.Entry<Pair, ClassStructure> entry : map.entrySet()) {
+            entry.getKey().clear();
+            entry.getValue().release();
+        }
+        classStructureCache.invalidateAll();
+        classStructureCache = null;
+    }
 
     // 构造一个类结构实例
     private ClassStructure newInstance(final String javaClassName) {
@@ -319,7 +349,7 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
             return new PrimitiveClassStructure(primitive);
         }
 
-        final Pair pair = new Pair(loader, javaClassName);
+        final Pair pair = new Pair(getClassLoader(), javaClassName);
         final ClassStructure existClassStructure = classStructureCache.getIfPresent(pair);
         if (null != existClassStructure) {
             return existClassStructure;
@@ -328,13 +358,13 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
             final InputStream is = getResourceAsStream(internalClassNameToResourceName(toInternalClassName(javaClassName)));
             if (null != is) {
                 try {
-                    final ClassStructure classStructure = new ClassStructureImplByAsm(is, loader);
+                    final ClassStructure classStructure = new ClassStructureImplByAsm(is, getClassLoader());
                     classStructureCache.put(pair, classStructure);
                     return classStructure;
                 } catch (Throwable cause) {
                     // ignore
                     logger.warn("SIMULATOR: new instance class structure by using ASM failed, will return null. class={};loader={};",
-                            javaClassName, loader, cause);
+                            javaClassName, getClassLoader(), cause);
                     classStructureCache.put(pair, null);
                 } finally {
                     IOUtils.closeQuietly(is);
@@ -373,10 +403,10 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
 
     @Override
     public ClassLoader getClassLoader() {
-        return loader;
+        return loader == null ? null : loader.get();
     }
 
-    private final LazyGet<ClassStructure> superClassStructureLazyGet
+    private LazyGet<ClassStructure> superClassStructureLazyGet
             = new LazyGet<ClassStructure>() {
         @Override
         protected ClassStructure initialValue() {
@@ -393,7 +423,7 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
         return superClassStructureLazyGet.get();
     }
 
-    private final LazyGet<List<ClassStructure>> interfaceClassStructuresLazyGet
+    private LazyGet<List<ClassStructure>> interfaceClassStructuresLazyGet
             = new LazyGet<List<ClassStructure>>() {
         @Override
         protected List<ClassStructure> initialValue() {
@@ -406,7 +436,7 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
         return interfaceClassStructuresLazyGet.get();
     }
 
-    private final LazyGet<List<ClassStructure>> annotationTypeClassStructuresLazyGet
+    private LazyGet<List<ClassStructure>> annotationTypeClassStructuresLazyGet
             = new LazyGet<List<ClassStructure>>() {
         @Override
         protected List<ClassStructure> initialValue() {
@@ -435,7 +465,7 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
     }
 
 
-    private final LazyGet<List<BehaviorStructure>> behaviorStructuresLazyGet
+    private LazyGet<List<BehaviorStructure>> behaviorStructuresLazyGet
             = new LazyGet<List<BehaviorStructure>>() {
         @Override
         protected List<BehaviorStructure> initialValue() {
@@ -526,6 +556,17 @@ public class ClassStructureImplByAsm extends FamilyClassStructure {
     @Override
     public Access getAccess() {
         return access;
+    }
+
+    @Override
+    public void release() {
+        classReader = null;
+        loader = null;
+        access = null;
+        superClassStructureLazyGet = null;
+        interfaceClassStructuresLazyGet = null;
+        annotationTypeClassStructuresLazyGet = null;
+        behaviorStructuresLazyGet = null;
     }
 
     @Override

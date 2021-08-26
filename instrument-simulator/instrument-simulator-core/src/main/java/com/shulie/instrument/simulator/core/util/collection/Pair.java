@@ -14,13 +14,42 @@
  */
 package com.shulie.instrument.simulator.core.util.collection;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.lang.ref.WeakReference;
 
-public class Pair extends ArrayList<Object> {
+public class Pair {
 
-    public Pair(Object... objects) {
-        super(Arrays.asList(objects));
+    private WeakReference<ClassLoader> classloaderHolder;
+    private String javaClassName;
+
+    public Pair(ClassLoader classLoader, String javaClassName) {
+        if (classLoader != null) {
+            classloaderHolder = new WeakReference<ClassLoader>(classLoader);
+        }
+        this.javaClassName = javaClassName;
     }
 
+    public void clear() {
+        if (classloaderHolder != null) {
+            classloaderHolder.clear();
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Pair pair = (Pair) o;
+
+        if (classloaderHolder != null ? !classloaderHolder.equals(pair.classloaderHolder) : pair.classloaderHolder != null)
+            return false;
+        return javaClassName != null ? javaClassName.equals(pair.javaClassName) : pair.javaClassName == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = classloaderHolder != null ? classloaderHolder.hashCode() : 0;
+        result = 31 * result + (javaClassName != null ? javaClassName.hashCode() : 0);
+        return result;
+    }
 }

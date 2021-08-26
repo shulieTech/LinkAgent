@@ -22,7 +22,7 @@ public final class ConfigNames {
     public final static String URL_WHITE_LIST = "URL_WHITE_LIST";
     public final static String MQ_WHITE_LIST = "MQ_WHITE_LIST";
     public final static String WHITE_LIST = "WHITE_LIST";
-    public final static String DUBBO_ALLOW_LIST = "DUBBO_ALLOW_LIST";
+    public final static String RPC_WHITE_LIST = "RPC_WHITE_LIST";
     public final static String WHITE_LIST_SWITCH_ON = "WHITE_LIST_SWITCH_ON";
     public final static String CONTEXT_PATH_BLOCK_LIST = "CONTEXT_PATH_BLOCK_LIST";
     public final static String SEARCH_KEY_WHITE_LIST = "SEARCH_KEY_WHITE_LIST";

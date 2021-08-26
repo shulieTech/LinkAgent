@@ -49,7 +49,7 @@ import java.util.*;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "logger", version = "1.0.0", author = "xiaobin@shulie.io", description = "日志模块")
 public class LoggerModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(LoggerModule.class);
+    private final Logger logger = LoggerFactory.getLogger(LoggerModule.class);
     @Resource
     private SimulatorConfig config;
 

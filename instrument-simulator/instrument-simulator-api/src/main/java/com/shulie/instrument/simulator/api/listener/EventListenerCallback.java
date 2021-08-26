@@ -14,8 +14,6 @@
  */
 package com.shulie.instrument.simulator.api.listener;
 
-import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
-
 /**
  * EventListener 回调，此类是为了让目标的 Listener 延迟实例化，这样可以最大化的减少在多个业务类加载器的情况下，
  * 最大化的限度减少默认模块类加载器加载到的类，因为在多业务类加载实例的情况下，默认类加载器一般只会负责加载 Module 类，
@@ -41,5 +39,5 @@ public interface EventListenerCallback {
      * @param policy        策略
      * @return 通知监听器
      */
-    EventListener onCall(EventListener eventListener, String scopeName, ExecutionPolicy policy);
+    EventListener onCall(EventListener eventListener, String scopeName, int policy);
 }

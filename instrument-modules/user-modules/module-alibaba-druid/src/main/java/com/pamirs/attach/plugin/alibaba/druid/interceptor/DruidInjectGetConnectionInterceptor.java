@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.alibaba.druid.interceptor;
 
 import com.alibaba.druid.pool.DruidDataSource;
+import com.pamirs.attach.plugin.alibaba.druid.destroy.DruidDestroy;
 import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
 import com.pamirs.pradar.CutOffResult;
@@ -31,6 +32,7 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -42,6 +44,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+@Destroyable(DruidDestroy.class)
 public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdaptor {
     private static Logger logger = LoggerFactory.getLogger(DruidInjectGetConnectionInterceptor.class.getName());
 

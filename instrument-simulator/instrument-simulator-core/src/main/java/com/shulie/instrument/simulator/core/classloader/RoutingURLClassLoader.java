@@ -35,9 +35,9 @@ public class RoutingURLClassLoader extends URLClassLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingURLClassLoader.class);
     protected final ClassLoadingLock classLoadingLock = new ClassLoadingLock();
-    private final Routing[] routingArray;
     protected final BootLoader bootLoader = BootLoaderFactory.newBootLoader();
     protected final ClassLoader parent;
+    protected Routing[] routingArray;
 
     public RoutingURLClassLoader(final URL[] urls,
                                  final Routing... routingArray) {
@@ -266,20 +266,25 @@ public class RoutingURLClassLoader extends URLClassLoader {
      * @param name className
      * @return resolved
      */
-    protected Class<?> resolveLocalClass(final String name) {
-        try {
-            Class clazz = findLoadedClass(name);
-            if (clazz != null) {
-                return clazz;
+    protected Class<?> resolveLocalClass(final String name) throws ClassNotFoundException {
+        return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
+            @Override
+            public Class<?> loadClass(String javaClassName) {
+                try {
+                    Class clazz = findLoadedClass(name);
+                    if (clazz != null) {
+                        return clazz;
+                    }
+                    return findClass(name);
+                } catch (Throwable e) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("can't resolve class {} from local with classloader {}.", name, this, e);
+                    }
+                    // ignore
+                }
+                return null;
             }
-            return findClass(name);
-        } catch (Throwable e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("can't resolve class {} from local with classloader {}.", name, this, e);
-            }
-            // ignore
-        }
-        return null;
+        });
     }
 
     /**
@@ -306,45 +311,45 @@ public class RoutingURLClassLoader extends URLClassLoader {
 
     @Override
     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
-        return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
-            @Override
-            public Class<?> loadClass(String javaClassName) throws ClassNotFoundException {
-                Class<?> clazz = null;
+//        return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
+//            @Override
+//            public Class<?> loadClass(String javaClassName) throws ClassNotFoundException {
+//            }
+//        });
+        Class<?> clazz = null;
 
-                // 1. find routing
-                if (clazz == null) {
-                    clazz = resolveRouting(name, resolve);
-                }
+        // 1. find routing
+        if (clazz == null) {
+            clazz = resolveRouting(name, resolve);
+        }
 
-                // 2. findLoadedClass
-                if (clazz == null) {
-                    clazz = findLoadedClass(name);
-                }
-                // 3. JDK related class
-                if (clazz == null) {
-                    clazz = resolveJDKClass(name);
-                }
+        // 2. findLoadedClass
+        if (clazz == null) {
+            clazz = findLoadedClass(name);
+        }
+        // 3. JDK related class
+        if (clazz == null) {
+            clazz = resolveJDKClass(name);
+        }
 
-                // 4. module classpath class
-                if (clazz == null) {
-                    clazz = resolveLocalClass(name);
-                }
+        // 4. module classpath class
+        if (clazz == null) {
+            clazz = resolveLocalClass(name);
+        }
 
-                // 5. super classpath class
-                if (clazz == null) {
-                    clazz = resolveSystemClass(name, resolve);
-                }
+        // 5. super classpath class
+        if (clazz == null) {
+            clazz = resolveSystemClass(name, resolve);
+        }
 
-                if (clazz != null) {
-                    if (resolve) {
-                        resolveClass(clazz);
-                    }
-                    return clazz;
-                }
-
-                throw new ClassNotFoundException("class " + name + " not found");
+        if (clazz != null) {
+            if (resolve) {
+                resolveClass(clazz);
             }
-        });
+            return clazz;
+        }
+
+        throw new ClassNotFoundException("class " + name + " not found");
 
     }
 
@@ -354,8 +359,8 @@ public class RoutingURLClassLoader extends URLClassLoader {
      */
     public static class Routing {
 
-        protected final Collection<String/*REGEX*/> regexExpresses = new ArrayList<String>();
-        protected final ClassLoader classLoader;
+        protected Collection<String/*REGEX*/> regexExpresses = new ArrayList<String>();
+        protected ClassLoader classLoader;
 
         /**
          * 构造类加载路由匹配器
@@ -368,26 +373,6 @@ public class RoutingURLClassLoader extends URLClassLoader {
                 regexExpresses.addAll(Arrays.asList(regexExpressArray));
             }
             this.classLoader = classLoader;
-        }
-
-        /**
-         * 当前参与匹配的Java类名是否命中路由匹配规则
-         * 命中匹配规则的类加载,将会从此ClassLoader中完成对应的加载行为
-         *
-         * @param javaClassName 参与匹配的Java类名
-         * @return true:命中;false:不命中;
-         */
-        protected boolean isHit(final String javaClassName) {
-            for (final String regexExpress : regexExpresses) {
-                try {
-                    if (matching(javaClassName, regexExpress)) {
-                        return true;
-                    }
-                } catch (Throwable cause) {
-                    logger.warn("SIMULATOR: routing {} failed, regex-express={}.", javaClassName, regexExpress, cause);
-                }
-            }
-            return false;
         }
 
         /**
@@ -499,6 +484,35 @@ public class RoutingURLClassLoader extends URLClassLoader {
                 sNdx++;
                 pNdx++;
             }
+        }
+
+        /**
+         * clean all resources
+         */
+        public void clean() {
+            regexExpresses.clear();
+            regexExpresses = null;
+            classLoader = null;
+        }
+
+        /**
+         * 当前参与匹配的Java类名是否命中路由匹配规则
+         * 命中匹配规则的类加载,将会从此ClassLoader中完成对应的加载行为
+         *
+         * @param javaClassName 参与匹配的Java类名
+         * @return true:命中;false:不命中;
+         */
+        protected boolean isHit(final String javaClassName) {
+            for (final String regexExpress : regexExpresses) {
+                try {
+                    if (matching(javaClassName, regexExpress)) {
+                        return true;
+                    }
+                } catch (Throwable cause) {
+                    logger.warn("SIMULATOR: routing {} failed, regex-express={}.", javaClassName, regexExpress, cause);
+                }
+            }
+            return false;
         }
     }
 

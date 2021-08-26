@@ -14,6 +14,13 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.hook;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.pamirs.attach.plugin.apache.rocketmq.RocketmqConstants;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceBean;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceConstants;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceContext;
@@ -32,10 +39,6 @@ import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 生产消息时的pradar埋点
@@ -71,15 +74,19 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             traceBean.setBornHost(context.getBornHost());
             String brokerAddr = context.getBrokerAddr();
             int port = -1;
-            if (context.getBrokerAddr() != null && context.getBrokerAddr().indexOf(':') != -1) {
-                brokerAddr = brokerAddr.substring(0, brokerAddr.indexOf(':'));
+            int indexOfColon = -1;
+            if (brokerAddr != null && (indexOfColon = brokerAddr.indexOf(':')) != -1) {
                 try {
-                    port = Integer.parseInt(context.getBrokerAddr().substring(context.getBrokerAddr().indexOf(':') + 1));
+                    port = Integer.parseInt(brokerAddr.substring(indexOfColon + 1));
                 } catch (NumberFormatException e) {
                 }
+                brokerAddr = brokerAddr.substring(0, indexOfColon);
             }
-            traceBean.setStoreHost(brokerAddr);
-            traceBean.setPort(port);
+            final List<String> nameServerAddressList = context.getProducer().getmQClientFactory().getMQClientAPIImpl()
+                .getNameServerAddressList();
+            Collections.sort(nameServerAddressList);
+            traceBean.setStoreHost(StringUtils
+                .join(nameServerAddressList, ","));
             traceBean.setBrokerName(context.getMq().getBrokerName());
             //上游AppName，记录当前应用的AppName
             traceBean.setProps(context.getProps());
@@ -109,6 +116,7 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             for (Map.Entry<String, String> entry : traceBean.getContext().entrySet()) {
                 putUserProperty(message, entry.getKey(), entry.getValue());
             }
+            putUserProperty(message,RocketmqConstants.NAME_SERVER_ADDRESS,traceBean.getStoreHost());
 
         } catch (PradarException e) {
             LOGGER.error("", e);
@@ -140,7 +148,7 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             if (context == null || context.getMessage() == null) {
                 return;
             }
-            MQTraceContext mqTraceContext = (MQTraceContext) context.getMqTraceContext();
+            MQTraceContext mqTraceContext = (MQTraceContext)context.getMqTraceContext();
             MQTraceBean traceBean = mqTraceContext.getTraceBeans().get(0);
 
             if (traceBean != null && context.getSendResult() != null) {

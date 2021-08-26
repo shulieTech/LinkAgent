@@ -15,6 +15,7 @@
 package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.scope.ScopeFactory;
+import com.shulie.instrument.simulator.api.extension.AdviceListenerWrap;
 import com.shulie.instrument.simulator.api.listener.AdviceListenerCallback;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
@@ -26,12 +27,12 @@ import com.shulie.instrument.simulator.api.scope.InterceptorScope;
  */
 public class Interceptors {
 
-    public final static ScopeAdviceListenerCallback SCOPE_CALLBACK = new ScopeAdviceListenerCallback();
+    public static ScopeAdviceListenerCallback SCOPE_CALLBACK = new ScopeAdviceListenerCallback();
 
     public static class ScopeAdviceListenerCallback implements AdviceListenerCallback {
 
         @Override
-        public AdviceListener onCall(AdviceListener listener, String scopeName, ExecutionPolicy policy) {
+        public AdviceListener onCall(AdviceListener listener, String scopeName, int policy) {
             if (scopeName == null) {
                 return Interceptors.newScopeInterceptor(listener, policy);
             }
@@ -79,7 +80,7 @@ public class Interceptors {
      * @param policy         执行策略
      * @return
      */
-    public static AdviceListener newScopeInterceptor(AdviceListener adviceListener, String scopeName, ExecutionPolicy policy) {
+    public static AdviceListener newScopeInterceptor(AdviceListener adviceListener, String scopeName, int policy) {
         InterceptorScope scope = ScopeFactory.getScope(scopeName);
         return newScopeInterceptor(adviceListener, scope, policy);
     }
@@ -92,7 +93,7 @@ public class Interceptors {
      * @param policy         执行策略
      * @return
      */
-    public static AdviceListener newScopeInterceptor(AdviceListener adviceListener, InterceptorScope scope, ExecutionPolicy policy) {
+    public static AdviceListener newScopeInterceptor(AdviceListener adviceListener, InterceptorScope scope, int policy) {
         return wrapByScope(adviceListener, scope, policy);
     }
 
@@ -103,11 +104,11 @@ public class Interceptors {
      * @param policy         执行策略
      * @return
      */
-    public static AdviceListener newScopeInterceptor(AdviceListener adviceListener, ExecutionPolicy policy) {
+    public static AdviceListener newScopeInterceptor(AdviceListener adviceListener, int policy) {
         return wrapByScope(adviceListener, policy);
     }
 
-    private static AdviceListener wrapByScope(AdviceListener interceptor, ExecutionPolicy policy) {
+    private static AdviceListener wrapByScope(AdviceListener interceptor, int policy) {
         if (interceptor instanceof AroundInterceptor) {
             return new ScopedAroundInterceptor((AroundInterceptor) interceptor, policy);
         }
@@ -136,7 +137,12 @@ public class Interceptors {
         return interceptor;
     }
 
-    private static AdviceListener wrapByScope(AdviceListener interceptor, InterceptorScope scope, ExecutionPolicy policy) {
+    private static AdviceListener wrapByScope(AdviceListener interceptor, InterceptorScope scope, int policy) {
+        if (interceptor instanceof AdviceListenerWrap) {
+            interceptor = ((AdviceListenerWrap)interceptor).getUnderLister();
+            return wrapByScope(interceptor, scope, policy);
+        }
+
         if (interceptor instanceof AroundInterceptor) {
             return new ScopedAroundInterceptor((AroundInterceptor) interceptor, scope, policy);
         }
@@ -160,7 +166,6 @@ public class Interceptors {
         if (interceptor instanceof ModificationInterceptor) {
             interceptor = new ScopedModificationInterceptor((ModificationInterceptor) interceptor, scope, policy);
         }
-
 
         return interceptor;
     }

@@ -20,7 +20,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig;
-import org.apache.commons.lang.ObjectUtils;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 
 /**
  * @author: wangjian
@@ -28,13 +28,21 @@ import org.apache.commons.lang.ObjectUtils;
  */
 public class WhiteListSwitch implements IChange<Boolean, ClusterTestConfig> {
 
-    private static final WhiteListSwitch INSTANCE = new WhiteListSwitch();
-
-    private WhiteListSwitch() {
-    }
+    private static WhiteListSwitch INSTANCE;
 
     public static WhiteListSwitch getInstance() {
+        if (INSTANCE == null) {
+            synchronized (WhiteListSwitch.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new WhiteListSwitch();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -55,7 +63,6 @@ public class WhiteListSwitch implements IChange<Boolean, ClusterTestConfig> {
             EventRouter.router().publish(event);
             PradarSwitcher.turnWhiteListSwitchOff();
             clusterTestConfig.setWhiteListSwitchOn(false);
-            PradarSwitcher.turnConfigSwitcherOn(ConfigNames.URL_WHITE_LIST);
         }
         return Boolean.TRUE;
     }

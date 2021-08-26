@@ -15,6 +15,8 @@
 package com.pamirs.attach.plugin.es.shadowserver.transport;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.TransportClientDefinition;
 import com.pamirs.attach.plugin.es.shadowserver.transport.definition.PreBuiltTransportClientDefinition;
@@ -26,44 +28,54 @@ import org.elasticsearch.client.transport.TransportClient;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/04/12 4:27 下午
  */
-public enum TransportClientDefinitionStrategy {
+public class TransportClientDefinitionStrategy {
 
-    LOW_VERSION {
-        @Override
-        public TransportClientDefinition definition() {
-            return TransportClient2XDefinition.getInstance();
-        }
+    private static final List<Matcher> registryMatchers = new ArrayList<Matcher>();
 
-        @Override
-        public boolean support(TransportClient transportClient) {
-            return Modifier.isAbstract(transportClient.getClass().getModifiers());
-        }
-    },
+    static {
+        registryMatchers.add(new Matcher() {
+            @Override
+            public TransportClientDefinition definition () {
+                return new TransportClient2XDefinition();
+            }
 
-    HIGH_VERSION {
-        @Override
-        public TransportClientDefinition definition() {
-            return PreBuiltTransportClientDefinition.getInstance();
-        }
+            @Override
+            public boolean support (TransportClient transportClient){
+                return Modifier.isAbstract(transportClient.getClass().getModifiers());
+            }
+        });
+        registryMatchers.add(new Matcher() {
+            @Override
+            public TransportClientDefinition definition () {
+                return new PreBuiltTransportClientDefinition();
+            }
 
-        @Override
-        public boolean support(TransportClient transportClient) {
-            return "org.elasticsearch.transport.client.PreBuiltTransportClient".
-                equals(transportClient.getClass().getName());
-        }
-    };
+            @Override
+            public boolean support (TransportClient transportClient){
+                return "org.elasticsearch.transport.client.PreBuiltTransportClient".
+                    equals(transportClient.getClass().getName());
+            }
+        });
+    }
 
     public static TransportClientDefinition match(TransportClient transportClient) {
-        for (TransportClientDefinitionStrategy value : TransportClientDefinitionStrategy.values()) {
-            if (value.support(transportClient)) {
-                return value.definition();
+        for (Matcher registryMatcher : registryMatchers) {
+            if (registryMatcher.support(transportClient)) {
+                return registryMatcher.definition();
             }
         }
         throw new PressureMeasureError("未支持的TransportClient版本！:" + transportClient.getClass().getName());
     }
 
-    public abstract boolean support(TransportClient transportClient);
+    public static void release() {
+        registryMatchers.clear();
+    }
 
-    public abstract TransportClientDefinition definition();
+    interface Matcher {
+
+        boolean support(TransportClient transportClient);
+
+        TransportClientDefinition definition();
+    }
 
 }

@@ -26,16 +26,27 @@ public final class SocketAddressUtils {
 
 
     // TODO JDK 7 InetSocketAddress.getHostString() - reflection not needed once we drop JDK 6 support.
-    private static final HostStringAccessor HOST_STRING_ACCESSOR = createHostStringAccessor();
+    private static HostStringAccessor HOST_STRING_ACCESSOR;
 
-    private static HostStringAccessor createHostStringAccessor() {
-        try {
-            final Method m = InetSocketAddress.class.getDeclaredMethod("getHostString");
-            m.setAccessible(true);
-            return new ReflectiveHostStringAccessor(m);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("Unexpected InetSocketAddress class", e);
+    private static HostStringAccessor getHostStringAccessor() {
+        if (HOST_STRING_ACCESSOR == null) {
+            synchronized (SocketAddressUtils.class) {
+                if (HOST_STRING_ACCESSOR == null) {
+                    try {
+                        final Method m = InetSocketAddress.class.getDeclaredMethod("getHostString");
+                        m.setAccessible(true);
+                        HOST_STRING_ACCESSOR = new ReflectiveHostStringAccessor(m);
+                    } catch (NoSuchMethodException e) {
+                        throw new IllegalStateException("Unexpected InetSocketAddress class", e);
+                    }
+                }
+            }
         }
+        return HOST_STRING_ACCESSOR;
+    }
+
+    public static void release() {
+        HOST_STRING_ACCESSOR = null;
     }
 
     private interface HostStringAccessor {
@@ -85,7 +96,7 @@ public final class SocketAddressUtils {
         if (inetSocketAddress == null) {
             return null;
         }
-        return HOST_STRING_ACCESSOR.getHostString(inetSocketAddress);
+        return getHostStringAccessor().getHostString(inetSocketAddress);
     }
 
     /**

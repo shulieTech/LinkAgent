@@ -98,20 +98,10 @@ class PradarRollingFileAppender extends PradarAppender {
         this.maxFileSize = maxFileSize;
         this.selfLogEnabled = selfLogEnabled;
         setFile();
-        addShutdownHook();
     }
 
     public void shutdown() {
         close();
-    }
-
-    private void addShutdownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                close();
-            }
-        });
     }
 
     private File getSmalllestFile() {

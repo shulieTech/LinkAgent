@@ -14,14 +14,17 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.RedisUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Destroyable(LettuceDestroy.class)
 public class PluginMaxRedisExpireTimeInterceptor extends ParametersWrapperInterceptorAdaptor {
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginMaxRedisExpireTimeInterceptor.class.getName());
     @Override

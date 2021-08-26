@@ -17,9 +17,11 @@ package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import com.alibaba.rocketmq.common.message.MessageQueue;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
+import com.pamirs.attach.plugin.alibaba.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,7 @@ import org.slf4j.LoggerFactory;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/30 3:53 下午
  */
+@Destroyable(MqDestroy.class)
 public class DefaultPushConsumerEarliestMsgStoreTimeInterceptor extends CutoffInterceptorAdaptor {
     protected final static Logger logger = LoggerFactory.getLogger(DefaultPushConsumerEarliestMsgStoreTimeInterceptor.class);
 
@@ -58,5 +61,4 @@ public class DefaultPushConsumerEarliestMsgStoreTimeInterceptor extends CutoffIn
             throw new PressureMeasureError(e);
         }
     }
-
 }

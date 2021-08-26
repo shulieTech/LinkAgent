@@ -125,4 +125,8 @@ public interface ClassStructure {
      */
     Access getAccess();
 
+    /**
+     * release
+     */
+    void release();
 }

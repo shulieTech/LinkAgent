@@ -14,16 +14,11 @@
  */
 package com.pamirs.pradar.interceptor;
 
-import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.debug.DebugTestInfoPusher;
-import com.pamirs.pradar.debug.model.DebugTestInfo;
-import com.pamirs.pradar.json.ResultSerializer;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +35,13 @@ abstract class BaseInterceptor extends AdviceListener {
     protected static final Logger LOGGER = LoggerFactory.getLogger(BaseInterceptor.class);
 
     protected InterceptorScope interceptorScope;
+    protected boolean costEnabled;
+    protected long minInterceptorCost;
+
+    public BaseInterceptor() {
+        this.costEnabled = Pradar.isInterceptorCostEnabled();
+        this.minInterceptorCost = Pradar.getMinInterceptorCost();
+    }
 
     public void setInterceptorScope(InterceptorScope interceptorScope) {
         this.interceptorScope = interceptorScope;
@@ -47,7 +49,10 @@ abstract class BaseInterceptor extends AdviceListener {
 
     @Override
     public void before(Advice advice) throws Throwable {
-        DebugTestInfo debugTestInfo = buildDebugTestInfo(advice, "beforeFirst", null);
+        long start = 0L;
+        if (costEnabled) {
+            start = System.nanoTime();
+        }
         Throwable e = null;
         try {
             doBefore(advice);
@@ -57,213 +62,23 @@ abstract class BaseInterceptor extends AdviceListener {
             e = t;
             throw t;
         } finally {
-            processDebugRecord(debugTestInfo);
-            recordDebugInfo(advice, "beforeLast", e);
-        }
-    }
-
-    private static String serializeObject(Object target) {
-        if (target == null) {
-            return StringUtils.EMPTY;
-        }
-        try {
-            return ResultSerializer.serializeObject(target, 2);
-        } catch (Throwable e) {
-            return StringUtils.EMPTY;
-        }
-    }
-
-    private void processDebugRecord(DebugTestInfo debugTestInfo) {
-        if (debugTestInfo == null) {
-            return;
-        }
-        if (!Pradar.isDebug()) {
-            return;
-        }
-        debugTestInfo.setTraceId(Pradar.getTraceId());
-        debugTestInfo.setRpcId(Pradar.getInvokeId());
-        debugTestInfo.setLogType(Pradar.getLogType());
-        DebugTestInfoPusher.addDebugInfo(debugTestInfo);
-    }
-
-    private DebugTestInfo buildDebugTestInfo() {
-        if (!Pradar.isDebug()) {
-            return null;
-        }
-        DebugTestInfo debugTestInfo = new DebugTestInfo();
-        debugTestInfo.setAppName(AppNameUtils.appName());
-        debugTestInfo.setAgentId(Pradar.getAgentId());
-        debugTestInfo.setTraceId(Pradar.getTraceId());
-        debugTestInfo.setRpcId(Pradar.getInvokeId());
-        debugTestInfo.setLogType(Pradar.getLogType());
-        return debugTestInfo;
-    }
-
-    private void recordDebugInfo(final Advice advice, final String method, final Throwable t) {
-        if (!Pradar.isDebug()) {
-            return;
-        }
-        DebugTestInfo debugTestInfo = buildDebugTestInfo(advice, method, t);
-        if (debugTestInfo != null) {
-            DebugTestInfoPusher.addDebugInfo(debugTestInfo);
-        }
-    }
-
-    private void recordDebugInfo(final DebugTestInfo debugTestInfo, final Advice advice, final String method, final Throwable t) {
-        if (debugTestInfo == null) {
-            return;
-        }
-        final String interceptorClassName = getClass().getName();
-        final String targetClass = advice.getTargetClass().getName();
-        final String classLoader = advice.getClassLoader().toString();
-        final Object target = advice.getTarget();
-        final Object[] args = advice.getParameterArray();
-        final Object retObj = advice.getReturnObj();
-        final Throwable throwable = advice.getThrowable();
-        debugTestInfo.setLogCallback(new DebugTestInfo.LogCallback() {
-            @Override
-            public DebugTestInfo.Log getLog() {
-                String targetString = serializeObject(target);
-                String parameterArray = serializeObject(args);
-                String returnObj = serializeObject(retObj);
-
-                DebugTestInfo.Log log = new DebugTestInfo.Log();
-                if (t != null || throwable != null) {
-                    log.setLevel("ERROR");
-                    if (t != null && throwable != null) {
-                        log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s, throwable: %s, interceptorError:%s",
-                                interceptorClassName,
-                                method,
-                                targetClass,
-                                classLoader,
-                                targetString,
-                                parameterArray,
-                                returnObj,
-                                serializeObject(throwable),
-                                serializeObject(t)
-                        ));
-                    } else if (t != null) {
-                        log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s, interceptorError:%s",
-                                interceptorClassName,
-                                method,
-                                targetClass,
-                                classLoader,
-                                targetString,
-                                parameterArray,
-                                returnObj,
-                                serializeObject(t)
-                        ));
-                    } else {
-                        log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s, throwable: %s",
-                                interceptorClassName,
-                                method,
-                                targetClass,
-                                classLoader,
-                                targetString,
-                                parameterArray,
-                                returnObj,
-                                serializeObject(throwable)
-                        ));
-                    }
-                } else {
-                    log.setLevel("INFO");
-                    log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s",
-                            interceptorClassName,
-                            method,
-                            targetClass,
-                            classLoader,
-                            targetString,
-                            parameterArray,
-                            returnObj));
+            if (costEnabled) {
+                long end = System.nanoTime();
+                double cost = (end - start) / 1000000.0;
+                if (cost > minInterceptorCost) {
+                    LOGGER.info("interceptor execute before cost interceptor={}, cost={}ms", getClass().getName(), cost);
                 }
-                return log;
             }
-        });
-        DebugTestInfoPusher.addDebugInfo(debugTestInfo);
-    }
-
-    private DebugTestInfo buildDebugTestInfo(final Advice advice, final String method, final Throwable t) {
-        DebugTestInfo debugTestInfo = new DebugTestInfo();
-        debugTestInfo.setTraceId(Pradar.getTraceId());
-        debugTestInfo.setRpcId(Pradar.getInvokeId());
-        debugTestInfo.setLogType(Pradar.getLogType());
-        debugTestInfo.setAgentId(Pradar.getAgentId());
-        debugTestInfo.setAppName(AppNameUtils.appName());
-        final String interceptorClassName = getClass().getName();
-        final String targetClass = advice.getTargetClass().getName();
-        final String classLoader = advice.getClassLoader().toString();
-        final Object target = advice.getTarget();
-        final Object[] args = advice.getParameterArray();
-        final Object retObj = advice.getReturnObj();
-        final Throwable throwable = advice.getThrowable();
-
-        debugTestInfo.setLogCallback(new DebugTestInfo.LogCallback() {
-            @Override
-            public DebugTestInfo.Log getLog() {
-                String targetString = serializeObject(target);
-                String parameterArray = serializeObject(args);
-                String returnObj = serializeObject(retObj);
-
-                DebugTestInfo.Log log = new DebugTestInfo.Log();
-                if (t != null || throwable != null) {
-                    log.setLevel("ERROR");
-                    if (t != null && throwable != null) {
-                        log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s, throwable: %s, interceptorError:%s",
-                                interceptorClassName,
-                                method,
-                                targetClass,
-                                classLoader,
-                                targetString,
-                                parameterArray,
-                                returnObj,
-                                serializeObject(throwable),
-                                serializeObject(t)
-                        ));
-                    } else if (t != null) {
-                        log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s, interceptorError:%s",
-                                interceptorClassName,
-                                method,
-                                targetClass,
-                                classLoader,
-                                targetString,
-                                parameterArray,
-                                returnObj,
-                                serializeObject(t)
-                        ));
-                    } else {
-                        log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s, throwable: %s",
-                                interceptorClassName,
-                                method,
-                                targetClass,
-                                classLoader,
-                                targetString,
-                                parameterArray,
-                                returnObj,
-                                serializeObject(throwable)
-                        ));
-                    }
-                } else {
-                    log.setLevel("INFO");
-                    log.setContent(String.format("%s[%s]: targetClass: %s, classLoader: %s, target: %s, parameterArray: %s, returnObj: %s",
-                            interceptorClassName,
-                            method,
-                            targetClass,
-                            classLoader,
-                            targetString,
-                            parameterArray,
-                            returnObj));
-                }
-                return log;
-            }
-        });
-        return debugTestInfo;
+        }
     }
 
     @Override
     public void afterReturning(Advice advice) throws Throwable {
+        long start = 0L;
+        if (costEnabled) {
+            start = System.nanoTime();
+        }
         boolean isDebug = Pradar.isDebug();
-        recordDebugInfo(advice, "afterFirst", null);
-        DebugTestInfo debugTestInfo = buildDebugTestInfo();
         Throwable throwable = null;
         try {
             doAfter(advice);
@@ -277,17 +92,23 @@ abstract class BaseInterceptor extends AdviceListener {
             throwable = e;
             throw e;
         } finally {
-            if (isDebug) {
-                recordDebugInfo(debugTestInfo, advice, "afterLast", throwable);
+            if (costEnabled) {
+                long end = System.nanoTime();
+                double cost = (end - start) / 1000000.0;
+                if (cost > minInterceptorCost) {
+                    LOGGER.info("interceptor execute after cost interceptor={}, cost={}ms", getClass().getName(), cost);
+                }
             }
         }
     }
 
     @Override
     public void afterThrowing(Advice advice) throws Throwable {
+        long start = 0L;
+        if (costEnabled) {
+            start = System.nanoTime();
+        }
         boolean isDebug = Pradar.isDebug();
-        buildDebugTestInfo(advice, "exceptionFirst", null);
-        DebugTestInfo debugTestInfo = buildDebugTestInfo();
         Throwable throwable = null;
         try {
             doException(advice);
@@ -297,8 +118,12 @@ abstract class BaseInterceptor extends AdviceListener {
             throwable = t;
             throw t;
         } finally {
-            if (isDebug) {
-                recordDebugInfo(debugTestInfo, advice, "exceptionLast", throwable);
+            if (costEnabled) {
+                long end = System.nanoTime();
+                double cost = (end - start) / 1000000.0;
+                if (cost > minInterceptorCost) {
+                    LOGGER.info("interceptor execute exception cost interceptor={}, cost={}ms", getClass().getName(), cost);
+                }
             }
         }
     }

@@ -14,16 +14,20 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Destroyable(JedisDestroyed.class)
 public class PluginMaxRedisExpireTimeInterceptor extends ParametersWrapperInterceptorAdaptor {
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginMaxRedisExpireTimeInterceptor.class.getName());
+
     @Override
     protected Object[] getParameter0(Advice advice) throws Throwable {
         Object[] args = advice.getParameterArray();
@@ -31,7 +35,7 @@ public class PluginMaxRedisExpireTimeInterceptor extends ParametersWrapperInterc
         if (!Pradar.isClusterTest()) {
             return args;
         }
-        RedisUtils.setMaxRedisExpireTime(advice.getBehavior().getName(),args);
+        RedisUtils.setMaxRedisExpireTime(advice.getBehavior().getName(), args);
         return args;
     }
 }

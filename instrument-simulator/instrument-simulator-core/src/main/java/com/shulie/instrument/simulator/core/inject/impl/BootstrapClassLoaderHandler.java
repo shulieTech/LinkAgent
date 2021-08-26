@@ -66,6 +66,11 @@ public class BootstrapClassLoaderHandler implements ClassInjector {
         throw new SimulatorException("invalid ClassLoader");
     }
 
+    @Override
+    public void destroy() {
+        isInjectedJarUrls.clear();
+    }
+
     private void injectClass0(String className) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
         /**
          * 让此判断更快一些

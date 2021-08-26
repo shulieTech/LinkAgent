@@ -14,8 +14,10 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.attach.plugin.redisson.factory.RedissonFactory;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -24,10 +26,11 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/3/1 5:11 下午
  */
+@Destroyable(RedissonDestroy.class)
 public class ShutdownMethodInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {
         Object target = advice.getTarget();
-        RedissonFactory.RedissonHolder.getFactory().shutdown(target);
+        RedissonFactory.getFactory().shutdown(target);
     }
 }

@@ -14,10 +14,12 @@
  */
 package com.shulie.instrument.simulator.agent.core.zk.impl;
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.state.ConnectionState;
-import com.netflix.curator.framework.state.ConnectionStateListener;
-import com.netflix.curator.utils.ZKPaths;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.utils.ZKPaths;
 import com.shulie.instrument.simulator.agent.core.zk.ZkHeartbeatNode;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -26,8 +28,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -93,6 +93,12 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
     public void start() throws Exception {
         checkState(running.compareAndSet(false, true), "heartbeat node has been started");
         client.getConnectionStateListenable().addListener(connectionStateListener);
+        try {
+            if (client.checkExists().forPath(path) != null) {
+                client.delete().forPath(path);
+            }
+        } catch (Exception ignore) {
+        }
         reset();
     }
 
@@ -128,7 +134,7 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
                         try {
                             reset();
                             logger.info("recovered from RECONNECTED event, path={}", path);
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             logger.error("fail to reset after reconnection, path={}", path, e);
                         }
                     }
@@ -154,7 +160,7 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
             if (event.getType() == Watcher.Event.EventType.NodeDeleted) {
                 try {
                     reset();
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     logger.warn("fail to reset in watch event, path={}", path, e);
                 }
             }

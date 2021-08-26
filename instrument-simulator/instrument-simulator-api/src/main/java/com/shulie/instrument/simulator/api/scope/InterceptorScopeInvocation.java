@@ -34,7 +34,7 @@ public interface InterceptorScopeInvocation {
      * @param policy
      * @return
      */
-    boolean tryEnter(ExecutionPolicy policy);
+    boolean tryEnter(int policy);
 
     /**
      * 尝试离开
@@ -42,14 +42,14 @@ public interface InterceptorScopeInvocation {
      * @param policy
      * @return
      */
-    boolean canLeave(ExecutionPolicy policy);
+    boolean canLeave(int policy);
 
     /**
      * 离开
      *
      * @param policy
      */
-    void leave(ExecutionPolicy policy);
+    void leave(int policy);
 
     /**
      * 是否是激活状态

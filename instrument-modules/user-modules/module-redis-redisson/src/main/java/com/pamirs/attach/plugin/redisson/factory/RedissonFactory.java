@@ -22,8 +22,8 @@ import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
-import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -48,18 +48,27 @@ public class RedissonFactory extends AbstractRedisServerFactory {
 
     static private Logger logger = LoggerFactory.getLogger(RedissonFactory.class);
 
-    static private AbstractRedisServerFactory factory = new RedissonFactory();
+    static private RedissonFactory factory;
 
 
     public RedissonFactory() {
         super(new RedissonNodesStrategy());
     }
 
-
-    public static class RedissonHolder {
-        public static AbstractRedisServerFactory getFactory() {
-            return factory;
+    public static RedissonFactory getFactory() {
+        if (factory == null) {
+            synchronized (RedissonFactory.class) {
+                if (factory == null) {
+                    factory = new RedissonFactory();
+                }
+            }
         }
+        return factory;
+    }
+
+    public static void release() {
+        RedissonFactory.destroy();
+        factory = null;
     }
 
 

@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.dbcp2;
 
 import com.pamirs.attach.plugin.dbcp2.interceptor.DataSourceGetConnectionCutoffArgsInterceptor;
 import com.pamirs.attach.plugin.dbcp2.interceptor.DataSourceGetConnectionCutoffInterceptor;
-import com.pamirs.attach.plugin.dbcp2.utils.DataSourceWrapUtil;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -52,10 +51,5 @@ public class Dbcp2Plugin extends ModuleLifecycleAdapter implements ExtensionModu
 
             }
         });
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
-        DataSourceWrapUtil.destroy();
     }
 }

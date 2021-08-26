@@ -35,9 +35,10 @@ public class PtQuartzJobBean extends QuartzJobBean {
             if (busJob != null){
                 PradarInternalService.startTrace(null, busJob.getClass().getName(), "execute");
                 PradarInternalService.setClusterTest(true);
+                PradarInternalService.middlewareName("quartz");
                 busJob.execute(context);
                 PradarInternalService.setClusterTest(false);
-                PradarInternalService.endTrace();
+                PradarInternalService.endTrace(null, 7);
             }
         } catch (Throwable e) {
             //

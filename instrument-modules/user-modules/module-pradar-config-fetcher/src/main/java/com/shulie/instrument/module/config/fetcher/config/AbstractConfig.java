@@ -82,16 +82,17 @@ public abstract class AbstractConfig<T> implements IConfig<T> {
         // 比对是否有变更，并更新内存保存的配置
         Boolean change = field.compareIsChangeAndSet(this, newValue);
         if (change) {
-            LOGGER.info("config changed：" + field.getDesc());
+            LOGGER.info("prepare to change {} config ：{}", field.getDesc(), newValue);
             // 有变更才进行事件通知
             // 默认直接替换，不处理 init  和 clear 事件
-            String listenerKey = ConfigManager.getListenerKey(type.getName(), field.getFileName(), ConfigEventEnum.CHANGE.name());
+            String listenerKey = ConfigManager.getListenerKey(type.getName(), field.getConfigName(), ConfigEventEnum.CHANGE.name());
             List<ConfigListener> configListeners = ConfigManager.getInstance().getListenerHolder().get(listenerKey);
             if (CollectionUtils.isNotEmpty(configListeners)) {
                 for (ConfigListener configListener : configListeners) {
                     configListener.onEvent(newValue);
                 }
             }
+            LOGGER.info("{} config changed successful：{}", field.getDesc(), newValue);
         }
     }
 }

@@ -16,13 +16,16 @@ package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
+import com.pamirs.attach.plugin.alibaba.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/26 11:13 下午
  */
+@Destroyable(MqDestroy.class)
 public class DefaultPushConsumerShutdownInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {

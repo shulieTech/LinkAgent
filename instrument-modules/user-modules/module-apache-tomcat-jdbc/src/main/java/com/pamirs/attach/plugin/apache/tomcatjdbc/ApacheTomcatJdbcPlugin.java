@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.apache.tomcatjdbc;
 
 import com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor.TomcatJdbcDataSourceProxyGetConnectionInterceptor;
-import com.pamirs.attach.plugin.apache.tomcatjdbc.util.DataSourceWrapUtil;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -56,10 +55,5 @@ public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements Ex
 
             }
         });
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
-        DataSourceWrapUtil.destroy();
     }
 }

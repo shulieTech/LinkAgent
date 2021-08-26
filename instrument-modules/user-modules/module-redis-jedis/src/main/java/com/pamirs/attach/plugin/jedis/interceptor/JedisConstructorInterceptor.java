@@ -15,8 +15,13 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.jedis.RedisConstants;
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
+import com.pamirs.attach.plugin.jedis.shadowserver.JedisClusterFactory;
+import com.pamirs.attach.plugin.jedis.shadowserver.JedisFactory;
+import com.pamirs.attach.plugin.jedis.shadowserver.JedisSentinelFactory;
 import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
@@ -30,6 +35,7 @@ import java.net.URI;
  * @package: com.pamirs.attach.plugin.jedis.interceptor
  * @Date 2020/12/1 2:32 下午
  */
+@Destroyable(JedisDestroyed.class)
 public class JedisConstructorInterceptor extends AroundInterceptor {
 
     @Override

@@ -21,25 +21,36 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 
+import java.util.HashSet;
 import java.util.Map;
-
+import java.util.Set;
 
 public class MQProducerSendInterceptor extends AroundInterceptor {
 
-    private Object lock = new Object();
-
+    private static Set registerHookSet = new HashSet();
 
     @Override
     public void doBefore(Advice advice) {
-        if (advice.getTarget() instanceof DefaultMQProducerImpl && !((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
-            synchronized (lock){
-                if (!((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
-                    ((DefaultMQProducerImpl)advice.getTarget()).registerSendMessageHook(new SendMessageHookImpl());
-                    LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
+        DefaultMQProducerImpl defaultMQProducerImpl = null;
+        if (advice.getTarget() instanceof DefaultMQProducer) {
+            defaultMQProducerImpl = ((DefaultMQProducer)advice.getTarget()).getDefaultMQProducerImpl();
+        }
+        if (advice.getTarget() instanceof DefaultMQProducerImpl) {
+            defaultMQProducerImpl = (DefaultMQProducerImpl)advice.getTarget();
+        }
+        if (defaultMQProducerImpl != null) {
+            if (!registerHookSet.contains(defaultMQProducerImpl)) {
+                synchronized (this) {
+                    if (!registerHookSet.contains(defaultMQProducerImpl)) {
+                        ((DefaultMQProducerImpl)defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
+                        registerHookSet.add(defaultMQProducerImpl);
+                        LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
+                    }
                 }
             }
         }

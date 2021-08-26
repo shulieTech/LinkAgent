@@ -21,6 +21,7 @@ import com.pamirs.pradar.TraceIdGenerator;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
@@ -105,7 +106,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
      * <p>
      * 如果该方法抛出异常不会阻塞流程，异常会以日志形式记录下来，后续流程会继续走下去
      */
-    public abstract void beforeFirst(Advice advice);
+    public abstract void beforeFirst(Advice advice) throws Exception;
 
     /**
      * 前置埋点的后置操作
@@ -113,7 +114,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
      * 如果该方法抛出异常不会阻塞流程，异常会以日志形式记录下来，后续流程会继续走下去
      * 如果在 {@link #beforeTrace(Advice)} 抛出异常后该方法也会执行
      */
-    public abstract void beforeLast(Advice advice);
+    public abstract void beforeLast(Advice advice) throws ProcessControlException;
 
     /**
      * 前置埋点
@@ -129,7 +130,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
      *
      * @param advice 节点对象
      */
-    public abstract void afterFirst(Advice advice);
+    public abstract void afterFirst(Advice advice) throws ProcessControlException;
 
     /**
      * 后置埋点的后置操作
@@ -203,7 +204,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor beforeFirst exec err:{}", this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable t) {
-            LOGGER.error("TraceInterceptor beforeFirst exec err:{}", this.getClass().getName(), t);
+            if (!(t instanceof ProcessControlException)) {
+                LOGGER.error("TraceInterceptor beforeFirst exec err:{}", this.getClass().getName(), t);
+            }
             throwable = t;
         }
         try {
@@ -223,8 +226,8 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 throw e;
             }
         } catch (Throwable e) {
+            LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
             if (Pradar.isClusterTest()) {
-                LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
                 throw new PressureMeasureError(e);
             }
         } finally {
@@ -241,18 +244,38 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 throwable = t;
             }
         }
-        if (throwable != null && Pradar.isClusterTest()) {
-            /**
-             * 如果这个地方日志记录成功，但是因为 agent 内部需要抛出异常，则需要将记录的日志弹出，忽略此次调用
-             */
+        if (throwable != null) {
             if (advice.hasMark(BEFORE_TRACE_SUCCESS)) {
-                advice.unMark(BEFORE_TRACE_SUCCESS);
-                Pradar.popInvokeContext();
+                try {
+                    if (Pradar.isExceptionOn()) {
+                        Pradar.response(throwable);
+                    }
+                    boolean isClient = true;
+                    try {
+                        isClient = isClient(advice);
+                    } catch (Throwable e) {
+                        LOGGER.error("Trace {} isClient execute error. use default value instead. {}", getClass().getName(), isClient, e);
+                    }
+                    if (isClient) {
+                        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType());
+                    } else {
+                        Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType());
+                    }
+                } finally {
+                    advice.unMark(BEFORE_TRACE_SUCCESS);
+                }
+            }else{
+                LOGGER.error("trace throw exception, but not BEFORE_TRACE_SUCCESS in {}.beforeTrace(...). loss trace log!", getClass().getName(), throwable);
             }
-            throw throwable;
+
+            //压测流量抛出异常，  业务流量只做记录
+            if (Pradar.isClusterTest()) {
+                throw throwable;
+            }
         }
 
     }
+
 
     /**
      * 开始服务端调用
@@ -342,6 +365,8 @@ abstract class TraceInterceptor extends BaseInterceptor {
             if (StringUtils.isNotBlank(record.getPort())) {
                 invokeContext.setPort(record.getPort());
             }
+
+            invokeContext.setPassCheck(record.isPassedCheck());
 
             if (record.getCallbackMsg() != null) {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());

@@ -105,7 +105,7 @@ public class RequestStartAsyncInterceptor extends AroundInterceptor implements I
                 return;
             }
             final AsyncContext asyncContext = (AsyncContext) advice.getReturnObj();
-            final AsyncListener asyncListener = new CatalinaAsyncListener(asyncContext, Pradar.popInvokeContextMap(), (HttpServletRequest) servletRequest, (HttpServletResponse) servletRequest);
+            final AsyncListener asyncListener = new CatalinaAsyncListener(asyncContext, Pradar.popInvokeContextMap(), (HttpServletRequest) servletRequest, (HttpServletResponse) servletResponse);
             asyncContext.addListener(asyncListener);
         } finally {
             advice.unMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS);

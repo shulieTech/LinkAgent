@@ -121,7 +121,7 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[c3p0] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
                 old.close();
             }
             return;
@@ -133,7 +133,7 @@ public class DataSourceWrapUtil {
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[c3p0] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                    logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
                     old.close();
                 }
             } catch (Throwable e) {
@@ -159,10 +159,10 @@ public class DataSourceWrapUtil {
                 dataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[c3p0] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                    logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
                     old.close();
                 }
-                logger.info("[c3p0] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUser(), ptDataSource.getJdbcUrl(), ptDataSource.getUser());
+                logger.info("[c3p0] create shadow datasource successful. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUser(), ptDataSource.getJdbcUrl(), ptDataSource.getUser());
             } catch (Throwable t) {
                 logger.error("[c3p0] init datasource err!", t);
                 ErrorReporter.buildError()

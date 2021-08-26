@@ -14,22 +14,12 @@
  */
 package com.shulie.instrument.simulator.api.listener;
 
-import com.shulie.instrument.simulator.api.event.Event;
-
 /**
  * 无任何动作的事件监听器, 提供给一些测试场景下使用
  *
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public class NoActionEventListener implements EventListener {
-    @Override
-    public void onEvent(Event event) throws Throwable {
+public class NoActionEventListener extends EventListener {
 
-    }
-
-    @Override
-    public void clean() {
-
-    }
 }

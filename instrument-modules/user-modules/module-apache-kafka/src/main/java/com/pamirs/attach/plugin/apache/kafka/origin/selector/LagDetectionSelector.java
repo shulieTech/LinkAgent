@@ -66,8 +66,8 @@ public class LagDetectionSelector implements PollConsumerSelector {
      */
     private boolean isLagTooMuch() {
         Set<TopicPartition> assignedTopicPartition = bizConsumer.assignment();
-        Map<TopicPartition, Long> committedOffsets = new HashMap<>();
-        Map<TopicPartition, Long> timeMap = new HashMap<>();
+        Map<TopicPartition, Long> committedOffsets = new HashMap();
+        Map<TopicPartition, Long> timeMap = new HashMap();
         long checkTime = System.currentTimeMillis() - maxLagMillSecond;
         for (TopicPartition topicPartition : assignedTopicPartition) {
             OffsetAndMetadata offsetAndMetadata = bizConsumer.committed(topicPartition);

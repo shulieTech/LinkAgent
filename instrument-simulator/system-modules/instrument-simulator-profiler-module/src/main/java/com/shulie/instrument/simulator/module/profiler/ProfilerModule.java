@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "profiler", version = "1.0.0", author = "xiaobin@shulie.io", description = "profiler 模块")
 public class ProfilerModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(ProfilerModule.class);
+    private final Logger logger = LoggerFactory.getLogger(ProfilerModule.class);
 
     private static String libPath;
     private static AsyncProfiler profiler = null;
@@ -242,7 +242,7 @@ public class ProfilerModule extends ParamSupported implements ExtensionModule {
                     profilerModel.setDuration(duration);
 
                     // 延时执行stop
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+                    ExecutorServiceFactory.getFactory().schedule(new Runnable() {
                         @Override
                         public void run() {
                             //在异步线程执行，profiler命令已经结束，不能输出到客户端

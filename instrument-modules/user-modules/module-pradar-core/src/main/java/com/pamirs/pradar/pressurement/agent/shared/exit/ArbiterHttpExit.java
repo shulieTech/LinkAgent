@@ -14,21 +14,24 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.exit;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.custominterfacebase.Exit;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * ArbiterHttpExit
@@ -39,43 +42,50 @@ public class ArbiterHttpExit implements Exit {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ArbiterHttpExit.class);
 
-    private static LoadingCache<String, Boolean> patternCache = CacheBuilder.newBuilder()
+    private static LoadingCache<String, MatchConfig> patternCache = CacheBuilder.newBuilder()
             .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
-                    new CacheLoader<String, Boolean>() {
+                    new CacheLoader<String, MatchConfig>() {
                         @Override
-                        public Boolean load(String name) throws Exception {
-                            Set<String> urlWhiteList = GlobalConfig.getInstance().getUrlWhiteList();
+                        public MatchConfig load(String name) throws Exception {
+                            Set<MatchConfig> urlWhiteList = GlobalConfig.getInstance().getUrlWhiteList();
                             if (urlWhiteList != null) {
-                                for (String urlWhite : urlWhiteList) {
-                                    if (matching(name, urlWhite)) {
-                                        return true;
+                                for (MatchConfig matchConfig : urlWhiteList) {
+                                    MatchConfig matching = matching(name, matchConfig);
+                                    if (null != matching && matching.isSuccess()) {
+                                        return matching;
                                     }
                                 }
                             }
-                            return false;
+                            return failure();
                         }
                     }
             );
 
-    private static LoadingCache<String, Boolean> httpMatchResult = CacheBuilder.newBuilder()
+    private static LoadingCache<String, MatchConfig> httpMatchResult = CacheBuilder.newBuilder()
             .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
-                    new CacheLoader<String, Boolean>() {
+                    new CacheLoader<String, MatchConfig>() {
                         @Override
-                        public Boolean load(String url) throws Exception {
+                        public MatchConfig load(String url) throws Exception {
                             return shallWePassHttpStringCache(url);
                         }
                     }
             );
 
-    private static LoadingCache<String, Boolean> rpcMatchResult = CacheBuilder.newBuilder()
+    private static LoadingCache<String, MatchConfig> rpcMatchResult = CacheBuilder.newBuilder()
             .maximumSize(100).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
-                    new CacheLoader<String, Boolean>() {
+                    new CacheLoader<String, MatchConfig>() {
                         @Override
-                        public Boolean load(String name) throws Exception {
+                        public MatchConfig load(String name) throws Exception {
                             return getRpcPassedCache(name);
                         }
                     }
             );
+
+    public static void release() {
+        patternCache.invalidateAll();
+        httpMatchResult.invalidateAll();
+        rpcMatchResult.invalidateAll();
+    }
 
     public static void clearRpcMatch() {
         rpcMatchResult.invalidateAll();
@@ -86,15 +96,19 @@ public class ArbiterHttpExit implements Exit {
         patternCache.invalidateAll();
     }
 
+    public static MatchConfig failure() {
+        return MatchConfig.failure(new WhiteListStrategy());
+    }
+
     /**
      * 判断是否可以通过此 rpc 调用
      * 只支持单独类名
      *
      * @param className 类名
      */
-    public static boolean shallWePassRpc(String className) {
+    public static MatchConfig shallWePassRpc(String className) {
         if (!PradarSwitcher.whiteListSwitchOn()) {
-            return true;
+            return MatchConfig.success(new WhiteListStrategy());
         }
         return rpcMatchResult.getUnchecked(className);
     }
@@ -106,9 +120,9 @@ public class ArbiterHttpExit implements Exit {
      * @param className  类名
      * @param methodName 方法名
      */
-    public static boolean shallWePassRpc(String className, String methodName) {
+    public static MatchConfig shallWePassRpc(String className, String methodName) {
         if (!PradarSwitcher.whiteListSwitchOn()) {
-            return true;
+            return MatchConfig.success(new WhiteListStrategy());
         }
         if (StringUtils.isBlank(methodName)) {
             return rpcMatchResult.getUnchecked(className);
@@ -116,88 +130,92 @@ public class ArbiterHttpExit implements Exit {
         return rpcMatchResult.getUnchecked(className + '#' + methodName);
     }
 
-    private static Boolean getRpcPassedCache(String name) {
+    private static MatchConfig getRpcPassedCache(String name) {
+        if (!PradarSwitcher.whiteListSwitchOn()) {
+            return MatchConfig.success(new WhiteListStrategy());
+        }
         if (StringUtils.isBlank(name)) {
-            return Boolean.FALSE;
+            return failure();
         }
 
-        Set<String> rpcNameList = GlobalConfig.getInstance().getRpcNameWhiteList();
+        MatchConfig config = new MatchConfig();
+        config.setUrl(name);
+
+        Set<MatchConfig> rpcNameList = GlobalConfig.getInstance().getRpcNameWhiteList();
         if (rpcNameList == null) {
-            return Boolean.FALSE;
+            return failure();
         }
-        if (rpcNameList.contains(name)) {
-            return Boolean.TRUE;
+        Iterator<MatchConfig> iterator = rpcNameList.iterator();
+        while (iterator.hasNext()) {
+            MatchConfig next = iterator.next();
+            if (next.equals(config)) {
+                return next;
+            }
         }
+
         if (StringUtils.indexOf(name, '#') != -1) {
-            return Boolean.FALSE;
+            return failure();
         } else {
-            for (String value : rpcNameList) {
-                if (StringUtils.indexOf(value, '#') == -1) {
+            for (MatchConfig matchConfig : rpcNameList) {
+                String value = matchConfig.getUrl();
+                final int index = StringUtils.indexOf(value, '#');
+                if (index == -1) {
                     if (StringUtils.equals(value, name)) {
-                        return Boolean.TRUE;
+                        return matchConfig;
                     }
                 } else {
                     // 如果白名单包含 # ，则取出类名进行比较
-                    String className = StringUtils.substring(value, StringUtils.indexOf(value, '#'));
+                    String className = StringUtils.substring(value, index);
                     if (StringUtils.equals(value, className)) {
-                        return Boolean.TRUE;
+                        return matchConfig;
                     }
                 }
             }
         }
-        return Boolean.FALSE;
-    }
-
-    /**
-     * 判断压测数据是否能通过这道门
-     * XingNG的rpc url格式
-     */
-    public static boolean shallWePassHttpStringXingNg(String url) {
-        if (!PradarSwitcher.whiteListSwitchOn()) {
-            // 体验模式 or 白名单开关关闭
-            return true;
-        }
-        //如果列表为空，同样是无法调用的
-        boolean arbiterAllowRequest = false;
-        if (url != null) {
-            if (patternCache.getUnchecked(url)) {
-                return true;
-            }
-        }
-        return arbiterAllowRequest;
+        return failure();
     }
 
     /**
      * 判断压测数据是否能通过这道门
      */
-    public static boolean shallWePassHttpString(String url) {
+    public static MatchConfig shallWePassHttpString(String url) {
         try {
             if (!PradarSwitcher.whiteListSwitchOn()) {
-                return true;
+                return MatchConfig.success(new WhiteListStrategy());
             }
-            Boolean result = httpMatchResult.get(url);
-            return result;
+            return httpMatchResult.get(url);
         } catch (ExecutionException e) {
             LOGGER.warn("WhiteListError: shallWePassHttpString cache exception!", e);
-            return false;
+            return failure();
         }
     }
 
-    private static boolean shallWePassHttpStringCache(String url) {
-        if (url != null && url.indexOf("&#47;") != -1) {
-            url = url.replace("&#47;", "/");
+    public static void main(String[] args) {
+        MatchConfig matchConfig = shallWePassHttpStringCache("http://pt-agent-test-oss3-1627285144888.oss-cn-hangzhou.aliyuncs.com/");
+    }
+
+    private static MatchConfig shallWePassHttpStringCache(String url) {
+        if (url != null) {
+            final int index = url.indexOf("&#47;");
+            if (index != -1) {
+                url = url.replace("&#47;", "/");
+            }
         }
+        MatchConfig config = null;
         String orgUrl = url;
         //如果列表为空，同样是无法调用的
-        boolean arbiterAllowRequest = false;
         if (url != null) {
             try {
                 URI uri = URI.create(url);
                 if (uri.getHost().startsWith("pt")) {
                     try {
+                        String substring = uri.getHost().substring(2);
+                        if (substring.startsWith("-")) {
+                            substring = substring.substring(1);
+                        }
                         url = new URI(uri.getScheme(),
                                 uri.getUserInfo(),
-                                uri.getHost().substring(2),
+                                substring,
                                 uri.getPort(),
                                 uri.getPath(),
                                 uri.getQuery(),
@@ -211,24 +229,28 @@ public class ArbiterHttpExit implements Exit {
             } catch (Throwable e) {
                 if (url.startsWith("http://")) {
                     url = url.substring(7);
-                    if (url.indexOf("/") != -1) {
-                        url = url.substring(url.indexOf('/') + 1);
+                    int index = url.indexOf("/");
+                    if (index != -1) {
+                        url = url.substring(index + 1);
                     } else {
                         url = "/";
                     }
                 } else if (url.startsWith("https://")) {
                     url = url.substring(8);
-                    if (url.indexOf("/") != -1) {
-                        url = url.substring(url.indexOf('/') + 1);
+                    int index = url.indexOf("/");
+                    if (index != -1) {
+                        url = url.substring(index + 1);
                     } else {
                         url = "/";
                     }
                 }
-                if (url.indexOf('?') != -1) {
-                    url = url.substring(0, url.indexOf('?'));
+                final int indexOfQuestion = url.indexOf('?');
+                if (indexOfQuestion != -1) {
+                    url = url.substring(0, indexOfQuestion);
                 }
-                if (url.indexOf('#') != -1) {
-                    url = url.substring(0, url.indexOf('#'));
+                final int indexOfx = url.indexOf('#');
+                if (indexOfx != -1) {
+                    url = url.substring(0, indexOfx);
                 }
                 //如果不是一个正常的uri则直接忽略这一步
             }
@@ -237,20 +259,22 @@ public class ArbiterHttpExit implements Exit {
                 /**
                  * 如果 url 为空或者是/没有其他值，则使用原 url 匹配一次
                  */
-                if (patternCache.getUnchecked(orgUrl)) {
-                    return true;
+                config = patternCache.getUnchecked(orgUrl);
+                if (null != config) {
+                    return config;
                 }
             }
-            if (patternCache.getUnchecked(url)) {
-                return true;
+            config = patternCache.getUnchecked(url);
+            if (null != config) {
+                return config;
             }
             if (null != PradarSwitcher.httpPassPrefix.get()
                     && url.startsWith(PradarSwitcher.httpPassPrefix.get())) {
-                return true;
+                return config;
             }
             LOGGER.warn("WhiteListError: url is not allowed:" + url);
         }
-        return arbiterAllowRequest;
+        return failure();
     }
 
     /**
@@ -264,43 +288,45 @@ public class ArbiterHttpExit implements Exit {
      * <li>    ANY matching ("*") == true</li>
      * </ul>
      *
-     * @param string   目标字符串
-     * @param wildcard 通配符匹配模版
+     * @param string      目标字符串
+     * @param matchConfig 通配符匹配模版
      * @return true:目标字符串符合匹配模版;false:目标字符串不符合匹配模版
      */
-    public static boolean matching(final String string, final String wildcard) {
-        if ("*".equals(wildcard)) {
-            return true;
+    public static MatchConfig matching(final String string, final MatchConfig matchConfig) {
+        String wildcard = matchConfig.getUrl();
+        if ("*".equals(matchConfig.getUrl())) {
+            return matchConfig;
         }
-        if (wildcard == null || string == null) {
-            return false;
+        if (matchConfig.getUrl() == null || string == null) {
+            return failure();
         }
         /**
          * 如果没有通配符则全匹配
          */
-        if (wildcard.indexOf("*") == -1) {
-            return wildcard.equals(string);
+        if (!wildcard.contains("*") && wildcard.equals(string)) {
+            return matchConfig;
         }
-        return null != wildcard
-                && null != string
-                && matching(string, wildcard, 0, 0);
+
+        return matching(string, matchConfig, 0, 0);
+
     }
 
     /**
      * Internal matching recursive function.
      */
-    private static boolean matching(String string, String wildcard, int stringStartNdx, int patternStartNdx) {
+    private static MatchConfig matching(String string, MatchConfig matchConfig, int stringStartNdx, int patternStartNdx) {
+        String wildcard = matchConfig.getUrl();
         int pNdx = patternStartNdx;
         int sNdx = stringStartNdx;
         int pLen = wildcard.length();
         if (pLen == 1) {
             if (wildcard.charAt(0) == '*') {     // speed-up
-                return true;
+                return matchConfig;
             }
         }
         int sLen = string.length();
         boolean nextIsNotWildcard = false;
-
+        MatchConfig config = failure();
         while (true) {
 
             // check if end of string and/or pattern occurred
@@ -308,10 +334,10 @@ public class ArbiterHttpExit implements Exit {
                 while ((pNdx < pLen) && (wildcard.charAt(pNdx) == '*')) {
                     pNdx++;
                 }
-                return pNdx >= pLen;
+                return pNdx >= pLen ? matchConfig : null;
             }
             if (pNdx >= pLen) {         // end of pattern, but not end of the string
-                return false;
+                return config;
             }
             char p = wildcard.charAt(pNdx);    // pattern char
 
@@ -343,11 +369,11 @@ public class ArbiterHttpExit implements Exit {
                     // find recursively if there is any substring from the end of the
                     // line that matches the rest of the pattern !!!
                     for (i = string.length(); i >= sNdx; i--) {
-                        if (matching(string, wildcard, i, pNdx)) {
-                            return true;
+                        if (null != matching(string, matchConfig, i, pNdx)) {
+                            return matchConfig;
                         }
                     }
-                    return false;
+                    return config;
                 }
             } else {
                 nextIsNotWildcard = false;
@@ -355,7 +381,7 @@ public class ArbiterHttpExit implements Exit {
 
             // check if pattern char and string char are equals
             if (p != string.charAt(sNdx)) {
-                return false;
+                return config;
             }
 
             // everything matches for now, continue

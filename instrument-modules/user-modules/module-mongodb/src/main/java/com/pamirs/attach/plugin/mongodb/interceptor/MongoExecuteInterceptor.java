@@ -1,4 +1,24 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.mongodb.interceptor;
+
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.mongodb.MongoClient;
 import com.mongodb.MongoNamespace;
@@ -14,12 +34,6 @@ import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
-
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author angju
@@ -43,6 +57,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
     private final static int FIND_AND_REPLACE = 12;
     private final static int FIND_AND_UPDATE = 13;
     private final static int MAP_REDUCE_TO_COLLECTION = 14;
+    private final static int INSERT_TO_COLLECTION = 15;
 
     public MongoExecuteInterceptor() {
         //读操作
@@ -62,6 +77,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
         operationNumMap.put(FindAndReplaceOperation.class, FIND_AND_REPLACE);
         operationNumMap.put(FindAndUpdateOperation.class, FIND_AND_UPDATE);
         operationNumMap.put(MapReduceToCollectionOperation.class, MAP_REDUCE_TO_COLLECTION);
+        operationNumMap.put(InsertOperation.class, INSERT_TO_COLLECTION);
     }
 
     @Override
@@ -80,7 +96,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
         Integer operationNum = operationNumMap.get(args[0].getClass());
         if (operationNum == null) {
             LOGGER.error("not support operation class is {} ", args[0].getClass().getName());
-            throw new PressureMeasureError("mongo not support pressure operation class is " + args[0].getClass().getName());
+            throw new PressureMeasureError("[2]mongo not support pressure operation class is " + args[0].getClass().getName());
         }
 
         List<ServerAddress> serverAddresses = ((MongoClient) advice.getTarget()).getAllAddress();
@@ -96,28 +112,17 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             ErrorReporter.Error error = ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0005")
-                    .setMessage("mongo 未配置对应影子表")
-                    .setDetail("mongo 未配置对应影子表");
+                    .setMessage("mongo 未配置对应影子表1")
+                    .setDetail("mongo 未配置对应影子表1");
             error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
             error.report();
-            throw new PressureMeasureError("mongo 未配置对应影子表");
-        }
-
-
-        if (operationNum > 7 && shadowDatabaseConfig == null) {
-            ErrorReporter.Error error = ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0005")
-                    .setMessage("mongo 未配置对应影子表")
-                    .setDetail("mongo 未配置对应影子表");
-            error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
-            error.report();
-            throw new PressureMeasureError("mongo 未配置对应影子表");
+            throw new PressureMeasureError("mongo 未配置对应影子表1");
         }
 
         MongoNamespace busMongoNamespace;
         switch (operationNum) {
             case FIND:
+                objectFieldMapAdd(FindOperation.class);
                 busMongoNamespace = ((FindOperation) args[0]).getNamespace();
                 setReadPtMongoNamespace(FindOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
@@ -133,6 +138,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
                 setReadPtMongoNamespace(DistinctOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case GROUP:
+                objectFieldMapAdd(GroupOperation.class);
                 busMongoNamespace = ((GroupOperation) args[0]).getNamespace();
                 setReadPtMongoNamespace(GroupOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
@@ -151,32 +157,43 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
                 setReadPtMongoNamespace(ParallelCollectionScanOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case MIXED_BULK_WRITE:
+                objectFieldMapAdd(MixedBulkWriteOperation.class);
                 busMongoNamespace = ((MixedBulkWriteOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(MixedBulkWriteOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case BASE_WRITE:
+                objectFieldMapAdd(BaseWriteOperation.class);
                 busMongoNamespace = ((BaseWriteOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(BaseWriteOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case FIND_AND_DELETE:
+                objectFieldMapAdd(FindAndDeleteOperation.class);
                 busMongoNamespace = ((FindAndDeleteOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(FindAndDeleteOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case FIND_AND_REPLACE:
+                objectFieldMapAdd(FindAndReplaceOperation.class);
                 busMongoNamespace = ((FindAndReplaceOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(FindAndReplaceOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case FIND_AND_UPDATE:
+                objectFieldMapAdd(FindAndUpdateOperation.class);
                 busMongoNamespace = ((FindAndUpdateOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(FindAndUpdateOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case MAP_REDUCE_TO_COLLECTION:
+                objectFieldMapAdd(MapReduceToCollectionOperation.class);
                 busMongoNamespace = ((MapReduceToCollectionOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(MapReduceToCollectionOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
+            case INSERT_TO_COLLECTION:
+                objectFieldMapAdd(InsertOperation.class);
+                busMongoNamespace = ((InsertOperation) (args[0])).getNamespace();
+                setWritePtMongoNamespace(InsertOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
+                break;
             default:
                 LOGGER.error("not support operation class is {} ", args[0].getClass().getName());
-                throw new PressureMeasureError("mongo not support pressure operation class is " + args[0].getClass().getName());
+                throw new PressureMeasureError("[3]mongo not support pressure operation class is " + args[0].getClass().getName());
         }
 
         return advice.getParameterArray();
@@ -207,22 +224,22 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             ErrorReporter.Error error = ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0005")
-                    .setMessage("mongo 未配置对应影子表:" + busMongoNamespace.getFullName())
-                    .setDetail("mongo 未配置对应影子表:" + busMongoNamespace.getFullName());
+                    .setMessage("mongo 未配置对应影子表2:" + busMongoNamespace.getFullName())
+                    .setDetail("mongo 未配置对应影子表2:" + busMongoNamespace.getFullName());
             error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
             error.report();
-            throw new PressureMeasureError("mongo 未配置对应影子表:" + busMongoNamespace.getFullName());
+            throw new PressureMeasureError("mongo 未配置对应影子表2:" + busMongoNamespace.getFullName());
         }
         String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
         if (shadowTableName == null) {
             ErrorReporter.Error error = ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0005")
-                    .setMessage("mongo 未配置对应影子表:" + busMongoNamespace.getFullName())
-                    .setDetail("mongo 未配置对应影子表:" + busMongoNamespace.getFullName());
+                    .setMessage("mongo 未配置对应影子表3:" + busMongoNamespace.getFullName())
+                    .setDetail("mongo 未配置对应影子表3:" + busMongoNamespace.getFullName());
             error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
             error.report();
-            throw new PressureMeasureError("mongo 未配置对应影子表:" + busMongoNamespace.getFullName());
+            throw new PressureMeasureError("mongo 未配置对应影子表3:" + busMongoNamespace.getFullName());
         }
         setPtMongoNamespace(operationClass, target, busMongoNamespace);
     }

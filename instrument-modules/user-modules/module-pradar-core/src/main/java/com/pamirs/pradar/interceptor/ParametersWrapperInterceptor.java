@@ -25,7 +25,7 @@ abstract class ParametersWrapperInterceptor extends BaseInterceptor {
     public final void doBefore(Advice advice) throws Throwable {
         Object[] args = getParameter(advice);
         if (args != null) {
-            for (int i = 0; i < Math.min(args.length, advice.getParameterArray().length); i++) {
+            for (int i = 0, len = Math.min(args.length, advice.getParameterArray().length); i < len; i++) {
                 advice.changeParameter(i, args[i]);
             }
         }

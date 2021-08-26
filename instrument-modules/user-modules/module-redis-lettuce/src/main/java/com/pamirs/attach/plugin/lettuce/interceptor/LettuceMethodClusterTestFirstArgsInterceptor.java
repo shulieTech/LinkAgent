@@ -14,6 +14,10 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
+
+@Destroyable(LettuceDestroy.class)
 public class LettuceMethodClusterTestFirstArgsInterceptor extends LettuceMethodClusterTestInterceptor {
 
     @Override

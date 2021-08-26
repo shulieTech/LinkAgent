@@ -24,9 +24,10 @@ public enum ErrorTypeEnum {
     AgentError("agent", "Agent异常"),
     MQ("MQ", "消息队列异常"),
     WebFilter("web-filter", "容器异常"),
-    LinkGuardEnhance("link-guard-enhance", "挡板异常"),
+    LinkGuardEnhance("mock-enhance", "挡板异常"),
     RedisServer("redisServer", "redis影子数据源异常"),
     ShadowEsServer("shadowEsServer", "es影子数据源异常"),
+    mock("mock", "mock处理异常"),
     ;
 
     private String errorType;

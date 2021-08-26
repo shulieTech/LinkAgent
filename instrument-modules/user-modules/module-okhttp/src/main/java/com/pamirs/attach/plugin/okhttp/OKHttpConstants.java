@@ -26,8 +26,18 @@ public final class OKHttpConstants {
     public static final String PLUGIN_NAME = "okhttp";
     public static final int PLUGIN_TYPE = MiddlewareType.TYPE_RPC;
 
+    public static final String DYNAMIC_FIELD_HEADER = "headers";
     public static final String DYNAMIC_FIELD_URL = "url";
     public static final String DYNAMIC_FIELD_URL_STRING = "urlString";
     public static final String DYNAMIC_FIELD_REQUEST = "request";
     public static final String DYNAMIC_FIELD_ORIGINAL_REQUEST = "originalRequest";
+
+
+    public static String getService(String schema, String host, int port, String path) {
+        String url = schema + "://" + host;
+        if (port != -1 && port != 80) {
+            url = url + ':' + port;
+        }
+        return url + path;
+    }
 }

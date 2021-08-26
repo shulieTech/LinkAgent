@@ -31,7 +31,7 @@ import org.kohsuke.MetaInfServices;
  * @author vincent
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "aliyun-hbase", version = "1.0.0", author = "xiaobin@shulie.io",description = "hbase 数据库,支持apache hbase 和阿里云 hbase")
+@ModuleInfo(id = "aliyun-hbase", version = "1.0.0", author = "xiaobin@shulie.io", description = "hbase 数据库,支持apache hbase 和阿里云 hbase")
 public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
@@ -104,7 +104,7 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
-        enhanceTemplate.enhance(this,"com.alibaba.lindorm.client.core.LindormWideColumnService",
+        enhanceTemplate.enhance(this, "com.alibaba.lindorm.client.core.LindormWideColumnService",
                 new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
@@ -501,5 +501,4 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 });
 
     }
-
 }

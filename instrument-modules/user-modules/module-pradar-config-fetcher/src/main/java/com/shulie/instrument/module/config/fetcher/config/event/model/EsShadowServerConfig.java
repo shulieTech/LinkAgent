@@ -14,17 +14,19 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.event.model;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowEsServerDisableEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowEsServerRegisterEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * @Auther: vernon
@@ -32,19 +34,27 @@ import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig
  * @Description:
  */
 public class EsShadowServerConfig implements IChange<Map<String, ShadowEsServerConfig>, ApplicationConfig> {
-
-    public EsShadowServerConfig() {
-    }
-
-    private static final EsShadowServerConfig instance = new EsShadowServerConfig();
+    private final static Logger LOGGER = LoggerFactory.getLogger(EsShadowServerConfig.class);
+    private static EsShadowServerConfig INSTANCE;
 
     public static EsShadowServerConfig getInstance() {
-        return instance;
+        if (INSTANCE == null) {
+            synchronized (EsShadowServerConfig.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new EsShadowServerConfig();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig,
-        Map<String, ShadowEsServerConfig> newConfig) {
+                                         Map<String, ShadowEsServerConfig> newConfig) {
         Map<String, ShadowEsServerConfig> old = applicationConfig.getShadowEsServerConfigs();
         List<ShadowEsServerConfig> removes = getRemoves(newConfig, old);
         List<ShadowEsServerConfig> adds = getAdds(newConfig, old);
@@ -55,6 +65,7 @@ public class EsShadowServerConfig implements IChange<Map<String, ShadowEsServerC
             publishRegisterEvents(adds);
             publishDisableEvents(removes);
         }
+        LOGGER.info("publish elasticsearch server config successful. config={}", newConfig);
         return result;
     }
 
@@ -71,17 +82,17 @@ public class EsShadowServerConfig implements IChange<Map<String, ShadowEsServerC
     }
 
     private List<ShadowEsServerConfig> getRemoves(Map<String, ShadowEsServerConfig> newConfig,
-        Map<String, ShadowEsServerConfig> old) {
+                                                  Map<String, ShadowEsServerConfig> old) {
         return leftNotInRight(old, newConfig);
     }
 
     private List<ShadowEsServerConfig> getAdds(Map<String, ShadowEsServerConfig> newConfig,
-        Map<String, ShadowEsServerConfig> old) {
+                                               Map<String, ShadowEsServerConfig> old) {
         return leftNotInRight(newConfig, old);
     }
 
     private List<ShadowEsServerConfig> leftNotInRight(Map<String, ShadowEsServerConfig> left,
-        Map<String, ShadowEsServerConfig> right) {
+                                                      Map<String, ShadowEsServerConfig> right) {
         List<ShadowEsServerConfig> result = new ArrayList<ShadowEsServerConfig>();
         for (Entry<String, ShadowEsServerConfig> entry : left.entrySet()) {
             if (!right.containsKey(entry.getKey())) {

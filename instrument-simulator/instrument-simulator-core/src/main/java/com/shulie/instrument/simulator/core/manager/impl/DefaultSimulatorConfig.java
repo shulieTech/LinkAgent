@@ -15,10 +15,8 @@
 package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.LoadMode;
-import com.shulie.instrument.simulator.api.ModuleRepositoryMode;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.core.CoreConfigure;
-import com.shulie.instrument.simulator.core.server.ProxyCoreServer;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -51,13 +49,8 @@ class DefaultSimulatorConfig implements SimulatorConfig {
     }
 
     @Override
-    public LoadMode getMode() {
+    public int getMode() {
         return config.getLaunchMode();
-    }
-
-    @Override
-    public ModuleRepositoryMode getModuleRepositoryMode() {
-        return config.getModuleRepositoryMode();
     }
 
     @Override
@@ -102,11 +95,7 @@ class DefaultSimulatorConfig implements SimulatorConfig {
 
     @Override
     public InetSocketAddress getServerAddress() {
-        try {
-            return ProxyCoreServer.getInstance().getLocal();
-        } catch (Throwable cause) {
-            return new InetSocketAddress("0.0.0.0", 0);
-        }
+        return config.getServerAddress();
     }
 
     @Override

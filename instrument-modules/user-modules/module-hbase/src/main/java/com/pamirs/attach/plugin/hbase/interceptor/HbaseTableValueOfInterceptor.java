@@ -14,11 +14,13 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.attach.plugin.hbase.util.HBaseTableNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.io.UnsupportedEncodingException;
@@ -29,6 +31,7 @@ import java.nio.charset.Charset;
 /**
  * 两个参数的valueOf
  */
+@Destroyable(HbaseDestroyed.class)
 public class HbaseTableValueOfInterceptor extends ParametersWrapperInterceptorAdaptor {
     private static Charset charset = Charset.forName("UTF-8");
 

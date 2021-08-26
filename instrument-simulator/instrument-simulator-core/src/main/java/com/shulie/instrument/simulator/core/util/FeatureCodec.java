@@ -25,6 +25,21 @@ import java.util.Map;
  * Feature编解器(线程安全)
  */
 public class FeatureCodec {
+    /**
+     * 转义符
+     */
+    private final static int ESCAPE_CHAR = 1;
+
+    /**
+     * 分割符
+     */
+    private final static int SPLIT_CHAR = 2;
+
+    /**
+     * 读取字符
+     */
+    private final static int READ_CHAR = 4;
+
 
     /**
      * KV片段分割符
@@ -233,7 +248,7 @@ public class FeatureCodec {
         final char[] segmentCharArray = new char[len];
 
         int segmentCharArrayIndex = 0;
-        ESCAPE_DECODE_STATE state = ESCAPE_DECODE_STATE.READ_CHAR;
+        int state = FeatureCodec.READ_CHAR;
 
         for (int index = 0; index < len; index++) {
 
@@ -241,7 +256,7 @@ public class FeatureCodec {
             switch (state) {
                 case READ_CHAR: {
                     if (c == ESCAPE_PREFIX_CHAR) {
-                        state = ESCAPE_DECODE_STATE.ESCAPE_CHAR;
+                        state = FeatureCodec.ESCAPE_CHAR;
                     } else {
                         segmentCharArray[segmentCharArrayIndex++] = c;
                     }
@@ -249,7 +264,7 @@ public class FeatureCodec {
                 }
 
                 case ESCAPE_CHAR: {
-                    state = ESCAPE_DECODE_STATE.READ_CHAR;
+                    state = FeatureCodec.READ_CHAR;
                     if (isSpecialChar(c)) {
                         segmentCharArray[segmentCharArrayIndex++] = c;
                     } else {
@@ -285,7 +300,7 @@ public class FeatureCodec {
         final char[] segmentCharArray = new char[len];
 
         int segmentCharArrayIndex = 0;
-        ESCAPE_SPLIT_STATE state = ESCAPE_SPLIT_STATE.READ_CHAR;
+        int state = FeatureCodec.READ_CHAR;
 
         for (int index = 0; index < len; ) {
 
@@ -296,14 +311,14 @@ public class FeatureCodec {
 
                     // 匹配到转义符
                     if (c == ESCAPE_PREFIX_CHAR) {
-                        state = ESCAPE_SPLIT_STATE.ESCAPE_CHAR;
+                        state = FeatureCodec.ESCAPE_CHAR;
                         segmentCharArray[segmentCharArrayIndex++] = c;
                         break;
                     }
 
                     // 匹配到分隔符
                     else if (c == splitChar) {
-                        state = ESCAPE_SPLIT_STATE.SPLIT_CHAR;
+                        state = FeatureCodec.SPLIT_CHAR;
                         continue;
                     }
 
@@ -316,14 +331,14 @@ public class FeatureCodec {
                 }
 
                 case SPLIT_CHAR: {
-                    state = ESCAPE_SPLIT_STATE.READ_CHAR;
+                    state = FeatureCodec.READ_CHAR;
                     addToArrayList(segmentArrayList, new String(segmentCharArray, 0, segmentCharArrayIndex));
                     segmentCharArrayIndex = 0;
                     break;
                 }
 
                 case ESCAPE_CHAR: {
-                    state = ESCAPE_SPLIT_STATE.READ_CHAR;
+                    state = FeatureCodec.READ_CHAR;
                     segmentCharArray[segmentCharArrayIndex++] = c;
                     break;
                 }
@@ -337,44 +352,4 @@ public class FeatureCodec {
         addToArrayList(segmentArrayList, new String(segmentCharArray, 0, segmentCharArrayIndex));
         return segmentArrayList.toArray(new String[0]);
     }
-
-    /**
-     * 转义解码状态枚举
-     */
-    private enum ESCAPE_DECODE_STATE {
-
-        /**
-         * 转义符
-         */
-        ESCAPE_CHAR,
-
-        /**
-         * 读取字符
-         */
-        READ_CHAR,
-
-    }
-
-    /**
-     * 逃逸分割状态枚举
-     */
-    private enum ESCAPE_SPLIT_STATE {
-
-        /**
-         * 转义符
-         */
-        ESCAPE_CHAR,
-
-        /**
-         * 分割符
-         */
-        SPLIT_CHAR,
-
-        /**
-         * 读取字符
-         */
-        READ_CHAR,
-
-    }
-
 }

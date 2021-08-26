@@ -18,8 +18,8 @@ import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServe
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
-import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisSentinelPool;
 
@@ -36,19 +36,31 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentinelPool> {
 
-    private static final JedisSentinelFactory jedisFactory = new JedisSentinelFactory();
+    private static JedisSentinelFactory jedisFactory;
 
     private JedisSentinelFactory() {
         super(new JedisSentinelNodesStrategy());
     }
 
     public static JedisSentinelFactory getFactory() {
+        if (jedisFactory == null) {
+            synchronized (JedisSentinelFactory.class) {
+                if (jedisFactory == null) {
+                    jedisFactory = new JedisSentinelFactory();
+                }
+            }
+        }
         return jedisFactory;
     }
 
     @Override
     public <T> T security(T client) {
         return client;
+    }
+
+    public static void release() {
+        JedisSentinelFactory.destroy();
+        jedisFactory = null;
     }
 
     @Override
@@ -99,8 +111,9 @@ public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentin
     }
 
     public HostAndPort createNode(String node) {
-        String host = node.substring(0, node.indexOf(":"));
-        int port = Integer.parseInt(node.substring(node.indexOf(":") + 1));
+        final int endIndex = node.indexOf(":");
+        String host = node.substring(0, endIndex);
+        int port = Integer.parseInt(node.substring(endIndex + 1));
         RedisConstants.registerShadowNodes.add(node);
         return new HostAndPort(host, port);
     }

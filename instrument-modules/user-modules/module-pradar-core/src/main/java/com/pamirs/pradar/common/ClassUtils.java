@@ -113,21 +113,27 @@ public class ClassUtils {
      * Feed abbreviation maps
      */
     static {
-        final Map<String, String> m = new HashMap<String, String>();
-        m.put("int", "I");
-        m.put("boolean", "Z");
-        m.put("float", "F");
-        m.put("long", "J");
-        m.put("short", "S");
-        m.put("byte", "B");
-        m.put("double", "D");
-        m.put("char", "C");
-        final Map<String, String> r = new HashMap<String, String>();
-        for (final Map.Entry<String, String> e : m.entrySet()) {
-            r.put(e.getValue(), e.getKey());
+        abbreviationMap = new HashMap<String, String>();
+        abbreviationMap.put("int", "I");
+        abbreviationMap.put("boolean", "Z");
+        abbreviationMap.put("float", "F");
+        abbreviationMap.put("long", "J");
+        abbreviationMap.put("short", "S");
+        abbreviationMap.put("byte", "B");
+        abbreviationMap.put("double", "D");
+        abbreviationMap.put("char", "C");
+        reverseAbbreviationMap = new HashMap<String, String>();
+        for (final Map.Entry<String, String> e : abbreviationMap.entrySet()) {
+            reverseAbbreviationMap.put(e.getValue(), e.getKey());
         }
-        abbreviationMap = Collections.unmodifiableMap(m);
-        reverseAbbreviationMap = Collections.unmodifiableMap(r);
+    }
+
+    public static void release() {
+        namePrimitiveMap.clear();
+        primitiveWrapperMap.clear();
+        wrapperPrimitiveMap.clear();
+        abbreviationMap.clear();
+        reverseAbbreviationMap.clear();
     }
 
     /**

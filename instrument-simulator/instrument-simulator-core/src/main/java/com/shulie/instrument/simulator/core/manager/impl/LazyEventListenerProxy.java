@@ -15,22 +15,25 @@
 package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.ModuleException;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.event.Event;
-import com.shulie.instrument.simulator.api.listener.EventListener;
-import com.shulie.instrument.simulator.api.listener.InitializingBean;
-import com.shulie.instrument.simulator.api.listener.Interruptable;
-import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.event.EventType;
+import com.shulie.instrument.simulator.api.listener.*;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceAdapterListener;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.ObjectIdUtils;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.classloader.BizClassLoaderHolder;
+import com.shulie.instrument.simulator.core.extension.ExtensionAdviceWrapContainer;
+import com.shulie.instrument.simulator.core.extension.GlobalAdviceWrapBuilders;
 import com.shulie.instrument.simulator.core.util.ReflectUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -42,8 +45,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author xiaobin.zfb
  * @since 2020/9/18 12:48 上午
  */
-public class LazyEventListenerProxy implements EventListener, Interruptable {
-    private final static Logger logger = LoggerFactory.getLogger(LazyEventListenerProxy.class.getName());
+public class LazyEventListenerProxy extends EventListener implements Interruptable {
+    private final Logger logger = LoggerFactory.getLogger(LazyEventListenerProxy.class.getName());
     private final CoreModule coreModule;
     private final Listeners listeners;
     /**
@@ -52,7 +55,7 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
      * <p>
      * 测试过 jctools 的 NonBlockingHashMap,性能比 ConcurrentHashMap 大概低30-40%左右
      */
-    private final ConcurrentHashMap<Integer, EventListener> eventListeners;
+    private final ConcurrentHashMap<Integer, EventListenerWrapper> eventListeners;
     private final AtomicBoolean isRunning = new AtomicBoolean(true);
 
     private final AtomicBoolean isInitInterrupt = new AtomicBoolean(false);
@@ -69,23 +72,24 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
     public LazyEventListenerProxy(final CoreModule coreModule, final Listeners listeners) {
         this.coreModule = coreModule;
         this.listeners = listeners;
-        this.eventListeners = new ConcurrentHashMap<Integer, EventListener>();
+        this.eventListeners = new ConcurrentHashMap<Integer, EventListenerWrapper>();
         this.listenerCostEnabled = Boolean.valueOf(System.getProperty("simulator.listener.cost.enabled", "false"));
     }
 
     @Override
     public void onEvent(Event event) throws Throwable {
-        if (listeners == Listeners.NONE) {
+        if (listeners == null || StringUtils.isBlank(listeners.getClassName())) {
             return;
         }
         if (!isRunning.get()) {
             return;
         }
 
-        EventListener listener = getEventListener();
+        EventListenerWrapper listener = getEventListenerWrapper();
         if (listener == null) {
             logger.error("SIMULATOR: event listener onEvent failed, cause by event listener init failed.");
         } else {
+            listener.setBizClassLoader(BizClassLoaderHolder.getBizClassLoader());
             if (!listenerCostEnabled) {
                 listener.onEvent(event);
             } else {
@@ -94,7 +98,7 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
                     listener.onEvent(event);
                 } finally {
                     long end = System.nanoTime();
-                    logger.info("{} execute {} cost {} ns", listeners.getClassName(), event.getType().name(), (end - start));
+                    logger.info("{} execute {} cost {} ns", listeners.getClassName(), EventType.name(event.getType()), (end - start));
                 }
             }
         }
@@ -108,11 +112,25 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
         /**
          * 执行所有的资源的清理
          */
-        Collection<EventListener> eventListenerSet = eventListeners.values();
-        eventListeners.clear();
-        for (EventListener eventListener : eventListenerSet) {
-            eventListener.clean();
+        Iterator<Map.Entry<Integer, EventListenerWrapper>> it = eventListeners.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Integer, EventListenerWrapper> entry = it.next();
+            EventListenerWrapper eventListenerWrapper = entry.getValue();
+            it.remove();
+            ClassLoader bizClassLoader = eventListenerWrapper.getBizClassLoader();
+            if (bizClassLoader != null) {
+                ClassLoader classLoader = BizClassLoaderHolder.getBizClassLoader();
+                try {
+                    BizClassLoaderHolder.setBizClassLoader(bizClassLoader);
+                    eventListenerWrapper.clean();
+                } finally {
+                    BizClassLoaderHolder.setBizClassLoader(classLoader);
+                }
+            } else {
+                eventListenerWrapper.clean();
+            }
         }
+        eventListeners.clear();
     }
 
     /**
@@ -125,7 +143,7 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
         if (!coreModule.isMiddlewareModule()) {
             return 0;
         }
-        return ObjectIdUtils.instance.identity(BizClassLoaderHolder.getBizClassLoader());
+        return ObjectIdUtils.identity(BizClassLoaderHolder.getBizClassLoader());
     }
 
     /**
@@ -135,16 +153,16 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
      *
      * @return 返回事件监听器
      */
-    private EventListener getEventListener() {
+    private EventListenerWrapper getEventListenerWrapper() {
         int id = getBizClassLoaderId();
-        EventListener eventListener = this.eventListeners.get(id);
-        if (eventListener != null) {
-            return eventListener;
+        EventListenerWrapper eventListenerWrapper = this.eventListeners.get(id);
+        if (eventListenerWrapper != null) {
+            return eventListenerWrapper;
         }
         synchronized (this) {
-            eventListener = this.eventListeners.get(id);
-            if (eventListener != null) {
-                return eventListener;
+            eventListenerWrapper = this.eventListeners.get(id);
+            if (eventListenerWrapper != null) {
+                return eventListenerWrapper;
             }
             ClassLoader classLoader = coreModule.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
             try {
@@ -154,14 +172,16 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
                 } else {
                     listener = Reflect.on(listeners.getClassName(), classLoader).create(listeners.getArgs()).get();
                 }
+
                 /**
                  * 设置是否可中断
                  */
                 if (isInitInterrupt.compareAndSet(false, true)) {
-                    isInterrupt = ReflectUtils.isInterruptEventHandler(eventListener);
+                    isInterrupt = ReflectUtils.isInterruptEventHandler(listener);
                 }
 
                 if (listener != null) {
+                    eventListenerWrapper = new EventListenerWrapper();
                     try {
                         coreModule.injectResource(listener);
                     } catch (ModuleException e) {
@@ -170,27 +190,36 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
                     if (listener instanceof InitializingBean) {
                         ((InitializingBean) listener).init();
                     }
+                    EventListener eventListener = null;
                     if (listener instanceof EventListener) {
                         eventListener = (EventListener) listener;
 
                         if (listeners.getScopeName() != null && listeners.getEventListenerCallback() != null) {
                             eventListener = listeners.getEventListenerCallback().onCall(eventListener, listeners.getScopeName(), listeners.getExecutionPolicy());
                         }
-
+                        eventListener.setBizClassLoader(BizClassLoaderHolder.getBizClassLoader());
                     } else if (listener instanceof AdviceListener) {
                         AdviceListener adviceListener = (AdviceListener) listener;
+                        adviceListener = new ExtensionAdviceWrapContainer(adviceListener);
                         if (listeners.getScopeName() != null && listeners.getAdviceListenerCallback() != null) {
                             adviceListener = listeners.getAdviceListenerCallback().onCall(adviceListener, listeners.getScopeName(), listeners.getExecutionPolicy());
                         }
+                        adviceListener.setBizClassLoader(BizClassLoaderHolder.getBizClassLoader());
                         eventListener = new AdviceAdapterListener(adviceListener);
+                    }
+                    eventListenerWrapper.setEventListener(eventListener);
+
+                    Destroyable destroyable = listener.getClass().getAnnotation(Destroyable.class);
+                    if (destroyable != null) {
+                        Destroyed destroyed = Reflect.on(destroyable.value()).create().get();
+                        eventListenerWrapper.setDestroyed(destroyed);
                     }
                 }
 
-
-                if (eventListener != null) {
-                    EventListener old = this.eventListeners.putIfAbsent(id, eventListener);
+                if (eventListenerWrapper != null) {
+                    EventListenerWrapper old = this.eventListeners.putIfAbsent(id, eventListenerWrapper);
                     if (old != null) {
-                        eventListener = old;
+                        eventListenerWrapper = old;
                     }
                 }
             } catch (Throwable e) {
@@ -198,7 +227,7 @@ public class LazyEventListenerProxy implements EventListener, Interruptable {
                 return null;
             }
         }
-        return eventListener;
+        return eventListenerWrapper;
     }
 
     @Override

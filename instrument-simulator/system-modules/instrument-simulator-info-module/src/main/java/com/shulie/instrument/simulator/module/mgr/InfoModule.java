@@ -18,7 +18,6 @@ import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.annotation.Command;
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.resource.ModuleManager;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.module.model.info.CommandInfo;
@@ -40,7 +39,7 @@ import java.util.List;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "info", version = "1.0.0", author = "")
 public class InfoModule implements ExtensionModule {
-    private final static Logger LOGGER = LoggerFactory.getLogger(InfoModule.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(InfoModule.class);
 
     @Resource
     private SimulatorConfig simulatorConfig;
@@ -67,21 +66,6 @@ public class InfoModule implements ExtensionModule {
                     .append("          SYSTEM_PROVIDER_LIB : ").append(simulatorConfig.getSystemProviderLibPath()).append("\n")
                     .append("                   ZK_SERVERS : ").append(simulatorConfig.getZkServers()).append("\n");
             return CommandResponse.success(versionSB.toString());
-        } catch (Throwable e) {
-            return CommandResponse.failure(e);
-        }
-
-    }
-
-    @Command("event-pool")
-    public CommandResponse eventPool() throws IOException {
-
-        try {
-            StringBuilder builder = new StringBuilder();
-            for (EventType eventType : EventType.values()) {
-                builder.append(String.format("%18s", eventType)).append("\n");
-            }
-            return CommandResponse.success(builder.toString());
         } catch (Throwable e) {
             return CommandResponse.failure(e);
         }

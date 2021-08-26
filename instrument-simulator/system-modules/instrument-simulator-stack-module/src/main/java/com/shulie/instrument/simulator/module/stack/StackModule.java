@@ -42,6 +42,9 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
+
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/1/29 1:56 下午
@@ -60,7 +63,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
         final String methodPattern = args.get("method");
         final String type = args.get("pattenType");
         final int wait = ParameterUtils.getInt(args, "wait", 5000);
-        final PatternType patternType = PatternType.of(type);
+        final int patternType = PatternType.of(type);
         if (StringUtils.isBlank(classPattern)) {
             return CommandResponse.failure("class can't be empty.");
         }
@@ -70,7 +73,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
         }
 
         if (!hasClass(classPattern, patternType)) {
-            return CommandResponse.failure("class is not found with patternType :" + patternType.name() + "! " + classPattern);
+            return CommandResponse.failure("class is not found with patternType :" + PatternType.name(patternType) + "! " + classPattern);
         }
         CountDownLatch latch = new CountDownLatch(1);
         EventWatcher watcher = null;
@@ -80,7 +83,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
                     .onClass(classPattern)
                     .onAnyBehavior(methodPattern)
                     .withInvoke()
-                    .onListener(Listeners.of(StackListener.class, latch, list))
+                    .onListener(Listeners.of(StackListener.class, new Object[]{latch, list}))
                     .onClass().onWatch();
             if (wait <= 0) {
                 latch.wait();
@@ -98,7 +101,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
 
     }
 
-    private boolean hasClass(final String classPattern, final PatternType patternType) {
+    private boolean hasClass(final String classPattern, final int patternType) {
         return !loadedClassDataSource.find(new ExtFilter() {
             @Override
             public boolean isIncludeSubClasses() {
@@ -142,7 +145,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
      */
     private static boolean patternMatching(final String string,
                                            final String pattern,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 if (StringUtils.isBlank(pattern)) {

@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.api.listener;
 
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
-import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 
 /**
  * AdviceListener 回调，此类是为了让目标的 Listener 延迟实例化，这样可以最大化的减少在多个业务类加载器的情况下，
@@ -42,5 +41,5 @@ public interface AdviceListenerCallback {
      * @param policy    策略
      * @return 通知监听器
      */
-    AdviceListener onCall(AdviceListener listener, String scopeName, ExecutionPolicy policy);
+    AdviceListener onCall(AdviceListener listener, String scopeName, int policy);
 }

@@ -16,6 +16,9 @@ package com.shulie.instrument.simulator.api.listener.ext;
 
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.event.Event;
+import com.shulie.instrument.simulator.api.listener.BizClassLoaderWrapper;
+
+import java.lang.ref.WeakReference;
 
 /**
  * 通知监听器
@@ -26,7 +29,20 @@ import com.shulie.instrument.simulator.api.event.Event;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public class AdviceListener {
+public class AdviceListener implements BizClassLoaderWrapper {
+    private WeakReference<ClassLoader> bizClassLoaderHolder;
+
+    @Override
+    public void setBizClassLoader(ClassLoader classLoader) {
+        if (classLoader != null) {
+            bizClassLoaderHolder = new WeakReference<ClassLoader>(classLoader);
+        }
+    }
+
+    @Override
+    public ClassLoader getBizClassLoader() {
+        return bizClassLoaderHolder == null ? null : bizClassLoaderHolder.get();
+    }
 
     /**
      * 清理

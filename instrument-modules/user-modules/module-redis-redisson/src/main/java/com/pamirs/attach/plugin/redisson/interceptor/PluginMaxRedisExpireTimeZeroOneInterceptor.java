@@ -14,6 +14,10 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
+
+@Destroyable(RedissonDestroy.class)
 public class PluginMaxRedisExpireTimeZeroOneInterceptor extends PluginMaxRedisExpireTimeInterceptor{
     @Override
     protected Integer getTimeToLiveKeyIndex() {

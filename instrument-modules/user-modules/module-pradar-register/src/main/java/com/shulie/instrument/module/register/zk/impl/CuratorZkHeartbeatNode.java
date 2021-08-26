@@ -14,11 +14,11 @@
  */
 package com.shulie.instrument.module.register.zk.impl;
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.state.ConnectionState;
-import com.netflix.curator.framework.state.ConnectionStateListener;
-import com.netflix.curator.utils.ZKPaths;
+import org.apache.curator.framework.CuratorFramework;
 import com.shulie.instrument.module.register.zk.ZkHeartbeatNode;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;

@@ -15,10 +15,7 @@
 package com.pamirs.pradar.internal;
 
 import com.pamirs.pradar.internal.adapter.JobAdapter;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 
 import java.util.Map;
 import java.util.Set;
@@ -233,12 +230,12 @@ public interface IGlobalConfigService {
      *
      * @return
      */
-    Set<String> getUrlWhiteList();
+    Set<MatchConfig> getUrlWhiteList();
 
     /**
      * 获取 dubbo 的白名单
      *
      * @return
      */
-    Set<String> getDubboNameWhiteList();
+    Set<MatchConfig> getDubboNameWhiteList();
 }

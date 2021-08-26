@@ -24,6 +24,10 @@ public class ConnectInfo {
     private String serverAddr;
     private int port;
 
+    public String getAddr(){
+        return getServerAddr() + ':' + getPort();
+    }
+
     public String getServerAddr() {
         return serverAddr;
     }

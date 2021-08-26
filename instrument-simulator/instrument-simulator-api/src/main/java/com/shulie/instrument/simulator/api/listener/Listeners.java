@@ -29,15 +29,13 @@ import java.util.Arrays;
  */
 public class Listeners {
 
-    public static final Listeners NONE = new Listeners();
-
     private String className;
     private Object[] args;
 
     /**
      * 执行策略
      */
-    private ExecutionPolicy executionPolicy = ExecutionPolicy.ALWAYS;
+    private int executionPolicy = ExecutionPolicy.ALWAYS;
 
     /**
      * 作用域名称
@@ -57,7 +55,7 @@ public class Listeners {
     private Listeners() {
     }
 
-    public static Listeners of(final String className, final String scopeName, final ExecutionPolicy policy, AdviceListenerCallback callback, final Object... args) {
+    public static Listeners of(final String className, final String scopeName, final int policy, AdviceListenerCallback callback, final Object... args) {
         Listeners listeners = new Listeners();
         listeners.setClassName(className);
         listeners.setScopeName(scopeName);
@@ -67,7 +65,7 @@ public class Listeners {
         return listeners;
     }
 
-    public static Listeners of(final String className, final String scopeName, final ExecutionPolicy policy, EventListenerCallback callback, final Object... args) {
+    public static Listeners of(final String className, final String scopeName, final int policy, EventListenerCallback callback, final Object... args) {
         Listeners listeners = new Listeners();
         listeners.setClassName(className);
         listeners.setScopeName(scopeName);
@@ -77,27 +75,51 @@ public class Listeners {
         return listeners;
     }
 
-    public static Listeners of(final Class clazz, final Object... args) {
+    public static Listeners of(final Class clazz) {
+        return of(clazz, null, ExecutionPolicy.ALWAYS, (AdviceListenerCallback) null, null);
+    }
+
+    public static Listeners of(final Class clazz, final Object[] args) {
         return of(clazz, null, ExecutionPolicy.ALWAYS, (AdviceListenerCallback) null, args);
     }
 
-    public static Listeners of(final Class clazz, final String scopeName, final EventListenerCallback callback, final Object... args) {
+    public static Listeners of(final Class clazz, final String scopeName, final EventListenerCallback callback) {
+        return of(clazz, scopeName, ExecutionPolicy.ALWAYS, callback, null);
+    }
+
+    public static Listeners of(final Class clazz, final String scopeName, final EventListenerCallback callback, final Object[] args) {
         return of(clazz, scopeName, ExecutionPolicy.ALWAYS, callback, args);
     }
 
-    public static Listeners dynamicScope(final Class clazz, final EventListenerCallback callback, final Object... args) {
+    public static Listeners dynamicScope(final Class clazz, final EventListenerCallback callback) {
+        return dynamicScope(clazz, ExecutionPolicy.ALWAYS, callback, null);
+    }
+
+    public static Listeners dynamicScope(final Class clazz, final EventListenerCallback callback, final Object[] args) {
         return dynamicScope(clazz, ExecutionPolicy.ALWAYS, callback, args);
     }
 
-    public static Listeners of(final Class clazz, final String scopeName, final AdviceListenerCallback callback, final Object... args) {
+    public static Listeners of(final Class clazz, final String scopeName, final AdviceListenerCallback callback) {
+        return of(clazz, scopeName, ExecutionPolicy.ALWAYS, callback, null);
+    }
+
+    public static Listeners of(final Class clazz, final String scopeName, final AdviceListenerCallback callback, final Object[] args) {
         return of(clazz, scopeName, ExecutionPolicy.ALWAYS, callback, args);
     }
 
-    public static Listeners dynamicScope(final Class clazz, final AdviceListenerCallback callback, final Object... args) {
+    public static Listeners dynamicScope(final Class clazz, final AdviceListenerCallback callback) {
+        return dynamicScope(clazz, ExecutionPolicy.ALWAYS, callback, null);
+    }
+
+    public static Listeners dynamicScope(final Class clazz, final AdviceListenerCallback callback, final Object[] args) {
         return dynamicScope(clazz, ExecutionPolicy.ALWAYS, callback, args);
     }
 
-    public static Listeners of(final Class clazz, final String scopeName, final ExecutionPolicy policy, final EventListenerCallback callback, final Object... args) {
+    public static Listeners of(final Class clazz, final String scopeName, final int policy, final EventListenerCallback callback) {
+        return of(clazz, scopeName, policy, callback, null);
+    }
+
+    public static Listeners of(final Class clazz, final String scopeName, final int policy, final EventListenerCallback callback, final Object[] args) {
         Listeners listeners = new Listeners();
         listeners.setClassName(clazz.getName());
         listeners.setScopeName(scopeName);
@@ -107,7 +129,11 @@ public class Listeners {
         return listeners;
     }
 
-    public static Listeners dynamicScope(final Class clazz, final ExecutionPolicy policy, final EventListenerCallback callback, final Object... args) {
+    public static Listeners dynamicScope(final Class clazz, final int policy, final EventListenerCallback callback) {
+        return dynamicScope(clazz, policy, callback, null);
+    }
+
+    public static Listeners dynamicScope(final Class clazz, final int policy, final EventListenerCallback callback, final Object[] args) {
         Listeners listeners = new Listeners();
         listeners.setClassName(clazz.getName());
         listeners.setArgs(args);
@@ -116,7 +142,11 @@ public class Listeners {
         return listeners;
     }
 
-    public static Listeners of(final Class clazz, final String scopeName, final ExecutionPolicy policy, final AdviceListenerCallback callback, final Object... args) {
+    public static Listeners of(final Class clazz, final String scopeName, final int policy, final AdviceListenerCallback callback) {
+        return of(clazz, scopeName, policy, callback, null);
+    }
+
+    public static Listeners of(final Class clazz, final String scopeName, final int policy, final AdviceListenerCallback callback, final Object[] args) {
         Listeners listeners = new Listeners();
         listeners.setClassName(clazz.getName());
         listeners.setScopeName(scopeName);
@@ -126,7 +156,11 @@ public class Listeners {
         return listeners;
     }
 
-    public static Listeners dynamicScope(final Class clazz, final ExecutionPolicy policy, final AdviceListenerCallback callback, final Object... args) {
+    public static Listeners dynamicScope(final Class clazz, final int policy, final AdviceListenerCallback callback) {
+        return dynamicScope(clazz, policy, callback, null);
+    }
+
+    public static Listeners dynamicScope(final Class clazz, final int policy, final AdviceListenerCallback callback, final Object[] args) {
         Listeners listeners = new Listeners();
         listeners.setClassName(clazz.getName());
         listeners.setArgs(args);
@@ -143,7 +177,7 @@ public class Listeners {
         this.args = args;
     }
 
-    public void setExecutionPolicy(ExecutionPolicy executionPolicy) {
+    public void setExecutionPolicy(int executionPolicy) {
         this.executionPolicy = executionPolicy;
     }
 
@@ -179,7 +213,7 @@ public class Listeners {
         this.eventListenerCallback = eventListenerCallback;
     }
 
-    public ExecutionPolicy getExecutionPolicy() {
+    public int getExecutionPolicy() {
         return executionPolicy;
     }
 
@@ -193,28 +227,20 @@ public class Listeners {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Listeners listeners = (Listeners) o;
 
-        if (className != null ? !className.equals(listeners.className) : listeners.className != null) {
-            return false;
-        }
-        if (executionPolicy != listeners.executionPolicy) {
-            return false;
-        }
+        if (executionPolicy != listeners.executionPolicy) return false;
+        if (className != null ? !className.equals(listeners.className) : listeners.className != null) return false;
         return scopeName != null ? scopeName.equals(listeners.scopeName) : listeners.scopeName == null;
     }
 
     @Override
     public int hashCode() {
         int result = className != null ? className.hashCode() : 0;
-        result = 31 * result + (executionPolicy != null ? executionPolicy.hashCode() : 0);
+        result = 31 * result + executionPolicy;
         result = 31 * result + (scopeName != null ? scopeName.hashCode() : 0);
         return result;
     }

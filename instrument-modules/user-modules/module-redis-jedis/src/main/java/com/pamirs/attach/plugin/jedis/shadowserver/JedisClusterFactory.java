@@ -18,8 +18,8 @@ import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServe
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
-import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisSlotBasedConnectionHandler;
 
@@ -36,14 +36,26 @@ import java.util.Set;
  */
 public class JedisClusterFactory extends AbstractRedisServerFactory<JedisSlotBasedConnectionHandler> {
 
-    private static final JedisClusterFactory jedisFactory = new JedisClusterFactory();
+    private static JedisClusterFactory jedisFactory;
 
     private JedisClusterFactory() {
         super(new JedisClusterNodesStrategy());
     }
 
     public static JedisClusterFactory getFactory() {
+        if (jedisFactory == null) {
+            synchronized (JedisClusterFactory.class) {
+                if (jedisFactory == null) {
+                    jedisFactory = new JedisClusterFactory();
+                }
+            }
+        }
         return jedisFactory;
+    }
+
+    public static void release() {
+        JedisClusterFactory.destroy();
+        jedisFactory = null;
     }
 
     @Override
@@ -90,8 +102,9 @@ public class JedisClusterFactory extends AbstractRedisServerFactory<JedisSlotBas
     public Set<HostAndPort> convert(List<String> nodes) {
         Set<HostAndPort> hostAndPorts = new HashSet<HostAndPort>();
         for (String node : nodes) {
-            String host = node.substring(0, node.indexOf(":"));
-            int port = Integer.parseInt(node.substring(node.indexOf(":") + 1));
+            final int endIndex = node.indexOf(":");
+            String host = node.substring(0, endIndex);
+            int port = Integer.parseInt(node.substring(endIndex + 1));
             HostAndPort hostAndPort = new HostAndPort(host, port);
             hostAndPorts.add(hostAndPort);
         }

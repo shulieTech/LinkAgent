@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.api.listener.ext;
 
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.filter.*;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
@@ -23,6 +22,8 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import java.util.*;
 
 import static com.shulie.instrument.simulator.api.event.EventType.*;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
 
 /**
  * 正在观察匹配构造器的实现
@@ -32,14 +33,14 @@ import static com.shulie.instrument.simulator.api.event.EventType.*;
  */
 class WatchingMatchBuilder implements IWatchingMatchBuilder {
     private final ClassMatchBuilder bfClass;
-    private final Set<EventType> eventEventTypeSet = new HashSet<EventType>();
+    private final Set<Integer> eventEventTypeSet = new HashSet<Integer>();
     private final List<Progress> progresses = new ArrayList<Progress>();
 
     private final ModuleEventWatcher moduleEventWatcher;
-    private final PatternType patternType;
+    private final int patternType;
     private final WatchCallback watchCallback;
 
-    public WatchingMatchBuilder(ClassMatchBuilder bfClass, ModuleEventWatcher moduleEventWatcher, WatchCallback watchCallback, final PatternType patternType) {
+    public WatchingMatchBuilder(ClassMatchBuilder bfClass, ModuleEventWatcher moduleEventWatcher, WatchCallback watchCallback, final int patternType) {
         this.bfClass = bfClass;
         this.moduleEventWatcher = moduleEventWatcher;
         this.watchCallback = watchCallback;
@@ -81,7 +82,7 @@ class WatchingMatchBuilder implements IWatchingMatchBuilder {
     }
 
     @Override
-    public void onWatching(Listeners listeners, EventType... eventEventTypeArray) throws Throwable {
+    public void onWatching(Listeners listeners, int... eventEventTypeArray) throws Throwable {
         watching(toProgressGroup(progresses));
     }
 
@@ -224,7 +225,7 @@ class WatchingMatchBuilder implements IWatchingMatchBuilder {
      */
     private static boolean patternMatching(final String string,
                                            final String pattern,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 return StringUtil.matching(string, pattern);
@@ -245,7 +246,7 @@ class WatchingMatchBuilder implements IWatchingMatchBuilder {
      */
     private static boolean patternMatching(final String string,
                                            final String[] patterns,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 if (patterns == null || patterns.length == 0) {

@@ -30,11 +30,6 @@ public class Messager {
     private static final ConcurrentHashMap<String, Action> actionMap = new ConcurrentHashMap<String, Action>();
 
     /**
-     * 异常处理器
-     */
-    private static volatile ExceptionHandler exceptionHandler;
-
-    /**
      * 控制Messager是否在发生异常时主动对外抛出
      * T:主动对外抛出，会中断方法
      * F:不对外抛出，只将异常信息打印出来
@@ -43,23 +38,37 @@ public class Messager {
 
     private static final ConcurrentHashMap<String, MessageHandler> namespaceMessagerHandlerMap
             = new ConcurrentHashMap<String, MessageHandler>();
+    private static final ConcurrentHashMap<String, ExceptionHandler> exceptionHandlers
+            = new ConcurrentHashMap<String, ExceptionHandler>();
 
     /**
-     * 注册异常处理器
+     * register ExceptionHandler of namespace
      *
      * @param exceptionHandler
      */
-    public static void registerExceptionHandler(ExceptionHandler exceptionHandler) {
-        Messager.exceptionHandler = exceptionHandler;
+    public static void registerExceptionHandler(String namespace, ExceptionHandler exceptionHandler) {
+        exceptionHandlers.putIfAbsent(namespace, exceptionHandler);
     }
 
     /**
-     * 获取异常处理器
+     * get ExceptionHandler of namespace
      *
+     * @param namespace
      * @return
      */
-    public static ExceptionHandler getExceptionHandler() {
-        return exceptionHandler;
+    public static ExceptionHandler getExceptionHandler(String namespace) {
+        return exceptionHandlers.get(namespace);
+    }
+
+
+    /**
+     * register ExceptionHandler of namespace
+     *
+     * @param namespace
+     * @return
+     */
+    public static boolean isRegisterExceptionHandler(String namespace) {
+        return exceptionHandlers.containsKey(namespace);
     }
 
     /**
@@ -84,39 +93,16 @@ public class Messager {
     }
 
     /**
-     * 注册全局动作
-     *
-     * @param moduleName 动作名称
-     * @param action     动作
-     */
-    public static void registerAction(final String moduleName, Action action) {
-        Action action1 = actionMap.putIfAbsent(moduleName, action);
-        if (action1 != null) {
-            System.err.println("duplicate register action:" + moduleName);
-        }
-    }
-
-    /**
-     * 执行动作
-     *
-     * @param actionName 动作名称
-     * @param args       参数
-     */
-    public static Object doAction(final String moduleName, final String actionName, Object... args) {
-        Action action = actionMap.get(moduleName);
-        if (action == null) {
-            return null;
-        }
-        return action.onAction(actionName, args);
-    }
-
-    /**
      * 清理信使钩子方法
      *
      * @param namespace 命名空间
      */
     public synchronized static void clean(final String namespace) {
-        namespaceMessagerHandlerMap.remove(namespace);
+        MessageHandler messageHandler = namespaceMessagerHandlerMap.remove(namespace);
+        if (messageHandler != null) {
+            messageHandler.destroy();
+        }
+        exceptionHandlers.remove(namespace);
         actionMap.clear();
     }
 
@@ -136,10 +122,11 @@ public class Messager {
     }
 
 
-    private static void handleException(Throwable cause) throws Throwable {
+    private static void handleException(String namespace, Throwable cause) throws Throwable {
         if (isMessagerThrows) {
             throw cause;
         } else {
+            ExceptionHandler exceptionHandler = getExceptionHandler(namespace);
             if (exceptionHandler != null) {
                 exceptionHandler.handleException(cause, "", null);
             } else {
@@ -162,7 +149,7 @@ public class Messager {
                 messageHandler.handleOnCallBefore(listenerId, clazz, isInterface, lineNumber, owner, name, desc);
             }
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
         }
     }
 
@@ -176,7 +163,7 @@ public class Messager {
                 messageHandler.handleOnCallReturn(listenerId, clazz, isInterface);
             }
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
         }
     }
 
@@ -191,7 +178,7 @@ public class Messager {
                 messageHandler.handleOnCallThrows(listenerId, clazz, isInterface, e);
             }
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
         }
     }
 
@@ -205,7 +192,7 @@ public class Messager {
                 messageHandler.handleOnLine(listenerId, clazz, lineNumber);
             }
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
         }
     }
 
@@ -230,7 +217,7 @@ public class Messager {
                     target
             );
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
             return Result.RESULT_NONE;
         }
     }
@@ -246,7 +233,7 @@ public class Messager {
             }
             return messageHandler.handleOnReturn(listenerId, clazz, object);
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
             return Result.RESULT_NONE;
         }
     }
@@ -262,7 +249,7 @@ public class Messager {
             }
             return messageHandler.handleOnThrows(listenerId, clazz, throwable);
         } catch (Throwable cause) {
-            handleException(cause);
+            handleException(namespace, cause);
             return Result.RESULT_NONE;
         }
     }

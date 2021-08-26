@@ -18,8 +18,6 @@ import com.pamirs.pradar.ConfigNames;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
 import com.shulie.instrument.module.config.fetcher.config.event.model.*;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author: wangjian
@@ -29,7 +27,7 @@ public enum FIELDS {
     URL_WHITE_LIST(ConfigNames.URL_WHITE_LIST, "URL_WHITE_LIST", UrlWhiteList.getInstance()),
     MQ_WHITE_LIST(ConfigNames.MQ_WHITE_LIST, "MQ_WHITE_LIST", MQWhiteList.getInstance()),
     WHITE_LIST(ConfigNames.WHITE_LIST, "WHITE_LIST", null),
-    DUBBO_ALLOW_LIST(ConfigNames.DUBBO_ALLOW_LIST, "DUBBO_ALLOW_LIST", RpcAllowList.getInstance()),
+    RPC_ALLOW_LIST(ConfigNames.RPC_WHITE_LIST, "RPC_ALLOW_LIST", RpcAllowList.getInstance()),
     WHITE_LIST_SWITCHON(ConfigNames.WHITE_LIST_SWITCH_ON, "WHITE_LIST_SWITCH_ON", WhiteListSwitch.getInstance()),
     CONTEXT_PATH_BLOCK_LIST(ConfigNames.CONTEXT_PATH_BLOCK_LIST, "CONTEXT_PATH_BLOCK_LIST", ContextPathBlockList.getInstance()),
     SEARCH_KEY_WHITE_LIST(ConfigNames.SEARCH_KEY_WHITE_LIST, "SEARCH_KEY_WHITE_LIST", SearchKeyWhiteList.getInstance()),
@@ -38,28 +36,34 @@ public enum FIELDS {
     SHADOW_JOB_CONFIGS(ConfigNames.SHADOW_JOB_CONFIGS, "SHADOW_JOB_CONFIGS", ShadowJobConfig.getInstance()),
     MOCK_CONFIGS("MOCK_CONFIGS", "MOCK_CONFIGS", MockConfigChanger.getInstance()),
     GLOBAL_SWITCHON(ConfigNames.GLOBAL_SWITCH_ON, "GLOBAL_SWITCH_ON", GlobalSwitch.getInstance()),
-    SHADOW_REDIS_SERVER_CONFIG("SHADOW_REDIS_SERVER_CONFIG", "SHADOW_REDIS_SERVER_CONFIG", RedisShadowServerConfig.getInstance()),
+    SHADOW_REDIS_SERVER_CONFIG("SHADOW_REDIS_SERVER_CONFIG", "SHADOW_REDIS_SERVER_CONFIG", RedisShadowServerConfig.getINSTANCE()),
     SHADOW_ES_SERVER_CONFIG("SHADOW_ES_SERVER_CONFIG", "SHADOW_ES_SERVER_CONFIG", EsShadowServerConfig.getInstance()),
     SHADOW_HBASE_SERVER_CONFIG("SHADOW_HBASE_SERVER_CONFIG", "SHADOW_HBASE_SERVER_CONFIG", ShadowHbaseConfigs.getInstance()),
     PLUGIN_MAX_REDIS_EXPIRE_TIME("PLUGIN_MAX_REDIS_EXPIRE_CONFIG", "PLUGIN_MAX_REDIS_EXPIRE_CONFIG", MaxRedisExpireTime.getInstance());
 
+    /**
+     * 配置名称
+     */
+    private String configName;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FIELDS.class);
-
-    private String fileName;
-
+    /**
+     * 配置描述
+     */
     private String desc;
 
+    /**
+     * 改变器
+     */
     private IChange change;
 
-    FIELDS(String fileName, String desc, IChange change) {
-        this.fileName = fileName;
+    FIELDS(String configName, String desc, IChange change) {
+        this.configName = configName;
         this.desc = desc;
         this.change = change;
     }
 
-    public String getFileName() {
-        return fileName;
+    public String getConfigName() {
+        return configName;
     }
 
     public String getDesc() {
@@ -69,7 +73,7 @@ public enum FIELDS {
     public static FIELDS of(String fileName) {
         FIELDS[] values = FIELDS.values();
         for (FIELDS value : values) {
-            if (StringUtils.equals(value.fileName, fileName)) {
+            if (StringUtils.equals(value.configName, fileName)) {
                 return value;
             }
         }
@@ -77,17 +81,7 @@ public enum FIELDS {
     }
 
     public <E> Boolean compareIsChangeAndSet(AbstractConfig config, E newValue) {
-        Boolean res = change.compareIsChangeAndSet(config, newValue);
-        switch (this) {
-            case SHADOW_DATABASE_CONFIGS:
-                return res;
-            default:
-                break;
-        }
-        if (res) {
-            LOGGER.info("new config:" + newValue);
-        }
-        return res;
+        return change.compareIsChangeAndSet(config, newValue);
     }
 
 }

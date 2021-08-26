@@ -15,7 +15,8 @@
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.attach.plugin.apache.kafka.header.HeaderGetter;
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -25,9 +26,12 @@ import com.pamirs.pradar.common.BytesUtils;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.commons.lang.StringUtils;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -41,6 +45,7 @@ import java.util.Map;
  * @package: com.pamirs.attach.plugin.apache.kafka.interceptor
  * @Date 2019-08-05 19:35
  */
+@Destroyable(KafkaDestroy.class)
 public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAdaptor {
     @Resource
     protected DynamicFieldManager manager;
@@ -78,18 +83,22 @@ public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAd
         if (list.isEmpty()) {
             return null;
         }
+        Object consumer = advice.getParameterArray()[2];
+        if (consumer instanceof Consumer && consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {
+            consumer = Reflect.on(consumer).get("delegate");
+        }
         ConsumerRecord consumerRecord = list.get(0);
         String group = null;
         String remoteAddress = null;
         if (args.length >= 3) {
-            group = manager.getDynamicField(args[2], KafkaConstants.DYNAMIC_FIELD_GROUP);
-            remoteAddress = getRemoteAddress(args[2]);
+            group = manager.getDynamicField(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP);
+            remoteAddress = getRemoteAddress(consumer);
         }
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setRemoteIp(remoteAddress);
         if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
-            HeaderGetter headerGetter = HeaderProvider.getHeaderGetter(consumerRecord);
-            Map<String, String> ctx = headerGetter.getHeaders(consumerRecord);
+            HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(consumerRecord);
+            Map<String, String> ctx = headerProcessor.getHeaders(consumerRecord);
             spanRecord.setContext(ctx);
         }
         spanRecord.setRequest(consumerRecord);
@@ -97,6 +106,7 @@ public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAd
         spanRecord.setService(consumerRecord.topic());
         spanRecord.setMethod(group == null ? "" : group);
         spanRecord.setRemoteIp(remoteAddress);
+        spanRecord.setCallbackMsg((System.currentTimeMillis() - consumerRecord.timestamp()) + "");
         return spanRecord;
     }
 

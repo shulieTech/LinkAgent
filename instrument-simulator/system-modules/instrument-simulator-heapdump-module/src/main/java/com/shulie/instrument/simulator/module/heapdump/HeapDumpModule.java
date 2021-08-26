@@ -45,7 +45,7 @@ import java.util.Map;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "heapdump", version = "1.0.0", author = "xiaobin@shulie.io", description = "内存 dump 模块")
 public class HeapDumpModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(HeapDumpModule.class);
+    private final Logger logger = LoggerFactory.getLogger(HeapDumpModule.class);
 
     @Resource
     private SimulatorConfig simulatorConfig;
@@ -90,7 +90,7 @@ public class HeapDumpModule extends ParamSupported implements ExtensionModule {
         }
     }
 
-    private static void execute(final String bashCommand) {
+    private void execute(final String bashCommand) {
         BufferedReader br = null;
         try {
             Runtime runtime = Runtime.getRuntime();
@@ -112,7 +112,7 @@ public class HeapDumpModule extends ParamSupported implements ExtensionModule {
         }
     }
 
-    private static void run(String file, boolean live) throws IOException {
+    private void run(String file, boolean live) throws IOException {
         HotSpotDiagnosticMXBean hotSpotDiagnosticMXBean = ManagementFactory
                 .getPlatformMXBean(HotSpotDiagnosticMXBean.class);
         hotSpotDiagnosticMXBean.dumpHeap(file, live);

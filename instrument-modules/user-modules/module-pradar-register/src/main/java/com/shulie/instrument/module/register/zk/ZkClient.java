@@ -15,7 +15,7 @@
 package com.shulie.instrument.module.register.zk;
 
 
-import com.netflix.curator.framework.recipes.locks.InterProcessMutex;
+import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 
 import java.util.List;
 
@@ -282,4 +282,11 @@ public interface ZkClient extends Stoppable {
      * @return
      */
     InterProcessMutex createLock(String path);
+
+    /**
+     * get client status if is running
+     *
+     * @return
+     */
+    boolean isRunning();
 }

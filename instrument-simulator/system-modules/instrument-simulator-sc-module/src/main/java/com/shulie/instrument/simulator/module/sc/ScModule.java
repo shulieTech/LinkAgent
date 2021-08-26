@@ -20,22 +20,17 @@ import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.filter.NameRegexFilter;
 import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
-import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
-import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.module.ParamSupported;
 import com.shulie.instrument.simulator.module.util.InterfaceNameRegexFilter;
 import com.shulie.instrument.simulator.module.util.SuperNameRegexFilter;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * 反编译模块扩展，可以通过指定一个匹配规则来反编译指定的类
@@ -47,20 +42,11 @@ import java.util.regex.Pattern;
 @ModuleInfo(id = "sc", version = "1.0.0", author = "xiaobin@shulie.io", description = "查找类模块")
 public class ScModule extends ParamSupported implements ExtensionModule {
 
-    private final Logger logger = LoggerFactory.getLogger(ScModule.class);
-    private static Pattern pattern = Pattern.compile("(?m)^/\\*\\s*\\*/\\s*$" + System.getProperty("line.separator"));
-
-    @Resource
-    private ModuleEventWatcher moduleEventWatcher;
-
     @Resource
     private LoadedClassDataSource loadedClassDataSource;
 
-    @Resource
-    private SimulatorConfig simulatorConfig;
-
     @Command(value = "sc", description = "查找类")
-    public CommandResponse jad(final Map<String, String> param) {
+    public CommandResponse sc(final Map<String, String> param) {
         try {
             final String cnPattern = getParameter(param, "class");
             final String type = getParameter(param, "type");
@@ -71,7 +57,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
                     String name = clazz.getCanonicalName() + " " + clazz.getClassLoader().toString();
                     classNames.add(name);
                 }
-                return CommandResponse.success(classes);
+                return CommandResponse.success(classNames);
             } else if (StringUtils.equals("s", type)) {
                 Set<Class<?>> classes = loadedClassDataSource.find(new SuperNameRegexFilter(cnPattern, ".*", true, true));
                 List<String> classNames = new ArrayList<String>();
@@ -79,7 +65,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
                     String name = clazz.getCanonicalName() + " " + clazz.getClassLoader().toString();
                     classNames.add(name);
                 }
-                return CommandResponse.success(classes);
+                return CommandResponse.success(classNames);
             } else if (StringUtils.equals("s", type)) {
                 Set<Class<?>> classes = loadedClassDataSource.find(new InterfaceNameRegexFilter(cnPattern, ".*", true, true));
                 List<String> classNames = new ArrayList<String>();
@@ -87,7 +73,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
                     String name = clazz.getCanonicalName() + " " + clazz.getClassLoader().toString();
                     classNames.add(name);
                 }
-                return CommandResponse.success(classes);
+                return CommandResponse.success(classNames);
             }
             return CommandResponse.failure("Unsupported type value:" + type);
         } catch (Throwable e) {

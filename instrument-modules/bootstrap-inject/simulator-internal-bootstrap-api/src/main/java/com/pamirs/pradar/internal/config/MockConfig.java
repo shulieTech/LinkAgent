@@ -52,19 +52,6 @@ public class MockConfig implements Serializable {
      */
     private String codeScript;
 
-    /**
-     * 脚本类型，1:挡板 2:类
-     */
-    private int type = MOCK_SCRIPT;
-
-    public int getType() {
-        return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
-    }
-
     public String getCodeScript() {
         return codeScript;
     }
@@ -109,7 +96,6 @@ public class MockConfig implements Serializable {
         return "MockConfig{" +
                 "className='" + className + '\'' +
                 ", methodName='" + methodName + '\'' +
-                ", type='" + type + '\'' +
                 ", methodArgClasses=" + methodArgClasses +
                 ", codeScript='" + codeScript + '\'' +
                 '}';

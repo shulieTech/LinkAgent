@@ -46,8 +46,8 @@ public class ClusterTestConfigZkResolver extends AbstractZkResolver<ClusterTestC
     protected void init(AbstractConfig config) {
         this.config = config;
 
-        addAllowListSwitchListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
-        addClusterTestSwitchListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
+        addAllowListSwitchListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
+        addClusterTestSwitchListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
     }
 
     @Override

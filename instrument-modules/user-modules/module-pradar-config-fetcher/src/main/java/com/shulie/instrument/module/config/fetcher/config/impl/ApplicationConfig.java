@@ -19,12 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
-import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.resolver.ConfigResolver;
@@ -45,7 +40,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
     /**
      * war name list
      */
-    private Set<String> urlWhiteList;
+    private Set<MatchConfig> urlWhiteList;
 
     /**
      * rabbitmq queue list
@@ -60,7 +55,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
     /**
      * dubbo 白名单列表
      */
-    private Set<String> rpcNameWhiteList;
+    private Set<MatchConfig> rpcNameWhiteList;
 
     /**
      * redis 不允许访问的 key 列表
@@ -106,8 +101,8 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
 
     public ApplicationConfig(ConfigResolver<ApplicationConfig> resolver) {
         super(resolver);
-        this.urlWhiteList = new HashSet<String>();
-        this.rpcNameWhiteList = new HashSet<String>();
+        this.urlWhiteList = new HashSet<MatchConfig>();
+        this.rpcNameWhiteList = new HashSet<MatchConfig>();
         this.allowListSwitchOn = true;
         this.contextPathBlockList = new HashSet<String>();
         this.cacheKeyAllowList = new HashSet<String>();
@@ -141,8 +136,8 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                 case URL_WHITE_LIST:
                     change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
                     break;
-                case DUBBO_ALLOW_LIST:
-                    change(FIELDS.DUBBO_ALLOW_LIST, newConfig.getRpcNameWhiteList());
+                case RPC_ALLOW_LIST:
+                    change(FIELDS.RPC_ALLOW_LIST, newConfig.getRpcNameWhiteList());
                     break;
                 case CONTEXT_PATH_BLOCK_LIST:
                     change(FIELDS.CONTEXT_PATH_BLOCK_LIST, newConfig.getContextPathBlockList());
@@ -181,7 +176,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
     public void refresh(ApplicationConfig newConfig) {
         if (getWhiteList) {
             change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
-            change(FIELDS.DUBBO_ALLOW_LIST, newConfig.getRpcNameWhiteList());
+            change(FIELDS.RPC_ALLOW_LIST, newConfig.getRpcNameWhiteList());
             change(FIELDS.CONTEXT_PATH_BLOCK_LIST, newConfig.getContextPathBlockList());
             change(FIELDS.CACHE_KEY_ALLOW_LIST, newConfig.getCacheKeyAllowList());
             change(FIELDS.SEARCH_KEY_WHITE_LIST, newConfig.getSearchWhiteList());
@@ -199,11 +194,11 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         }
     }
 
-    public Set<String> getUrlWhiteList() {
+    public Set<MatchConfig> getUrlWhiteList() {
         return urlWhiteList;
     }
 
-    public void setUrlWhiteList(Set<String> urlWhiteList) {
+    public void setUrlWhiteList(Set<MatchConfig> urlWhiteList) {
         this.urlWhiteList = urlWhiteList;
     }
 
@@ -224,11 +219,11 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         this.allowListSwitchOn = allowListSwitchOn;
     }
 
-    public Set<String> getRpcNameWhiteList() {
+    public Set<MatchConfig> getRpcNameWhiteList() {
         return rpcNameWhiteList;
     }
 
-    public void setRpcNameWhiteList(Set<String> rpcNameWhiteList) {
+    public void setRpcNameWhiteList(Set<MatchConfig> rpcNameWhiteList) {
         this.rpcNameWhiteList = rpcNameWhiteList;
     }
 

@@ -341,6 +341,7 @@ public abstract class RequestTracer<REQ, RESP> {
         }
 
         InvokeContext invokeContext = Pradar.getInvokeContext();
+
         invokeContext.setClusterTest(isClusterTestRequest);
         invokeContext.setDebug(isDebug);
         final long contentLength = getContentLength(request);

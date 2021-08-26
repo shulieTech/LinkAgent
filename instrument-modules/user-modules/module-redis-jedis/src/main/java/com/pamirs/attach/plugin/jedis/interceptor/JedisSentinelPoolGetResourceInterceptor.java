@@ -14,10 +14,13 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.shadowserver.JedisSentinelFactory;
+import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +31,18 @@ import redis.clients.jedis.JedisSentinelPool;
  * @package: com.pamirs.attach.plugin.jedis.interceptor
  * @Date 2020/11/27 10:28 下午
  */
+@Destroyable(JedisDestroyed.class)
 public class JedisSentinelPoolGetResourceInterceptor extends CutoffInterceptorAdaptor {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JedisSentinelPoolGetResourceInterceptor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+        JedisSentinelPoolGetResourceInterceptor.class.getName());
 
     @Override
     public CutOffResult cutoff0(Advice advice) {
+        RedisUtils.setIsSingleMode(false);
         Object target = advice.getTarget();
         try {
-            JedisSentinelPool client = (JedisSentinelPool) JedisSentinelFactory.getFactory().getClient(target);
+            JedisSentinelPool client = (JedisSentinelPool)JedisSentinelFactory.getFactory().getClient(target);
             return CutOffResult.cutoff(client.getResource());
         } catch (PressureMeasureError e) {
             throw e;

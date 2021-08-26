@@ -15,21 +15,24 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.Collection;
 
 /**
- * @Author: Hengyu
+ * @Author: guohz
  * @ClassName: JedisPipelineBaseInterceptor
  * @Package: com.pamirs.attach.plugin.redis.interceptor
  * @Date: 2019/8/27 12:30 下午
  * @Description:
  */
+@Destroyable(JedisDestroyed.class)
 public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAdaptor {
     @Override
     public Object[] getParameter0(Advice advice) {

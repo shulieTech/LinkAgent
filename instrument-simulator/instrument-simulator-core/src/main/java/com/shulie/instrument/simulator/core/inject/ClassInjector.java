@@ -27,4 +27,8 @@ public interface ClassInjector {
      */
     void injectClass(ClassLoader targetClassLoader, String className);
 
+    /**
+     * destroy all resource
+     */
+    void destroy();
 }

@@ -49,20 +49,20 @@ public class VersionUtils {
      * @return
      */
     public static boolean isLeVersion(String version1, String version2) {
-        if (version1 == version2) {
-            return true;
-        }
         if (version1 == null) {
             return false;
         }
         if (version2 == null) {
             return true;
         }
+        if (version1.equals(version2)) {
+            return true;
+        }
         String[] arr1 = StringUtils.split(version1, '.');
         String[] arr2 = StringUtils.split(version2, '.');
         for (int i = 0, len = Math.min(arr1.length, arr2.length); i < len; i++) {
-            int v1 = Integer.valueOf(arr1[0]);
-            int v2 = Integer.valueOf(arr2[0]);
+            int v1 = Integer.parseInt(arr1[0]);
+            int v2 = Integer.parseInt(arr2[0]);
             if (v1 > v2) {
                 return false;
             }

@@ -28,10 +28,7 @@ import java.io.*;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -111,6 +108,8 @@ class DefaultFileReader implements FileReader {
         }
     });
 
+    private Future future;
+
     public DefaultFileReader(byte dataType, int version, String path, LogCallback callback) {
         this(dataType, version, path, callback, DEFAULT_MAX_FAILURE_SLEEP_INTERVAL);
     }
@@ -140,7 +139,7 @@ class DefaultFileReader implements FileReader {
          * 将启动标识置成true
          */
         isStarting = true;
-        service.schedule(new Runnable() {
+        future = service.schedule(new Runnable() {
             @Override
             public void run() {
                 if (isStarting) {
@@ -153,13 +152,13 @@ class DefaultFileReader implements FileReader {
                                 sleep = maxFailureSleepInterval;
                             }
                             //如果失败则休眠一会再进行下一次推送
-                            service.schedule(this, sleep, TimeUnit.MILLISECONDS);
+                            future = service.schedule(this, sleep, TimeUnit.MILLISECONDS);
                         } else {
                             pushFailureCount.set(0);
-                            service.schedule(this, 0, TimeUnit.SECONDS);
+                            future = service.schedule(this, 0, TimeUnit.SECONDS);
                         }
                     } catch (Throwable e) {
-                        service.schedule(this, 0, TimeUnit.SECONDS);
+                        future = service.schedule(this, 0, TimeUnit.SECONDS);
                     }
                 }
             }
@@ -430,6 +429,10 @@ class DefaultFileReader implements FileReader {
     @Override
     public void stop() {
         isStarting = false;
+        if (future != null && !future.isCancelled() && !future.isDone()) {
+            future.cancel(true);
+        }
+        service.shutdownNow();
         try {
             this.fileFetcher.close();
         } catch (IOException e) {
@@ -439,7 +442,7 @@ class DefaultFileReader implements FileReader {
     }
 
     @Override
-    public boolean isStoped() {
+    public boolean isStopped() {
         return !isStarting;
     }
 

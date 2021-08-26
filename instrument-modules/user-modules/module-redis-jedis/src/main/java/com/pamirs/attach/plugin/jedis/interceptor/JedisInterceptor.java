@@ -15,20 +15,21 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.jedis.RedisConstants;
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import redis.clients.jedis.BinaryJedis;
 import redis.clients.jedis.Client;
-
-import java.lang.reflect.Method;
 
 /**
  * @author vincent
  * @version v0.1 2016/12/29 11:10
  */
+@Destroyable(JedisDestroyed.class)
 public class JedisInterceptor extends TraceInterceptorAdaptor {
 
     @Override
@@ -96,6 +97,4 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
         record.setMiddlewareName(RedisConstants.MIDDLEWARE_NAME);
         return record;
     }
-
-
 }

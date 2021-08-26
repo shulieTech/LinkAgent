@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.mock;
 
 import com.pamirs.attach.plugin.mock.interceptor.MockAdviceListener;
-import com.pamirs.attach.plugin.mock.utils.GroovyUtils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.internal.config.MockConfig;
@@ -117,7 +116,7 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
             LOGGER.warn("挡板增强失败", e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
-                    .setErrorCode("link-guard-enhance-0001")
+                    .setErrorCode("mock-enhance-0001")
                     .setMessage("挡板增强失败！")
                     .setDetail("挡板增强失败:" + e.getMessage())
                     .closePradar(ConfigNames.LINK_GUARD_CONFIG)
@@ -152,7 +151,7 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 if (mockConfig.getMethodArgClasses() != null && !mockConfig.getMethodArgClasses().isEmpty()) {
                     buildingForBehavior.withParameterTypes(mockConfig.getMethodArgClasses().toArray(new String[mockConfig.getMethodArgClasses().size()]));
                 }
-                buildingForBehavior.onListener(Listeners.of(MockAdviceListener.class, mockConfig.getType(), mockConfig.getCodeScript()));
+                buildingForBehavior.onListener(Listeners.of(MockAdviceListener.class, new Object[]{mockConfig.getCodeScript()}));
                 watchers.put(mockConfig.getKey(), buildingForClass.onWatch());
             }
         }
@@ -160,12 +159,17 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     }
 
     @Override
-    public void onUnload() throws Throwable {
-        GroovyUtils.clearCache();
-        for (Map.Entry<String, EventWatcher> entry : this.watchers.entrySet()) {
-            entry.getValue().onUnWatched();
+    public void onFrozen() throws Throwable {
+        if (this.watchers != null) {
+            for (Map.Entry<String, EventWatcher> entry : this.watchers.entrySet()) {
+                entry.getValue().onUnWatched();
+            }
+            this.watchers.clear();
         }
-        this.watchers.clear();
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
         this.watchers = null;
     }
 }

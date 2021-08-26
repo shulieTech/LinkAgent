@@ -22,8 +22,8 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowJobRegisterEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import org.apache.commons.lang.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,14 +39,21 @@ import java.util.Set;
 public class ShadowJobConfig implements IChange<Set<ShadowJob>, ApplicationConfig> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ShadowJobConfig.class.getName());
 
-    private static final ShadowJobConfig INSTANCE = new ShadowJobConfig();
-
-    private ShadowJobConfig() {
-
-    }
+    private static ShadowJobConfig INSTANCE;
 
     public static ShadowJobConfig getInstance() {
+        if (INSTANCE == null) {
+            synchronized (ShadowJobConfig.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new ShadowJobConfig();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -100,7 +107,7 @@ public class ShadowJobConfig implements IChange<Set<ShadowJob>, ApplicationConfi
                 LOGGER.info("need add job：" + newJob.toString());
             }
         }
-
+        LOGGER.info("publish shadow job config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 

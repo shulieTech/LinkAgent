@@ -43,7 +43,7 @@ public interface FileReader {
      *
      * @return 是否停止
      */
-    boolean isStoped();
+    boolean isStopped();
 
     /**
      * 获取位点

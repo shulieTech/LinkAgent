@@ -90,12 +90,14 @@ public class ServletRequestTracer extends RequestTracer<HttpServletRequest, Http
             }
         } else {
             Enumeration parameterNames = request.getParameterNames();
-            while (parameterNames.hasMoreElements()) {
-                Object key = parameterNames.nextElement();
-                String value = request.getParameter(String.valueOf(key));
-                stringBuilder.append(key);
-                stringBuilder.append(":");
-                stringBuilder.append(value);
+            if (parameterNames != null) {
+                while (parameterNames.hasMoreElements()) {
+                    Object key = parameterNames.nextElement();
+                    String value = request.getParameter(String.valueOf(key));
+                    stringBuilder.append(key);
+                    stringBuilder.append(":");
+                    stringBuilder.append(value);
+                }
             }
         }
         // POST 方法将body留下来

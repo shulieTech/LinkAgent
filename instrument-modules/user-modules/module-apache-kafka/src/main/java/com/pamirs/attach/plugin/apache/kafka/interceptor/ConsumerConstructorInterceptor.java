@@ -15,7 +15,9 @@
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.commons.lang.ArrayUtils;
@@ -31,6 +33,7 @@ import java.util.List;
  * @author <a href="tangyuhan@shulie.io">yuhan.tang</a>
  * @since 2019-08-05 19:32
  */
+@Destroyable(KafkaDestroy.class)
 public class ConsumerConstructorInterceptor extends AroundInterceptor {
     @Resource
     protected DynamicFieldManager manager;

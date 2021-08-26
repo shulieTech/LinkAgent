@@ -32,6 +32,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,32 +46,47 @@ import java.util.concurrent.TimeUnit;
  */
 public class MonitorCollector {
 
+    public static final String CPU_USAGE_KEY = "cpuUsage";
+    public static final String IO_WAIT_KEY = "ioWait";
     private final static Logger logger = LoggerFactory.getLogger(MonitorCollector.class.getName());
-
     private static final ThreadLocal<DecimalFormat> decimalFormatThreadLocal = new ThreadLocal<DecimalFormat>() {
         @Override
         protected DecimalFormat initialValue() {
             return new DecimalFormat("0.00");
         }
     };
-
-    public static SystemInfo si = new SystemInfo();
-
-
-    public static final String CPU_USAGE_KEY = "cpuUsage";
-    public static final String IO_WAIT_KEY = "ioWait";
     private static final String NETWORK_USAGE_KEY = "networkUsage";
     private static final String NETWORK_SPEED_KEY = "networkSpeed";
+    private static long lastErrorTime;
+    private static MonitorCollector INSTANCE;
+    public SystemInfo si;
+    private int printLogCount = 2;
+    private ScheduledFuture future;
 
-    private static int printLogCount = 2;
+    private MonitorCollector() {
+        si = new SystemInfo();
+    }
 
-    private static ScheduledFuture future;
+    public static MonitorCollector getInstance() {
+        if (INSTANCE == null) {
+            synchronized (MonitorCollector.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new MonitorCollector();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+
+    public HardwareAbstractionLayer getHardware() {
+        return si.getHardware();
+    }
 
     /**
      * 初始化 monitor 数据收集任务
      */
-    public static void initMonitorCollectorTask() {
-        future = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+    public void start() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 if (!PradarSwitcher.isMonitorEnabled()) {
@@ -78,13 +94,11 @@ public class MonitorCollector {
                 }
                 try {
                     long timeStamp = System.currentTimeMillis() / 1000;
-                    String ip = PradarCoreUtils.getLocalAddress();
                     String appName = AppNameUtils.appName();
-
                     StringBuilder stringBuilder = new StringBuilder();
                     HardwareAbstractionLayer hal = si.getHardware();
                     CentralProcessor processor = si.getHardware().getProcessor();
-                    Map<String, String> cpuInfoResult = MonitorCollector.getCpuUsageAndIoWait(processor);
+                    Map<String, String> cpuInfoResult = getCpuUsageAndIoWait(processor);
                     String[] cpuLoad = getCpuLoad(processor);
                     String memoryUsage = getMemoryUsage(hal.getMemory());
                     int cpuNum = getCpus(processor);
@@ -122,10 +136,10 @@ public class MonitorCollector {
 
     }
 
-    public static long[] getFileSystem() {
+    public long[] getFileSystem() {
         try {
             FileSystem fileSystem = si.getOperatingSystem().getFileSystem();
-            OSFileStore[] fileStores = fileSystem.getFileStores();
+            List<OSFileStore> fileStores = Arrays.asList(fileSystem.getFileStores());
             long totalSpace = 0L;
             long useSpace = 0L;
             for (OSFileStore store : fileStores) {
@@ -134,7 +148,10 @@ public class MonitorCollector {
             }
             return new long[]{totalSpace, useSpace};
         } catch (Throwable e) {
-            logger.warn("getFileSystem error! ");
+            if (System.currentTimeMillis() - lastErrorTime > 600000) {
+                logger.warn("getFileSystem error! ", e);
+                lastErrorTime = System.currentTimeMillis();
+            }
             return null;
         }
 
@@ -145,9 +162,9 @@ public class MonitorCollector {
      *
      * @return
      */
-    public static long[] getDisk(HardwareAbstractionLayer hal) {
+    public long[] getDisk(HardwareAbstractionLayer hal) {
         try {
-            HWDiskStore[] diskStores = hal.getDiskStores();
+            List<HWDiskStore> diskStores = Arrays.asList(hal.getDiskStores());
             long readBytes = 0L;
             long writeBytes = 0L;
             for (HWDiskStore hwDiskStore : diskStores) {
@@ -165,15 +182,15 @@ public class MonitorCollector {
     /**
      * cpu 核数量
      */
-    public static int getCpus(CentralProcessor processor) {
+    public int getCpus(CentralProcessor processor) {
         return processor.getPhysicalProcessorCount();
     }
 
     /**
      * 网络带宽以及带宽使用率
      */
-    private static Map<String, Object> getNetwork(HardwareAbstractionLayer hal, String serverIp) {
-        NetworkIF[] networkIFsBefore = hal.getNetworkIFs();
+    private Map<String, Object> getNetwork(HardwareAbstractionLayer hal, String serverIp) {
+        List<NetworkIF> networkIFsBefore = Arrays.asList(hal.getNetworkIFs());
         long beforeBytesRecv = 0;
         long beforeBytesSend = 0;
         String name = null;
@@ -194,7 +211,7 @@ public class MonitorCollector {
             }
         }
         Util.sleep(450);
-        NetworkIF[] networkIFsAfter = hal.getNetworkIFs();
+        List<NetworkIF> networkIFsAfter = Arrays.asList(hal.getNetworkIFs());
         long afterBytesRecv = 0;
         long afterBytesSend = 0;
         for (NetworkIF networkIF : networkIFsAfter) {
@@ -226,7 +243,7 @@ public class MonitorCollector {
      * @param memory
      * @return
      */
-    public static String getMemoryUsage(GlobalMemory memory) {
+    public String getMemoryUsage(GlobalMemory memory) {
         return decimalFormatThreadLocal.get().format((memory.getTotal() - memory.getAvailable()) * 100d / memory.getTotal());
     }
 
@@ -237,7 +254,7 @@ public class MonitorCollector {
      * @param memory
      * @return
      */
-    private static long getMemory(GlobalMemory memory) {
+    private long getMemory(GlobalMemory memory) {
         return memory.getTotal();
     }
 
@@ -247,7 +264,7 @@ public class MonitorCollector {
      *
      * @return
      */
-    public static String[] getCpuLoad(CentralProcessor processor) {
+    public String[] getCpuLoad(CentralProcessor processor) {
         double[] loadAverage = processor.getSystemLoadAverage(3);
         return new String[]{decimalFormatThreadLocal.get().format(loadAverage[0]), decimalFormatThreadLocal.get().format(loadAverage[1]), decimalFormatThreadLocal.get().format(loadAverage[2])};
     }
@@ -258,7 +275,7 @@ public class MonitorCollector {
      *
      * @return
      */
-    public static Map<String, String> getCpuUsageAndIoWait(CentralProcessor processor) {
+    public Map<String, String> getCpuUsageAndIoWait(CentralProcessor processor) {
         long[] prevTicks = processor.getSystemCpuLoadTicks();
         Util.sleep(450);
         long[] ticks = processor.getSystemCpuLoadTicks();
@@ -290,7 +307,7 @@ public class MonitorCollector {
     }
 
 
-    public static long getSpeed(String name) {
+    public long getSpeed(String name) {
         Process pro1 = null;
         Runtime r = Runtime.getRuntime();
         String line = null;
@@ -339,7 +356,7 @@ public class MonitorCollector {
         return 0;
     }
 
-    public static void shutdown() {
+    public void stop() {
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
         }

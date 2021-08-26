@@ -27,6 +27,9 @@ public final class HttpClientConstants {
 
     public static final String HTTP_CLIENT_NAME_3X = "httpclient3";
     public static final String HTTP_CLIENT_NAME_4X = "httpclient4";
+    public static final String HTTP_CLIENT_NAME_5X = "httpclient5";
 
     public static final String DYNAMIC_FIELD_PARAMETERS = "parameters";
+
+    public static Class clazz = null;
 }

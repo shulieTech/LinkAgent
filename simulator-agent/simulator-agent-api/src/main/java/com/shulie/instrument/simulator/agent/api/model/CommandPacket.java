@@ -32,9 +32,9 @@ public class CommandPacket {
     public final static int OPERATE_TYPE_UPGRADE = 3;
 
     /**
-     * 默认命令包，即安装命令包
+     * 无任何操作的命令包
      */
-    public final static CommandPacket DEFAULT_PACKET = defaultCommandPacket();
+    public final static CommandPacket NO_ACTION_PACKET = noActionCommandPacket();
     /**
      * 命令 ID
      */
@@ -49,6 +49,11 @@ public class CommandPacket {
      * 操作类型 1: 安装 2:卸载 3:升级
      */
     private int operateType;
+
+    /**
+     * 是否使用本地模式
+     */
+    private boolean useLocal;
 
     /**
      * 数据包地址，支持 http/https/文件
@@ -69,6 +74,14 @@ public class CommandPacket {
      * 附加数据
      */
     private Map<String, String> extras = Collections.EMPTY_MAP;
+
+    public boolean isUseLocal() {
+        return useLocal;
+    }
+
+    public void setUseLocal(boolean useLocal) {
+        this.useLocal = useLocal;
+    }
 
     public int getLiveTime() {
         return liveTime;
@@ -122,11 +135,15 @@ public class CommandPacket {
         return extras;
     }
 
+    public String getExtra(String key) {
+        return extras != null ? extras.get(key) : null;
+    }
+
     public void setExtras(Map<String, String> extras) {
         this.extras = extras;
     }
 
-    public static CommandPacket defaultCommandPacket() {
+    public static CommandPacket noActionCommandPacket() {
         CommandPacket commandPacket = new CommandPacket();
         commandPacket.setId(-1);
         commandPacket.setCommandType(COMMAND_TYPE_FRAMEWORK);

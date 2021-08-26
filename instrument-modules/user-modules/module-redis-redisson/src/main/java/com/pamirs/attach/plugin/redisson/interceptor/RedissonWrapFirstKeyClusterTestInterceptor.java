@@ -14,8 +14,10 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -24,6 +26,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
  * @mail xiaobin@shulie.io
  * @Date 2020/9/8 4:05 下午
  */
+@Destroyable(RedissonDestroy.class)
 public class RedissonWrapFirstKeyClusterTestInterceptor extends ClusterTestArgsWrapperInterceptor {
     @Override
     protected Object[] getParameter0(Advice advice) {

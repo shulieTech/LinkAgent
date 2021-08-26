@@ -39,12 +39,12 @@ public final class GlobalConfig {
     /**
      * war name list
      */
-    private Set<String> urlWhiteList = new HashSet<String>();
+    private Set<MatchConfig> urlWhiteList = new HashSet<MatchConfig>();
 
     /**
      * rpc name list，包含 dubbo、grpc 等
      */
-    private Set<String> rpcNameWhiteList = new HashSet<String>();
+    private Set<MatchConfig> rpcNameWhiteList = new HashSet<MatchConfig>();
 
 
     /**
@@ -121,6 +121,30 @@ public final class GlobalConfig {
             }
         }
         return INSTANCE;
+    }
+
+    public void release() {
+        wrongSqlDetail.clear();
+        urlWhiteList.clear();
+        rpcNameWhiteList.clear();
+        contextPathBlockList.clear();
+        searchWhiteList.clear();
+        cacheKeyWhiteList.clear();
+        mqWhiteList.clear();
+        traceRules.clear();
+        shadowDatabaseConfigs.clear();
+        shadowRedisConfigs.clear();
+        shadowEsServerConfigs.clear();
+        shadowHbaseServerConfigs.clear();
+        applicationAccessStatus.clear();
+        jobAdapterMap.clear();
+        registerdJobs.clear();
+        needRegisterJobs.clear();
+        needStopJobs.clear();
+        errorRegister.clear();
+        mockConfigs.clear();
+        shadowTable.clear();
+        apis.clear();
     }
 
     public Set<String> getApis() {
@@ -318,21 +342,21 @@ public final class GlobalConfig {
         this.contextPathBlockList = contextPathBlockList;
     }
 
-    public Set<String> getUrlWhiteList() {
+    public Set<MatchConfig> getUrlWhiteList() {
         return urlWhiteList;
     }
 
 
-    public void setUrlWhiteList(Set<String> urlWhiteList) {
+    public void setUrlWhiteList(Set<MatchConfig> urlWhiteList) {
         this.urlWhiteList = urlWhiteList;
     }
 
 
-    public Set<String> getRpcNameWhiteList() {
+    public Set<MatchConfig> getRpcNameWhiteList() {
         return rpcNameWhiteList;
     }
 
-    public void setRpcNameWhiteList(Set<String> rpcNameWhiteList) {
+    public void setRpcNameWhiteList(Set<MatchConfig> rpcNameWhiteList) {
         this.rpcNameWhiteList = rpcNameWhiteList;
     }
 
@@ -349,7 +373,7 @@ public final class GlobalConfig {
     }
 
     public void setShadowEsServerConfigs(
-        Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
+            Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
         this.shadowEsServerConfigs = shadowEsServerConfigs;
     }
 

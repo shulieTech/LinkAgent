@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -47,9 +48,8 @@ public class TcpDataPusher implements DataPusher {
      * 重启回调
      */
     private RemotingClient client;
-    private ProtocolFactorySelector selector;
     private ServerAddrProvider provider;
-    private String addr;
+    private ConnectInfo currentConnectInfo;
 
     public TcpDataPusher() {
     }
@@ -75,11 +75,10 @@ public class TcpDataPusher implements DataPusher {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("client start to use log server addr:{} port:{}", connectInfo.getServerAddr(), connectInfo.getPort());
         }
-        this.addr = connectInfo.getServerAddr() + ':' + connectInfo.getPort();
+        currentConnectInfo=connectInfo;
         NettyClientConfigurator config = new NettyClientConfigurator();
         ProtocolFactorySelector protocolFactorySelector = new DefaultProtocolFactorySelector();
         client = new NettyRemotingClient(protocolFactorySelector, config);
-        this.selector = new DefaultProtocolFactorySelector();
         return true;
     }
 
@@ -107,21 +106,22 @@ public class TcpDataPusher implements DataPusher {
                     requestCommand.setEncodeType(EncoderType.of(Pradar.DEFAULT_CHARSET.name()).getEncoderType());
                     requestCommand.setLength((int) length);
                     requestCommand.setFile(new DefaultFileRegion(fc, position, length));
-                    RemotingCommand responseCommand = client.invokeSync(addr, requestCommand, serverOptions.getTimeout());
+                    RemotingCommand responseCommand = client.invokeSync(currentConnectInfo.getAddr(), requestCommand, serverOptions.getTimeout());
                     if (responseCommand.getCode() == CommandCode.SUCCESS) {
                         return true;
                     } else if (responseCommand.getCode() == CommandCode.SYSTEM_ERROR) {
                         return false;
                     } else if (responseCommand.getCode() == CommandCode.SYSTEM_BUSY) {
+                        provider.errorConnectInfo(currentConnectInfo);
                         if (LOGGER.isInfoEnabled()) {
-                            LOGGER.info("log server is busy {}. attempt to choose another log server.", addr);
+                            LOGGER.info("log server is busy {}. attempt to choose another log server.", currentConnectInfo.getAddr());
                         }
-                        ConnectInfo connectInfo = provider.selectConnectInfo();
-                        if (connectInfo != null) {
-                            addr = connectInfo.getServerAddr() + ':' + connectInfo.getPort();
+                        ConnectInfo c = provider.selectConnectInfo();
+                        if (c != null) {
+                            currentConnectInfo = c;
                         }
                         if (LOGGER.isInfoEnabled()) {
-                            LOGGER.info("log server changed to connect host {}.", addr);
+                            LOGGER.info("log server changed to connect host {}.", currentConnectInfo.getAddr());
                         }
                         return false;
                     } else if (responseCommand.getCode() == CommandCode.COMMAND_CODE_NOT_SUPPORTED) {
@@ -131,38 +131,41 @@ public class TcpDataPusher implements DataPusher {
                     return false;
                 } catch (RemotingConnectException e) {
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("client send request to log server {} ,can't connect to server. attempt to choose another log server.", addr, e);
+                        LOGGER.info("client send request to log server {} ,can't connect to server. attempt to choose another log server.", currentConnectInfo.getAddr(), e);
                     }
+                    provider.errorConnectInfo(currentConnectInfo);
                     ConnectInfo connectInfo = provider.selectConnectInfo();
                     if (connectInfo != null) {
-                        addr = connectInfo.getServerAddr() + ':' + connectInfo.getPort();
+                        currentConnectInfo = connectInfo;
                     }
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("log server changed to connect host {}.", addr);
+                        LOGGER.info("log server changed to connect host {}.", currentConnectInfo.getAddr());
                     }
                     return false;
                 } catch (RemotingSendRequestException e) {
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("client send request to log server {} occur RemotingSendRequestException. attempt to choose another log server.", addr, e);
+                        LOGGER.info("client send request to log server {} occur RemotingSendRequestException. attempt to choose another log server.", currentConnectInfo.getAddr(), e);
                     }
+                    provider.errorConnectInfo(currentConnectInfo);
                     ConnectInfo connectInfo = provider.selectConnectInfo();
                     if (connectInfo != null) {
-                        addr = connectInfo.getServerAddr() + ':' + connectInfo.getPort();
+                        currentConnectInfo = connectInfo;
                     }
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("log server changed to connect host {}.", addr);
+                        LOGGER.info("log server changed to connect host {}.", currentConnectInfo.getAddr());
                     }
                     return false;
                 } catch (RemotingTimeoutException e) {
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("client send request to log server {} timeout. attempt to choose another log server.", addr, e);
+                        LOGGER.info("client send request to log server {} timeout. attempt to choose another log server.", currentConnectInfo.getAddr(), e);
                     }
+                    provider.errorConnectInfo(currentConnectInfo);
                     ConnectInfo connectInfo = provider.selectConnectInfo();
                     if (connectInfo != null) {
-                        addr = connectInfo.getServerAddr() + ':' + connectInfo.getPort();
+                        currentConnectInfo = connectInfo;
                     }
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("log server changed to connect host {}.", addr);
+                        LOGGER.info("log server changed to connect host {}.", currentConnectInfo.getAddr());
                     }
                     return false;
                 } finally {
@@ -182,7 +185,7 @@ public class TcpDataPusher implements DataPusher {
         try {
             client.start();
         } catch (Throwable e) {
-            LOGGER.error("start log server push client err! host:{} ", addr, e);
+            LOGGER.error("start log server push client err! host:{} ", currentConnectInfo.getAddr(), e);
             return false;
         }
         return true;
@@ -194,9 +197,10 @@ public class TcpDataPusher implements DataPusher {
             return;
         }
         try {
-            this.client.shutdown();
+            this.client.shutdownSync();
         } catch (Throwable e) {
-            LOGGER.error("close client err! host:{} ", addr, e);
+            LOGGER.error("close client err! host:{} ", currentConnectInfo.getAddr(), e);
         }
     }
+
 }

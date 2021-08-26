@@ -159,7 +159,7 @@ abstract class AbstractContext extends BaseContext {
             return false;
         }
 
-        if (Pradar.isDebug()) {
+        if (Pradar.isClusterTest() || Pradar.isDebug()) {
             return true;
         }
 

@@ -22,6 +22,8 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
 import static java.util.regex.Pattern.quote;
 
 /**
@@ -40,7 +42,7 @@ public class EventWatchBuilder {
 
 
     private final ModuleEventWatcher moduleEventWatcher;
-    private final PatternType patternType;
+    private final int patternType;
     private List<ClassMatchBuilder> bfClasses = new ArrayList<ClassMatchBuilder>();
 
     /**
@@ -49,7 +51,7 @@ public class EventWatchBuilder {
      * @param moduleEventWatcher 模块事件观察者
      */
     public EventWatchBuilder(final ModuleEventWatcher moduleEventWatcher) {
-        this(moduleEventWatcher, PatternType.WILDCARD);
+        this(moduleEventWatcher, WILDCARD);
     }
 
     /**
@@ -59,7 +61,7 @@ public class EventWatchBuilder {
      * @param patternType        模版匹配模式
      */
     public EventWatchBuilder(final ModuleEventWatcher moduleEventWatcher,
-                             final PatternType patternType) {
+                             final int patternType) {
         this.moduleEventWatcher = moduleEventWatcher;
         this.patternType = patternType;
     }

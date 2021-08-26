@@ -14,11 +14,13 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
+import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -26,6 +28,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
  * @Date: 2020/8/13 11:40
  * @Description:
  */
+@Destroyable(ElasticSearchDestroy.class)
 public class ElasticSearchExecuteInterceptor extends ParametersWrapperInterceptorAdaptor {
     @Override
     public Object[] getParameter0(Advice advice) {

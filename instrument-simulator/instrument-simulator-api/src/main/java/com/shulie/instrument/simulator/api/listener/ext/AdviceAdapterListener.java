@@ -20,19 +20,24 @@ import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.api.listener.Interruptable;
 import com.shulie.instrument.simulator.api.util.*;
 
+import static com.shulie.instrument.simulator.api.event.EventType.*;
+
 /**
  * 通知监听器
  *
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public class AdviceAdapterListener implements EventListener, Interruptable {
+public class AdviceAdapterListener extends EventListener implements Interruptable {
 
     private final AdviceListener adviceListener;
     private final boolean isInterruptable;
 
     public AdviceAdapterListener(final AdviceListener adviceListener) {
         this.adviceListener = adviceListener;
+        if (adviceListener.getBizClassLoader() != null) {
+            setBizClassLoader(adviceListener.getBizClassLoader());
+        }
         this.isInterruptable = isInterruptEventHandler(adviceListener);
     }
 

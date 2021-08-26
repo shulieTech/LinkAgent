@@ -20,14 +20,15 @@ import com.shulie.instrument.simulator.agent.spi.command.Command;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/18 2:55 下午
  */
-public class ReloadModuleCommand implements Command {
-    private final String moduleId;
+public class ReloadModuleCommand<T> implements Command<T> {
+    private final T packet;
 
-    public ReloadModuleCommand(final String moduleId) {
-        this.moduleId = moduleId;
+    public ReloadModuleCommand(T packet) {
+        this.packet = packet;
     }
 
-    public String getModuleId() {
-        return moduleId;
+    @Override
+    public T getPacket() {
+        return packet;
     }
 }

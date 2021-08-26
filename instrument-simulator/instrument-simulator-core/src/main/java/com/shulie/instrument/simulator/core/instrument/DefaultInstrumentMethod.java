@@ -44,7 +44,7 @@ public class DefaultInstrumentMethod implements InstrumentMethod {
     }
 
     @Override
-    public void addInterceptor(Listeners listeners, EventType... types) {
+    public void addInterceptor(Listeners listeners, int... types) {
         this.buildingForBehavior.onListener(listeners, types);
     }
 

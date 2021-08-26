@@ -96,6 +96,11 @@ public class SpanRecord implements Serializable {
     private Boolean clusterTest;
 
     /**
+     * 是否是压测请求
+     */
+    private boolean passedCheck = false;
+
+    /**
      * 上下文注入器
      */
     private ContextInject contextInject;
@@ -232,5 +237,13 @@ public class SpanRecord implements Serializable {
 
     public void setContextInject(ContextInject contextInject) {
         this.contextInject = contextInject;
+    }
+
+    public boolean isPassedCheck() {
+        return passedCheck;
+    }
+
+    public void setPassedCheck(boolean passedCheck) {
+        this.passedCheck = passedCheck;
     }
 }

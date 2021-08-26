@@ -18,8 +18,10 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import org.apache.commons.lang.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
@@ -28,14 +30,22 @@ import java.util.Set;
  * @since : 2020/9/8 17:38
  */
 public class ContextPathBlockList implements IChange<Set<String>, ApplicationConfig> {
-
-    private static final ContextPathBlockList INSTANCE = new ContextPathBlockList();
-
-    private ContextPathBlockList() {
-    }
+    private final static Logger LOGGER = LoggerFactory.getLogger(ContextPathBlockList.class);
+    private static ContextPathBlockList INSTANCE;
 
     public static ContextPathBlockList getInstance() {
+        if (INSTANCE == null) {
+            synchronized (ContextPathBlockList.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new ContextPathBlockList();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -48,6 +58,7 @@ public class ContextPathBlockList implements IChange<Set<String>, ApplicationCon
         applicationConfig.setContextPathBlockList(newValue);
         GlobalConfig.getInstance().setContextPathBlockList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.CONTEXT_PATH_BLOCK_LIST);
+        LOGGER.info("publish context path block list config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 }

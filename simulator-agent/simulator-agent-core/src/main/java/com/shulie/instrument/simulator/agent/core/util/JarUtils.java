@@ -319,7 +319,7 @@ public final class JarUtils {
                 out.write(buf, 0, size);
                 int newPercent = (int) Math.round((len*1.0 / fileLength) * 100);
                 if (percent < newPercent) {
-                    logger.info("Downloading file {} -------> {}%\n", fileName, newPercent);
+                    logger.info("Downloading file {} -------> {}%", fileName, newPercent);
                     percent = newPercent;
                 }
             }

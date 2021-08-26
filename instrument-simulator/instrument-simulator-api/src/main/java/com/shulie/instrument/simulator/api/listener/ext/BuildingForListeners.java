@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.api.listener.ext;
 
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 
 import java.util.Arrays;
@@ -26,13 +25,11 @@ import java.util.Arrays;
  * @since 2020/10/24 1:29 下午
  */
 public class BuildingForListeners {
-    public final static BuildingForListeners NO_ACTION = new BuildingForListeners(null);
-
     private final Listeners listeners;
-    private final EventType[] eventTypes;
+    private final int[] eventTypes;
 
 
-    public BuildingForListeners(final Listeners listeners, final EventType... eventTypes) {
+    public BuildingForListeners(final Listeners listeners, final int... eventTypes) {
         this.listeners = listeners;
         this.eventTypes = eventTypes;
     }
@@ -41,7 +38,7 @@ public class BuildingForListeners {
         return listeners;
     }
 
-    public EventType[] getEventTypes() {
+    public int[] getEventTypes() {
         return eventTypes;
     }
 

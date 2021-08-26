@@ -20,6 +20,8 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowHbaseDynamicEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -28,13 +30,23 @@ import java.util.Map;
  * @package: com.shulie.instrument.module.config.fetcher.config.event.model
  * @Date 2021/4/28 10:42 上午
  */
-public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig>, ApplicationConfig>{
-
-    private static ShadowHbaseConfigs INSTANCE = new ShadowHbaseConfigs();
-
+public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig>, ApplicationConfig> {
+    private final static Logger LOGGER = LoggerFactory.getLogger(ShadowHbaseConfigs.class);
+    private static ShadowHbaseConfigs INSTANCE;
 
     public static ShadowHbaseConfigs getInstance() {
+        if (INSTANCE == null) {
+            synchronized (ShadowHbaseConfigs.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new ShadowHbaseConfigs();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -78,6 +90,7 @@ public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig
         }
         GlobalConfig.getInstance().getShadowHbaseServerConfigs().clear();
         GlobalConfig.getInstance().setShadowHbaseServerConfigs(newValue);
+        LOGGER.info("publish shadow hbase config successful. config={}", newValue);
         return change;
     }
 }

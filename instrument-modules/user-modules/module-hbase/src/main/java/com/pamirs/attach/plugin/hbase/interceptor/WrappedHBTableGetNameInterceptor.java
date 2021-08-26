@@ -14,9 +14,11 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.hadoop.hbase.TableName;
 
@@ -24,6 +26,7 @@ import org.apache.hadoop.hbase.TableName;
  * @author angju
  * @date 2021/1/20 14:06
  */
+@Destroyable(HbaseDestroyed.class)
 public class WrappedHBTableGetNameInterceptor extends ResultInterceptorAdaptor {
 
     @Override

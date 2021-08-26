@@ -15,9 +15,11 @@
 package com.pamirs.attach.plugin.redisson.interceptor;
 
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ModificationInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.redisson.Redisson;
@@ -38,6 +40,7 @@ import java.util.Iterator;
  * @mail xiaobin@shulie.io
  * @Date 2020/9/8 11:03 上午
  */
+@Destroyable(RedissonDestroy.class)
 public class RedissonMethodInterceptor extends ModificationInterceptorAdaptor {
     @Resource
     protected DynamicFieldManager manager;

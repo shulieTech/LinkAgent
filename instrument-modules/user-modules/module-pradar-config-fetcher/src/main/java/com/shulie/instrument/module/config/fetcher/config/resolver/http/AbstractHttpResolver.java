@@ -79,7 +79,7 @@ public abstract class AbstractHttpResolver<T extends AbstractConfig<T>> implemen
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
         }
-        service.shutdown();
+        service.shutdownNow();
     }
 
     private Runnable getRunnableTask(final T refreshConfig) {

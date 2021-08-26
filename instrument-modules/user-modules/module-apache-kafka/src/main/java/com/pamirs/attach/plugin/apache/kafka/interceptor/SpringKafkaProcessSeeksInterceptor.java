@@ -15,8 +15,10 @@
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -27,12 +29,16 @@ import org.apache.kafka.clients.consumer.Consumer;
  * @date 2021/6/7 11:52
  * spring-kafka低版本的方法
  */
+@Destroyable(KafkaDestroy.class)
 public class SpringKafkaProcessSeeksInterceptor extends AroundInterceptor {
     @Override
     public void doBefore(Advice advice) throws Throwable {
         try {
             Object consumer = Reflect.on(advice.getTarget()).get(KafkaConstants.REFLECT_FIELD_CONSUMER);
-            if(consumer instanceof Consumer){
+            if (consumer instanceof Consumer) {
+                if (consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {
+                    consumer = Reflect.on(consumer).get("delegate");
+                }
                 ConsumerHolder.addWorkWithSpring((Consumer<?, ?>)consumer);
             }
         } catch (ReflectException ignore) {

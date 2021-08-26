@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.api.listener.ext;
 
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 
 /**
@@ -28,7 +27,7 @@ public interface IWatchingMatchBuilder {
     /**
      * 添加渲染进度监听器，可以添加多个
      * <p>
-     * 用于观察{@link #onWatching(Listeners)}和{@link #onWatching(Listeners, EventType...)}的渲染进度
+     * 用于观察{@link #onWatching(Listeners)}和{@link #onWatching(Listeners, int...)}的渲染进度
      * </p>
      *
      * @param progress 渲染进度监听器
@@ -79,6 +78,6 @@ public interface IWatchingMatchBuilder {
      * @param eventEventTypeArray 需要监听的事件
      * @return EventWatcher
      */
-    void onWatching(Listeners listeners, EventType... eventEventTypeArray) throws Throwable;
+    void onWatching(Listeners listeners, int... eventEventTypeArray) throws Throwable;
 
 }

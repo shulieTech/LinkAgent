@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "monitor", version = "1.0.0", author = "xiaobin@shulie.io", description = "监视器模块")
 public class MonitorModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(MonitorModule.class);
+    private final Logger logger = LoggerFactory.getLogger(MonitorModule.class);
     @Resource
     private ModuleEventWatcher moduleEventWatcher;
 
@@ -81,7 +81,7 @@ public class MonitorModule extends ParamSupported implements ExtensionModule {
                     .onClass(classPattern).includeSubClasses()
                     .onBehavior(methodPattern)
                     .withInvoke().withCall()
-                    .onListener(Listeners.of(MonitorListener.class, latch, traceViews, wait != -1 ? -1 : limits))
+                    .onListener(Listeners.of(MonitorListener.class, new Object[]{latch, traceViews, wait != -1 ? -1 : limits}))
                     .onClass().onWatch();
 
             if (wait > 0) {

@@ -14,9 +14,9 @@
  */
 package com.shulie.instrument.module.register.zk.impl;
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.CuratorFrameworkFactory;
-import com.netflix.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import com.pamirs.pradar.exception.PradarException;
 import com.shulie.instrument.module.register.zk.ZkClient;
 import org.apache.commons.lang.StringUtils;
@@ -24,15 +24,11 @@ import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadFactory;
 
 public class NetflixCuratorZkClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(NetflixCuratorZkClientFactory.class);
-
-    private static ConcurrentMap<String, ZkClient> cache = new ConcurrentHashMap<String, ZkClient>();
 
     private static NetflixCuratorZkClientFactory INSTANCE;
 
@@ -47,6 +43,10 @@ public class NetflixCuratorZkClientFactory {
         return INSTANCE;
     }
 
+    public static void release() {
+        INSTANCE = null;
+    }
+
     private NetflixCuratorZkClientFactory() {
     }
 
@@ -54,46 +54,34 @@ public class NetflixCuratorZkClientFactory {
         if (StringUtils.isBlank(spec.getZkServers())) {
             throw new PradarException("zookeeper servers is empty.");
         }
-        ZkClient zkClient = cache.get(spec.getZkServers());
-        if (zkClient == null) {
-            String path = ZooKeeper.class.getProtectionDomain().getCodeSource().getLocation().toString();
-            logger.info("Load ZooKeeper from {}", path);
+        String path = ZooKeeper.class.getProtectionDomain().getCodeSource().getLocation().toString();
+        logger.info("Load ZooKeeper from {}", path);
 
-            CuratorFramework client = CuratorFrameworkFactory.builder()
-                    .connectString(spec.getZkServers())
-                    .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-                    .connectionTimeoutMs(spec.getConnectionTimeoutMillis())
-                    .sessionTimeoutMs(spec.getSessionTimeoutMillis())
-                    .threadFactory(new ThreadFactory() {
-                        @Override
-                        public Thread newThread(Runnable r) {
-                            Thread t = new Thread(r, spec.getThreadName());
-                            t.setDaemon(true);
-                            t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                                @Override
-                                public void uncaughtException(Thread t, Throwable e) {
-                                    logger.error("Thread {} caught a unknow exception with UncaughtExceptionHandler", t.getName(), e);
-                                }
-                            });
-                            return t;
-                        }
-                    })
-                    .build();
-            client.start();
-            logger.info("ZkClient started: {}", spec.getZkServers());
+        CuratorFramework client = CuratorFrameworkFactory.builder()
+                .connectString(spec.getZkServers())
+                .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                .connectionTimeoutMs(spec.getConnectionTimeoutMillis())
+                .sessionTimeoutMs(spec.getSessionTimeoutMillis())
+                .threadFactory(new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread t = new Thread(r, spec.getThreadName());
+                        t.setDaemon(true);
+                        t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                            @Override
+                            public void uncaughtException(Thread t, Throwable e) {
+                                logger.error("Thread {} caught a unknow exception with UncaughtExceptionHandler", t.getName(), e);
+                            }
+                        });
+                        return t;
+                    }
+                })
+                .build();
+        client.start();
+        logger.info("ZkClient started: {}", spec.getZkServers());
 
-            NetflixCuratorZkClient theClient = new NetflixCuratorZkClient(client, spec.getZkServers());
-            ZkClient oldClient = cache.putIfAbsent(spec.getZkServers(), theClient);
-            if (oldClient != null) {
-                try {
-                    theClient.stop();
-                } catch (Throwable e) {
-                }
-                return oldClient;
-            }
-            return theClient;
-        }
-        return zkClient;
+        NetflixCuratorZkClient theClient = new NetflixCuratorZkClient(client, spec.getZkServers());
+        return theClient;
 
     }
 }

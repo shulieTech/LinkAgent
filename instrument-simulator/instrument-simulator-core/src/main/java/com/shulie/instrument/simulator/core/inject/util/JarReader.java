@@ -74,6 +74,15 @@ public class JarReader {
 
     }
 
+    public void close() {
+        if (jarFile != null) {
+            try {
+                jarFile.close();
+            } catch (IOException e) {
+            }
+        }
+    }
+
     private class BufferedContext {
 
         private final byte[] buffer = new byte[BUFFER_SIZE];

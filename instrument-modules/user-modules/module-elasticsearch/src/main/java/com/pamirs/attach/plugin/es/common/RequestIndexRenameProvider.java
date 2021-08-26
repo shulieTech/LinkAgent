@@ -97,4 +97,8 @@ public final class RequestIndexRenameProvider {
         }
         return registry.get(target.getClass().getName());
     }
+
+    public static void release() {
+        registry.clear();
+    }
 }

@@ -15,20 +15,23 @@
 package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.*;
+import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.resource.*;
+import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
-import com.shulie.instrument.simulator.core.classloader.ModuleClassLoader;
 import com.shulie.instrument.simulator.core.classloader.impl.ClassLoaderFactoryImpl;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
+import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
+import com.shulie.instrument.simulator.core.manager.ModuleLoader;
 import com.shulie.instrument.simulator.core.manager.*;
 import com.shulie.instrument.simulator.core.util.ModuleSpecUtils;
 import com.shulie.instrument.simulator.core.util.VersionUtils;
@@ -51,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.shulie.instrument.simulator.api.ModuleException.ErrorCode.*;
-import static com.shulie.instrument.simulator.core.manager.impl.DefaultCoreModuleManager.ModuleLifeCycleType.*;
+import static com.shulie.instrument.simulator.core.manager.impl.ModuleLifeCycleType.*;
 import static org.apache.commons.lang.reflect.FieldUtils.writeField;
 
 /**
@@ -61,22 +64,22 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final CoreConfigure config;
-    private final Instrumentation inst;
+    private CoreConfigure config;
+    private Instrumentation inst;
     private ClassFileTransformer defaultClassFileTransformer;
-    private final ClassInjector classInjector;
-    private final CoreLoadedClassDataSource classDataSource;
-    private final ProviderManager providerManager;
+    private ClassInjector classInjector;
+    private CoreLoadedClassDataSource classDataSource;
+    private ProviderManager providerManager;
 
     /**
      * 系统模块目录列表
      */
-    private final File[] systemModuleLibs;
+    private File[] systemModuleLibs;
 
     /**
      * 用户模块目录列表
      */
-    private final File[] userModuleLibs;
+    private File[] userModuleLibs;
 
     /**
      * 类加载器服务
@@ -94,17 +97,32 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     private ModuleCommandInvoker moduleCommandInvoker;
 
     /**
+     * switcher manager
+     */
+    private SwitcherManager switcherManager;
+
+    /**
      * 禁用的模块列表
      */
-    private final List<String> disabledModules;
+    private List<String> disabledModules;
+
+    /**
+     * event listener handler
+     */
+    private EventListenerHandler eventListenerHandler;
 
     // 已加载的模块集合
-    private final Map<String, CoreModule> loadedModuleMap = new ConcurrentHashMap<String, CoreModule>();
+    private Map<String, CoreModule> loadedModuleMap = new ConcurrentHashMap<String, CoreModule>();
 
     /**
      * 所有等待加载的模块
      */
     private Queue<Runnable> waitLoadModules = new ConcurrentLinkedQueue<Runnable>();
+
+    /**
+     * module loader
+     */
+    private ModuleLoader moduleLoader;
 
     /**
      * 模块模块管理
@@ -118,19 +136,23 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                     final Instrumentation inst,
                                     final CoreLoadedClassDataSource classDataSource,
                                     final ProviderManager providerManager,
-                                    final ClassLoaderService classLoaderService) {
+                                    final ClassLoaderService classLoaderService,
+                                    final EventListenerHandler eventListenerHandler,
+                                    final SwitcherManager switcherManager) {
         this.config = config;
         this.simulatorConfig = new DefaultSimulatorConfig(config);
         this.inst = inst;
         this.classDataSource = classDataSource;
         this.providerManager = providerManager;
+        this.switcherManager = switcherManager;
         this.systemModuleLibs = getSystemModuleLibFiles(config.getSystemModuleLibPath());
-
-        this.userModuleLibs = ModuleLoaders.getModuleLoader(config.getModuleRepositoryMode()).loadModuleLibs(config.getAppName(), config.getUserModulePaths());
+        this.moduleLoader = new LocalModuleLoader();
+        this.userModuleLibs = this.moduleLoader.loadModuleLibs(config.getAppName(), config.getUserModulePaths());
         this.classLoaderService = classLoaderService;
         this.moduleCommandInvoker = new DefaultModuleCommandInvoker(this);
         this.disabledModules = config.getDisabledModules();
         this.classInjector = new ModuleJarClassInjector(this.simulatorConfig);
+        this.eventListenerHandler = eventListenerHandler;
     }
 
     @Override
@@ -159,6 +181,26 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     public void onShutdown() {
         this.providerManager.onShutdown(config.getNamespace(), simulatorConfig);
         this.inst.removeTransformer(this.defaultClassFileTransformer);
+        this.switcherManager.close();
+        this.config = null;
+        this.inst = null;
+        this.defaultClassFileTransformer = null;
+        this.classInjector.destroy();
+        this.classInjector = null;
+        this.classDataSource = null;
+        this.providerManager = null;
+        this.systemModuleLibs = null;
+        this.userModuleLibs = null;
+        this.classLoaderService = null;
+        this.simulatorConfig = null;
+        this.moduleCommandInvoker = null;
+        this.disabledModules = null;
+        this.eventListenerHandler = null;
+        this.loadedModuleMap.clear();
+        this.loadedModuleMap = null;
+        this.waitLoadModules.clear();
+        this.waitLoadModules = null;
+        this.switcherManager = null;
     }
 
     /**
@@ -191,7 +233,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      * @param eventType  模块生命周期事件类型
      * @throws ModuleException 当触发模块生命周期出现错误时抛出模块异常
      */
-    private void callAndFireModuleLifeCycle(final CoreModule coreModule, final ModuleLifeCycleType eventType) throws ModuleException {
+    private void callAndFireModuleLifeCycle(final CoreModule coreModule, final int eventType) throws ModuleException {
         /**
          * 查看是否配置指定了模块不启用，如果指定了则直接忽略
          */
@@ -223,7 +265,9 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                     try {
                         moduleLifecycle.onActive();
                         //发布事件
-                        GlobalSwitch.switchOn(coreModule.getModuleId());
+                        if (coreModule.getModuleSpec().isSwitchAuto()) {
+                            switcherManager.switchOn(coreModule.getModuleId());
+                        }
                     } catch (Throwable throwable) {
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
                     }
@@ -233,7 +277,35 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 case MODULE_FROZEN: {
                     try {
                         moduleLifecycle.onFrozen();
-                        GlobalSwitch.switchOff(coreModule.getModuleId());
+                        if (coreModule.getModuleSpec().isSwitchAuto()) {
+                            switcherManager.switchOff(coreModule.getModuleId());
+                        }
+                    } catch (Throwable throwable) {
+                        throw new ModuleException(coreModule.getModuleId(), MODULE_FROZEN_ERROR, throwable);
+                    }
+                    break;
+                }
+
+            }// switch
+        } else {
+            switch (eventType) {
+                case MODULE_ACTIVE: {
+                    try {
+                        //发布事件
+                        if (coreModule.getModuleSpec().isSwitchAuto()) {
+                            switcherManager.switchOn(coreModule.getModuleId());
+                        }
+                    } catch (Throwable throwable) {
+                        throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
+                    }
+                    break;
+                }
+
+                case MODULE_FROZEN: {
+                    try {
+                        if (coreModule.getModuleSpec().isSwitchAuto()) {
+                            switcherManager.switchOff(coreModule.getModuleId());
+                        }
                     } catch (Throwable throwable) {
                         throw new ModuleException(coreModule.getModuleId(), MODULE_FROZEN_ERROR, throwable);
                     }
@@ -319,7 +391,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 new ReleaseResource<ModuleEventWatcher>(
                         SimulatorGuard.getInstance().doGuard(
                                 ModuleEventWatcher.class,
-                                new DefaultModuleEventWatcher(inst, classDataSource, coreModule, config.isEnableUnsafe(), config.getNamespace())
+                                new DefaultModuleEventWatcher(inst, classDataSource, coreModule, config.isEnableUnsafe(), config.getNamespace(), eventListenerHandler)
                         )
                 ) {
                     @Override
@@ -334,7 +406,6 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                 moduleEventWatcher.delete(simulatorClassFileTransformer.getWatchId());
                             }
                         }
-                        moduleEventWatcher.close();
                     }
                 });
         coreModule.setModuleEventWatcher(moduleEventWatcher);
@@ -345,6 +416,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setEnhanceTemplate(new DefaultEnhanceTemplate(moduleEventWatcher));
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
+        coreModule.setExtensionTemplate(new DefaultExtensionTemplate());
     }
 
     private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -444,6 +516,13 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 else if (DynamicFieldManager.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, coreModule.getDynamicFieldManager(), true);
                 }
+                // inject switcher manager
+                else if (SwitcherManager.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, switcherManager, true);
+                }
+                else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, coreModule.getExtensionTemplate(), true);
+                }
                 // 其他情况需要输出日志警告
                 else {
                     logger.warn("SIMULATOR: module inject @Resource ignored: field not found. module={};class={};type={};field={};",
@@ -452,6 +531,102 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                             fieldType.getName(),
                             resourceField.getName()
                     );
+                }
+
+            }
+        } catch (IllegalAccessException cause) {
+            throw new ModuleException(coreModule.getModuleId(), MODULE_LOAD_ERROR, cause);
+        }
+    }
+
+    public void deInjectResource(final Object target, CoreModule coreModule) throws ModuleException {
+        if (target == null) {
+            return;
+        }
+        if (target instanceof ModuleLifecycleAdapter) {
+            ((ModuleLifecycleAdapter) target).setModuleName(coreModule.getModuleId());
+        }
+        try {
+            for (final Field resourceField : getFieldsListWithAnnotation(target.getClass(), Resource.class)) {
+                final Class<?> fieldType = resourceField.getType();
+
+                // LoadedClassDataSource对象注入
+                if (LoadedClassDataSource.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            null,
+                            true
+                    );
+                }
+
+                // ModuleEventWatcher对象注入
+                else if (ModuleEventWatcher.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            null,
+                            true
+                    );
+                }
+
+                // ModuleController对象注入
+                else if (ModuleController.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            null,
+                            true
+                    );
+                }
+
+                // ModuleManager对象注入
+                else if (ModuleManager.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            null,
+                            true
+                    );
+                }
+
+                // SimulatorConfig注入
+                else if (SimulatorConfig.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            null,
+                            true
+                    );
+                }
+                //EnhanceTemplate注入
+                else if (EnhanceTemplate.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            null,
+                            true
+                    );
+                }
+                // ModuleCommandInvoker 注入
+                else if (ModuleCommandInvoker.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, null, true);
+                }
+                // ObjectManager 注入
+                else if (ObjectManager.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, null, true);
+                }
+                // DynamicFieldManager 注入
+                else if (DynamicFieldManager.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, null, true);
+                }
+                // DeploymentManager inject
+                else if (DeploymentManager.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, null, true);
+                }
+                // inject switcher manager
+                else if (SwitcherManager.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, null, true);
                 }
 
             }
@@ -483,6 +658,22 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     public synchronized CoreModule unload(final CoreModule coreModule,
                                           final boolean isIgnoreModuleException) throws ModuleException {
 
+        return unload(coreModule, isIgnoreModuleException, true);
+    }
+
+    /**
+     * 卸载并删除注册模块
+     * <p>1. 如果模块原本就不存在，则幂等此次操作</p>
+     * <p>2. 如果模块存在则尝试进行卸载</p>
+     * <p>3. 卸载模块之前会尝试冻结该模块</p>
+     *
+     * @param coreModule              等待被卸载的模块
+     * @param isIgnoreModuleException 是否忽略模块异常
+     * @param frozen                  卸载前是否先冻结模块
+     * @throws ModuleException 卸载模块失败
+     */
+    @Override
+    public CoreModule unload(CoreModule coreModule, boolean isIgnoreModuleException, boolean frozen) throws ModuleException {
         if (!coreModule.isLoaded()) {
             if (logger.isDebugEnabled()) {
                 logger.debug("SIMULATOR: module already unLoaded. module={};", coreModule.getModuleId());
@@ -497,8 +688,10 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             );
         }
 
-        // 尝试冻结模块
-        frozen(coreModule, isIgnoreModuleException);
+        if (frozen) {
+            // 尝试冻结模块
+            frozen(coreModule, isIgnoreModuleException);
+        }
 
         // 通知生命周期
         try {
@@ -516,19 +709,23 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             }
         }
 
+        String moduleId = coreModule.getModuleId();
+        ClassLoaderFactory classLoaderFactory = coreModule.getClassLoaderFactory();
         // 从模块注册表中删除
-        loadedModuleMap.remove(coreModule.getModuleId());
+        loadedModuleMap.remove(moduleId);
         // 标记模块为：已卸载
         coreModule.markLoaded(false);
-
-        // 释放所有可释放资源
+        // de inject resource, free class easy
+        deInjectResource(coreModule.getModule(), coreModule);
+        // can't get moduleId & classLoaderFactory from module after releaseAll
+        // so get moduleId & classLoaderFactory before releaseAll invoke
         coreModule.releaseAll();
 
         //卸载所有导出的资源
-        classLoaderService.unload(coreModule.getModuleId(), coreModule.getClassLoaderFactory());
+        classLoaderService.unload(moduleId, classLoaderFactory);
 
         // 尝试关闭ClassLoader
-        closeModuleJarClassLoaderIfNecessary(coreModule.getClassLoaderFactory());
+        closeModuleJarClassLoaderIfNecessary(classLoaderFactory);
 
         return coreModule;
     }
@@ -540,78 +737,74 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
         //先卸载所有有开关依赖的模块
         List<CoreModule> modules = new ArrayList<CoreModule>(loadedModuleMap.values());
+        List<CoreModule> userModules = new ArrayList<CoreModule>();
+        List<CoreModule> systemModules = new ArrayList<CoreModule>();
+        for (CoreModule coreModule : modules) {
+            if (coreModule.getModuleSpec().isSystemModule()) {
+                systemModules.add(coreModule);
+            } else {
+                userModules.add(coreModule);
+            }
+        }
+
+        // uninstall user modules first
+        uninstall(userModules);
+        uninstall(systemModules);
+    }
+
+    /**
+     * unload module in order
+     *
+     * @param coreModule
+     * @param modules
+     */
+    private void unloadInOrder(CoreModule coreModule, List<CoreModule> modules) {
+        if (!coreModule.isLoaded()) {
+            return;
+        }
         Iterator<CoreModule> it = modules.iterator();
-        //先卸载无导出的模块
         while (it.hasNext()) {
-            CoreModule coreModule = it.next();
-            if (CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportPackages())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportPrefixPackages())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportSuffixPackages())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportExactlyPackages())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportClasses())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportResources())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportExactlyResources())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportPrefixResources())
-                    && CollectionUtils.isEmpty(coreModule.getModuleSpec().getExportSuffixResources())
-            ) {
+            CoreModule module = it.next();
+            // ignore if moduleSpec is null or dependencies is null
+            if (!module.isLoaded() || !module.getModuleSpec().getDependencies().contains(coreModule.getModuleId())) {
+                continue;
+            }
+            unloadInOrder(module, modules);
+        }
+        try {
+            unload(coreModule, true, false);
+        } catch (ModuleException cause) {
+            // 强制卸载不可能出错，这里不对外继续抛出任何异常
+            logger.warn("SIMULATOR: force unloading module occur error! module={};", coreModule.getModuleId(), cause);
+        }
+    }
+
+    private void uninstall(List<CoreModule> modules) {
+        for (CoreModule coreModule : modules) {
+            if (!coreModule.getModuleSpec().isMiddlewareModule()) {
                 try {
-                    unload(coreModule, true);
+                    frozen(coreModule, true);
                 } catch (ModuleException cause) {
                     // 强制卸载不可能出错，这里不对外继续抛出任何异常
-                    logger.warn("SIMULATOR: force unloading module occur error! module={};", coreModule.getModuleId(), cause);
+                    logger.warn("SIMULATOR: force frozen module occur error! module={};", coreModule.getModuleId(), cause);
                 }
-                it.remove();
             }
         }
 
-        //再卸载有导入的模块
-        while (it.hasNext()) {
-            CoreModule coreModule = it.next();
-            if (CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportPackages())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportPrefixPackages())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportSuffixPackages())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportExactlyPackages())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportClasses())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportResources())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportExactlyResources())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportPrefixResources())
-                    && CollectionUtils.isNotEmpty(coreModule.getModuleSpec().getImportSuffixResources())
-            ) {
+        for (CoreModule coreModule : modules) {
+            if (coreModule.getModuleSpec().isMiddlewareModule()) {
                 try {
-                    unload(coreModule, true);
+                    frozen(coreModule, true);
                 } catch (ModuleException cause) {
                     // 强制卸载不可能出错，这里不对外继续抛出任何异常
-                    logger.warn("SIMULATOR: force unloading module occur error! module={};", coreModule.getModuleId(), cause);
+                    logger.warn("SIMULATOR: force frozen module occur error! module={};", coreModule.getModuleId(), cause);
                 }
-                it.remove();
             }
         }
 
-        //再卸载所有的用户自定义模块
-        while (it.hasNext()) {
-            CoreModule coreModule = it.next();
-            if (!coreModule.getModuleSpec().isSystemModule()) {
-                try {
-                    unload(coreModule, true);
-                } catch (ModuleException cause) {
-                    // 强制卸载不可能出错，这里不对外继续抛出任何异常
-                    logger.warn("SIMULATOR: force unloading module occur error! module={};", coreModule.getModuleId(), cause);
-                }
-                it.remove();
-            }
+        for (CoreModule coreModule : modules) {
+            unloadInOrder(coreModule, modules);
         }
-
-
-        // 强制卸载所有模块
-        for (final CoreModule coreModule : modules) {
-            try {
-                unload(coreModule, true);
-            } catch (ModuleException cause) {
-                // 强制卸载不可能出错，这里不对外继续抛出任何异常
-                logger.warn("SIMULATOR: force unloading module occur error! module={};", coreModule.getModuleId(), cause);
-            }
-        }
-
     }
 
     @Override
@@ -645,7 +838,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             List<BuildingForListeners> list = simulatorClassFileTransformer.getAllListeners();
             if (CollectionUtils.isNotEmpty(list)) {
                 for (BuildingForListeners buildingForListeners : list) {
-                    EventListenerHandler.getSingleton().active(
+                    eventListenerHandler.active(
                             buildingForListeners.getListenerId(),
                             simulatorClassFileTransformer.getEventListeners().get(buildingForListeners.getListenerId()),
                             buildingForListeners.getEventTypes()
@@ -699,8 +892,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         // 冻结所有监听器
         for (final SimulatorClassFileTransformer simulatorClassFileTransformer : coreModule.getSimulatorClassFileTransformers()) {
             for (BuildingForListeners buildingForListeners : simulatorClassFileTransformer.getAllListeners()) {
-                EventListenerHandler.getSingleton()
-                        .frozen(buildingForListeners.getListenerId());
+                eventListenerHandler.frozen(buildingForListeners.getListenerId());
             }
 
         }
@@ -956,19 +1148,19 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             /**
              * 如果开关已经是开启状态，则直接执行即可
              */
-            if (GlobalSwitch.isAllSwitchOn(moduleSpec.getDependencies())) {
+            if (switcherManager.isAllSwitchOn(moduleSpec.getDependencies())) {
                 loadModule(moduleSpec);
                 if (logger.isInfoEnabled()) {
                     logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
                 }
             } else {
-                GlobalSwitch.registerMultiSwitchOnCallback(moduleSpec.getDependencies(), new Runnable() {
+                switcherManager.registerMultiSwitchOnCallback(moduleSpec.getDependencies(), new Runnable() {
                     @Override
                     public void run() {
                         /**
                          * 当开启状态时执行加载
                          */
-                        if (GlobalSwitch.isAllSwitchOn(moduleSpec.getDependencies())) {
+                        if (switcherManager.isAllSwitchOn(moduleSpec.getDependencies())) {
                             loadModule(moduleSpec);
                             if (logger.isInfoEnabled()) {
                                 logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
@@ -977,7 +1169,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                             /**
                              * 否则重新注册开关,因为回调执行一次就会销毁
                              */
-                            GlobalSwitch.registerMultiSwitchOnCallback(moduleSpec.getDependencies(), this);
+                            switcherManager.registerMultiSwitchOnCallback(moduleSpec.getDependencies(), this);
                         }
                     }
                 });
@@ -1038,12 +1230,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      * @param classLoaderFactory 需要被关闭的ClassLoader工厂
      */
     private void closeModuleJarClassLoaderIfNecessary(final ClassLoaderFactory classLoaderFactory) {
-
-        if (!(classLoaderFactory instanceof ModuleClassLoader)) {
-            return;
-        }
-
-        // 查找已经注册的模块中是否仍然还包含有ModuleJarClassLoader的引用
+        // 查找已经注册的模块中是否仍然还包含有ModuleClassLoader的引用
         boolean hasRef = false;
         for (final CoreModule coreModule : loadedModuleMap.values()) {
             if (classLoaderFactory == coreModule.getClassLoaderFactory()) {
@@ -1054,7 +1241,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         if (!hasRef) {
             if (logger.isInfoEnabled()) {
-                logger.info("SIMULATOR: ModuleJarClassLoaderFactory={} will be close: all module unloaded.", classLoaderFactory);
+                logger.info("SIMULATOR: ModuleClassLoaderFactory={} will be close: all module unloaded.", classLoaderFactory);
             }
             classLoaderFactory.release();
         }
@@ -1087,7 +1274,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             final ArrayList<Long> checksumCRC32s = new ArrayList<Long>();
 
             // 1. 找出所有有变动的文件(add/remove)
-            for (final File jarFile : ModuleLoaders.getModuleLoader(config.getModuleRepositoryMode()).loadModuleLibs(config.getAppName(), config.getUserModulePaths())) {
+            for (final File jarFile : this.moduleLoader.loadModuleLibs(config.getAppName(), config.getUserModulePaths())) {
                 final long checksumCRC32;
                 try {
                     checksumCRC32 = FileUtils.checksumCRC32(jarFile);
@@ -1206,36 +1393,4 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         loadModules(userModuleSpecs, "force-flush");
 
     }
-
-    /**
-     * 模块生命周期类型
-     */
-    enum ModuleLifeCycleType {
-
-        /**
-         * 模块加载
-         */
-        MODULE_LOAD,
-
-        /**
-         * 模块卸载
-         */
-        MODULE_UNLOAD,
-
-        /**
-         * 模块激活
-         */
-        MODULE_ACTIVE,
-
-        /**
-         * 模块冻结
-         */
-        MODULE_FROZEN,
-
-        /**
-         * 模块加载完成
-         */
-        MODULE_LOAD_COMPLETED
-    }
-
 }

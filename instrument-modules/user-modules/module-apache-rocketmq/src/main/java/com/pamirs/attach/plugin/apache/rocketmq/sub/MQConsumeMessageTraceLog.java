@@ -21,6 +21,7 @@ import com.pamirs.attach.plugin.apache.rocketmq.common.MQType;
 import com.pamirs.attach.plugin.apache.rocketmq.common.PradarLogUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 
 /**
@@ -65,7 +66,12 @@ public class MQConsumeMessageTraceLog {
 
         // 记录第一条消息结束消费,默认配置一次只消费一条消息时本方法到此结束
         if (MQType.ROCKETMQ.equals(ctx.getMqType())) {
-            Pradar.endServerInvoke(MiddlewareType.TYPE_MQ);
+            if(ctx.isSuccess()) {
+                Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_SUCCESS,MiddlewareType.TYPE_MQ);
+            }else{
+                Pradar.response(ctx.getErrorMsg());
+                Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_FAILED,MiddlewareType.TYPE_MQ);
+            }
         }
 
         // 如果是批量消息需要特殊处理，后面只是记录一个处理结束的点

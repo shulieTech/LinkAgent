@@ -160,6 +160,13 @@ public interface AgentConfig {
     String getUserAppKey();
 
     /**
+     * 获取userid
+     *
+     * @return
+     */
+    String getUserId();
+
+    /**
      * 获取 agent结果文件路径
      *
      * @return agent 结果文件路径
@@ -221,4 +228,11 @@ public interface AgentConfig {
      * @return
      */
     String getAgentVersion();
+
+    /**
+     * 获取 tro 控制台地址
+     *
+     * @return
+     */
+    String getTroWebUrl();
 }

@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.dbcp.interceptor;
 
 import com.pamirs.attach.plugin.dbcp.ListenerRegisterStatus;
+import com.pamirs.attach.plugin.dbcp.destroy.DbcpDestroy;
 import com.pamirs.attach.plugin.dbcp.utils.DataSourceWrapUtil;
 import com.pamirs.attach.plugin.dbcp.utils.DbcpMediaDataSource;
 import com.pamirs.pradar.CutOffResult;
@@ -31,6 +32,7 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
@@ -49,6 +51,7 @@ import java.util.Set;
  * @mail xiaobin@shulie.io
  * @Date 2020/8/17 10:13 上午
  */
+@Destroyable(DbcpDestroy.class)
 public class DataSourceGetConnectionCutoffArgsInterceptor extends CutoffInterceptorAdaptor {
     private final static Logger logger = LoggerFactory.getLogger(DataSourceGetConnectionCutoffInterceptor.class.getName());
 

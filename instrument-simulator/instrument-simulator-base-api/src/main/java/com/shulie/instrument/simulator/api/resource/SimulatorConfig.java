@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.api.resource;
 
 import com.shulie.instrument.simulator.api.LoadMode;
-import com.shulie.instrument.simulator.api.ModuleRepositoryMode;
 
 import java.io.File;
 import java.lang.instrument.Instrumentation;
@@ -44,14 +43,7 @@ public interface SimulatorConfig {
      *
      * @return 仿真器加载模式
      */
-    LoadMode getMode();
-
-    /**
-     * 获取模块仓库模式
-     *
-     * @return 模块仓库模块
-     */
-    ModuleRepositoryMode getModuleRepositoryMode();
+    int getMode();
 
     /**
      * 判断仿真器是否启用了unsafe

@@ -18,5 +18,11 @@ package com.shulie.instrument.simulator.agent.spi.command;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/17 7:58 下午
  */
-public interface Command {
+public interface Command<T> {
+    /**
+     * 返回命令体内容
+     *
+     * @return
+     */
+    T getPacket();
 }

@@ -15,8 +15,10 @@
 package com.pamirs.attach.plugin.hbase.interceptor;
 
 import com.pamirs.attach.plugin.hbase.HbaseConstants;
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.hadoop.hbase.client.AliHBaseUETable;
 
@@ -24,6 +26,7 @@ import org.apache.hadoop.hbase.client.AliHBaseUETable;
  * @author angju
  * @date 2020/12/29 21:06
  */
+@Destroyable(HbaseDestroyed.class)
 public class AliHBaseUETableInterceptor extends TraceInterceptorAdaptor {
     @Override
     public String getPluginName() {

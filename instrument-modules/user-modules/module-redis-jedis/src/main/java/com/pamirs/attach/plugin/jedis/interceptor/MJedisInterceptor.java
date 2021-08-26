@@ -15,18 +15,21 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.*;
 
+@Destroyable(JedisDestroyed.class)
 public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override
@@ -77,7 +80,31 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return processXReadGroup(args, whiteList);
         }
 
+        if ("mset".equals(advice.getBehavior().getName())||"msetnx".equals(advice.getBehavior().getName())) {
+            return processMset(args, whiteList);
+        }
+
         return process(args, whiteList);
+    }
+
+    private Object[] processMset(Object[] args, Collection<String> whiteList) {
+        Object params = args[0];
+        if (params instanceof String[]) {
+            String[] data = (String[]) params;
+            for (int i = 0; i < data.length; i=i+2) {
+                data[i] = fetchKeyString(data[i], whiteList);
+            }
+            return args;
+        } else if (params instanceof byte[][]) {
+            byte[][] data = (byte[][]) params;
+            for (int i = 0; i < data.length; i = i + 2) {
+                String key = fetchKeyString(new String(data[i]), whiteList);
+                data[i] = key.getBytes();
+            }
+            return args;
+        }
+
+        throw new PressureMeasureError("Jedis not support mset key deserialize !");
     }
 
     private Object[] processXRead(Object[] args, Collection<String> whiteList) {
@@ -248,17 +275,19 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     private Object[] processKeyString(Object[] args, Collection<String> whiteList, int keyIndex) {
         String key = (String) args[keyIndex];
+        args[keyIndex] = fetchKeyString(key, whiteList);
+        return args;
+    }
 
+    private String fetchKeyString(String key, Collection<String> whiteList) {
         if (whiteListValidate(whiteList, key)) {
-            return args;
+            return key;
         }
 
         if (!Pradar.isClusterTestPrefix(key)) {
-            key = Pradar.addClusterTestPrefix(key);
-            args[keyIndex] = key;
-            return args;
+            return Pradar.addClusterTestPrefix(key);
         }
-        return args;
+        return key;
     }
 
     private boolean whiteListValidate(Collection<String> whiteList, String key) {

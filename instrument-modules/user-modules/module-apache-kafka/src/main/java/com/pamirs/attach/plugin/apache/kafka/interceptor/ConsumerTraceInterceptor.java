@@ -14,8 +14,14 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
+import java.util.Iterator;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.attach.plugin.apache.kafka.header.HeaderGetter;
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
@@ -24,6 +30,7 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.ReversedTraceInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.SpanRecord;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -31,20 +38,17 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
-import javax.annotation.Resource;
-import java.util.Iterator;
-import java.util.Map;
-
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/05/14 11:37 上午
  */
+@Destroyable(KafkaDestroy.class)
 public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
 
     @Resource
     protected DynamicFieldManager manager;
 
-    private final ThreadLocal<Boolean> lastPollHasRecordsThreadLocal = new ThreadLocal<>();
+    private final ThreadLocal<Boolean> lastPollHasRecordsThreadLocal = new ThreadLocal();
 
     @Override
     protected boolean isClient(Advice advice) {
@@ -64,12 +68,12 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object result = advice.getReturnObj();
-        KafkaConsumer kafkaConsumer = (KafkaConsumer)advice.getTarget();
+        KafkaConsumer kafkaConsumer = (KafkaConsumer) advice.getTarget();
         if (ConsumerHolder.isWorkWithOtherFramework(kafkaConsumer)) {
             return null;
         }
         ConsumerMetaData consumerMetaData = ConsumerHolder.getConsumerMetaData(kafkaConsumer);
-        ConsumerRecords consumerRecords = (ConsumerRecords)result;
+        ConsumerRecords consumerRecords = (ConsumerRecords) result;
         if (consumerRecords.isEmpty()) {
             lastPollHasRecordsThreadLocal.set(false);
             return null;
@@ -80,25 +84,26 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
             return null;
         }
         lastPollHasRecordsThreadLocal.set(true);
-        ConsumerRecord consumerRecord = (ConsumerRecord)next;
+        ConsumerRecord consumerRecord = (ConsumerRecord) next;
         SpanRecord spanRecord = new SpanRecord();
         if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
-            HeaderGetter headerGetter = HeaderProvider.getHeaderGetter(consumerRecord);
-            Map<String, String> ctx = headerGetter.getHeaders(consumerRecord);
+            HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(consumerRecord);
+            Map<String, String> ctx = headerProcessor.getHeaders(consumerRecord);
             spanRecord.setContext(ctx);
         }
         String topic = consumerRecord.topic();
+        //TODO 原生这里的kafka服务器信息 和通过spring获取的服务器信息，集群节点顺序不一致
         spanRecord.setRemoteIp(consumerMetaData.getBootstrapServers());
         spanRecord.setRequest(consumerRecords.count());
         spanRecord.setService(consumerRecord.topic());
         spanRecord.setMethod(
-            Pradar.isClusterTestPrefix(topic) ? consumerMetaData.getPtGroupId() : consumerMetaData.getGroupId());
+                Pradar.isClusterTestPrefix(topic) ? consumerMetaData.getPtGroupId() : consumerMetaData.getGroupId());
         return spanRecord;
     }
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        if (ConsumerHolder.isWorkWithOtherFramework((Consumer)advice.getTarget())) {
+        if (ConsumerHolder.isWorkWithOtherFramework((Consumer) advice.getTarget())) {
             return null;
         }
         Boolean lastPollHasRecords = lastPollHasRecordsThreadLocal.get();
@@ -113,7 +118,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
-        if (ConsumerHolder.isWorkWithOtherFramework((Consumer)advice.getTarget())) {
+        if (ConsumerHolder.isWorkWithOtherFramework((Consumer) advice.getTarget())) {
             return null;
         }
         Throwable throwable = advice.getThrowable();

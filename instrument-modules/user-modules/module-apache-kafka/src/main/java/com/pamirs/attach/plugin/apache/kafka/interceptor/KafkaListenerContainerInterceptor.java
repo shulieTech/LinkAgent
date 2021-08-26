@@ -16,12 +16,15 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -46,6 +49,7 @@ import java.util.List;
  * @package: com.pamirs.attach.plugin.apache.kafka.interceptor
  * @Date 2020-04-03 16:47
  */
+@Destroyable(KafkaDestroy.class)
 public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
     private final static Logger logger = LoggerFactory.getLogger(KafkaListenerContainerInterceptor.class.getName());
@@ -303,7 +307,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
                  * topic 都需要在白名单中配置好才可以启动
                  */
                 if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
-                    if (GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance().getMqWhiteList().contains(topic + '#' + groupId)) {
+                    if (PradarSwitcher.whiteListSwitchOn() && GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance().getMqWhiteList().contains(topic + '#' + groupId)) {
                         topicList.add(Pradar.addClusterTestPrefix(topic));
                     }
                 }

@@ -14,21 +14,24 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.io.IOException;
-
+import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.ResponseListener;
 import org.elasticsearch.client.RestClient;
+
+import java.io.IOException;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/04/12 11:41 上午
  */
+@Destroyable(ElasticSearchDestroy.class)
 public class RestClientPerformAsyncRequestInterceptor extends AbstractRestClientShadowServerInterceptor {
 
     @Override
     protected Object doCutoff(RestClient restClient, String methodName, Object[] args) throws IOException {
-        restClient.performRequestAsync((Request)args[0], (ResponseListener)args[1]);
+        restClient.performRequestAsync((Request) args[0], (ResponseListener) args[1]);
         return null;
     }
 

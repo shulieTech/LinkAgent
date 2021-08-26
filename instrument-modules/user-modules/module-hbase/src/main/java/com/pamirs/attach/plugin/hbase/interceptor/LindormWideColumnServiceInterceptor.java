@@ -14,16 +14,19 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/04/02 2:16 下午
  */
+@Destroyable(HbaseDestroyed.class)
 public class LindormWideColumnServiceInterceptor extends ParametersWrapperInterceptorAdaptor {
 
 
@@ -41,7 +44,7 @@ public class LindormWideColumnServiceInterceptor extends ParametersWrapperInterc
         if (!Pradar.isClusterTest()) {
             return args;
         }
-        String tableName = (String)arg0;
+        String tableName = (String) arg0;
         if (tableName.startsWith("hbase") || tableName.startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
             return args;
         }

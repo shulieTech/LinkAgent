@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -37,6 +38,7 @@ import redis.clients.jedis.Client;
  */
 public final class RedisUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisUtils.class.getName());
+
     private RedisUtils() { /* no instance */ }
 
     /**
@@ -53,8 +55,8 @@ public final class RedisUtils {
      */
     public final static Map<String, List<Integer>> METHOD_MORE_KEYS = new HashMap<String, List<Integer>>();
 
-    public static final ConcurrentHashMap<String, String> HOST_SERVER_TYPE_MAP = new ConcurrentHashMap<String, String>();
-
+    public static final ConcurrentHashMap<String, String> HOST_SERVER_TYPE_MAP
+        = new ConcurrentHashMap<String, String>();
 
     public static final Set<String> EVAL_METHOD_NAME = new HashSet<String>();
 
@@ -247,8 +249,6 @@ public final class RedisUtils {
         METHOD_NAMES.put("georadiusByMember", READ);
         METHOD_NAMES.put("geoadd", READ);
 
-
-
         METHOD_NAMES.put("xinfoStream", READ);
         METHOD_NAMES.put("xinfoGroup", READ);
         METHOD_NAMES.put("xrange", READ);
@@ -271,18 +271,18 @@ public final class RedisUtils {
         METHOD_NAMES.put("ds_hget", READ);
 
         // init METHOD_MORE_KEYS
-        METHOD_MORE_KEYS.put("rpoplpush", Arrays.asList(0,1));
-        METHOD_MORE_KEYS.put("smove", Arrays.asList(0,1));
-        METHOD_MORE_KEYS.put("sinterstore", Arrays.asList(0,1));
-        METHOD_MORE_KEYS.put("zunionstore", Arrays.asList(0,1));
-        METHOD_MORE_KEYS.put("sunionstore", Arrays.asList(0,1));
-        METHOD_MORE_KEYS.put("sdiffstore", Arrays.asList(0,1));
+        METHOD_MORE_KEYS.put("rpoplpush", Arrays.asList(0, 1));
+        METHOD_MORE_KEYS.put("smove", Arrays.asList(0, 1));
+        METHOD_MORE_KEYS.put("sinterstore", Arrays.asList(0, 1));
+        METHOD_MORE_KEYS.put("zunionstore", Arrays.asList(0, 1));
+        METHOD_MORE_KEYS.put("sunionstore", Arrays.asList(0, 1));
+        METHOD_MORE_KEYS.put("sdiffstore", Arrays.asList(0, 1));
         METHOD_MORE_KEYS.put("sort", Arrays.asList(0));
-        METHOD_MORE_KEYS.put("zinterstore", Arrays.asList(0,1));
+        METHOD_MORE_KEYS.put("zinterstore", Arrays.asList(0, 1));
         METHOD_MORE_KEYS.put("blpop", Arrays.asList(1));
         METHOD_MORE_KEYS.put("brpop", Arrays.asList(1));
         METHOD_MORE_KEYS.put("migrate", Arrays.asList(2));
-        METHOD_MORE_KEYS.put("rename", Arrays.asList(0,1));
+        METHOD_MORE_KEYS.put("rename", Arrays.asList(0, 1));
 
         //init eval method
         EVAL_METHOD_NAME.add("evalsha");
@@ -371,7 +371,6 @@ public final class RedisUtils {
         return host + ":" + port;
     }
 
-
     public static String methodStr(String methodName, String argsExt) {
         if (argsExt == null || argsExt.trim().length() == 0) {
             return methodName;
@@ -388,9 +387,11 @@ public final class RedisUtils {
         Float maxRedisExpireTime = GlobalConfig.getInstance().getMaxRedisExpireTime();
         try {
             if (maxRedisExpireTime != null && maxRedisExpireTime > -1f) {
-                if ((methodName.equals("setex") && args[1] instanceof Integer) || (methodName.equals("expire") && args[1] instanceof Integer)) {
+                if ((methodName.equals("setex") && args[1] instanceof Integer) || (methodName.equals("expire")
+                    && args[1] instanceof Integer)) {
                     args[1] = Math.min((Integer)args[1], Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
-                } else if ((methodName.equals("pexpire") && args[1] instanceof Long) || (methodName.equals("psetex") && args[1] instanceof Long)) {
+                } else if ((methodName.equals("pexpire") && args[1] instanceof Long) || (methodName.equals("psetex")
+                    && args[1] instanceof Long)) {
                     args[1] = Math.min((Long)args[1], Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
                 } else if (methodName.equals("set") && args.length == 3 && args[2].getClass().getName().equals(
                     "redis.clients.jedis.params.SetParams")) {
@@ -409,31 +410,47 @@ public final class RedisUtils {
                         params.put("px", Math.min((Long)args[1],
                             Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue()));
                     }
-                }else if(methodName.equals("set") && args.length == 5 && args[4] instanceof Long){
+                } else if (methodName.equals("set") && args.length == 5 && args[4] instanceof Long) {
                     String expx = args[3].toString();
                     Long time = (Long)args[4];
                     if (expx.equals("ex")) {
                         args[4] = Math.min(time,
                             Float.valueOf(maxRedisExpireTime * 60 * 60).longValue());
-                    }else if (expx.equals("px")) {
+                    } else if (expx.equals("px")) {
                         args[4] = Math.min(time,
                             Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
                     }
-                }else if(methodName.equals("set") && args.length == 5 && args[4] instanceof Integer){
+                } else if (methodName.equals("set") && args.length == 5 && args[4] instanceof Integer) {
                     String expx = args[3].toString();
                     Integer time = (Integer)args[4];
                     if (expx.equals("ex")) {
                         args[4] = Math.min(time,
                             Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
-                    }else if (expx.equals("px")) {
+                    } else if (expx.equals("px")) {
                         args[4] = Math.min(time,
                             Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).intValue());
                     }
                 }
             }
         } catch (Exception exception) {
-            LOGGER.error("jedis maxRedisExpireTime -method: {},new args:{},maxRedisExpireTime:{},exception:{}",methodName,Arrays.toString(args),maxRedisExpireTime,
+            LOGGER.error("jedis maxRedisExpireTime -method: {},new args:{},maxRedisExpireTime:{},exception:{}",
+                methodName, Arrays.toString(args), maxRedisExpireTime,
                 Throwables.getStackTraceAsString(exception));
         }
+    }
+
+    public static volatile AtomicBoolean isSingleMode = new AtomicBoolean(true);
+
+    public static void setIsSingleMode(Boolean bool) {
+        isSingleMode.set(bool);
+    }
+
+    /**
+     * 是否单机模式
+     *
+     * @return
+     */
+    public static Boolean isSingleMode() {
+        return isSingleMode.get();
     }
 }

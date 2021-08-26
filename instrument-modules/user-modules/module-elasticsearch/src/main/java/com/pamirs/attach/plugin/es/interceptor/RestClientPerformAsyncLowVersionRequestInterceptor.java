@@ -14,24 +14,27 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.Map;
-
+import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
 import org.elasticsearch.client.ResponseListener;
 import org.elasticsearch.client.RestClient;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.Map;
+
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/04/12 11:41 上午
  */
+@Destroyable(ElasticSearchDestroy.class)
 public class RestClientPerformAsyncLowVersionRequestInterceptor extends AbstractRestClientShadowServerInterceptor {
 
-    private static volatile Method performRequestAsyncMethod;
+    private volatile Method performRequestAsyncMethod;
 
     @Override
     protected Object doCutoff(RestClient restClient, String methodName, Object[] args) throws IOException {
@@ -40,8 +43,8 @@ public class RestClientPerformAsyncLowVersionRequestInterceptor extends Abstract
                 if (performRequestAsyncMethod == null) {
                     try {
                         performRequestAsyncMethod = restClient.getClass().getMethod("performRequestAsync",
-                            String.class, String.class, Map.class, HttpEntity.class,
-                            HttpAsyncResponseConsumerFactory.class, ResponseListener.class, Header[].class);
+                                String.class, String.class, Map.class, HttpEntity.class,
+                                HttpAsyncResponseConsumerFactory.class, ResponseListener.class, Header[].class);
                     } catch (NoSuchMethodException e) {
                         throw new PressureMeasureError("performRequestAsyncMethod not find!", e);
                     }
@@ -59,12 +62,12 @@ public class RestClientPerformAsyncLowVersionRequestInterceptor extends Abstract
     @Override
     protected boolean doCheck(Object target, String methodName, Object[] args) {
         return args.length == 7
-            && args[0] instanceof String
-            && args[1] instanceof String
-            && args[2] instanceof Map
-            && (args[3] == null || args[3] instanceof HttpEntity)
-            && args[4] instanceof HttpAsyncResponseConsumerFactory
-            && args[5] instanceof ResponseListener
-            && args[6].getClass().isArray();
+                && args[0] instanceof String
+                && args[1] instanceof String
+                && args[2] instanceof Map
+                && (args[3] == null || args[3] instanceof HttpEntity)
+                && args[4] instanceof HttpAsyncResponseConsumerFactory
+                && args[5] instanceof ResponseListener
+                && args[6].getClass().isArray();
     }
 }

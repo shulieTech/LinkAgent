@@ -29,12 +29,17 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
  */
 public class ReflectUtil {
 
-    private static final Map<String, Field> FIELDMAP = new ConcurrentHashMap<String, Field>();
-    private static final Map<String, Method> METHODMAP = new ConcurrentHashMap<String, Method>();
+    private static final Map<String, Field> FIELD_MAP = new ConcurrentHashMap<String, Field>();
+    private static final Map<String, Method> METHOD_MAP = new ConcurrentHashMap<String, Method>();
+
+    public static void release() {
+        FIELD_MAP.clear();
+        METHOD_MAP.clear();
+    }
 
     public static Field getField(Object o, String fieldName) throws Exception {
         String key = o.toString() + "-" + fieldName;
-        Field field = FIELDMAP.get(key);
+        Field field = FIELD_MAP.get(key);
         if (null == field) {
             if (o instanceof Class) {
                 Class clazz = (Class) o;
@@ -46,14 +51,14 @@ public class ReflectUtil {
             if (!field.isAccessible()) {
                 field.setAccessible(true);
             }
-            FIELDMAP.put(key, field);
+            FIELD_MAP.put(key, field);
         }
         return field;
     }
 
     public static Method getMethod(Object o, String fieldName, Class... pamras) throws Exception {
         String key = o.toString() + "-" + fieldName;
-        Method method = METHODMAP.get(key);
+        Method method = METHOD_MAP.get(key);
         if (null == method) {
             if (o instanceof Class) {
                 Class clazz = (Class) o;
@@ -65,7 +70,7 @@ public class ReflectUtil {
             if (!method.isAccessible()) {
                 method.setAccessible(true);
             }
-            METHODMAP.put(key, method);
+            METHOD_MAP.put(key, method);
         }
         return method;
     }

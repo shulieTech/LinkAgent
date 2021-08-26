@@ -72,9 +72,10 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             traceBean.setBornHost(context.getBornHost());
             String brokerAddr = context.getBrokerAddr();
             String port = "";
-            if (context.getBrokerAddr() != null && context.getBrokerAddr().indexOf(':') != -1) {
-                brokerAddr = brokerAddr.substring(0, brokerAddr.indexOf(':'));
-                port = context.getBrokerAddr().substring(context.getBrokerAddr().indexOf(':') + 1);
+            int index = -1;
+            if (brokerAddr != null && (index = brokerAddr.indexOf(':')) != -1) {
+                port = brokerAddr.substring(index + 1);
+                brokerAddr = brokerAddr.substring(0, index);
             }
             traceBean.setStoreHost(brokerAddr);
             traceBean.setPort(port);

@@ -18,6 +18,9 @@ package com.shulie.instrument.simulator.api.listener.ext;
 import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
+
 /**
  * 模式匹配组
  *
@@ -27,9 +30,9 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 class Group {
 
     final String[] patternArray;
-    final PatternType patternType;
+    final int patternType;
 
-    Group(PatternType patternType, String[] patternArray) {
+    Group(int patternType, String[] patternArray) {
         this.patternType = patternType;
         this.patternArray = ArrayUtils.isEmpty(patternArray)
                 ? new String[0]
@@ -62,7 +65,7 @@ class Group {
      */
     private static boolean patternMatching(final String string,
                                            final String pattern,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 return StringUtil.matching(string, pattern);

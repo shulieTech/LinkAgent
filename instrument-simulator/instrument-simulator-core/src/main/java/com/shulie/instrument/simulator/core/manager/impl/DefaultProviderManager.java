@@ -16,14 +16,10 @@ package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleSpec;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.classloader.ProviderClassLoader;
 import com.shulie.instrument.simulator.core.manager.ProviderManager;
-import com.shulie.instrument.simulator.message.boot.util.JvmUtils;
-import com.shulie.instrument.simulator.message.boot.version.JvmVersion;
 import com.shulie.instrument.simulator.spi.ModuleJarLoadingChain;
 import com.shulie.instrument.simulator.spi.ModuleLoadingChain;
 import com.shulie.instrument.simulator.spi.SimulatorLifecycle;
@@ -37,7 +33,6 @@ import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -48,6 +43,7 @@ public class DefaultProviderManager implements ProviderManager {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Collection<ModuleJarLoadingChain> moduleJarLoadingChains = new ArrayList<ModuleJarLoadingChain>();
+    private final Collection<ProviderClassLoader> providerClassLoaders = new ArrayList<ProviderClassLoader>();
     private final Collection<ModuleLoadingChain> moduleLoadingChains = new ArrayList<ModuleLoadingChain>();
     private final Collection<SimulatorLifecycle> startupChains = new ArrayList<SimulatorLifecycle>();
     private final CoreConfigure config;
@@ -73,6 +69,7 @@ public class DefaultProviderManager implements ProviderManager {
             File providerJarFile = (File) file;
             try {
                 final ProviderClassLoader providerClassLoader = new ProviderClassLoader(providerJarFile, getClass().getClassLoader());
+                providerClassLoaders.add(providerClassLoader);
                 // load ModuleJarLoadingChain
                 inject(moduleJarLoadingChains, ModuleJarLoadingChain.class, providerClassLoader, providerJarFile);
 
@@ -188,5 +185,11 @@ public class DefaultProviderManager implements ProviderManager {
         for (final SimulatorLifecycle simulatorLifecycle : startupChains) {
             simulatorLifecycle.onShutdown(namespace, simulatorConfig);
         }
+        startupChains.clear();
+
+        for (final ProviderClassLoader providerClassLoader : providerClassLoaders) {
+            providerClassLoader.closeIfPossible();
+        }
+        providerClassLoaders.clear();
     }
 }

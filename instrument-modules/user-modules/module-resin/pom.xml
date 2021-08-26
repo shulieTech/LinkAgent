@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>io.shulie.instrument.module</groupId>
+        <artifactId>user-modules</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>module-resin</artifactId>
+    <name>${project.artifactId} ${project.version}</name>
+
+    <properties>
+        <module-name>resin</module-name>
+    </properties>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>module-pradar-core</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>module-servlet-common</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.caucho</groupId>
+            <artifactId>resin</artifactId>
+            <version>3.0.9</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

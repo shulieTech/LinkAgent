@@ -15,11 +15,13 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -33,6 +35,7 @@ import java.util.*;
  * @Date: 2020/9/8 09:38
  * @Description:
  */
+@Destroyable(JedisDestroyed.class)
 public class RedisDataCheckInterceptor extends AroundInterceptor {
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -61,10 +64,29 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
             keys = processEvalMethodName(args, whiteList);
         } else if (RedisUtils.METHOD_MORE_KEYS.containsKey(methodName)) {
             keys = processMoreKeys(methodName, whiteList, args);
+        } else if ("mset".equals(advice.getBehavior().getName())||"msetnx".equals(advice.getBehavior().getName())) {
+            keys = processMset(args, whiteList);
         } else {
             keys = process(args, whiteList);
         }
         validateKeys(keys);
+    }
+
+    private List<String> processMset(Object[] args, Collection<String> whiteList){
+        ArrayList<String> keyList = new ArrayList<String>();
+        Object params = args[0];
+        if (params instanceof String[]) {
+            String[] data = (String[]) params;
+            for (int i = 0; i < data.length; i=i+2) {
+                keyList.add(data[i]);
+            }
+        } else if (params instanceof byte[][]) {
+            byte[][] data = (byte[][]) params;
+            for (int i = 0; i < data.length; i = i + 2) {
+                keyList.add(new String(data[i]));
+            }
+        }
+        return keyList;
     }
 
     private void validateKeys(List<String> keys) {
@@ -73,9 +95,9 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
             boolean isCluster = Pradar.isClusterTest();
             boolean withPt = Pradar.isClusterTestPrefix(key);
             if (isCluster && !withPt) {
-                throw new PressureMeasureError("jedis .压测流量进入业务库...,key = " + key);
+                throw new PressureMeasureError("jedis:压测流量进入业务库...,key = " + key);
             } else if (!isCluster && withPt) {
-                logger.error("jedis:业务流量进入压测库,key = {}", key);
+                throw new PressureMeasureError("jedis:业务流量进入压测库,key = " + key);
             }
         }
     }
@@ -332,5 +354,4 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
         }
         return keys;
     }
-
 }

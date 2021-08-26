@@ -15,10 +15,12 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.lettuce.core.protocol.DefaultEndpoint;
@@ -27,6 +29,7 @@ import io.netty.channel.Channel;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+@Destroyable(LettuceDestroy.class)
 public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
 
     @Override

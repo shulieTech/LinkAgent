@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>io.shulie.instrument.module</groupId>
+        <artifactId>user-modules</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>module-jetcache</artifactId>
+
+    <properties>
+        <module-name>jetcache</module-name>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>module-pradar-core</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alicp.jetcache</groupId>
+            <artifactId>jetcache-anno</artifactId>
+            <version>2.6.0.M2</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alicp.jetcache</groupId>
+            <artifactId>jetcache-redis</artifactId>
+            <version>2.6.0.M2</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.cache</groupId>
+            <artifactId>cache-api</artifactId>
+            <version>1.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>

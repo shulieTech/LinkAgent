@@ -51,7 +51,7 @@ public class PlainClassLoaderHandler implements ClassInjector {
 
     private final Map<String, List<JarReader>> pluginJarReaders;
 
-    private static final ConcurrentMap<ClassLoader, ClassLoaderAttachment> classLoaderAttachment = new ConcurrentWeakHashMap<ClassLoader, ClassLoaderAttachment>();
+    private final ConcurrentMap<ClassLoader, ClassLoaderAttachment> classLoaderAttachment = new ConcurrentWeakHashMap<ClassLoader, ClassLoaderAttachment>();
 
 
     static {
@@ -98,6 +98,27 @@ public class PlainClassLoaderHandler implements ClassInjector {
         } catch (Exception e) {
             logger.warn("SIMULATOR: Failed to load plugin class {} with classLoader {}", className, classLoader, e);
             throw new SimulatorException("Failed to load plugin class " + className + " with classLoader " + classLoader, e);
+        }
+    }
+
+    @Override
+    public void destroy() {
+        if (pluginJarReaders != null) {
+            for (Map.Entry<String, List<JarReader>> entry : pluginJarReaders.entrySet()) {
+                List<JarReader> list = entry.getValue();
+                if (list != null) {
+                    for (JarReader reader : list) {
+                        reader.close();
+                    }
+                }
+            }
+            pluginJarReaders.clear();
+        }
+        if (classLoaderAttachment != null) {
+            for (Map.Entry<ClassLoader, ClassLoaderAttachment> entry : classLoaderAttachment.entrySet()) {
+                entry.getValue().destroy();
+            }
+            classLoaderAttachment.clear();
         }
     }
 
@@ -329,6 +350,11 @@ public class PlainClassLoaderHandler implements ClassInjector {
 
         public boolean containsClass(String className) {
             return this.classCache.containsKey(className);
+        }
+
+        public void destroy() {
+            pluginLock.clear();
+            classCache.clear();
         }
     }
 

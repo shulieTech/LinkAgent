@@ -143,12 +143,12 @@ public class ExtFilterMatcher implements Matcher {
         // 如果不开启加载Bootstrap的类，遇到就过滤掉
         if (!extFilter.isIncludeBootstrap()
                 && classStructure.getClassLoader() == null) {
-            return MatchingResult.UN_MATCHED;
+            return MatchingResult.unMatched();
         }
 
         // 匹配ClassStructure
         if (!matchingClassStructure(classStructure)) {
-            return MatchingResult.UN_MATCHED;
+            return MatchingResult.unMatched();
         }
 
         MatchingResult result = new MatchingResult(true);

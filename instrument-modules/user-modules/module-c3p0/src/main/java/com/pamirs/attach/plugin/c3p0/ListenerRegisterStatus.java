@@ -39,6 +39,10 @@ public class ListenerRegisterStatus {
         return INSTANCE;
     }
 
+    public static void release() {
+        INSTANCE = null;
+    }
+
     /**
      * 判断是否已经初始化
      *

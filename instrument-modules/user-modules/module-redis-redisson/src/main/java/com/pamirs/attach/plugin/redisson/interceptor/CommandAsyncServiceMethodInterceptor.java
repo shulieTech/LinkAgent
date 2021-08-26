@@ -15,7 +15,9 @@
 package com.pamirs.attach.plugin.redisson.interceptor;
 
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 
 /**
  * @Description
@@ -23,6 +25,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
  * @mail xiaobin@shulie.io
  * @Date 2020/9/8 11:32 上午
  */
+@Destroyable(RedissonDestroy.class)
 public class CommandAsyncServiceMethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     public String getPluginName() {

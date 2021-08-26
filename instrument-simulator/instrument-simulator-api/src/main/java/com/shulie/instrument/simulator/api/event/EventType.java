@@ -22,67 +22,93 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public enum EventType {
+public abstract class EventType {
     /**
      * 加载事件
      */
-    LOAD,
+    public final static int LOAD = 1;
 
     /**
      * 调用:BEFORE
      */
-    BEFORE,
+    public final static int BEFORE = 2;
 
     /**
      * 调用:RETURN
      */
-    RETURN,
+    public final static int RETURN = 3;
 
     /**
      * 调用:THROWS
      */
-    THROWS,
+    public final static int THROWS = 4;
 
     /**
      * 调用:LINE
      * 一行被调用了
      */
-    LINE,
+    public final static int LINE = 5;
 
     /**
      * 调用:CALL_BEFORE
      * 一个方法被调用之前
      */
-    CALL_BEFORE,
+    public final static int CALL_BEFORE = 6;
 
     /**
      * 调用:CALL_RETURN
      * 一个方法被调用正常返回之后
      */
-    CALL_RETURN,
+    public final static int CALL_RETURN = 7;
 
     /**
      * 调用:CALL_THROWS
      * 一个方法被调用抛出异常之后
      */
-    CALL_THROWS,
+    public final static int CALL_THROWS = 8;
 
 
     /**
      * 立即调用:RETURN
      * 由{@link ProcessControlException#throwReturnImmediately(Object)}触发
      */
-    IMMEDIATELY_RETURN,
+    public final static int IMMEDIATELY_RETURN = 9;
 
     /**
      * 立即调用:THROWS
      * 由{@link ProcessControlException#throwThrowsImmediately(Throwable)}触发
      */
-    IMMEDIATELY_THROWS;
+    public final static int IMMEDIATELY_THROWS = 10;
 
     /**
      * 空类型
      */
-    public static final EventType[] EMPTY = new EventType[0];
+    public final static Integer[] EMPTY = new Integer[0];
 
+    public static String name(int type) {
+        switch (type) {
+            case LOAD:
+                return "LOAD";
+            case BEFORE:
+                return "BEFORE";
+            case RETURN:
+                return "RETURN";
+            case THROWS:
+                return "THROWS";
+            case LINE:
+                return "LINE";
+            case CALL_BEFORE:
+                return "CALL_BEFORE";
+            case CALL_RETURN:
+                return "CALL_RETURN";
+            case CALL_THROWS:
+                return "CALL_THROWS";
+            case IMMEDIATELY_RETURN:
+                return "IMMEDIATELY_RETURN";
+            case IMMEDIATELY_THROWS:
+                return "IMMEDIATELY_THROWS";
+
+        }
+        return "UNKNOW";
+    }
 }

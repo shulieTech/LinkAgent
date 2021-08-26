@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "watch", version = "1.0.0", author = "xiaobin@shulie.io", description = "方法 watch 模块")
 public class WatchModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(WatchModule.class);
+    private final Logger logger = LoggerFactory.getLogger(WatchModule.class);
 
     @Resource
     private ModuleEventWatcher moduleEventWatcher;
@@ -76,7 +76,7 @@ public class WatchModule extends ParamSupported implements ExtensionModule {
                     .onClass(classPattern).includeSubClasses()
                     .onBehavior(methodPattern)
                     .withInvoke().withCall()
-                    .onListener(Listeners.of(WatchListener.class, latch, watchViews, condition, express, wait != -1 ? -1 : limits))
+                    .onListener(Listeners.of(WatchListener.class, new Object[]{latch, watchViews, condition, express, wait != -1 ? -1 : limits}))
                     .onClass().onWatch();
 
             if (wait > 0) {

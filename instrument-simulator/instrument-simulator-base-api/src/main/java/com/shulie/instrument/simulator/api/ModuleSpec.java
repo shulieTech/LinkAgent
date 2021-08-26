@@ -55,7 +55,7 @@ public class ModuleSpec {
     /**
      * 支持的启动模式
      */
-    private LoadMode[] supportedModes;
+    private int[] supportedModes;
 
     /**
      * 是否启动时就激活
@@ -68,6 +68,11 @@ public class ModuleSpec {
      * 模块描述
      */
     private String description;
+
+    /**
+     * auto switch
+     */
+    private boolean switchAuto;
 
     /**
      * 模块版本号
@@ -222,13 +227,14 @@ public class ModuleSpec {
         this.author = moduleInfo.author();
         this.priority = moduleInfo.priority();
         this.description = moduleInfo.description();
+        this.switchAuto = moduleInfo.switchAuto();
     }
 
-    public LoadMode[] getSupportedModes() {
+    public int[] getSupportedModes() {
         return supportedModes;
     }
 
-    public void setSupportedModes(LoadMode[] supportedModes) {
+    public void setSupportedModes(int[] supportedModes) {
         this.supportedModes = supportedModes;
     }
 
@@ -332,6 +338,14 @@ public class ModuleSpec {
 
     public String getModuleId() {
         return moduleId;
+    }
+
+    public boolean isSwitchAuto() {
+        return switchAuto;
+    }
+
+    public void setSwitchAuto(boolean switchAuto) {
+        this.switchAuto = switchAuto;
     }
 
     private static Set<String> strToSet(String str, String delimiter) {
@@ -513,6 +527,31 @@ public class ModuleSpec {
         ModuleSpec spec = (ModuleSpec) o;
 
         return moduleId != null ? moduleId.equals(spec.moduleId) : spec.moduleId == null;
+    }
+
+    public void clear() {
+        this.module = null;
+        this.classOfModule = null;
+        this.dependencies.clear();
+        this.exportPackages.clear();
+        this.exportExactlyPackages.clear();
+        this.exportPrefixPackages.clear();
+        this.exportSuffixPackages.clear();
+        this.importPackages.clear();
+        this.importExactlyPackages.clear();
+        this.importPrefixPackages.clear();
+        this.importSuffixPackages.clear();
+        this.exportClasses.clear();
+        this.importClasses.clear();
+        this.exportResources.clear();
+        this.exportExactlyResources.clear();
+        this.exportPrefixResources.clear();
+        this.exportSuffixResources.clear();
+        this.importResources.clear();
+        this.importExactlyResources.clear();
+        this.importPrefixResources.clear();
+        this.importSuffixResources.clear();
+        this.file = null;
     }
 
     @Override

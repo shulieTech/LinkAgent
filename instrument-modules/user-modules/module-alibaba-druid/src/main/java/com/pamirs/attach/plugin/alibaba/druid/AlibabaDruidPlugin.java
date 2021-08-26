@@ -15,9 +15,6 @@
 package com.pamirs.attach.plugin.alibaba.druid;
 
 import com.pamirs.attach.plugin.alibaba.druid.interceptor.DruidInjectGetConnectionInterceptor;
-import com.pamirs.attach.plugin.alibaba.druid.interceptor.DruidInjectInitInterceptor;
-import com.pamirs.attach.plugin.alibaba.druid.interceptor.OracleExprParserPrimaryRestInterceptor;
-import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -40,31 +37,14 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
 
     @Override
     public void onActive() throws Throwable {
-        //jdbc pt table mechanism
-        enhanceTemplate.enhance(this, "com.alibaba.druid.sql.dialect.oracle.parser.OracleExprParser", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod method = target.getDeclaredMethod("primaryRest", "com.alibaba.druid.sql.ast.SQLExpr");
-                method.addInterceptor(Listeners.of(OracleExprParserPrimaryRestInterceptor.class));
-            }
-        });
-
         enhanceTemplate.enhance(this, "com.alibaba.druid.pool.DruidDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass instrumentClass) {
-                InstrumentMethod initMethod = instrumentClass.getDeclaredMethod("init");
-                initMethod.addInterceptor(Listeners.of(DruidInjectInitInterceptor.class));
-
                 InstrumentMethod getConnectionMethod = instrumentClass.getDeclaredMethod("getConnection", "long");
                 getConnectionMethod.addInterceptor(Listeners.of(DruidInjectGetConnectionInterceptor.class, "Druid_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             }
         });
 
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
-        DataSourceWrapUtil.destroy();
     }
 }

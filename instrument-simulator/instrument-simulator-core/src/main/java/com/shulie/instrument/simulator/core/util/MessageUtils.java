@@ -28,10 +28,10 @@ public class MessageUtils {
      *
      * @param namespace 命名空间
      */
-    public synchronized static void init(final String namespace) {
+    public synchronized static void init(final String namespace, EventListenerHandler eventListenerHandler) {
 
         if (!Messager.isInit(namespace)) {
-            Messager.init(namespace, EventListenerHandler.getSingleton());
+            Messager.init(namespace, eventListenerHandler);
         }
 
     }

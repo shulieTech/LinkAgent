@@ -47,7 +47,6 @@ public class LogbackUtils {
         final Logger logger = LoggerFactory.getLogger(LoggerFactory.class);
         try {
             is = new FileInputStream(configureFile);
-            NamespaceConvert.initNamespaceConvert(namespace);
             configurator.doConfigure(is);
             logger.info(SimulatorStringUtils.getLogo());
             if (logger.isInfoEnabled()) {

@@ -15,10 +15,7 @@
 package com.pamirs.pradar.internal;
 
 import com.pamirs.pradar.internal.adapter.JobAdapter;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 
 import java.util.Collections;
 import java.util.Map;
@@ -380,7 +377,7 @@ public class GlobalConfigService {
      *
      * @return
      */
-    public static Set<String> getUrlWhiteList() {
+    public static Set<MatchConfig> getUrlWhiteList() {
         if (instance == null) {
             return Collections.EMPTY_SET;
         }
@@ -392,7 +389,7 @@ public class GlobalConfigService {
      *
      * @return
      */
-    public static Set<String> getDubboNameWhiteList() {
+    public static Set<MatchConfig> getDubboNameWhiteList() {
         if (instance == null) {
             return Collections.EMPTY_SET;
         }

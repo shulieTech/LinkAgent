@@ -14,12 +14,13 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.time.Duration;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
-import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
+import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -29,6 +30,7 @@ import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -45,9 +47,12 @@ import org.slf4j.LoggerFactory;
  * @package: com.pamirs.attach.plugin.apache.kafka.interceptor
  * @Date 2019-08-05 19:32
  */
+@Destroyable(KafkaDestroy.class)
 @SuppressWarnings("rawtypes")
 public class ConsumerPollInterceptor extends CutoffInterceptorAdaptor {
     private final static Logger LOGGER = LoggerFactory.getLogger(ConsumerPollInterceptor.class.getName());
+
+    private final AtomicBoolean warnAlready = new AtomicBoolean(false);
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
@@ -68,19 +73,26 @@ public class ConsumerPollInterceptor extends CutoffInterceptorAdaptor {
         if (consumerMetaData == null) {
             return CutOffResult.passed();
         }
-        if (consumerMetaData.isHasShadow()) {
-            Object[] args = advice.getParameterArray();
-            ConsumerProxy consumerProxy = ConsumerHolder.getProxyOrCreate(consumer);
-            long timeout = 100L;
-            if (args[0] instanceof Long) {
-                timeout = (long)args[0];
-            } else if (args[0] instanceof Duration) {
+        Object[] args = advice.getParameterArray();
+        long timeout = 100L;
+        if (args[0] instanceof Long) {
+            timeout = (Long)args[0];
+        } /* else if (args[0] instanceof Duration) {
                 timeout = ((Duration)args[0]).toMillis();
-            } else if (args[0] instanceof Timer) {
-                timeout = ((Timer)args[0]).remainingMs();
+            } */ else if (args[0] instanceof Timer) {
+            timeout = ((Timer)args[0]).remainingMs();
+        }
+        if (consumerMetaData.isHasShadow()) {
+            ConsumerProxy consumerProxy = ConsumerHolder.getProxyOrCreate(consumer, timeout);
+            if (consumerProxy == null) {
+                return CutOffResult.PASSED;
             }
             return CutOffResult.cutoff(consumerProxy.poll(timeout));
         } else {
+            if(warnAlready.compareAndSet(false, true)){
+                LOGGER.warn("consumer with group id : {} topic : {} doesn't has shadow consumer config",
+                    consumerMetaData.getGroupId(), consumerMetaData.getTopics());
+            }
             return CutOffResult.passed();
         }
     }

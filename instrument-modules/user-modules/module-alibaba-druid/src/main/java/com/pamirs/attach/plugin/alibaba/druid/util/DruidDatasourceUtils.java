@@ -51,7 +51,7 @@ public class DruidDatasourceUtils {
         }
 
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
-        if(StringUtils.isBlank(driverClassName)) {
+        if (StringUtils.isBlank(driverClassName)) {
             driverClassName = sourceDatasource.getDriverClassName();
         }
 
@@ -401,6 +401,7 @@ public class DruidDatasourceUtils {
             }
             return true;
         } catch (Throwable e) {
+            logger.error("check configured dataSource fail", e);
             return false;
         }
     }
@@ -411,6 +412,7 @@ public class DruidDatasourceUtils {
             String username = sourceDataSource.getUsername();
             return DatabaseUtils.isTestTable(url, username);
         } catch (Throwable e) {
+            logger.error("check shadowTable dataSource fail", e);
             return true;
         }
     }

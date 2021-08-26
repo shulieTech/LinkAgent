@@ -219,4 +219,9 @@ public class ShadowEsClientHolder {
         return nodes;
     }
 
+    public static void release() {
+        transportClientMapping.clear();
+        restClientMapping.clear();
+    }
+
 }

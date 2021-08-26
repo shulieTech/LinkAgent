@@ -3,13 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>com.shulie.instrument.module</groupId>
+        <groupId>io.shulie.instrument.module</groupId>
         <artifactId>user-modules</artifactId>
         <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-mock</artifactId>
-    <name>module-mock</name>
+    <name>${project.artifactId} ${project.version}</name>
 
     <properties>
         <module-name>mock</module-name>
@@ -17,13 +17,13 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>
@@ -33,12 +33,6 @@
             <artifactId>junit</artifactId>
             <version>4.13</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy-all</artifactId>
-            <version>2.4.9</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- 给MOCK模块单独配置一个日志 -->

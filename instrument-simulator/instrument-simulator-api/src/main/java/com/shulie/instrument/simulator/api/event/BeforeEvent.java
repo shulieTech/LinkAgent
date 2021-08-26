@@ -14,9 +14,11 @@
  */
 package com.shulie.instrument.simulator.api.event;
 
+import java.lang.ref.WeakReference;
+
 /**
  * 方法调用BEFORE事件
- *
+ * <p>
  * 注意: Event 的内容会在方法调用周期结束后进行清理，内部的数据将会全部清空
  * 这样做是为了内存回收的速度加快，所以如果需要在方法调用生命周期外引用 Event
  * 需要提前将内部的数据引用
@@ -29,7 +31,7 @@ public class BeforeEvent extends InvokeEvent {
     /**
      * 触发调用事件的ClassLoader
      */
-    private ClassLoader javaClassLoader;
+    private WeakReference<ClassLoader> javaClassLoader;
 
     /**
      * 获取触发调用事件的类名称
@@ -77,7 +79,9 @@ public class BeforeEvent extends InvokeEvent {
                        final Object target,
                        final Object[] argumentArray) {
         super(processId, invokeId, EventType.BEFORE);
-        this.javaClassLoader = javaClassLoader;
+        if (javaClassLoader != null) {
+            this.javaClassLoader = new WeakReference<ClassLoader>(javaClassLoader);
+        }
         this.clazz = clazz;
         this.javaMethodName = javaMethodName;
         this.javaMethodDesc = javaMethodDesc;
@@ -99,7 +103,7 @@ public class BeforeEvent extends InvokeEvent {
     }
 
     public ClassLoader getJavaClassLoader() {
-        return javaClassLoader;
+        return javaClassLoader == null ? null : javaClassLoader.get();
     }
 
     public Class getClazz() {

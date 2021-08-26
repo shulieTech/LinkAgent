@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.core.manager.impl;
 
-import com.shulie.instrument.simulator.api.ModuleRepositoryMode;
 import com.shulie.instrument.simulator.core.manager.ModuleLoader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -28,11 +27,6 @@ import java.util.LinkedHashSet;
  * @since 2020/10/27 3:36 下午
  */
 public class LocalModuleLoader implements ModuleLoader {
-
-    @Override
-    public ModuleRepositoryMode supportMode() {
-        return ModuleRepositoryMode.LOCAL;
-    }
 
     @Override
     public File[] loadModuleLibs(String appName, String[] paths) {

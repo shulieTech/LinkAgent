@@ -15,7 +15,9 @@
 package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
 import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
+import com.pamirs.attach.plugin.apache.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
 
@@ -23,6 +25,7 @@ import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/26 10:18 下午
  */
+@Destroyable(MqDestroy.class)
 public class DefaultMQPushConsumerImplHasHookListener extends AroundInterceptor {
 
     @Override
@@ -47,4 +50,5 @@ public class DefaultMQPushConsumerImplHasHookListener extends AroundInterceptor 
          */
         ConsumerRegistry.registerConsumer(target.getDefaultMQPushConsumer());
     }
+
 }

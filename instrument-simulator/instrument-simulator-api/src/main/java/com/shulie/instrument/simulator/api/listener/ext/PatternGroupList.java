@@ -30,7 +30,7 @@ class PatternGroupList {
     /*
      * 添加模式匹配组
      */
-    void add(PatternType patternType, String... patternArray) {
+    void add(int patternType, String... patternArray) {
         groups.add(new Group(patternType, patternArray));
     }
 

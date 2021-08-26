@@ -97,7 +97,7 @@ class PradarLogDaemon implements Runnable {
     static void start() {
         if (PradarSwitcher.isPradarLogDaemonEnabled() && running.compareAndSet(false, true)) {
             int logDaemonInterval = Pradar.PRADAR_LOG_DAEMON_INTERVAL;
-            scheduledFuture = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new PradarLogDaemon(), logDaemonInterval, logDaemonInterval, TimeUnit.SECONDS);
+            scheduledFuture = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new PradarLogDaemon(), logDaemonInterval, logDaemonInterval, TimeUnit.SECONDS);
         } else {
             LOGGER.warn("PradarLogDaemon start failed. cause by logDaemonSwitcher: {}, runningStatus: {}", PradarSwitcher.isPradarLogDaemonEnabled(), running.get());
         }

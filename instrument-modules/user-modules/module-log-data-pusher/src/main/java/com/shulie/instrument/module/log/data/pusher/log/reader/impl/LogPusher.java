@@ -77,7 +77,7 @@ public class LogPusher {
             }
         }
 
-        positionFuture = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+        positionFuture = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 for (FileReader fileReader : fileReaders) {
@@ -90,7 +90,7 @@ public class LogPusher {
         }, 2, 2, TimeUnit.SECONDS);
 
         if (!this.failures.isEmpty()) {
-            failuresFuture = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+            failuresFuture = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
                     if (failures.isEmpty()) {
@@ -118,9 +118,6 @@ public class LogPusher {
         if (!isStarted) {
             return;
         }
-        if (this.fileReaders == null) {
-            return;
-        }
         this.isStarted = false;
         if (positionFuture != null && !positionFuture.isDone() && !positionFuture.isCancelled()) {
             positionFuture.cancel(true);
@@ -128,5 +125,15 @@ public class LogPusher {
         if (failuresFuture != null && !failuresFuture.isDone() && !failuresFuture.isCancelled()) {
             failuresFuture.cancel(true);
         }
+        if (this.fileReaders == null) {
+            return;
+        }
+        for (FileReader fileReader : this.fileReaders) {
+            if (fileReader.isStopped()) {
+                continue;
+            }
+            fileReader.stop();
+        }
+        this.fileReaders = null;
     }
 }

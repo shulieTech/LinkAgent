@@ -29,7 +29,11 @@ import org.apache.rocketmq.common.message.MessageQueue;
  */
 public class PullConsumerInterceptor extends AroundInterceptor {
 
-    private static PullConsumeMessageHookImpl hook = new PullConsumeMessageHookImpl();
+    private PullConsumeMessageHookImpl hook;
+
+    public PullConsumerInterceptor() {
+        hook = new PullConsumeMessageHookImpl();
+    }
 
     private boolean checkArgs(Object[] args, Object result) {
         if (args == null || args.length == 0) {

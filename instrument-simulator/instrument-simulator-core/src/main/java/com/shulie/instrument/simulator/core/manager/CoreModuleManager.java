@@ -100,6 +100,7 @@ public interface CoreModuleManager {
 
     /**
      * 卸载模块
+     * 默认卸载之前先冻结模块
      *
      * @param coreModule              模块
      * @param isIgnoreModuleException 是否忽略模块异常
@@ -107,6 +108,17 @@ public interface CoreModuleManager {
      * @throws ModuleException 卸载模块失败
      */
     CoreModule unload(CoreModule coreModule, boolean isIgnoreModuleException) throws ModuleException;
+
+    /**
+     * 卸载模块
+     *
+     * @param coreModule              模块
+     * @param isIgnoreModuleException 是否忽略模块异常
+     * @param frozen                  在 unload 之前是否先 frozen 模块
+     * @return 返回被卸载的模块
+     * @throws ModuleException 卸载模块失败
+     */
+    CoreModule unload(CoreModule coreModule, boolean isIgnoreModuleException, boolean frozen) throws ModuleException;
 
     /**
      * 对目标对象进行资源注入

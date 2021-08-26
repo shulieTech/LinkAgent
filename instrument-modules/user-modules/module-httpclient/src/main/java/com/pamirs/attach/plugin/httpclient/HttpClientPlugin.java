@@ -114,6 +114,77 @@ public class HttpClientPlugin extends ModuleLifecycleAdapter implements Extensio
 
             }
         });
+        //httpclient v5
+        enhanceTemplate.enhance(this, "org.apache.hc.client5.http.impl.classic.CloseableHttpClient", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+
+                //execute and doExecute, only one method exists!
+                InstrumentMethod executeMethod0 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.HttpHost", "org.apache.hc.core5.http.ClassicHttpRequest","org.apache.hc.core5.http.protocol.HttpContext");
+                executeMethod0.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+
+                InstrumentMethod executeMethod1 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.ClassicHttpRequest", "org.apache.hc.core5.http.protocol.HttpContext");
+                executeMethod1.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor1.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod2 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.ClassicHttpRequest");
+                executeMethod2.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor1.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod3 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.HttpHost","org.apache.hc.core5.http.ClassicHttpRequest");
+                executeMethod3.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod4 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.ClassicHttpRequest","org.apache.hc.core5.http.io.HttpClientResponseHandler");
+                executeMethod4.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor1.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod5 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.ClassicHttpRequest", "org.apache.hc.core5.http.protocol.HttpContext","org.apache.hc.core5.http.io.HttpClientResponseHandler");
+                executeMethod5.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor1.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod6 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.HttpHost", "org.apache.hc.core5.http.ClassicHttpRequest","org.apache.hc.core5.http.io.HttpClientResponseHandler");
+                executeMethod6.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod7 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.HttpHost", "org.apache.hc.core5.http.ClassicHttpRequest", "org.apache.hc.core5.http.protocol.HttpContext","org.apache.hc.core5.http.io.HttpClientResponseHandler");
+                executeMethod7.addInterceptor(Listeners.of(HttpClientv5MethodInterceptor.class, "HTTPCLIENT_5_SYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+            }
+        });
+
+        enhanceTemplate.enhance(this, "org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod executeMethod0 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.HttpHost", "org.apache.hc.core5.http.nio.AsyncRequestProducer", "org.apache.hc.core5.http.nio.AsyncResponseConsumer", "org.apache.hc.core5.http.nio.HandlerFactory","org.apache.hc.core5.http.protocol.HttpContext","org.apache.hc.core5.concurrent.FutureCallback");
+                executeMethod0.addInterceptor(Listeners.of(AsyncHttpClientv5MethodInterceptor.class, "HTTPCLIENT_5_ASYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod1 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.nio.AsyncRequestProducer", "org.apache.hc.core5.http.nio.AsyncResponseConsumer", "org.apache.hc.core5.http.nio.HandlerFactory","org.apache.hc.core5.http.protocol.HttpContext","org.apache.hc.core5.concurrent.FutureCallback");
+                executeMethod1.addInterceptor(Listeners.of(AsyncHttpClientv5MethodInterceptor2.class, "HTTPCLIENT_5_ASYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod2 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.nio.AsyncRequestProducer", "org.apache.hc.core5.http.nio.AsyncResponseConsumer", "org.apache.hc.core5.http.protocol.HttpContext","org.apache.hc.core5.concurrent.FutureCallback");
+                executeMethod2.addInterceptor(Listeners.of(AsyncHttpClientv5MethodInterceptor2.class, "HTTPCLIENT_5_ASYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod3 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.core5.http.nio.AsyncRequestProducer", "org.apache.hc.core5.http.nio.AsyncResponseConsumer", "org.apache.hc.core5.concurrent.FutureCallback");
+                executeMethod3.addInterceptor(Listeners.of(AsyncHttpClientv5MethodInterceptor2.class, "HTTPCLIENT_5_ASYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod4 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.client5.http.async.methods.SimpleHttpRequest",  "org.apache.hc.core5.http.protocol.HttpContext","org.apache.hc.core5.concurrent.FutureCallback");
+                executeMethod4.addInterceptor(Listeners.of(AsyncHttpClientv5MethodInterceptor1.class, "HTTPCLIENT_5_ASYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod executeMethod5 = target.getDeclaredMethod("execute",
+                    "org.apache.hc.client5.http.async.methods.SimpleHttpRequest","org.apache.hc.core5.concurrent.FutureCallback");
+                executeMethod5.addInterceptor(Listeners.of(AsyncHttpClientv5MethodInterceptor1.class, "HTTPCLIENT_5_ASYNC_EXECUTE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+            }
+        });
 
     }
 

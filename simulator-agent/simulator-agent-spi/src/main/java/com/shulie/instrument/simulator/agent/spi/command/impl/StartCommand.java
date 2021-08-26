@@ -22,5 +22,16 @@ import com.shulie.instrument.simulator.agent.spi.command.Command;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/17 7:58 下午
  */
-public class StartCommand implements Command {
+public class StartCommand<T> implements Command {
+
+    private final T packet;
+
+    public StartCommand(T packet) {
+        this.packet = packet;
+    }
+
+    @Override
+    public T getPacket() {
+        return packet;
+    }
 }

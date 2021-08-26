@@ -14,23 +14,23 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.util.List;
-
 import com.pamirs.attach.plugin.es.ElasticsearchConstants;
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
+import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
-import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.elasticsearch.client.support.AbstractClient;
-import org.elasticsearch.client.transport.TransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 import static com.pamirs.attach.plugin.es.common.ElasticSearchParser.parseAddressAndPort;
 
@@ -38,6 +38,7 @@ import static com.pamirs.attach.plugin.es.common.ElasticSearchParser.parseAddres
  * @author vincent
  * @version v0.1 2016/12/29 11:10
  */
+@Destroyable(ElasticSearchDestroy.class)
 public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
     Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
@@ -61,7 +62,7 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
             LOGGER.error("elasticsearch {} is not supported", args[1].getClass().getName());
             return null;
         }
-        AbstractClient client = (AbstractClient)target;
+        AbstractClient client = (AbstractClient) target;
         record.setService(toString(requestIndexRename.getIndex(args[1])));
         record.setMethod(advice.getBehavior().getName());
         record.setRemoteIp(parseAddressAndPort(client));

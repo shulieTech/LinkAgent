@@ -35,4 +35,9 @@ public interface ServerAddrProvider {
      * @param connectInfo
      */
     void errorConnectInfo(ConnectInfo connectInfo);
+
+    /**
+     * release all resources
+     */
+    void release();
 }

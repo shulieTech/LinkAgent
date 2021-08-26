@@ -32,21 +32,18 @@ public class ScopedParametersWrapperInterceptor extends ParametersWrapperInterce
 
     private final ParametersWrapperInterceptor interceptor;
     private final InterceptorScope scope;
-    private final ExecutionPolicy policy;
+    private final int policy;
 
-    public ScopedParametersWrapperInterceptor(ParametersWrapperInterceptor interceptor, ExecutionPolicy policy) {
+    public ScopedParametersWrapperInterceptor(ParametersWrapperInterceptor interceptor, int policy) {
         this(interceptor, null, policy);
     }
 
-    public ScopedParametersWrapperInterceptor(ParametersWrapperInterceptor interceptor, InterceptorScope scope, ExecutionPolicy policy) {
+    public ScopedParametersWrapperInterceptor(ParametersWrapperInterceptor interceptor, InterceptorScope scope, int policy) {
         if (interceptor == null) {
             throw new NullPointerException("interceptor must not be null");
         }
         if (scope == null) {
             throw new NullPointerException("scope must not be null");
-        }
-        if (policy == null) {
-            throw new NullPointerException("policy must not be null");
         }
         this.interceptor = interceptor;
         this.scope = scope;

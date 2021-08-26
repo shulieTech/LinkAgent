@@ -14,9 +14,6 @@
  */
 package com.shulie.instrument.simulator.api;
 
-import static com.shulie.instrument.simulator.api.ProcessControlException.State.RETURN_IMMEDIATELY;
-import static com.shulie.instrument.simulator.api.ProcessControlException.State.THROWS_IMMEDIATELY;
-
 /**
  * 流程控制异常
  * <p>用于控制事件处理器处理事件走向</p>
@@ -25,11 +22,25 @@ import static com.shulie.instrument.simulator.api.ProcessControlException.State.
  * @since 2020/10/23 10:45 下午
  */
 public final class ProcessControlException extends Exception {
+    /**
+     * 立即返回
+     */
+    public final static int RETURN_IMMEDIATELY = 1;
+
+    /**
+     * 立即抛出异常
+     */
+    public final static int THROWS_IMMEDIATELY = 2;
+
+    /**
+     * 不干预任何流程
+     */
+    public final static int NONE_IMMEDIATELY = 3;
 
     /**
      * 流程控制状态
      */
-    private final State state;
+    private final int state;
 
     /**
      * 回应结果对象(直接返回或者抛出异常)
@@ -41,11 +52,11 @@ public final class ProcessControlException extends Exception {
      */
     private final boolean isIgnoreProcessEvent;
 
-    ProcessControlException(State state, Object result) {
+    ProcessControlException(int state, Object result) {
         this(false, state, result);
     }
 
-    ProcessControlException(boolean isIgnoreProcessEvent, State state, Object result) {
+    ProcessControlException(boolean isIgnoreProcessEvent, int state, Object result) {
         this.isIgnoreProcessEvent = isIgnoreProcessEvent;
         this.state = state;
         this.result = result;
@@ -80,7 +91,7 @@ public final class ProcessControlException extends Exception {
         return isIgnoreProcessEvent;
     }
 
-    public State getState() {
+    public int getState() {
         return state;
     }
 
@@ -91,29 +102,6 @@ public final class ProcessControlException extends Exception {
     @Override
     public Throwable fillInStackTrace() {
         return null;
-    }
-
-
-    /**
-     * 流程控制状态
-     */
-    public enum State {
-
-        /**
-         * 立即返回
-         */
-        RETURN_IMMEDIATELY,
-
-        /**
-         * 立即抛出异常
-         */
-        THROWS_IMMEDIATELY,
-
-        /**
-         * 不干预任何流程
-         */
-        NONE_IMMEDIATELY
-
     }
 
 }

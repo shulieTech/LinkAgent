@@ -1,23 +1,38 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.mongodb.DBCollection;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.ServerAddress;
 import com.pamirs.pradar.CutOffResult;
+import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
-import com.pamirs.pradar.internal.PradarInternalService;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -26,10 +41,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorAdaptor {
 
     private final Map<String, MongoClient> clientMapping
-            = new ConcurrentHashMap<String, MongoClient>();
+        = new ConcurrentHashMap<String, MongoClient>();
 
     private final Map<String, DBCollection> collectionMapping
-            = new ConcurrentHashMap<String, DBCollection>();
+        = new ConcurrentHashMap<String, DBCollection>();
 
     private final Object lock = new Object();
 
@@ -41,7 +56,7 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
         if (!check(advice)) {
             return CutOffResult.passed();
         }
-        DBCollection dbCollection = (DBCollection) advice.getTarget();
+        DBCollection dbCollection = (DBCollection)advice.getTarget();
         DBCollection ptCollection = getPtCollection(dbCollection);
         if (ptCollection == null) {
             return CutOffResult.passed();
@@ -58,7 +73,7 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
         }
 
         if (Pradar.isClusterTestPrefix(busCollectionName) || Pradar.isClusterTestPrefix(
-                bizDbCollection.getDB().getName())) {
+            bizDbCollection.getDB().getName())) {
             return null;
         }
 
@@ -77,6 +92,13 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
                             //读操作，未配置影子表，直接读取业务表
                             return null;
                         } else {
+                            ErrorReporter.buildError()
+                                .setErrorType(ErrorTypeEnum.DataSource)
+                                .setErrorCode("datasource-0002")
+                                .setMessage("mongodb影子库/表未配置！")
+                                .setDetail(
+                                    "业务库配置:::url: " + bizDbCollection.getDB().getMongo().getAddress().toString())
+                                .report();
                             throw new PressureMeasureError("mongodb影子库/表未配置");
                         }
                     }
@@ -102,10 +124,10 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
     }
 
     protected DBCollection doShadowDatabase(DBCollection dbCollection, String busCollectionName,
-                                            ShadowDatabaseConfig config) throws Throwable {
+        ShadowDatabaseConfig config) throws Throwable {
         MongoClient ptMongoClient = getPtMongoClient(config);
         return ptMongoClient.getDB(Pradar.addClusterTestPrefix(dbCollection.getDB().getName())).getCollection(
-                Pradar.addClusterTestPrefix(busCollectionName));
+            Pradar.addClusterTestPrefix(busCollectionName));
     }
 
     /**
@@ -128,17 +150,23 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
     }
 
     protected DBCollection doShadowTable(DBCollection dbCollection, String busCollectionName,
-                                         ShadowDatabaseConfig config) throws Throwable {
+        ShadowDatabaseConfig config) throws Throwable {
         if (Pradar.isClusterTestPrefix(busCollectionName)) {
             return null;
         }
         String shadowTableName = getShadowTableName(config, busCollectionName);
         if (shadowTableName == null) {
+            ErrorReporter.buildError()
+                .setErrorType(ErrorTypeEnum.DataSource)
+                .setErrorCode("datasource-0002")
+                .setMessage("mongodb影子表未配置！")
+                .setDetail("表名:" + busCollectionName)
+                .report();
             throw new PressureMeasureError(String.format("mongodb影子表未配置 ： %s", busCollectionName));
         }
 
         return dbCollection.getDB().getCollection(
-                PradarInternalService.addClusterTestPrefix(busCollectionName));
+            shadowTableName);
     }
 
     protected abstract boolean check(Advice advice);

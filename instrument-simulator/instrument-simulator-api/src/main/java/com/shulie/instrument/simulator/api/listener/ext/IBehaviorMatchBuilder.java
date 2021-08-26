@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.api.listener.ext;
 
 
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 
 /**
@@ -199,7 +198,7 @@ public interface IBehaviorMatchBuilder {
      * @param eventEventTypeArray 需要被监听的事件列表（参数废弃）
      * @return this
      */
-    IBehaviorMatchBuilder onListener(Listeners listeners, EventType... eventEventTypeArray);
+    IBehaviorMatchBuilder onListener(Listeners listeners, int... eventEventTypeArray);
 
 
     /**
@@ -210,5 +209,5 @@ public interface IBehaviorMatchBuilder {
      * @throws Throwable 如果 watching 不成功会抛出异常
      * @see IClassMatchBuilder#onWatch()
      */
-    void onWatching(Listeners listeners, WatchCallback watchCallback, EventType... eventEventTypeArray) throws Throwable;
+    void onWatching(Listeners listeners, WatchCallback watchCallback, int... eventEventTypeArray) throws Throwable;
 }

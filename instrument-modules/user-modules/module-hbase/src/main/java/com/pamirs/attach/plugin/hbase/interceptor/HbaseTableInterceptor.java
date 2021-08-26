@@ -14,12 +14,14 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.attach.plugin.hbase.util.HBaseTableNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,7 @@ import java.nio.charset.Charset;
  * @Date: 2020/7/21 11:46
  * @Description:
  */
+@Destroyable(HbaseDestroyed.class)
 public class HbaseTableInterceptor extends ParametersWrapperInterceptorAdaptor {
     private final Logger logger = LoggerFactory.getLogger(HbaseTableInterceptor.class);
 

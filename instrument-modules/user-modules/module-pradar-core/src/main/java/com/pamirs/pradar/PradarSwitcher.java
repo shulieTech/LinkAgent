@@ -17,12 +17,12 @@ package com.pamirs.pradar;
 
 import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
-import com.shulie.instrument.simulator.api.GlobalSwitch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class PradarSwitcher {
     private final static Logger LOGGER = LoggerFactory.getLogger(PradarSwitcher.class);
 
-    private static Map<String, Boolean> configSwitchers = new ConcurrentHashMap<String, Boolean>();
+    private static ConcurrentMap<String, Boolean> configSwitchers = new ConcurrentHashMap<String, Boolean>();
 
     private static CopyOnWriteArrayList<PradarSwitcherListener> listeners = new CopyOnWriteArrayList<PradarSwitcherListener>();
 
@@ -167,9 +167,9 @@ public class PradarSwitcher {
     }
 
     public static void turnConfigSwitcherOn(String configName) {
-        Boolean oldValue = configSwitchers.get(configName);
-        configSwitchers.put(configName, Boolean.TRUE);
-        if (oldValue != null && oldValue != true) {
+        configSwitchers.get(configName);
+        Boolean oldValue = configSwitchers.put(configName, Boolean.TRUE);
+        if (oldValue != null && !oldValue) {
             for (PradarSwitcherListener listener : listeners) {
                 listener.onListen(new PradarSwitchEvent(isClusterTestEnabled(), getClusterTestUnableReason()));
             }
@@ -325,7 +325,6 @@ public class PradarSwitcher {
         boolean before = isClusterTestEnabled();
         isClusterTestReady = true;
         configSwitchers.clear();
-        GlobalSwitch.switchOn("clusterTestSwitcher");
         boolean after = isClusterTestEnabled();
         if (before != after) {
             for (PradarSwitcherListener listener : listeners) {
@@ -346,7 +345,6 @@ public class PradarSwitcher {
         }
         boolean before = isClusterTestEnabled();
         isClusterTestReady = false;
-        GlobalSwitch.switchOff("clusterTestSwitcher");
         boolean after = isClusterTestEnabled();
         if (before != after) {
             for (PradarSwitcherListener listener : listeners) {
@@ -401,8 +399,11 @@ public class PradarSwitcher {
      * @param interval 采样频率 1/x，有效范围在 [1, 9999] 之间，超出范围的数值都作为全采样处理。
      */
     static public void setSamplingInterval(int interval) {
-        if (interval < 1 || interval > 9999) {
+        if (interval < 1) {
             interval = 1;
+        }
+        if (interval > 9999) {
+            interval = 9999;
         }
         LOGGER.info("setSamplingInterval={}", interval);
         samplingInterval = interval;
@@ -578,6 +579,11 @@ public class PradarSwitcher {
                 listener.onListen(new PradarSwitchEvent(after, "Cluster Tester is force closed...."));
             }
         }
+    }
+
+    public static void destroy() {
+        configSwitchers.clear();
+        listeners.clear();
     }
 
     static public boolean getSamplingZkConfig() {

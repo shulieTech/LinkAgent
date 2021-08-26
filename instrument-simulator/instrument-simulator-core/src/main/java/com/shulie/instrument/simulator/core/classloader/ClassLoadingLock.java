@@ -73,4 +73,10 @@ class ClassLoadingLock {
         }
     }
 
+    /**
+     * release all resources
+     */
+    public void release() {
+        classLoadingLockMap.clear();
+    }
 }

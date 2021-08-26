@@ -54,6 +54,7 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         //io.grpc.internal.ServerImpl.ServerTransportListenerImpl.startCall
         enhanceServerTransportListenerImplStartCall("io.grpc.internal.ServerImpl$ServerTransportListenerImpl");
         enhanceServerStreamListenerImplHalfClosed("io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl");
+//        enhanceServerStreamListenerImplMessagesAvailable("io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl");
 
         /* *****GRPC server**** */
     }
@@ -98,6 +99,10 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("halfClosed"
                         );
                 streamCreatedMethod.addInterceptor(Listeners.of(ServerStreamListenerImplHalfClosedInterceptor.class));
+
+                InstrumentMethod messagesAvailableMethod = target.getDeclaredMethod("messagesAvailable", "io.grpc.internal.StreamListener$MessageProducer"
+                );
+                messagesAvailableMethod.addInterceptor(Listeners.of(ServerStreamListenerImplMessagesAvailableInterceptor.class));
             }
         });
     }

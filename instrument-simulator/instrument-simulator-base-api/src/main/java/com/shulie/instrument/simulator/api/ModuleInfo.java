@@ -55,7 +55,7 @@ public @interface ModuleInfo {
      *
      * @return 期待仿真器的加载模式
      */
-    LoadMode[] supportedModes() default {LoadMode.AGENT, LoadMode.ATTACH};
+    int[] supportedModes() default {LoadMode.AGENT, LoadMode.ATTACH};
 
     /**
      * 是否在加载时候就激活模块。
@@ -92,5 +92,12 @@ public @interface ModuleInfo {
      * @return
      */
     int priority() default 100;
+
+    /**
+     * 是否是自动开关，如果否则需要手动触发激活该模块对应的开关
+     *
+     * @return
+     */
+    boolean switchAuto() default true;
 
 }

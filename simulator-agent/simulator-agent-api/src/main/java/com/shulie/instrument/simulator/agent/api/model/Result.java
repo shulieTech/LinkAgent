@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.agent.api.model;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -25,7 +26,7 @@ public class Result<T> implements Serializable {
     /**
      * 结果
      */
-    private T result;
+    private T data;
     /**
      * 是否成功
      */
@@ -33,14 +34,19 @@ public class Result<T> implements Serializable {
     /**
      * 失败原因
      */
-    private String errorMsg;
+    private String error;
 
-    public T getResult() {
-        return result;
+    /**
+     * 预留
+     */
+    private Map<String, Object> extra;
+
+    public T getData() {
+        return data;
     }
 
-    public void setResult(T result) {
-        this.result = result;
+    public void setData(T data) {
+        this.data = data;
     }
 
     public boolean isSuccess() {
@@ -51,11 +57,19 @@ public class Result<T> implements Serializable {
         this.success = success;
     }
 
-    public String getErrorMsg() {
-        return errorMsg;
+    public String getError() {
+        return error;
     }
 
-    public void setErrorMsg(String errorMsg) {
-        this.errorMsg = errorMsg;
+    public void setError(String error) {
+        this.error = error;
+    }
+
+    public Map<String, Object> getExtra() {
+        return extra;
+    }
+
+    public void setExtra(Map<String, Object> extra) {
+        this.extra = extra;
     }
 }

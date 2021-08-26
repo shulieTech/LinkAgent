@@ -17,7 +17,6 @@ package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
 import com.shulie.instrument.simulator.api.scope.InterceptorScopeInvocation;
 import org.slf4j.Logger;
@@ -31,18 +30,15 @@ public class ScopedTraceInterceptor extends AroundInterceptor {
 
     private final TraceInterceptor interceptor;
     private final InterceptorScope scope;
-    private final ExecutionPolicy policy;
+    private final int policy;
 
-    public ScopedTraceInterceptor(TraceInterceptor interceptor, ExecutionPolicy policy) {
+    public ScopedTraceInterceptor(TraceInterceptor interceptor, int policy) {
         this(interceptor, null, policy);
     }
 
-    public ScopedTraceInterceptor(TraceInterceptor interceptor, InterceptorScope scope, ExecutionPolicy policy) {
+    public ScopedTraceInterceptor(TraceInterceptor interceptor, InterceptorScope scope, int policy) {
         if (interceptor == null) {
             throw new NullPointerException("interceptor must not be null");
-        }
-        if (policy == null) {
-            throw new NullPointerException("policy must not be null");
         }
         this.interceptor = interceptor;
         this.scope = scope;

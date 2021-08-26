@@ -28,7 +28,9 @@ public final class ConfigCache {
     private static Map<Integer, String> groups = new HashMap<Integer, String>();
     private static ConcurrentMap<Integer, Boolean> isInited = new ConcurrentHashMap<Integer, Boolean>();
 
-    public static void clear() {
+    public static void release() {
+        servers.clear();
+        groups.clear();
         isInited.clear();
     }
 

@@ -14,22 +14,23 @@
  */
 package com.pamirs.pradar;
 
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.alibaba.ttl.TransmittableThreadLocal;
+
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.pamirs.pradar.AppNameUtils.appName;
 
@@ -38,11 +39,21 @@ import static com.pamirs.pradar.AppNameUtils.appName;
  * <p>
  * 多个线程之间的传递使用 toMap 转换成 Map,不能直接拿当前对象在多个线程内部传递
  */
-public final class InvokeContext extends AbstractContext {
+public final class InvokeContext extends AbstractContext implements Cloneable {
     private final static Logger LOGGER = LoggerFactory.getLogger(InvokeContext.class);
 
     static private final TransmittableThreadLocal<InvokeContext> threadLocal
-            = new TransmittableThreadLocal<InvokeContext>();
+        = new TransmittableThreadLocal<InvokeContext>() {
+        @Override
+        protected InvokeContext copy(InvokeContext parentValue) {
+            try {
+                return (InvokeContext)parentValue.clone();
+            } catch (Throwable e) {
+                LOGGER.error("copy InvokeContext fail!, use default", e);
+                return super.copy(parentValue);
+            }
+        }
+    };
 
     public static final String EMPTY = "";
 
@@ -86,28 +97,39 @@ public final class InvokeContext extends AbstractContext {
     }
 
     // childRpcIdx for clone
-    InvokeContext(String _traceId, String _traceAppName, String _invokeId, InvokeContext _parentInvokeContext, AtomicInteger _childRpcIdx) {
+    InvokeContext(String _traceId, String _traceAppName, String _invokeId, InvokeContext _parentInvokeContext,
+        AtomicInteger _childRpcIdx) {
         super(_traceId, _traceAppName, _invokeId);
         parentInvokeContext = _parentInvokeContext;
         childInvokeIdx = _childRpcIdx;
         id = idx.incrementAndGet();
     }
-//===============
+
+    // for clone
+    InvokeContext(String _traceId, String _traceAppName, String _invokeId, InvokeContext _parentInvokeContext,
+        AtomicInteger _childRpcIdx, long _id) {
+        super(_traceId, _traceAppName, _invokeId);
+        parentInvokeContext = _parentInvokeContext;
+        childInvokeIdx = _childRpcIdx;
+        id = _id;
+    }
+    //===============
 
     // new root RPC context
-    InvokeContext(String _traceId, String _traceAppName, String _invokeId, String traceMethod, String traceServiceName) {
+    InvokeContext(String _traceId, String _traceAppName, String _invokeId, String traceMethod,
+        String traceServiceName) {
         this(_traceId, _traceAppName, _invokeId, null, traceMethod, traceServiceName);
     }
 
-
     InvokeContext(String _traceId, String _traceAppName, String _invokeId, InvokeContext _parentInvokeContext
-            , String traceMethod, String traceServiceName) {
+        , String traceMethod, String traceServiceName) {
         this(_traceId, _traceAppName, _invokeId, _parentInvokeContext, new AtomicInteger(0)
-                , traceMethod, traceServiceName);
+            , traceMethod, traceServiceName);
     }
 
-    InvokeContext(String _traceId, String _traceAppName, String _invokeId, InvokeContext _parentInvokeContext, AtomicInteger _childRpcIdx
-            , String traceMethod, String traceServiceName) {
+    InvokeContext(String _traceId, String _traceAppName, String _invokeId, InvokeContext _parentInvokeContext,
+        AtomicInteger _childRpcIdx
+        , String traceMethod, String traceServiceName) {
         super(_traceId, _traceAppName, _invokeId, traceMethod, traceServiceName);
         parentInvokeContext = _parentInvokeContext;
         childInvokeIdx = _childRpcIdx;
@@ -145,7 +167,8 @@ public final class InvokeContext extends AbstractContext {
      * @return
      */
     public boolean isRoot() {
-        return StringUtils.equals(invokeId, Pradar.ROOT_INVOKE_ID) || StringUtils.equals(invokeId, Pradar.MAL_ROOT_INVOKE_ID);
+        return StringUtils.equals(invokeId, Pradar.ROOT_INVOKE_ID) || StringUtils.equals(invokeId,
+            Pradar.MAL_ROOT_INVOKE_ID);
     }
 
     @Override
@@ -161,7 +184,8 @@ public final class InvokeContext extends AbstractContext {
     }
 
     protected InvokeContext cloneInstance() {
-        InvokeContext clone = new InvokeContext(traceId, traceAppName, getInvokeId(), parentInvokeContext, childInvokeIdx);
+        InvokeContext clone = new InvokeContext(traceId, traceAppName, getInvokeId(), parentInvokeContext,
+            childInvokeIdx);
         clone.attributes = this.attributes;
         clone.localAttributes = this.localAttributes;
 
@@ -190,7 +214,8 @@ public final class InvokeContext extends AbstractContext {
      */
     public InvokeContext createChildInvoke() {
         final InvokeContext parent;
-        if (checkInvokeIdOverLoad(this.invokeId) && this.parentInvokeContext != null && this.parentInvokeContext.parentInvokeContext != null) {
+        if (checkInvokeIdOverLoad(this.invokeId) && this.parentInvokeContext != null
+            && this.parentInvokeContext.parentInvokeContext != null) {
             // 当前 InvokeContext 创建子 InvokeContext，一般当前 Context 就是服务端或者入口端，
             // 正常情况不应该再有 parent。如果 invokeId 过长，而且又存在 parent，
             // parent->parent，很可能就是埋点出现问题，比如一直 startInvoke，没有 endInvoke，
@@ -198,7 +223,8 @@ public final class InvokeContext extends AbstractContext {
             //
             LOGGER.warn("InvokeContext leak detected, traceId={}, invokeId={}", traceId, invokeId);
             /* parent = new InvokeContext(traceId, traceAppName, Pradar.ADJUST_ROOT_INVOKE_ID);*/
-            parent = new InvokeContext(traceId, traceAppName, Pradar.ADJUST_ROOT_INVOKE_ID, traceMethod, traceServiceName);
+            parent = new InvokeContext(traceId, traceAppName, Pradar.ADJUST_ROOT_INVOKE_ID, traceMethod,
+                traceServiceName);
         } else {
             parent = this;
         }
@@ -251,7 +277,8 @@ public final class InvokeContext extends AbstractContext {
 
     public void endTrace(String result, int type) {
         if (this.logType != Pradar.LOG_TYPE_TRACE) {
-            LOGGER.error("context mismatch at endTrace(), logType={}, middleware={}, currentMiddlewareType: {}", this.logType, this.middlewareName, type);
+            LOGGER.error("context mismatch at endTrace(), logType={}, middleware={}, currentMiddlewareType: {}",
+                this.logType, this.middlewareName, type);
             this.logType = Pradar.LOG_TYPE_EVENT_ILLEGAL;
             return;
         }
@@ -262,7 +289,8 @@ public final class InvokeContext extends AbstractContext {
 
     public void endTrace(String result, int type, String appendMsg) {
         if (this.logType != Pradar.LOG_TYPE_TRACE) {
-            LOGGER.error("context mismatch at endTrace(), logType={}, middleware={}, currentMiddlewareType: {}", this.logType, this.middlewareName, type);
+            LOGGER.error("context mismatch at endTrace(), logType={}, middleware={}, currentMiddlewareType: {}",
+                this.logType, this.middlewareName, type);
             this.logType = Pradar.LOG_TYPE_EVENT_ILLEGAL;
             return;
         }
@@ -336,7 +364,9 @@ public final class InvokeContext extends AbstractContext {
      */
     public void endServerInvoke(int type, String result) {
         if (this.logType != Pradar.LOG_TYPE_INVOKE_SERVER) {
-            LOGGER.warn("context mismatch at rpcServerSend(), logType={}", this.logType);
+            if (!ResultCode.INVOKE_RESULT_UNKNOWN.equals(result)) {
+                LOGGER.warn("context mismatch at rpcServerSend(), logType={}", this.logType);
+            }
             this.logType = Pradar.LOG_TYPE_EVENT_ILLEGAL;
             return;
         }
@@ -347,7 +377,9 @@ public final class InvokeContext extends AbstractContext {
 
     public void endServerInvoke(String result) {
         if (this.logType != Pradar.LOG_TYPE_INVOKE_SERVER) {
-            LOGGER.warn("context mismatch at rpcServerSend(), logType={}", this.logType);
+            if (!ResultCode.INVOKE_RESULT_UNKNOWN.equals(result)) {
+                LOGGER.warn("context mismatch at rpcServerSend(), logType={}", this.logType);
+            }
             this.logType = Pradar.LOG_TYPE_EVENT_ILLEGAL;
             return;
         }
@@ -413,8 +445,10 @@ public final class InvokeContext extends AbstractContext {
             context.put(PradarService.PRADAR_REMOTE_IP, remoteIp);
         }
         context.put(PradarService.PRADAR_UPSTREAM_APPNAME_KEY, upAppName == null ? appName() : upAppName);
-        context.put(PradarService.PRADAR_CLUSTER_TEST_KEY, isClusterTest() ? Pradar.PRADAR_CLUSTER_TEST_ON : Pradar.PRADAR_CLUSTER_TEST_OFF);
+        context.put(PradarService.PRADAR_CLUSTER_TEST_KEY,
+            isClusterTest() ? Pradar.PRADAR_CLUSTER_TEST_ON : Pradar.PRADAR_CLUSTER_TEST_OFF);
         context.put(PradarService.PRADAR_DEBUG_KEY, isDebug() ? Pradar.PRADAR_DEBUG_ON : Pradar.PRADAR_DEBUG_OFF);
+        context.put(PradarService.PRADAR_WHITE_LIST_CHECK, String.valueOf(isPassCheck()));
         if (serviceName != null) {
             context.put(PradarService.PRADAR_SERVICE_NAME, serviceName);
         }
@@ -429,24 +463,27 @@ public final class InvokeContext extends AbstractContext {
 
     protected String generateNodeId(String traceNode, String serviceName, String methodName, String middlewareName) {
         if (StringUtils.startsWith(serviceName, "http://") || StringUtils.startsWith(serviceName, "https://")) {
-            return md5String((traceNode == null ? "" : traceNode + '-') + getRegularServiceName(defaultBlankIfNull(serviceName), methodName)
+            return md5String(
+                (traceNode == null ? "" : traceNode + '-') + getRegularServiceName(defaultBlankIfNull(serviceName),
+                    methodName)
                     + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         } else {
             return md5String((traceNode == null ? "" : traceNode + '-') + defaultBlankIfNull(serviceName)
-                    + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
+                + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         }
     }
 
     protected String generateNodeId() {
         if (StringUtils.startsWith(serviceName, "http://") || StringUtils.startsWith(serviceName, "https://")) {
-            return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + getRegularServiceName(defaultBlankIfNull(serviceName), methodName)
-                    + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
+            return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + getRegularServiceName(
+                defaultBlankIfNull(serviceName), methodName)
+                + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         } else if (middlewareName != null && middlewareName.equals("redis")) {
             return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + defaultBlankIfNull(serviceName)
-                    + '-' + defaultBlankIfNull(middlewareName));
+                + '-' + defaultBlankIfNull(middlewareName));
         } else {
             return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + defaultBlankIfNull(serviceName)
-                    + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
+                + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         }
     }
 
@@ -489,8 +526,11 @@ public final class InvokeContext extends AbstractContext {
      */
     private static boolean matches(String serviceName, String methodName, String pattern) {
         String patternMethod = "";
-        if (pattern != null && pattern.indexOf('#') != -1) {
-            patternMethod = pattern.substring(pattern.lastIndexOf('#') + 1);
+        if (pattern != null) {
+            final int index = pattern.lastIndexOf('#');
+            if (index != -1) {
+                patternMethod = pattern.substring(index + 1);
+            }
         }
         if (!StringUtils.equalsIgnoreCase(patternMethod, methodName)) {
             return false;
@@ -601,7 +641,6 @@ public final class InvokeContext extends AbstractContext {
         return name;
     }
 
-
     /**
      * 反序列化上下文
      *
@@ -622,6 +661,7 @@ public final class InvokeContext extends AbstractContext {
         String serviceName = map.get(PradarService.PRADAR_SERVICE_NAME);
         String methodName = map.get(PradarService.PRADAR_METHOD_NAME);
         String middlewareName = map.get(PradarService.PRADAR_MIDDLEWARE_NAME);
+        boolean passedCheck = Boolean.parseBoolean(map.get(PradarService.PRADAR_WHITE_LIST_CHECK));
         boolean isClusterTest = ClusterTestUtils.isClusterTestRequest(map.get(PradarService.PRADAR_CLUSTER_TEST_KEY));
         if (!isClusterTest) {
             isClusterTest = ClusterTestUtils.isClusterTestRequest(map.get(PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY));
@@ -659,6 +699,7 @@ public final class InvokeContext extends AbstractContext {
         ctx.setUpAppName(upAppName);
         ctx.setClusterTest(isClusterTest);
         ctx.setDebug(isDebug);
+        ctx.setPassCheck(passedCheck);
         if (StringUtils.isNotBlank(serviceName)) {
             ctx.setServiceName(serviceName);
         }
@@ -686,5 +727,53 @@ public final class InvokeContext extends AbstractContext {
 
     public long getId() {
         return id;
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        InvokeContext temp = null;
+        // 不传递父上下文，减少内存开销
+        // 传递之后如果开启span， clone 的这个本身就是父上下文，  如果不开启span， 本身这个上下文也没用。
+        //        if (this.parentInvokeContext != null) {
+        //            temp = (InvokeContext) this.parentInvokeContext.clone();
+        //        }
+        InvokeContext invokeContext = new InvokeContext(this.traceId, this.traceAppName, this.invokeId, temp,
+            new AtomicInteger(this.childInvokeIdx.get()), this.id);
+
+        invokeContext.middlewareName = this.middlewareName;
+        //        invokeContext.childInvokeIdx.set(this.childInvokeIdx.get());
+        invokeContext.isThreadCommit = this.isThreadCommit;
+        invokeContext.attributes = new LinkedHashMap<String, String>();
+        if (this.attributes != null) {
+            invokeContext.attributes.putAll(this.attributes);
+        }
+        invokeContext.localAttributes = new LinkedHashMap<String, String>();
+        if (this.localAttributes != null) {
+            invokeContext.localAttributes.putAll(this.localAttributes);
+        }
+        invokeContext.serviceName = this.serviceName;
+        invokeContext.methodName = this.methodName;
+        invokeContext.remoteIp = this.remoteIp;
+        invokeContext.callBackMsg = this.callBackMsg;
+        invokeContext.logType = this.logType;
+        invokeContext.upAppName = this.upAppName;
+        invokeContext.request = this.request;
+        invokeContext.requestSize = this.requestSize;
+        invokeContext.response = this.response;
+        invokeContext.responseSize = this.responseSize;
+        invokeContext.startTime = this.startTime;
+        invokeContext.hasError = this.hasError;
+        invokeContext.invokeType = this.invokeType;
+        invokeContext.isClusterTest = this.isClusterTest;
+        invokeContext.isDebug = this.isDebug;
+        invokeContext.logTime = this.logTime;
+        invokeContext.passCheck = this.passCheck;
+        invokeContext.port = this.port;
+        invokeContext.resultCode = this.resultCode;
+        invokeContext.traceMethod = this.traceMethod;
+        invokeContext.traceServiceName = this.traceServiceName;
+        invokeContext.remoteAppName = this.remoteAppName;
+        invokeContext.traceName = this.traceName;
+        return invokeContext;
     }
 }

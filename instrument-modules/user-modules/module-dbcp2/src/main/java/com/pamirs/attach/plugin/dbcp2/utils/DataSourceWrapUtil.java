@@ -17,10 +17,10 @@ package com.pamirs.attach.plugin.dbcp2.utils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DataSourceWrapUtil {
-    private static Logger logger = LoggerFactory.getLogger(BasicDataSource.class.getName());
+    private static Logger logger = LoggerFactory.getLogger(DataSourceWrapUtil.class.getName());
 
     public static final ConcurrentHashMap<DataSourceMeta, DbcpMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, DbcpMediaDataSource>();
 
@@ -118,7 +118,7 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[dbcp2] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                logger.info("[dbcp2] destroyed shadow table datasource successful. url:{} ,username:{}", target.getUrl(), target.getUsername());
                 old.close();
             }
             return;
@@ -130,7 +130,7 @@ public class DataSourceWrapUtil {
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[dbcp2] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    logger.info("[dbcp2] destroyed shadow table datasource successful. url:{} ,username:{}", target.getUrl(), target.getUsername());
                     old.close();
                 }
             } catch (Throwable e) {
@@ -152,10 +152,10 @@ public class DataSourceWrapUtil {
                 dataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[dbcp2] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    logger.info("[dbcp2] destroyed shadow table datasource successful. url:{} ,username:{}", target.getUrl(), target.getUsername());
                     old.close();
                 }
-                logger.info("[dbcp2] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+                logger.info("[dbcp2] create shadow datasource successful. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
             } catch (Throwable t) {
                 logger.error("[dbcp2] init datasource err!", t);
                 ErrorReporter.buildError()
@@ -196,7 +196,7 @@ public class DataSourceWrapUtil {
         }
 
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
-        if(StringUtils.isBlank(driverClassName)) {
+        if (StringUtils.isBlank(driverClassName)) {
             driverClassName = sourceDatasource.getDriverClassName();
         }
 

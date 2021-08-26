@@ -30,10 +30,11 @@ public class PtElasticJobSimpleJob implements SimpleJob {
     @Override
     public void execute(ShardingContext shardingContext) {
         PradarInternalService.startTrace(null, simpleJob.getClass().getName(), "execute");
+        PradarInternalService.middlewareName("elastic-job");
         PradarInternalService.setClusterTest(true);
         simpleJob.execute(shardingContext);
         PradarInternalService.setClusterTest(false);
-        PradarInternalService.endTrace();
+        PradarInternalService.endTrace(null, 7);
     }
 
     public void setSimpleJob(SimpleJob simpleJob){

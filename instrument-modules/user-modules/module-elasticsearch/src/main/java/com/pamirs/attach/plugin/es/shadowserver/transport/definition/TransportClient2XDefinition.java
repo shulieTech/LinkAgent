@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.es.shadowserver.transport.definition;
 
-import com.pamirs.attach.plugin.es.shadowserver.rest.definition.TransportClientDefinition;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 
@@ -23,12 +22,6 @@ import org.elasticsearch.common.settings.Settings;
  * @since 2021/04/25 8:32 下午
  */
 public class TransportClient2XDefinition extends AbstractTransportClientDefinition {
-
-    private static final TransportClient2XDefinition INSTANCE = new TransportClient2XDefinition();
-
-    public static TransportClientDefinition getInstance() {
-        return INSTANCE;
-    }
 
     @Override
     protected TransportClient doSolve(Settings settings, TransportClient target) {

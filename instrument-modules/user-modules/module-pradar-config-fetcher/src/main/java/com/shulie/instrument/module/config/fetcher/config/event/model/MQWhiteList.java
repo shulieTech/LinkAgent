@@ -18,7 +18,9 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
-import org.apache.commons.lang.ObjectUtils;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
@@ -29,11 +31,22 @@ import java.util.Set;
  * @Description:
  */
 public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
-
-    private static final MQWhiteList INSTANCE = new MQWhiteList();
+    private final static Logger LOGGER = LoggerFactory.getLogger(MQWhiteList.class);
+    private static MQWhiteList INSTANCE;
 
     public static MQWhiteList getInstance() {
+        if (INSTANCE == null) {
+            synchronized (MQWhiteList.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new MQWhiteList();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -46,6 +59,7 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
         currentValue.setMqList(newValue);
         GlobalConfig.getInstance().setMqWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.MQ_WHITE_LIST);
+        LOGGER.info("publish mq whitelist config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 }

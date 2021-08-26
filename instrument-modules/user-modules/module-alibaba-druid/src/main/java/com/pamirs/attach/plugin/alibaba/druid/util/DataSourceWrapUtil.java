@@ -54,6 +54,7 @@ public class DataSourceWrapUtil {
         }
         DruidDataSource target = dataSourceMeta.getDataSource();
         if (isPerformanceDataSource(target)) {
+            LOGGER.warn("[druid] current datasource is performance datasource. ignore it. url={}, username={}", target.getUrl(), target.getUsername());
             return;
         }
         if (!DruidDatasourceUtils.configured(target)) {//没有配置对应的影子表或影子库
@@ -91,7 +92,7 @@ public class DataSourceWrapUtil {
             LOGGER.info("[druid] use db shadow config:{}", GlobalConfig.getInstance().getShadowDatasourceConfigs());
             DruidDataSource ptDataSource = DruidDatasourceUtils.generateDatasourceFromConfiguration(target, GlobalConfig.getInstance().getShadowDatasourceConfigs());
             if (ptDataSource == null) {
-                LOGGER.error("[druid] Configuration error for datasource, url: {} username:{} configurations:{}", target.getUrl(), target.getUsername(), GlobalConfig.getInstance().getShadowDatasourceConfigs());
+                LOGGER.error("[druid] create shadow datasource error. maybe datasource config is not correct, url: {} username:{} configurations:{}", target.getUrl(), target.getUsername(), GlobalConfig.getInstance().getShadowDatasourceConfigs());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0003")

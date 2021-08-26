@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.apache.kafka.origin;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -37,18 +38,13 @@ public class ConsumerMetaData {
 
     private final Set<String> topics;
 
-    private final List<String> shadowTopics;
-
     private final String groupId;
 
     private final String ptGroupId;
 
-    private final boolean hasShadow;
-
     private final String bootstrapServers;
 
-    public ConsumerMetaData(Set<String> topics, String groupId, List<String> shadowTopics,
-                            String bootstrapServers) {
+    public ConsumerMetaData(Set<String> topics, String groupId, String bootstrapServers) {
         this.topics = topics;
         this.groupId = groupId;
         if (Pradar.isClusterTestPrefix(groupId)) {
@@ -56,8 +52,6 @@ public class ConsumerMetaData {
         } else {
             this.ptGroupId = Pradar.addClusterTestPrefix(groupId);
         }
-        this.shadowTopics = shadowTopics;
-        this.hasShadow = shadowTopics.size() > 0;
         this.bootstrapServers = bootstrapServers;
     }
 
@@ -73,7 +67,6 @@ public class ConsumerMetaData {
                 }
             }
             Object metadata = Reflect.on(consumer).get("metadata");
-            List<String> shadowTopic = getShadowTopics(topics, groupId);
 
             Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
             Iterable<Node> nodes;
@@ -92,13 +85,13 @@ public class ConsumerMetaData {
                 sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
                         .toString()).append(",");
             }
-            return new ConsumerMetaData(topics, groupId, shadowTopic, sb.substring(0, sb.length() - 1));
+            return new ConsumerMetaData(topics, groupId, sb.substring(0, sb.length() - 1));
         } catch (ReflectException e) {
             throw new PressureMeasureError(e);
         }
     }
 
-    public static List<String> getShadowTopics(Set<String> topics, String groupId) {
+    public List<String> getShadowTopics() {
         List<String> topicList = new ArrayList<String>();
         if (topics != null) {
             for (String topic : topics) {
@@ -106,7 +99,7 @@ public class ConsumerMetaData {
                  * topic 都需要在白名单中配置好才可以启动
                  */
                 if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
-                    if (GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance()
+                    if (PradarSwitcher.whiteListSwitchOn() && GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance()
                             .getMqWhiteList().contains(topic + '#' + groupId)) {
                         topicList.add(Pradar.addClusterTestPrefix(topic));
                     }
@@ -120,16 +113,12 @@ public class ConsumerMetaData {
         return topics;
     }
 
-    public List<String> getShadowTopics() {
-        return shadowTopics;
-    }
-
     public String getGroupId() {
         return groupId;
     }
 
     public boolean isHasShadow() {
-        return hasShadow;
+        return getShadowTopics().size() > 0;
     }
 
     public String getPtGroupId() {

@@ -14,12 +14,12 @@
  */
 package com.shulie.instrument.module.register.zk.impl;
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.api.BackgroundCallback;
-import com.netflix.curator.framework.api.CuratorEvent;
-import com.netflix.curator.framework.state.ConnectionState;
-import com.netflix.curator.framework.state.ConnectionStateListener;
-import com.netflix.curator.utils.ZKPaths;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.utils.ZKPaths;
 import com.shulie.instrument.module.register.zk.ZkNodeCache;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -109,6 +109,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
     }
 
     private void start(boolean requireRebuild) throws Exception {
+        running.compareAndSet(false, true);
         ZKPaths.mkdirs(client.getZookeeperClient().getZooKeeper(), path, false);
         client.getConnectionStateListenable().addListener(connectionStateListener);
 
@@ -149,7 +150,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
         if (dataIsCompressed && newData != null) {
             try {
                 dataToSet = ZipCompressionProvider.decompress(path, newData);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.warn("fail to decompress NodeCache of path={}", path, e);
                 return;
             }

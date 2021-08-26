@@ -42,18 +42,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class DefaultDataPushManager implements DataPushManager {
     private final static Logger LOGGER = LoggerFactory.getLogger(DefaultDataPushManager.class.getName());
-    private static Map<String, DataPusher> dataPushers = new HashMap<String, DataPusher>();
+    private Map<String, DataPusher> dataPushers = new HashMap<String, DataPusher>();
     private DataPusher dataPusher;
     private LogPusher logPusher;
     private ServerAddrProvider provider;
     private PusherOptions pusherOptions;
     private AtomicBoolean isStarted = new AtomicBoolean(false);
 
-    static {
-        loadDataPushers();
-    }
 
     public DefaultDataPushManager(final PusherOptions pusherOptions) {
+        loadDataPushers();
         this.pusherOptions = pusherOptions;
         ServerProviderOptions serverProviderOptions = new ServerProviderOptions();
         serverProviderOptions.setServerZkPath(pusherOptions.getServerZkPath());
@@ -72,7 +70,7 @@ public class DefaultDataPushManager implements DataPushManager {
         }
     }
 
-    private static void loadDataPushers() {
+    private void loadDataPushers() {
         try {
             DataPusher dataPusher = new TcpDataPusher();
             dataPushers.put(dataPusher.getName(), dataPusher);
@@ -85,12 +83,12 @@ public class DefaultDataPushManager implements DataPushManager {
      * 添加重试启动任务
      */
     private void addRetryStartTask() {
-        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 boolean isSuccess = start0();
                 if (!isSuccess) {
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                    ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 } else {
                     isStarted.compareAndSet(false, true);
                 }
@@ -166,8 +164,10 @@ public class DefaultDataPushManager implements DataPushManager {
         if (!isStarted.compareAndSet(true, false)) {
             return;
         }
-        this.dataPusher.stop();
         this.logPusher.stop();
+        this.dataPusher.stop();
+        this.provider.release();
+        dataPushers.clear();
     }
 
 }

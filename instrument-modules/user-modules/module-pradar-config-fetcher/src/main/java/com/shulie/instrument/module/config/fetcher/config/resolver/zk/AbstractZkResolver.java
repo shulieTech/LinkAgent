@@ -66,7 +66,7 @@ public abstract class AbstractZkResolver<T extends AbstractConfig<T>> implements
         /**
          * 使用定时线程去初始化，如果初始化失败则定时重试
          */
-        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -86,7 +86,7 @@ public abstract class AbstractZkResolver<T extends AbstractConfig<T>> implements
                     }
 
                     if (!isInited.get()) {
-                        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                        ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                     }
                 } catch (PradarException e) {
                     logger.error("[config-subscriber] start config-subscriber zookeeper err!", e);
@@ -97,7 +97,7 @@ public abstract class AbstractZkResolver<T extends AbstractConfig<T>> implements
                             .setDetail("初始化ZK/初始化配置监听失败")
                             .closePradar(ConfigNames.CLUSTER_TEST_READY_CONFIG)
                             .report();
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                    ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 } catch (Throwable e) {
                     ErrorReporter.buildError()
                             .setErrorType(ErrorTypeEnum.AgentError)
@@ -107,7 +107,7 @@ public abstract class AbstractZkResolver<T extends AbstractConfig<T>> implements
                             .closePradar(ConfigNames.CLUSTER_TEST_READY_CONFIG)
                             .report();
                     logger.error("[config-subscriber] start config-subscriber zookeeper err!", e);
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 5, TimeUnit.SECONDS);
+                    ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 }
             }
         }, 0, TimeUnit.SECONDS);

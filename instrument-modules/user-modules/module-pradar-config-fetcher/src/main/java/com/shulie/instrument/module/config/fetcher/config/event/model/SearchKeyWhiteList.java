@@ -18,8 +18,10 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import org.apache.commons.lang.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
@@ -28,14 +30,22 @@ import java.util.Set;
  * @since 2020/9/30 4:00 下午
  */
 public class SearchKeyWhiteList implements IChange<Set<String>, ApplicationConfig> {
-
-    private static final SearchKeyWhiteList INSTANCE = new SearchKeyWhiteList();
-
-    private SearchKeyWhiteList() {
-    }
+    private static final Logger LOGGER = LoggerFactory.getLogger(SearchKeyWhiteList.class.getName());
+    private static SearchKeyWhiteList INSTANCE;
 
     public static SearchKeyWhiteList getInstance() {
+        if (INSTANCE == null) {
+            synchronized (SearchKeyWhiteList.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new SearchKeyWhiteList();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -48,6 +58,7 @@ public class SearchKeyWhiteList implements IChange<Set<String>, ApplicationConfi
         applicationConfig.setSearchWhiteList(newValue);
         GlobalConfig.getInstance().setSearchWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.SEARCH_KEY_WHITE_LIST);
+        LOGGER.info("publish search key whitelist config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 }

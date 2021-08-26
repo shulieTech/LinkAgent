@@ -110,7 +110,7 @@ class AsyncAppender extends PradarAppender {
         this.workerName = workerName;
 
         task = new AsyncRunnable();
-        future = ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE.submit(task);
+        future = ExecutorServiceFactory.getFactory().submit(task);
     }
 
     int size() {
@@ -261,11 +261,11 @@ class AsyncAppender extends PradarAppender {
         PradarAppender appender0 = this.appender;
         this.appender = new NoOpAppender();
         appender0.close();
-        if (task != null) {
-            task.shutdown();
-        }
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
+        }
+        if (task != null) {
+            task.shutdown();
         }
     }
 

@@ -17,7 +17,9 @@ package com.shulie.instrument.simulator.api.executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -28,18 +30,158 @@ import java.util.concurrent.*;
  * @since 2021/1/9 3:20 下午
  */
 public class ExecutorServiceFactory {
-    private final static Logger LOGGER = LoggerFactory.getLogger(ExecutorServiceFactory.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(ExecutorServiceFactory.class);
     /**
      * 全局的定时执行线程池
      */
-    public static final ScheduledExecutorService GLOBAL_SCHEDULE_EXECUTOR_SERVICE = getScheduledExecutorService();
+    private ScheduledExecutorService globalScheduleExecutorService;
 
     /**
      * 全局的执行线程池
      */
-    public static final ExecutorService GLOBAL_EXECUTOR_SERVICE = getExecutorService();
+    private ExecutorService globalExecutorService;
 
-    private static final ConcurrentHashMap<Task, TaskInfo> tasks = new ConcurrentHashMap<Task, TaskInfo>();
+    private ConcurrentHashMap<Task, TaskInfo> tasks;
+
+    private static ExecutorServiceFactory instance;
+
+    public static ExecutorServiceFactory getFactory() {
+        if (instance == null) {
+            synchronized (ExecutorServiceFactory.class) {
+                if (instance == null) {
+                    instance = new ExecutorServiceFactory();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public ScheduledExecutorService getGlobalScheduleExecutorService() {
+        return globalScheduleExecutorService;
+    }
+
+    public ExecutorService getGlobalExecutorService() {
+        return globalExecutorService;
+    }
+
+    public ScheduledFuture<?> schedule(Runnable command,
+                                       long delay, TimeUnit unit) {
+        if (globalScheduleExecutorService == null) {
+            return null;
+        }
+        return globalScheduleExecutorService.schedule(command, delay, unit);
+    }
+
+
+    public <V> ScheduledFuture<V> schedule(Callable<V> callable,
+                                           long delay, TimeUnit unit) {
+        if (globalScheduleExecutorService == null) {
+            return null;
+        }
+        return globalScheduleExecutorService.schedule(callable, delay, unit);
+    }
+
+
+    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
+                                                  long initialDelay,
+                                                  long period,
+                                                  TimeUnit unit) {
+        if (globalScheduleExecutorService == null) {
+            return null;
+        }
+        return globalScheduleExecutorService.scheduleAtFixedRate(command, initialDelay, period, unit);
+    }
+
+    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
+                                                     long initialDelay,
+                                                     long delay,
+                                                     TimeUnit unit) {
+        if (globalScheduleExecutorService == null) {
+            return null;
+        }
+        return globalScheduleExecutorService.scheduleAtFixedRate(command, initialDelay, delay, unit);
+    }
+
+    public <T> Future<T> submit(Callable<T> task) {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.submit(task);
+    }
+
+    public <T> Future<T> submit(Runnable task, T result) {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.submit(task, result);
+    }
+
+    public Future<?> submit(Runnable task) {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.submit(task);
+    }
+
+    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.invokeAll(tasks);
+    }
+
+    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
+                                         long timeout, TimeUnit unit)
+            throws InterruptedException {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.invokeAll(tasks, timeout, unit);
+    }
+
+    public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException, ExecutionException {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.invokeAny(tasks);
+    }
+
+    public <T> T invokeAny(Collection<? extends Callable<T>> tasks,
+                           long timeout, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        if (globalExecutorService == null) {
+            return null;
+        }
+        return globalExecutorService.invokeAny(tasks, timeout, unit);
+    }
+
+    public void execute(Runnable command) {
+        if (globalExecutorService == null) {
+            return;
+        }
+        globalExecutorService.execute(command);
+    }
+
+    public ExecutorServiceFactory() {
+        this.globalScheduleExecutorService = getScheduledExecutorService();
+        this.globalExecutorService = getExecutorService();
+        this.tasks = new ConcurrentHashMap<Task, TaskInfo>();
+    }
+
+    /**
+     * shutdown executor service factory
+     */
+    public void shutdown() {
+        if (this.globalExecutorService != null) {
+            this.globalExecutorService.shutdownNow();
+        }
+        if (this.globalScheduleExecutorService != null) {
+            this.globalScheduleExecutorService.shutdownNow();
+        }
+        this.tasks.clear();
+    }
 
     /**
      * 判断任务是否还在运行中
@@ -47,7 +189,7 @@ public class ExecutorServiceFactory {
      * @param taskInfo
      * @return
      */
-    private static boolean isRunning(TaskInfo taskInfo) {
+    private boolean isRunning(TaskInfo taskInfo) {
         if (taskInfo == null) {
             return true;
         }
@@ -60,11 +202,11 @@ public class ExecutorServiceFactory {
      *
      * @param task
      */
-    public static void reliableExecute(final Task task, final int retryIntervalSec) {
+    public void reliableExecute(final Task task, final int retryIntervalSec) {
         try {
             boolean success = task.execute();
             if (!success) {
-                ScheduledFuture future = GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+                ScheduledFuture future = globalScheduleExecutorService.schedule(new Runnable() {
                     @Override
                     public void run() {
                         try {
@@ -73,7 +215,7 @@ public class ExecutorServiceFactory {
                             if (!success && isRunning(taskInfo)) {
                                 taskInfo.failed();
                                 if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                    ScheduledFuture f = GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                    ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
                                     taskInfo = tasks.get(task);
                                     if (taskInfo == null) {
                                         taskInfo = new TaskInfo(f);
@@ -96,7 +238,7 @@ public class ExecutorServiceFactory {
                             taskInfo.failed();
                             if (isRunning(taskInfo)) {
                                 if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                    ScheduledFuture f = GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                    ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
                                     taskInfo = tasks.get(task);
                                     if (taskInfo == null) {
                                         taskInfo = new TaskInfo(f);
@@ -129,7 +271,7 @@ public class ExecutorServiceFactory {
                 }
             }
         } catch (Throwable e) {
-            ScheduledFuture future = GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+            ScheduledFuture future = globalScheduleExecutorService.schedule(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -138,7 +280,7 @@ public class ExecutorServiceFactory {
                         if (!success && isRunning(taskInfo)) {
                             taskInfo.failed();
                             if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                ScheduledFuture f = GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
                                 taskInfo = tasks.get(task);
                                 if (taskInfo == null) {
                                     taskInfo = new TaskInfo(f);
@@ -161,7 +303,7 @@ public class ExecutorServiceFactory {
                         taskInfo.failed();
                         if (isRunning(taskInfo)) {
                             if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                ScheduledFuture f = GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
                                 taskInfo = tasks.get(task);
                                 if (taskInfo == null) {
                                     taskInfo = new TaskInfo(f);
@@ -201,11 +343,11 @@ public class ExecutorServiceFactory {
      *
      * @param task
      */
-    public static void reliableExecute(Task task) {
+    public void reliableExecute(Task task) {
         reliableExecute(task, 1000);
     }
 
-    private static boolean equals(String str1, String str2) {
+    private boolean equals(String str1, String str2) {
         if (str1 == str2) {
             return true;
         }
@@ -221,7 +363,7 @@ public class ExecutorServiceFactory {
      *
      * @param taskGroup
      */
-    public static void cancelTask(String taskGroup) {
+    public void cancelTask(String taskGroup) {
         Iterator<Map.Entry<Task, TaskInfo>> it = tasks.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Task, TaskInfo> entry = it.next();
@@ -249,7 +391,7 @@ public class ExecutorServiceFactory {
      *
      * @return
      */
-    private static ScheduledExecutorService getScheduledExecutorService() {
+    private ScheduledExecutorService getScheduledExecutorService() {
         int processors = Runtime.getRuntime().availableProcessors();
         if (processors <= 0) {
             processors = 4;
@@ -262,6 +404,9 @@ public class ExecutorServiceFactory {
                 t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                     @Override
                     public void uncaughtException(Thread t, Throwable e) {
+                        if (e instanceof InterruptedException) {
+                            t.interrupt();
+                        }
                         LOGGER.error("Thread {} caught a unknow exception with UncaughtExceptionHandler", t.getName(), e);
                     }
                 });
@@ -275,7 +420,7 @@ public class ExecutorServiceFactory {
      *
      * @return
      */
-    private static ExecutorService getExecutorService() {
+    private ExecutorService getExecutorService() {
         int processors = Runtime.getRuntime().availableProcessors();
         if (processors <= 0) {
             processors = 4;
@@ -289,6 +434,9 @@ public class ExecutorServiceFactory {
                 t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                     @Override
                     public void uncaughtException(Thread t, Throwable e) {
+                        if (e instanceof InterruptedException) {
+                            t.interrupt();
+                        }
                         LOGGER.error("Thread {} caught a unknow exception with UncaughtExceptionHandler", t.getName(), e);
                     }
                 });
@@ -297,7 +445,7 @@ public class ExecutorServiceFactory {
         });
     }
 
-    private static class TaskInfo {
+    private class TaskInfo {
         private boolean running = true;
         private int failedCount;
         private ScheduledFuture scheduledFuture;

@@ -15,11 +15,13 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import io.lettuce.core.output.KeyStreamingChannel;
 import io.lettuce.core.output.KeyValueStreamingChannel;
@@ -30,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+@Destroyable(LettuceDestroy.class)
 public abstract class LettuceMethodClusterTestInterceptor extends ParametersWrapperInterceptorAdaptor {
     private static final Logger LOGGER = LoggerFactory.getLogger(LettuceMethodClusterTestInterceptor.class.getName());
 

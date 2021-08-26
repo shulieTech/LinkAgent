@@ -27,7 +27,6 @@ import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.listener.ext.EventWatchBuilder;
 import com.shulie.instrument.simulator.api.listener.ext.EventWatcher;
-import com.shulie.instrument.simulator.api.listener.ext.PatternType;
 import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.util.ParameterUtils;
@@ -45,6 +44,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
+
 /**
  * trace命令
  * <p>测试用模块</p>
@@ -52,7 +54,7 @@ import java.util.concurrent.TimeUnit;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "trace", version = "1.0.0", author = "xiaobin@shulie.io", description = "方法追踪模块")
 public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(TraceModule.class);
+    private final Logger logger = LoggerFactory.getLogger(TraceModule.class);
 
     @Resource
     private ModuleEventWatcher moduleEventWatcher;
@@ -177,23 +179,25 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
                         .onAnyBehavior(methodPattern)
                         .withInvoke().withCall()
                         .onListener(Listeners.of(TraceListener.class,
-                                true,
-                                latch,
-                                traceViews,
-                                traceMethods,
-                                childrenWatchers,
-                                condition,
-                                express,
-                                level,
-                                limits,
-                                stopInMills,
-                                wait))
+                                new Object[]{
+                                        true,
+                                        latch,
+                                        traceViews,
+                                        traceMethods,
+                                        childrenWatchers,
+                                        condition,
+                                        express,
+                                        level,
+                                        limits,
+                                        stopInMills,
+                                        wait
+                                }))
                         .onClass().onWatch();
                 watchers.add(watcher);
             }
 
             if (wait > 0) {
-                latch.await(wait, TimeUnit.SECONDS);
+                latch.await(wait, TimeUnit.MILLISECONDS);
             } else if (limits > 0) {
                 latch.await();
             }
@@ -272,12 +276,12 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
 
             @Override
             public boolean doClassNameFilter(String javaClassName) {
-                return patternMatching(javaClassName, new String[]{classPattern}, PatternType.WILDCARD);
+                return patternMatching(javaClassName, new String[]{classPattern}, WILDCARD);
             }
 
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
-                return patternMatching(classDescriptor.getClassName(), new String[]{classPattern}, PatternType.WILDCARD);
+                return patternMatching(classDescriptor.getClassName(), new String[]{classPattern}, WILDCARD);
             }
 
             @Override
@@ -302,7 +306,7 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
      */
     private static boolean patternMatching(final String string,
                                            final String[] patterns,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 if (patterns == null || patterns.length == 0) {

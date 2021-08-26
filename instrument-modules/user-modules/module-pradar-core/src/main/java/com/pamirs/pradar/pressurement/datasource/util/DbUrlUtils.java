@@ -125,16 +125,19 @@ public class DbUrlUtils {
 
     public static String getHostFromDbUrl(String url) {
         //TODO 对不同的jdbc Url格式进行host截取
-        if (url.contains("//")) {
-            url = url.substring(url.indexOf("//") + 2, url.length());
-            if (url.contains(":")) {
-                url = url.substring(0, url.lastIndexOf(":"));
+        int indexOfDoubleSlash = -1;
+        int indexOfAt = -1;
+        if ((indexOfDoubleSlash = url.indexOf("//")) != -1) {
+            url = url.substring(indexOfDoubleSlash + 2);
+            int indexOfColon = url.lastIndexOf(":");
+            if (indexOfColon != -1) {
+                url = url.substring(0, indexOfColon);
             } else {
                 url = url.substring(0, url.indexOf("/"));
             }
             return url;
-        } else if (url.contains("@")) {
-            url = url.substring(url.indexOf("@") + 1, url.length());
+        } else if ((indexOfAt = url.indexOf("@")) != -1) {
+            url = url.substring(indexOfAt + 1);
             if (url.contains(":")) {
                 url = url.substring(0, url.lastIndexOf(":"));
             } else {
@@ -142,20 +145,25 @@ public class DbUrlUtils {
             }
             return url;
         } else {
-            return url.substring(url.indexOf("//") + 2, url.lastIndexOf(":"));
+            return url.substring(indexOfDoubleSlash + 2, url.lastIndexOf(":"));
         }
     }
 
     public static String getPortFromDbUrl(String url) {
-        if (url.contains("//")) {
-            url = url.substring(url.indexOf("//") + 2, url.length());
-        } else if (url.contains("@")) {
-            url = url.substring(url.indexOf("@") + 1, url.length());
+        int indexOfDoubleSlash = -1;
+        int indexOfAt = -1;
+        if ((indexOfDoubleSlash = url.indexOf("//")) != -1) {
+            url = url.substring(indexOfDoubleSlash + 2);
+        } else if ((indexOfAt = url.indexOf("@")) != -1) {
+            url = url.substring(indexOfAt + 1);
         }
-        if (url.contains(":")) {
-            String port = url.substring(url.lastIndexOf(":") + 1, url.length());
-            if (port.contains("/")) {
-                port = port.substring(0, port.indexOf("/"));
+
+        int indexOfLastColon = url.lastIndexOf(":");
+        if (indexOfLastColon != -1) {
+            String port = url.substring(indexOfLastColon + 1);
+            int indexOfSlash = port.indexOf("/");
+            if (indexOfSlash != -1) {
+                port = port.substring(0, indexOfSlash);
             }
             return port;
         } else {

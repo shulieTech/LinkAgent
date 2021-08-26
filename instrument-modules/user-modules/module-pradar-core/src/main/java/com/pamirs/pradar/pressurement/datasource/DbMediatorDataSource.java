@@ -53,7 +53,7 @@ public abstract class DbMediatorDataSource<T> {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
-    protected T dataSourcePerformanceTest;//压测第二数据源
+    protected volatile T dataSourcePerformanceTest;//压测第二数据源
 
 
     //static Map<DataSource, String> map = new HashMap<DataSource, String>();

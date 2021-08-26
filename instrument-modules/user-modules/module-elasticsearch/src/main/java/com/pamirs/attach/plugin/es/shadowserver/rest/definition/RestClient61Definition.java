@@ -23,12 +23,6 @@ import org.elasticsearch.client.RestClientBuilder;
  */
 public class RestClient61Definition extends AbstractRestClientDefinition implements RestClientDefinition {
 
-    private static final RestClient61Definition INSTANCE = new RestClient61Definition();
-
-    public static RestClient61Definition getInstance() {return INSTANCE;}
-
-    private RestClient61Definition() {}
-
     @Override
     protected void doAssembleBuilder(RestClient target, RestClientBuilder builder) {
         Long maxRetryTimeoutMillis = reflectSilence(target, "maxRetryTimeoutMillis");

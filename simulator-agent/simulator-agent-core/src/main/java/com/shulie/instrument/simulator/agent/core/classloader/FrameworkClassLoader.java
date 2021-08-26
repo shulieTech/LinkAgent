@@ -23,6 +23,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLStreamHandlerFactory;
 import java.util.Collection;
+import java.util.Vector;
 import java.util.jar.JarFile;
 
 /**
@@ -58,6 +59,7 @@ public class FrameworkClassLoader extends URLClassLoader {
             } catch (Throwable cause) {
                 logger.warn("SIMULATOR: close ModuleJarClassLoader failed. JDK7+", cause);
             }
+            releaseClasses();
             return;
         }
 
@@ -84,11 +86,25 @@ public class FrameworkClassLoader extends URLClassLoader {
                     // if we got this far, this is probably not a JAR loader so skip it
                 }
             }
-
+            releaseClasses();
         } catch (Throwable cause) {
             logger.warn("SIMULATOR: close ModuleJarClassLoader failed. probably not a HOTSPOT VM", cause);
         }
 
 
+    }
+
+    private void releaseClasses() {
+        try {
+            final Object classes = ReflectUtils.getDeclaredJavaFieldValueUnCaught(ClassLoader.class, "classes", this);
+            if (classes == null) {
+                return;
+            }
+            if (!(classes instanceof Vector)) {
+                return;
+            }
+            ((Vector) classes).clear();
+        } catch (Throwable e) {
+        }
     }
 }

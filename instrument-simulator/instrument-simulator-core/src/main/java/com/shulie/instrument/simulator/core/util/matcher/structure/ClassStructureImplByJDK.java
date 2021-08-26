@@ -123,9 +123,9 @@ class AccessImplByJDKBehavior extends ModifierAccess {
  * 用JDK的反射实现的类结构
  */
 public class ClassStructureImplByJDK extends FamilyClassStructure {
-    private final static Logger LOGGER = LoggerFactory.getLogger(ClassStructureImplByJDK.class);
-    private final static Annotation[] EMPTY_ANNOTATION = new Annotation[0];
-    private final Class<?> clazz;
+    private final Logger LOGGER = LoggerFactory.getLogger(ClassStructureImplByJDK.class);
+    private final Annotation[] EMPTY_ANNOTATION = new Annotation[0];
+    private Class<?> clazz;
     private String javaClassName;
 
     public ClassStructureImplByJDK(final Class<?> clazz) {
@@ -308,6 +308,12 @@ public class ClassStructureImplByJDK extends FamilyClassStructure {
     @Override
     public Access getAccess() {
         return new AccessImplByJDKClass(clazz);
+    }
+
+    @Override
+    public void release() {
+        clazz = null;
+        javaClassName = null;
     }
 
     @Override

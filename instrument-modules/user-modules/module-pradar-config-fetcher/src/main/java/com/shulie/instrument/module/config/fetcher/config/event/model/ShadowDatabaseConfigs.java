@@ -36,13 +36,21 @@ import java.util.Set;
 public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabaseConfig>, ApplicationConfig> {
     private final static Logger logger = LoggerFactory.getLogger(ShadowDatabaseConfigs.class.getName());
 
-    private static final ShadowDatabaseConfigs INSTANCE = new ShadowDatabaseConfigs();
-
-    private ShadowDatabaseConfigs() {
-    }
+    private static ShadowDatabaseConfigs INSTANCE;
 
     public static ShadowDatabaseConfigs getInstance() {
+        if (INSTANCE == null) {
+            synchronized (ShadowDatabaseConfigs.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new ShadowDatabaseConfigs();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -86,7 +94,7 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
         // 清除影子表模式的sql表名替换缓存
         SqlParser.clear();
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.SHADOW_DATABASE_CONFIGS);
-        logger.info("new config:");
+        logger.info("publish datasource config successful. new config: {}", newValue);
         for (Map.Entry<String, ShadowDatabaseConfig> entry : newValue.entrySet()) {
             logger.info(entry.getKey());
             logger.info(entry.getValue().toString());

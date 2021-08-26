@@ -20,17 +20,17 @@ package com.shulie.instrument.simulator.api.scope;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public enum ExecutionPolicy {
+public interface ExecutionPolicy {
     /**
      * Interceptor的增强不受限
      */
-    ALWAYS,
+    int ALWAYS = 1;
     /**
      * 有边界，只允许增强一次
      */
-    BOUNDARY,
+    int BOUNDARY = 2;
     /**
      * 只允许在内部使用
      */
-    INTERNAL
+    int INTERNAL = 3;
 }

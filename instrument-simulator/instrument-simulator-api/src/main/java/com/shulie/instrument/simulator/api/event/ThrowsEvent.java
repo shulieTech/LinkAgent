@@ -16,7 +16,7 @@ package com.shulie.instrument.simulator.api.event;
 
 /**
  * 异常/错误抛出事件
- *
+ * <p>
  * 注意: Event 的内容会在方法调用周期结束后进行清理，内部的数据将会全部清空
  * 这样做是为了内存回收的速度加快，所以如果需要在方法调用生命周期外引用 Event
  * 需要提前将内部的数据引用
@@ -54,7 +54,7 @@ public class ThrowsEvent extends InvokeEvent {
      * @param invokeId  调用ID
      * @param throwable 抛出的异常/错误信息
      */
-    ThrowsEvent(final EventType eventType,
+    ThrowsEvent(final int eventType,
                 final int processId,
                 final int invokeId,
                 final Throwable throwable) {
@@ -64,7 +64,7 @@ public class ThrowsEvent extends InvokeEvent {
         // 对入参进行校验
         if (eventType != EventType.THROWS
                 && eventType != EventType.IMMEDIATELY_THROWS) {
-            throw new IllegalArgumentException(String.format("type must be %s or %s", EventType.THROWS, EventType.IMMEDIATELY_THROWS));
+            throw new IllegalArgumentException(String.format("type must be %s or %s", "THROWS", "IMMEDIATELY_THROWS"));
         }
 
     }

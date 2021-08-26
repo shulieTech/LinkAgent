@@ -14,15 +14,15 @@
  */
 package com.pamirs.attach.plugin.es.shadowserver.utils;
 
-import java.lang.reflect.Constructor;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import com.pamirs.pradar.exception.PressureMeasureError;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.Node;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.transport.TransportAddress;
+
+import java.lang.reflect.Constructor;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -36,7 +36,7 @@ public class HostAndPort {
 
     public static final boolean usingInetSocket = TransportAddress.class.isInterface();
 
-    private static volatile Constructor inetSocketConstructor;
+    private Constructor inetSocketConstructor;
 
     public HostAndPort(String address) {
         String[] tmp = address.split(":");
@@ -63,7 +63,7 @@ public class HostAndPort {
         if (usingInetSocket) {
             Constructor constructor = getInetSocketConstructor();
             try {
-                return (TransportAddress)constructor.newInstance(InetAddress.getByName(host), port);
+                return (TransportAddress) constructor.newInstance(InetAddress.getByName(host), port);
             } catch (Exception e) {
                 throw new PressureMeasureError("无法构造InetSocketTransportAddress，当前版本不兼容！");
             }
@@ -78,7 +78,7 @@ public class HostAndPort {
                 if (inetSocketConstructor == null) {
                     try {
                         inetSocketConstructor = InetSocketTransportAddress.class.getConstructor(InetAddress.class,
-                            int.class);
+                                int.class);
                     } catch (NoSuchMethodException e) {
                         throw new PressureMeasureError("无法构造InetSocketTransportAddress，当前版本不兼容！");
                     }

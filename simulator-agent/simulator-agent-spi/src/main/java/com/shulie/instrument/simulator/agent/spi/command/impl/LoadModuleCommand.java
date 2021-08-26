@@ -20,14 +20,15 @@ import com.shulie.instrument.simulator.agent.spi.command.Command;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/18 2:55 下午
  */
-public class LoadModuleCommand implements Command {
-    private final String path;
+public class LoadModuleCommand<T> implements Command<T> {
+    private final T packet;
 
-    public LoadModuleCommand(final String path) {
-        this.path = path;
+    public LoadModuleCommand(T packet) {
+        this.packet = packet;
     }
 
-    public String getPath() {
-        return path;
+    @Override
+    public T getPacket() {
+        return packet;
     }
 }

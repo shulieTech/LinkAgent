@@ -124,6 +124,11 @@ public class AgentConfigImpl implements AgentConfig {
     }
 
     @Override
+    public String getUserId() {
+        return coreConfig.getUserId();
+    }
+
+    @Override
     public String getAgentResultFilePath() {
         return coreConfig.getAgentResultFilePath();
     }
@@ -167,6 +172,11 @@ public class AgentConfigImpl implements AgentConfig {
     @Override
     public String getAgentVersion() {
         return version;
+    }
+
+    @Override
+    public String getTroWebUrl() {
+        return coreConfig.getTroWebUrl();
     }
 
     /**

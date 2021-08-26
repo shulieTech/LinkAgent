@@ -44,14 +44,26 @@ public class LettuceMasterSlaveFactory extends AbstractRedisServerFactory<Object
 
     private final static Logger LOGGER = LoggerFactory.getLogger(LettuceMasterSlaveFactory.class);
 
-    private static final LettuceMasterSlaveFactory factory = new LettuceMasterSlaveFactory();
+    private static LettuceMasterSlaveFactory factory;
 
     private LettuceMasterSlaveFactory() {
         super(new LettuceMasterStrategy(manager));
     }
 
     public static LettuceMasterSlaveFactory getFactory() {
+        if (factory == null) {
+            synchronized (LettuceMasterSlaveFactory.class) {
+                if (factory == null) {
+                    factory = new LettuceMasterSlaveFactory();
+                }
+            }
+        }
         return factory;
+    }
+
+    public static void release() {
+        LettuceMasterSlaveFactory.destroy();
+        factory = null;
     }
 
     @Override

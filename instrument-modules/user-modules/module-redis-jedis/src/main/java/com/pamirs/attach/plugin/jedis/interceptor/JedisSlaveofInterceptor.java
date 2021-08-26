@@ -14,10 +14,12 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.shadowserver.JedisFactory;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +32,7 @@ import redis.clients.jedis.Jedis;
  * @package: com.pamirs.attach.plugin.jedis.interceptor
  * @Date 2020/12/8 7:07 下午
  */
+@Destroyable(JedisDestroyed.class)
 public class JedisSlaveofInterceptor extends AroundInterceptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JedisPoolGetResourceInterceptor.class.getName());

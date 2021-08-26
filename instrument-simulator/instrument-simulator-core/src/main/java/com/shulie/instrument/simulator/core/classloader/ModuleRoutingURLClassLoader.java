@@ -38,7 +38,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     protected static final String CLASS_RESOURCE_SUFFIX = ".class";
 
     private static final Logger logger = LoggerFactory.getLogger(ModuleRoutingURLClassLoader.class);
-    private final Routing[] routingArray;
+    protected Routing[] routingArray;
     protected final ClassLoaderService classLoaderService;
     protected final String moduleId;
 
@@ -362,13 +362,8 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
 
     @Override
     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
-        return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
-            @Override
-            public Class<?> loadClass(String javaClassName) throws ClassNotFoundException {
-                definePackageIfNecessary(name);
-                return loadClassInternal(name, resolve);
-            }
-        });
+        definePackageIfNecessary(name);
+        return loadClassInternal(name, resolve);
     }
 
     /**

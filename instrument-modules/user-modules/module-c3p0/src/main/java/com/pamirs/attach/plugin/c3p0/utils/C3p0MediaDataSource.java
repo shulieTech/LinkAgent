@@ -78,11 +78,18 @@ public class C3p0MediaDataSource extends WrappedDbMediatorDataSource<ComboPooled
                 ErrorReporter.Error error = ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0001")
-                        .setMessage("数据源获取链接失败！" + (Pradar.isClusterTest() ? "(压测流量)" : ""))
-                        .setDetail("get connection failed by dbMediatorDataSource, message: " + e.getMessage() + "\r\n" + printStackTrace(e));
+                        .setMessage("数据源获取链接失败！" + ((Pradar.isClusterTest() ? "(压测流量)" : "") + ", url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getJdbcUrl())
+                                + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUser())))
+                        .setDetail("get connection failed by dbMediatorDataSource, url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getJdbcUrl()) +
+                                ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUser())
+                                + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
 //                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
-                throw new PressureMeasureError("pressure test flow get connection fail " + e.getMessage());
+                throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
+                        + (dataSourceBusiness == null ? null : dataSourceBusiness.getJdbcUrl())
+                        + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUser()), e);
             }
         } else {
             String dbType = JdbcUtils.getDbType(dataSourceBusiness.getJdbcUrl(), JdbcUtils.getDriverClassName(dataSourceBusiness.getJdbcUrl()));

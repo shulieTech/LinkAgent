@@ -15,10 +15,12 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.*;
@@ -26,6 +28,7 @@ import java.util.*;
 /**
  * 第一个参数是 K类型，第二参数或者第三个参数是 K 数组类型
  */
+@Destroyable(LettuceDestroy.class)
 public class LettuceMethodFirstKeyAndOtherKeysInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override

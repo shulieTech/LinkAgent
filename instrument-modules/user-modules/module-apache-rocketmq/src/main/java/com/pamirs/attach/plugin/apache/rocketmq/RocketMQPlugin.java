@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq;
 
-import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.interceptor.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -23,7 +22,6 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import org.kohsuke.MetaInfServices;
 
 /**
@@ -35,12 +33,6 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
     @Override
     public void onActive() throws Throwable {
         addHookRegisterInterceptor();
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                ConsumerRegistry.destroy();
-            }
-        });
     }
 
     private void addHookRegisterInterceptor() {
@@ -103,10 +95,6 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
         this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-//                final InstrumentMethod startMethod = target.getDeclaredMethod("start");
-//                startMethod
-//                        .addInterceptor(Listeners.of(MQProducerInterceptor.class));
-
                 //压测代码
                 InstrumentMethod method = target.getDeclaredMethods("sendDefaultImpl");
                 method.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
@@ -117,16 +105,6 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 //压测代码 end
             }
         });
-
-//        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.producer.TransactionMQProducer", new EnhanceCallback() {
-//            @Override
-//            public void doEnhance(InstrumentClass target) {
-//                //压测代码
-//                InstrumentMethod method = target.getDeclaredMethods("send*");
-//                method.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
-//                //压测代码 end
-//            }
-//        });
 
 
         this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {

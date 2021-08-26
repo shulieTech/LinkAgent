@@ -20,25 +20,28 @@ import com.alibaba.fastjson.TypeReference;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.druid.support.json.JSONUtils;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.register.zk.ZkNodeCache;
 import com.shulie.instrument.module.register.zk.ZkPathChildrenCache;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
+import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import io.shulie.tro.web.config.entity.AllowList;
 import io.shulie.tro.web.config.entity.ShadowDB;
 import io.shulie.tro.web.config.entity.ShadowJob;
 import io.shulie.tro.web.config.enums.AllowListType;
 import io.shulie.tro.web.config.enums.BlockListType;
-import io.shulie.tro.web.config.enums.ShadowDSType;
+import io.shulie.tro.web.config.enums.ShadowDBType;
 import io.shulie.tro.web.config.sync.zk.constants.ZkConfigPathConstants;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -77,9 +80,8 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
      * 更新应用agent版本的接口
      */
     private static final String AGENT_VERSION = "/api/confcenter/applicationmnt/update/applicationAgent";
-    private final String VERSION = ApplicationConfigZkResolver.class.getPackage().getImplementationVersion();
     private static final String NODE_UNIQUE_KEY = UUID.randomUUID().toString().replace("_", "");
-
+    private final String VERSION = ApplicationConfigZkResolver.class.getPackage().getImplementationVersion();
     private Map<String, List<AllowList>> allowLists;
 
     private Map<String, Set<String>> ignoreListMap;
@@ -89,8 +91,9 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
 
     private boolean checkAndGenerate = false;
     private ScheduledFuture future;
+    private SwitcherManager switcherManager;
 
-    public ApplicationConfigZkResolver(ZookeeperOptions options) {
+    public ApplicationConfigZkResolver(SwitcherManager switcherManager, ZookeeperOptions options) {
         super(options);
         this.allowLists = new ConcurrentHashMap<String, List<AllowList>>();
         this.ignoreListMap = new ConcurrentHashMap<String, Set<String>>();
@@ -110,13 +113,13 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
     protected void init(AbstractConfig config) {
         this.config = config;
 
-        addAllowListListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
-        addBlockListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
-        addGuardListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
-        addShadowDbListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
-        addShadowJobListener(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
+        addAllowListListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
+        addBlockListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
+        addGuardListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
+        addShadowDbListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
+        addShadowJobListener(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
 
-        future = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -167,7 +170,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
             if (httpResult.getResult() != null && httpResult.getResult().contains("data=true")) {
                 final StringBuilder url2 = new StringBuilder(troWebUrl).append(UPLOAD_APP_INFO);
                 HttpUtils.HttpResult httpResult1 = HttpUtils.doPost(url2.toString(), JSONUtils.toJSONString(appInfo));
-                if(!httpResult1.isSuccess()) {
+                if (!httpResult1.isSuccess()) {
                     logger.warn("上传应用信息失败: {}", httpResult1.getResult());
                 }
             }
@@ -205,7 +208,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
         final StringBuilder url = new StringBuilder(troWeb).append(UPLOAD_ACCESS_STATUS);
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSONUtils.toJSONString(result));
-            if(!httpResult.isSuccess()) {
+            if (!httpResult.isSuccess()) {
                 logger.warn("上传应用接入状态失败: {}", httpResult.getResult());
             }
             // TODO 存在一个隐患，去除了清空内存中异常信息，改为agent全量发送异常数据
@@ -237,7 +240,10 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSONUtils.toJSONString(map));
             if (httpResult.isSuccess()) {
+                logger.info("zk上报应用成功 url={}, result={}", url, httpResult.getResult());
                 checkAndGenerate = true;
+            } else {
+                logger.info("zk上报应用失败 url={}, result={}", url, httpResult.getResult());
             }
         } catch (Throwable e) {
             logger.warn("自动增加应用失败", e);
@@ -382,7 +388,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                                 }.getType());
                                 allowLists.put(path, list);
                             }
-                            trigger(FIELDS.DUBBO_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
+                            trigger(FIELDS.RPC_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
                         }
                     });
                     try {
@@ -391,7 +397,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                             }.getType());
                             allowLists.put(key, list);
                         }
-                        trigger(FIELDS.DUBBO_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
+                        trigger(FIELDS.RPC_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
                     } catch (Throwable e) {
                         ErrorReporter.buildError()
                                 .setErrorType(ErrorTypeEnum.AgentError)
@@ -416,7 +422,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                         }.getType());
                         allowLists.put(path, list);
                     }
-                    trigger(FIELDS.DUBBO_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
+                    trigger(FIELDS.RPC_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
                 }
             });
             try {
@@ -438,7 +444,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                 throw new PradarException(e);
             }
         }
-        trigger(FIELDS.DUBBO_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
+        trigger(FIELDS.RPC_ALLOW_LIST, FIELDS.CACHE_KEY_ALLOW_LIST, FIELDS.URL_WHITE_LIST);
     }
 
     @Override
@@ -452,20 +458,22 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
         ApplicationConfig.getWhiteList = true;
         ApplicationConfig.getShadowJobConfig = true;
         ApplicationConfig applicationConfig = new ApplicationConfig(this);
-        Set<String> urlWhiteList = new HashSet<String>();
+        Set<MatchConfig> urlWhiteList = new HashSet<MatchConfig>();
         for (Map.Entry<String, List<AllowList>> entry : allowLists.entrySet()) {
             for (AllowList allowList : entry.getValue()) {
                 if (allowList.getType() == AllowListType.HTTP) {
-                    urlWhiteList.add(allowList.getInterfaceName());
+                    // TODO
+                    urlWhiteList.add(new MatchConfig());
                 }
             }
         }
         applicationConfig.setUrlWhiteList(urlWhiteList);
-        Set<String> dubboWhiteList = new HashSet<String>();
+        Set<MatchConfig> dubboWhiteList = new HashSet<MatchConfig>();
         for (Map.Entry<String, List<AllowList>> entry : allowLists.entrySet()) {
             for (AllowList allowList : entry.getValue()) {
                 if (allowList.getType() == AllowListType.DUBBO) {
-                    dubboWhiteList.add(allowList.getInterfaceName());
+                    // TODO
+                    dubboWhiteList.add(new MatchConfig());
                 }
             }
         }
@@ -477,8 +485,8 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
             ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
             shadowDatabaseConfig.setUrl(shadowDB.getBizJdbcUrl());
             shadowDatabaseConfig.setUsername(shadowDB.getBizUserName());
-            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDSType.SCHEMA ? 0 : 1);
-            if (shadowDB.getType() == ShadowDSType.SCHEMA) {
+            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDBType.SCHEMA ? 0 : 1);
+            if (shadowDB.getType() == ShadowDBType.SCHEMA) {
                 shadowDatabaseConfig.setShadowSchema(shadowDB.getShadowSchemaConfig().getSchema());
                 shadowDatabaseConfig.setShadowDriverClassName(shadowDB.getShadowSchemaConfig().getDriverClassName());
                 shadowDatabaseConfig.setShadowUsername(shadowDB.getShadowSchemaConfig().getUsername());
@@ -486,7 +494,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                 shadowDatabaseConfig.setShadowPassword(shadowDB.getShadowSchemaConfig().getPassword());
                 shadowDatabaseConfig.setProperties(shadowDB.getShadowSchemaConfig().getProperties());
             } else {
-                Map<String, String> mappingTables = new HashMap<String, String>();
+                Map<String, String> mappingTables = new ConcurrentHashMap<String, String>();
                 for (String tableName : shadowDB.getShadowTableConfig().getTableNames()) {
                     mappingTables.put(tableName, Pradar.addClusterTestPrefix(tableName));
                 }
@@ -521,10 +529,12 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
             // 配置拉取过程中，配置无异常
             // 或者历史配置有完成拉取的记录
             PradarSwitcher.clusterTestReady();
+            switcherManager.switchOn(ConfigFetcherConstants.MODULE_NAME);
         } else {
             // 本次配置没有成功拉取 并且 历史无成功拉取配置
             // 中断压测
             PradarSwitcher.clusterTestPrepare();
+            switcherManager.switchOff(ConfigFetcherConstants.MODULE_NAME);
         }
         return applicationConfig;
     }
@@ -538,25 +548,28 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
         for (FIELDS f : fields) {
             switch (f) {
                 case URL_WHITE_LIST:
-                    Set<String> urlWhiteList = new HashSet<String>();
+                    Set<MatchConfig> urlWhiteList = new HashSet<MatchConfig>();
                     for (Map.Entry<String, List<AllowList>> entry : allowLists.entrySet()) {
                         if (entry.getValue() != null) {
                             for (AllowList allowList : entry.getValue()) {
                                 if (allowList.getType() == AllowListType.HTTP) {
-                                    urlWhiteList.add(allowList.getInterfaceName());
+                                    // TODO
+                                    urlWhiteList.add(new MatchConfig());
                                 }
                             }
                         }
                     }
                     applicationConfig.setUrlWhiteList(urlWhiteList);
                     break;
-                case DUBBO_ALLOW_LIST:
-                    Set<String> dubboWhiteList = new HashSet<String>();
+                case RPC_ALLOW_LIST:
+                    Set<MatchConfig> dubboWhiteList = new HashSet<MatchConfig>();
                     for (Map.Entry<String, List<AllowList>> entry : allowLists.entrySet()) {
                         if (entry.getValue() != null) {
                             for (AllowList allowList : entry.getValue()) {
                                 if (allowList.getType() == AllowListType.DUBBO) {
-                                    dubboWhiteList.add(allowList.getInterfaceName());
+                                    // TODO
+                                    dubboWhiteList.add(new MatchConfig());
+//                                    dubboWhiteList.add(allowList.getInterfaceName());
                                 }
                             }
                         }
@@ -576,8 +589,8 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                             ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
                             shadowDatabaseConfig.setUrl(shadowDB.getBizJdbcUrl());
                             shadowDatabaseConfig.setUsername(shadowDB.getBizUserName());
-                            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDSType.SCHEMA ? 0 : 1);
-                            if (shadowDB.getType() == ShadowDSType.SCHEMA) {
+                            shadowDatabaseConfig.setDsType(shadowDB.getType() == ShadowDBType.SCHEMA ? 0 : 1);
+                            if (shadowDB.getType() == ShadowDBType.SCHEMA) {
                                 shadowDatabaseConfig.setShadowSchema(shadowDB.getShadowSchemaConfig().getSchema());
                                 shadowDatabaseConfig.setShadowDriverClassName(shadowDB.getShadowSchemaConfig().getDriverClassName());
                                 shadowDatabaseConfig.setShadowUsername(shadowDB.getShadowSchemaConfig().getUsername());
@@ -585,7 +598,7 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
                                 shadowDatabaseConfig.setShadowPassword(shadowDB.getShadowSchemaConfig().getPassword());
                                 shadowDatabaseConfig.setProperties(shadowDB.getShadowSchemaConfig().getProperties());
                             } else {
-                                Map<String, String> mappingTables = new HashMap<String, String>();
+                                Map<String, String> mappingTables = new ConcurrentHashMap<String, String>();
                                 for (String tableName : shadowDB.getShadowTableConfig().getTableNames()) {
                                     mappingTables.put(tableName, Pradar.addClusterTestPrefix(tableName));
                                 }
@@ -628,10 +641,12 @@ public class ApplicationConfigZkResolver extends AbstractZkResolver<ApplicationC
             // 配置拉取过程中，配置无异常
             // 或者历史配置有完成拉取的记录
             PradarSwitcher.clusterTestReady();
+            switcherManager.switchOn(ConfigFetcherConstants.MODULE_NAME);
         } else {
             // 本次配置没有成功拉取 并且 历史无成功拉取配置
             // 中断压测
             PradarSwitcher.clusterTestPrepare();
+            switcherManager.switchOff(ConfigFetcherConstants.MODULE_NAME);
         }
         return applicationConfig;
     }

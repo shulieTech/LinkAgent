@@ -59,6 +59,11 @@ public class SamplingRateConfigFetcher implements ISamplingRateConfigFetcher {
     private String globalSamplingPath;
     private String appSamplingPath;
 
+    private ZkNodeCache globalSamplingNode;
+    private ZkNodeCache appSamplingNode;
+    private ZkPathChildrenCache globalSamplingPathChildren;
+    private ZkPathChildrenCache appSamplingPathChildren;
+
     public SamplingRateConfigFetcher(ZookeeperOptions zookeeperOptions, SimulatorConfig simulatorConfig) {
         zkClientSpec = new ZkClientSpec();
         this.simulatorConfig = simulatorConfig;
@@ -98,10 +103,10 @@ public class SamplingRateConfigFetcher implements ISamplingRateConfigFetcher {
             boolean exists = this.zkClient.exists(globalSamplingPath);
             boolean appExists = this.zkClient.exists(appSamplingPath);
             PradarSwitcher.setSamplingZkConfig(exists || appExists);
-            updateSamplingInterval(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE, globalSamplingPath);
-            updateSamplingInterval(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE, appSamplingPath);
-            listenPathChange(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE, globalSamplingPath);
-            listenPathChange(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE, appSamplingPath);
+            globalSamplingNode = updateSamplingInterval(ExecutorServiceFactory.getFactory().getGlobalExecutorService(), globalSamplingPath);
+            appSamplingNode = updateSamplingInterval(ExecutorServiceFactory.getFactory().getGlobalExecutorService(), appSamplingPath);
+            globalSamplingPathChildren = listenPathChange(ExecutorServiceFactory.getFactory().getGlobalExecutorService(), globalSamplingPath);
+            appSamplingPathChildren = listenPathChange(ExecutorServiceFactory.getFactory().getGlobalExecutorService(), appSamplingPath);
         } catch (Throwable e) {
             LOGGER.error("register zk listener error:", e);
             ErrorReporter.buildError()
@@ -117,6 +122,18 @@ public class SamplingRateConfigFetcher implements ISamplingRateConfigFetcher {
 
     @Override
     public void stop() {
+        if (globalSamplingNode != null && globalSamplingNode.isRunning()) {
+            globalSamplingNode.stop();
+        }
+        if (appSamplingNode != null && appSamplingNode.isRunning()) {
+            appSamplingNode.stop();
+        }
+        if (globalSamplingPathChildren != null && globalSamplingPathChildren.isRunning()) {
+            globalSamplingPathChildren.stop();
+        }
+        if (appSamplingPathChildren != null && appSamplingPathChildren.isRunning()) {
+            appSamplingPathChildren.stop();
+        }
         if (this.zkClient != null) {
             try {
                 this.zkClient.stop();
@@ -126,9 +143,10 @@ public class SamplingRateConfigFetcher implements ISamplingRateConfigFetcher {
         }
     }
 
-    private void listenPathChange(ExecutorService executor, final String path) {
-        final ZkPathChildrenCache pathChildrenCache = zkClient.createPathChildrenCache(path.substring(0, path.lastIndexOf("/")));
-        final String simpleSamplingNodeName = path.substring(path.lastIndexOf("/") + 1);
+    private ZkPathChildrenCache listenPathChange(ExecutorService executor, final String path) {
+        final int endIndex = path.lastIndexOf("/");
+        final ZkPathChildrenCache pathChildrenCache = zkClient.createPathChildrenCache(path.substring(0, endIndex));
+        final String simpleSamplingNodeName = path.substring(endIndex + 1);
         pathChildrenCache.setUpdateExecutor(executor);
         pathChildrenCache.setUpdateListener(new Runnable() {
             @Override
@@ -170,9 +188,10 @@ public class SamplingRateConfigFetcher implements ISamplingRateConfigFetcher {
                     .setDetail(e.getMessage())
                     .report();
         }
+        return pathChildrenCache;
     }
 
-    private void updateSamplingInterval(ExecutorService executor, final String path) {
+    private ZkNodeCache updateSamplingInterval(ExecutorService executor, final String path) {
         final ZkNodeCache zkNodeCache = this.zkClient.createZkNodeCache(path, false);
         zkNodeCache.setUpdateExecutor(executor);
         zkNodeCache.setUpdateListener(new Runnable() {
@@ -241,5 +260,6 @@ public class SamplingRateConfigFetcher implements ISamplingRateConfigFetcher {
                     .setDetail(e.getMessage())
                     .report();
         }
+        return zkNodeCache;
     }
 }

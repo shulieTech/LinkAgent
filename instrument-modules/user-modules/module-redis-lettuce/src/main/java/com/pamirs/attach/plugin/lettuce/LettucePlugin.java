@@ -14,31 +14,8 @@
  */
 package com.pamirs.attach.plugin.lettuce;
 
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestFirstArgsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestFirstSecondArgsArraySplitInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestFirstSecondArgsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestFirstThirdArgsArraySplitInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestFirstThirdArgsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestSecondArgsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestSecondThirdArgsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodClusterTestThirdArgsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodFirstKeyAndOtherKeysInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodFirstKeyStreamOffsetArrayInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodFirstKeyStreamOffsetInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodMigrateInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.LettuceMethodShutdownInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.PluginMaxRedisExpireTimeInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.RedisClientAttachRedisURIsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.RedisClientConstructorInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.RedisClientPerformanceInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.RedisClusterClientConstructorInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.RedisMasterSlaveAttachRedisURIsInterceptor;
-import com.pamirs.attach.plugin.lettuce.interceptor.RedisMasterSlavePerformanceInterceptor;
-import com.pamirs.attach.plugin.lettuce.shadowserver.LettuceFactory;
+import com.pamirs.attach.plugin.lettuce.interceptor.*;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -48,9 +25,10 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
+
+import javax.annotation.Resource;
 
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = LettuceConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "redis 的 lettuce 客户端")
@@ -199,12 +177,6 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         addMasterSlave();
 
         addPluginMaxRedisExpireTimeRedisCommands();
-        addReleaseResource(new ReleaseResource(null) {
-            @Override
-            public void release() {
-                LettuceFactory.destroy();
-            }
-        });
     }
 
     private void addMasterSlave() {
@@ -213,8 +185,8 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethods("connect", "connectAsync");
                 // Attach endpoint
-                method.addInterceptor(Listeners.dynamicScope(RedisMasterSlaveAttachRedisURIsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-                method.addInterceptor(Listeners.dynamicScope(RedisMasterSlavePerformanceInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisMasterSlaveAttachRedisURIsInterceptor.class, "Lettuce_Scope",  ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisMasterSlavePerformanceInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
     }
@@ -228,8 +200,8 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 constructor.addInterceptor(Listeners.of(RedisClientConstructorInterceptor.class));
 
                 InstrumentMethod method = target.getDeclaredMethods("connect", "connectAsync", "connectPubSub", "connectPubSubAsync", "connectSentinel", "connectSentinelAsync");
-                method.addInterceptor(Listeners.dynamicScope(RedisClientAttachRedisURIsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-                method.addInterceptor(Listeners.dynamicScope(RedisClientPerformanceInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisClientAttachRedisURIsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisClientPerformanceInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
 
@@ -249,8 +221,8 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 constructor.addInterceptor(Listeners.of(RedisClusterClientConstructorInterceptor.class));
 
                 InstrumentMethod method = target.getDeclaredMethods("connect", "connectAsync", "connectPubSub", "connectPubSubAsync", "connectSentinel", "connectSentinelAsync");
-                method.addInterceptor(Listeners.dynamicScope(RedisClientAttachRedisURIsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-                method.addInterceptor(Listeners.dynamicScope(RedisClientPerformanceInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisClientAttachRedisURIsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisClientPerformanceInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
     }
@@ -294,66 +266,67 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         @Override
         public void doEnhance(InstrumentClass target) {
 
-            InstrumentMethod method = target.getDeclaredMethods("expire","pexpire","setex","psetex");
+            InstrumentMethod method = target.getDeclaredMethods("expire", "pexpire", "setex", "psetex");
             method.addInterceptor(Listeners
-                .of(PluginMaxRedisExpireTimeInterceptor.class));
-            target.getDeclaredMethod("set","java.lang.Object","java.lang.Object","io.lettuce.core.SetArgs")
-                .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
+                    .of(PluginMaxRedisExpireTimeInterceptor.class));
+            target.getDeclaredMethod("set", "java.lang.Object", "java.lang.Object", "io.lettuce.core.SetArgs")
+                    .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
         }
     };
+
     private void addPluginMaxRedisExpireTimeRedisCommands() {
         this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisAsyncCommands",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
         this.enhanceTemplate.enhance(this, "io.lettuce.core.api.sync.RedisStringCommands",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisReactiveCommands",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisAsyncCommandsImpl", pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisAdvancedClusterAsyncCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisClusterPubSubAsyncCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.pubsub.RedisPubSubAsyncCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisAdvancedClusterReactiveCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.cluster.RedisClusterPubSubReactiveCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.pubsub.RedisPubSubReactiveCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisReactiveCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
 
         this.enhanceTemplate.enhance(this, "io.lettuce.core.sentinel.RedisSentinelReactiveCommandsImpl",
-            pluginMaxRedisExpireTimeCallback);
+                pluginMaxRedisExpireTimeCallback);
     }
 
     private EnhanceCallback callback = new EnhanceCallback() {
         @Override
         public void doEnhance(InstrumentClass target) {
             InstrumentMethod method0 = target.getDeclaredMethods(EXCLUDE_METHOD_NAMES).withNot();
-            method0.addInterceptor(Listeners.dynamicScope(LettuceMethodInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            method0.addInterceptor(Listeners.of(LettuceMethodInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             InstrumentMethod method = target.getDeclaredMethods(FIRST_ARGS_INCLUDE_METHODS);
-            method.addInterceptor(Listeners.dynamicScope(LettuceMethodClusterTestFirstArgsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            method.addInterceptor(Listeners.of(LettuceMethodClusterTestFirstArgsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             InstrumentMethod method1 = target.getDeclaredMethods("blpop", "brpop", "bzpopmin", "bzpopmax");
-            method1.addInterceptor(Listeners.dynamicScope(LettuceMethodClusterTestSecondArgsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            method1.addInterceptor(Listeners.of(LettuceMethodClusterTestSecondArgsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             InstrumentMethod method2 = target.getDeclaredMethods("eval", "evalsha");
-            method2.addInterceptor(Listeners.dynamicScope(LettuceMethodClusterTestThirdArgsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            method2.addInterceptor(Listeners.of(LettuceMethodClusterTestThirdArgsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             InstrumentMethod method3 = target.getDeclaredMethods("bitopAnd", "bitopNot", "bitopOr", "bitopXor", "rpoplpush", "sdiffstore", "sinterstore", "smove", "sunionstore", "pfmerge", "rename", "renamenx");
-            method3.addInterceptor(Listeners.dynamicScope(LettuceMethodClusterTestFirstSecondArgsInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            method3.addInterceptor(Listeners.of(LettuceMethodClusterTestFirstSecondArgsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             InstrumentMethod method4 = target.getDeclaredMethods("sortStore");
             method4.addInterceptor(Listeners.of(LettuceMethodClusterTestFirstThirdArgsInterceptor.class, "Lettuce_sortStore", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));

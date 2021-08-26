@@ -15,8 +15,10 @@
 package com.pamirs.attach.plugin.redisson.interceptor;
 
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -25,6 +27,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
  * @mail xiaobin@shulie.io
  * @Date 2020/9/8 2:05 下午
  */
+@Destroyable(RedissonDestroy.class)
 public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethodInterceptor {
 
     @Override

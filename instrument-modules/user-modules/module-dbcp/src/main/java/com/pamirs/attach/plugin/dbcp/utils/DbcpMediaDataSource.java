@@ -74,11 +74,18 @@ public class DbcpMediaDataSource extends WrappedDbMediatorDataSource<BasicDataSo
                 ErrorReporter.Error error = ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0001")
-                        .setMessage("数据源获取链接失败！" + (Pradar.isClusterTest() ? "(压测流量)" : ""))
-                        .setDetail("get connection failed by dbMediatorDataSource, message: " + e.getMessage() + "\r\n" + printStackTrace(e));
+                        .setMessage("数据源获取链接失败！" + ((Pradar.isClusterTest() ? "(压测流量)" : "") + ", url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                                + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())))
+                        .setDetail("get connection failed by dbMediatorDataSource, url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()) +
+                                ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())
+                                + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
 //                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
-                throw new PressureMeasureError("pressure test flow get connection fail " + e.getMessage());
+                throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
+                        + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                        + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()), e);
             }
         } else {
             String dbType = JdbcUtils.getDbType(dataSourceBusiness.getUrl(), JdbcUtils.getDriverClassName(dataSourceBusiness.getUrl()));
@@ -108,13 +115,18 @@ public class DbcpMediaDataSource extends WrappedDbMediatorDataSource<BasicDataSo
                 ErrorReporter.Error error = ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0001")
-                        .setMessage("数据源获取链接失败！" + (Pradar.isClusterTest() ? "(压测流量)" : ""))
-                        .setDetail("get connection failed by dbMediatorDataSource, message: " + e.getMessage() + "\r\n" + printStackTrace(e));
-                /*if (Pradar.isClusterTest()) {
-                    error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
-                }*/
+                        .setMessage("数据源获取链接失败！" + ((Pradar.isClusterTest() ? "(压测流量)" : "") + ", url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                                + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())))
+                        .setDetail("get connection failed by dbMediatorDataSource, url="
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()) +
+                                ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())
+                                + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
+//                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
-                throw new PressureMeasureError("pressure test flow get connection fail " + e.getMessage());
+                throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
+                        + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                        + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()), e);
             }
         } else {
             String dbType = JdbcUtils.getDbType(dataSourceBusiness.getUrl(), JdbcUtils.getDriverClassName(dataSourceBusiness.getUrl()));

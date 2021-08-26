@@ -80,7 +80,7 @@ public abstract class HttpScheduledUploader<T> extends HttpUploader<T> {
         }
         running = true;
 
-        future = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 if (!running) {
@@ -93,7 +93,7 @@ public abstract class HttpScheduledUploader<T> extends HttpUploader<T> {
                 if (!httpResult.isSuccess()) {
                     LOGGER.error("Agent Health Check failed，access Config Center failed! HttpStatus Code: " + httpResult.getStatus() + ",message ：" + httpResult.getResult());
                 } else {
-                    LOGGER.info("Agent Health Check success！");
+                    LOGGER.info("Agent Health Check successful！");
                 }
                 uploadCount++;
             }

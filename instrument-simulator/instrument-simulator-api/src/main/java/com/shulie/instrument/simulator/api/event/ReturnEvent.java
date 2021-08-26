@@ -16,7 +16,7 @@ package com.shulie.instrument.simulator.api.event;
 
 /**
  * 方法调用RETURN事件
- *
+ * <p>
  * 注意: Event 的内容会在方法调用周期结束后进行清理，内部的数据将会全部清空
  * 这样做是为了内存回收的速度加快，所以如果需要在方法调用生命周期外引用 Event
  * 需要提前将内部的数据引用
@@ -36,7 +36,7 @@ public class ReturnEvent extends InvokeEvent {
      *
      * @param processId 调用过程ID
      * @param invokeId  调用ID
-     * @param returnObj    调用返回值(void方法返回值为null)
+     * @param returnObj 调用返回值(void方法返回值为null)
      */
     public ReturnEvent(final int processId,
                        final int invokeId,
@@ -52,9 +52,9 @@ public class ReturnEvent extends InvokeEvent {
      * @param eventType 必须是{@link EventType#RETURN}或{@link EventType#IMMEDIATELY_RETURN}两者之一的值
      * @param processId 调用过程ID
      * @param invokeId  调用ID
-     * @param returnObj    调用返回值(void方法返回值为null)
+     * @param returnObj 调用返回值(void方法返回值为null)
      */
-    ReturnEvent(final EventType eventType,
+    ReturnEvent(final int eventType,
                 final int processId,
                 final int invokeId,
                 final Object returnObj) {
@@ -64,7 +64,7 @@ public class ReturnEvent extends InvokeEvent {
         // 对入参进行校验
         if (eventType != EventType.IMMEDIATELY_RETURN
                 && eventType != EventType.RETURN) {
-            throw new IllegalArgumentException(String.format("type must be %s or %s", EventType.RETURN, EventType.IMMEDIATELY_RETURN));
+            throw new IllegalArgumentException(String.format("type must be %s or %s", "RETURN", "IMMEDIATELY_RETURN"));
         }
 
     }

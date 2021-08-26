@@ -14,9 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.text.MessageFormat;
 
 /**
@@ -26,23 +24,36 @@ public final class BootLogger {
 
     private final String messagePattern;
     private final PrintStream out;
-    private final PrintStream err;
+    private final File file;
 
     public BootLogger(String loggerName) {
-        this(loggerName, System.out, System.err);
+        this(loggerName, System.out);
     }
 
-    BootLogger(String loggerName, PrintStream out, PrintStream err) {
+    BootLogger(String loggerName, PrintStream out) {
         if (loggerName == null) {
             throw new NullPointerException("loggerName must not be null");
         }
         this.messagePattern = "{0,date,yyyy-MM-dd HH:mm:ss} [{1}](" + loggerName + ") {2}{3}";
         this.out = out;
-        this.err = err;
+        String logPath = System.getProperty("SIMULATOR_LOG_PATH");
+        if (logPath == null && "".equals(logPath.trim())) {
+            logPath = System.getProperty("user.home") + File.separator + "pradarlogs";
+        }
+        file = new File(logPath, "simulator.log");
     }
 
     static BootLogger getLogger(String loggerName) {
         return new BootLogger(loggerName);
+    }
+
+    private PrintWriter getWriter() {
+        try {
+            return new PrintWriter(new OutputStreamWriter(new FileOutputStream(file, true), "UTF-8"));
+        } catch (Throwable e) {
+            this.out.println(e);
+            return null;
+        }
     }
 
     private String format(String logLevel, String msg, String exceptionMessage) {
@@ -60,7 +71,19 @@ public final class BootLogger {
 
     public void info(String msg) {
         String formatMessage = format("INFO ", msg, "");
-        this.out.println(formatMessage);
+        PrintWriter writer = getWriter();
+        if (writer != null) {
+            try {
+                writer.println(formatMessage);
+            } finally {
+                try {
+                    writer.close();
+                } catch (Exception e) {
+                }
+            }
+        } else {
+            this.out.println(formatMessage);
+        }
     }
 
 
@@ -75,7 +98,19 @@ public final class BootLogger {
     public void warn(String msg, Throwable throwable) {
         String exceptionMessage = toString(throwable);
         String formatMessage = format("WARN ", msg, exceptionMessage);
-        this.err.println(formatMessage);
+        PrintWriter writer = getWriter();
+        if (writer != null) {
+            try {
+                writer.println(formatMessage);
+            } finally {
+                try {
+                    writer.close();
+                } catch (Exception e) {
+                }
+            }
+        } else {
+            this.out.println(formatMessage);
+        }
     }
 
     public void error(String msg) {
@@ -85,7 +120,19 @@ public final class BootLogger {
     public void error(String msg, Throwable throwable) {
         String exceptionMessage = toString(throwable);
         String formatMessage = format("ERROR ", msg, exceptionMessage);
-        this.err.println(formatMessage);
+        PrintWriter writer = getWriter();
+        if (writer != null) {
+            try {
+                writer.println(formatMessage);
+            } finally {
+                try {
+                    writer.close();
+                } catch (Exception e) {
+                }
+            }
+        } else {
+            this.out.println(formatMessage);
+        }
     }
 
     private String toString(Throwable throwable) {

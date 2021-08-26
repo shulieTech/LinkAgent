@@ -17,11 +17,11 @@ package com.shulie.instrument.simulator.agent.core.config;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
-import com.shulie.instrument.simulator.agent.api.model.AppConfig;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.Result;
 import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
+import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
@@ -31,9 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -46,22 +44,13 @@ public class ExternalAPIImpl implements ExternalAPI {
     private AgentConfig agentConfig;
     private AtomicBoolean isWarnAlready;
 
+    private final static String COMMAND_URL = "api/agent/application/node/probe/operate";
+
+    private final static String REPORT_URL = "api/agent/application/node/probe/operateResult";
+
     public ExternalAPIImpl(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
         isWarnAlready = new AtomicBoolean(false);
-    }
-
-    @Override
-    public File downloadAgent(String agentDownloadUrl, String targetPath) {
-        if (StringUtils.isNotBlank(agentDownloadUrl)) {
-            if (StringUtils.indexOf(agentDownloadUrl, '?') != -1) {
-                agentDownloadUrl += "&appName=" + agentConfig.getAppName() + "&agentId=" + agentConfig.getAgentId();
-            } else {
-                agentDownloadUrl += "?appName=" + agentConfig.getAppName() + "&agentId=" + agentConfig.getAgentId();
-            }
-            return DownloadUtils.download(agentDownloadUrl, targetPath);
-        }
-        return null;
     }
 
     @Override
@@ -69,9 +58,11 @@ public class ExternalAPIImpl implements ExternalAPI {
         if (StringUtils.isNotBlank(agentDownloadUrl)) {
             StringBuilder builder = new StringBuilder(agentDownloadUrl);
             if (StringUtils.indexOf(agentDownloadUrl, '?') != -1) {
-                builder.append("&appName=").append(agentConfig.getAppName()).append("&agentId=").append(agentConfig.getAgentId());
+                builder.append("&appName=").append(agentConfig.getAppName()).append("&agentId=").append(
+                        agentConfig.getAgentId());
             } else {
-                builder.append("?appName=").append(agentConfig.getAppName()).append("&agentId=").append(agentConfig.getAgentId());
+                builder.append("?appName=").append(agentConfig.getAppName()).append("&agentId=").append(
+                        agentConfig.getAgentId());
             }
             return DownloadUtils.download(builder.toString(), targetPath);
         }
@@ -80,17 +71,36 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     @Override
     public void reportCommandResult(long commandId, boolean isSuccess, String errorMsg) {
-
+        String webUrl = agentConfig.getTroWebUrl();
+        if (StringUtils.isBlank(webUrl)) {
+            logger.warn("AGENT: tro.web.url is not assigned.");
+            return;
+        }
+        String url = joinUrl(webUrl, REPORT_URL);
+        Map<String, String> body = new HashMap<String, String>();
+        body.put("appName", agentConfig.getAppName());
+        body.put("agentId", agentConfig.getAgentId());
+        body.put("operateResult", isSuccess ? "1" : "0");
+        if (StringUtils.isNotBlank(errorMsg)) {
+            body.put("errorMsg", errorMsg);
+        }
+        HttpUtils.doPost(url, agentConfig.getUserAppKey(), JSON.toJSONString(body));
     }
 
     @Override
     public CommandPacket getLatestCommandPacket() {
-        String agentConfigUrl = agentConfig.getProperty("agent.command.url", null);
+        String webUrl = agentConfig.getTroWebUrl();
+        if (StringUtils.isBlank(webUrl)) {
+            logger.warn("AGENT: tro.web.url is not assigned.");
+            return CommandPacket.NO_ACTION_PACKET;
+        }
+        //todo file模式？
+        String agentConfigUrl = joinUrl(webUrl, COMMAND_URL);
         if (StringUtils.isBlank(agentConfigUrl)) {
             if (isWarnAlready.compareAndSet(false, true)) {
                 logger.warn("AGENT: agent.command.url is not assigned.");
             }
-            return CommandPacket.DEFAULT_PACKET;
+            return CommandPacket.NO_ACTION_PACKET;
         }
         String url = agentConfigUrl;
         if (StringUtils.indexOf(url, '?') != -1) {
@@ -101,8 +111,8 @@ public class ExternalAPIImpl implements ExternalAPI {
 
         String resp = ConfigUtils.doConfig(url, agentConfig.getUserAppKey());
         if (StringUtils.isBlank(resp)) {
-            logger.error("AGENT: fetch agent command got a err response. {}", url);
-            throw new RuntimeException("fetch agent command got a err response. " + url);
+            logger.warn("AGENT: fetch agent command got a err response. {}", url);
+            return CommandPacket.NO_ACTION_PACKET;
         }
 
         /**
@@ -114,55 +124,12 @@ public class ExternalAPIImpl implements ExternalAPI {
             Result<CommandPacket> response = JSON.parseObject(resp, type);
             if (!response.isSuccess()) {
                 logger.error("fetch agent command got a fault response. resp={}", resp);
-                throw new RuntimeException(response.getErrorMsg());
+                throw new RuntimeException(response.getError());
             }
-            return response.getResult();
+            return response.getData();
         } catch (Throwable e) {
             logger.error("AGENT: parse command err. {}", resp, e);
-            throw new RuntimeException("AGENT: parse command err.. " + resp, e);
-        }
-    }
-
-    @Override
-    public AppConfig getAppConfig() throws RuntimeException {
-        String agentConfigUrl = agentConfig.getProperty("agent.config.url", null);
-        if (StringUtils.isBlank(agentConfigUrl)) {
-            if (isWarnAlready.compareAndSet(false, true)) {
-                logger.warn("AGENT: agent.config.url is not assigned.");
-            }
-            /**
-             * 如果没有配置则给一个默认值
-             */
-            AppConfig appConfig = new AppConfig();
-            appConfig.setRunning(true);
-            appConfig.setAgentVersion("1.0.0");
-            return appConfig;
-        }
-        String url = agentConfigUrl;
-        if (StringUtils.indexOf(url, '?') != -1) {
-            url += "&appName=" + agentConfig.getAppName() + "&agentId=" + agentConfig.getAgentId();
-        } else {
-            url += "?appName=" + agentConfig.getAppName() + "&agentId=" + agentConfig.getAgentId();
-        }
-
-        String resp = ConfigUtils.doConfig(url, agentConfig.getUserAppKey());
-        if (StringUtils.isBlank(resp)) {
-            logger.error("AGENT: fetch agent config got a err response. {}", url);
-            throw new RuntimeException("fetch agent config got a err response. " + url);
-        }
-
-        try {
-            Type type = new TypeReference<Result<AppConfig>>() {
-            }.getType();
-            Result<AppConfig> response = JSON.parseObject(resp, type);
-            if (!response.isSuccess()) {
-                logger.error("fetch agent config got a fault response. resp={}", resp);
-                throw new RuntimeException(response.getErrorMsg());
-            }
-            return response.getResult();
-        } catch (Throwable e) {
-            logger.error("AGENT: parse app config err. {}", resp, e);
-            throw new RuntimeException("AGENT: parse app config err.. " + resp, e);
+            return CommandPacket.NO_ACTION_PACKET;
         }
     }
 
@@ -179,5 +146,9 @@ public class ExternalAPIImpl implements ExternalAPI {
             processlist.add(descriptor.displayName());
         }
         return processlist;
+    }
+
+    private String joinUrl(String troWebUrl, String endpoint) {
+        return troWebUrl.endsWith("/") ? troWebUrl + endpoint : troWebUrl + "/" + endpoint;
     }
 }

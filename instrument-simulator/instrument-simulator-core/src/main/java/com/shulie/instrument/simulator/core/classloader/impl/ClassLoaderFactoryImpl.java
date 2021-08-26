@@ -15,22 +15,17 @@
 package com.shulie.instrument.simulator.core.classloader.impl;
 
 import com.shulie.instrument.simulator.api.ModuleRuntimeException;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.util.ObjectIdUtils;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.ModuleClassLoader;
-import com.shulie.instrument.simulator.message.boot.util.JvmUtils;
-import com.shulie.instrument.simulator.message.boot.version.JvmVersion;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.instrument.Instrumentation;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2020/11/13 11:34 下午
  */
 public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
-    private final static Logger logger = LoggerFactory.getLogger(ClassLoaderFactoryImpl.class);
+    private final Logger logger = LoggerFactory.getLogger(ClassLoaderFactoryImpl.class);
 
     private final ClassLoaderService classLoaderService;
     private final File moduleJarFile;
@@ -75,7 +70,7 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
             return defaultClassLoader;
         }
         try {
-            int id = ObjectIdUtils.instance.identity(businessClassLoader);
+            int id = ObjectIdUtils.identity(businessClassLoader);
             if (id == 0) {
                 return defaultClassLoader;
             }
@@ -110,6 +105,7 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
             entry.getValue().closeIfPossible();
         }
         defaultClassLoader.closeIfPossible();
+        defaultClassLoader = null;
         classLoaderCache.clear();
         classLoaderCache = null;
     }

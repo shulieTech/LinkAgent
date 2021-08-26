@@ -72,7 +72,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     @Override
     public void onActive() throws Throwable {
-        boolean isPushPerfEnabled = simulatorConfig.getBooleanProperty("pradar.perf.push.enabled", false);
+        boolean isPushPerfEnabled = simulatorConfig.getBooleanProperty("pradar.perf.push.enabled", true);
         if (!isPushPerfEnabled) {
             return;
         }
@@ -82,7 +82,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
          * 默认 thread 统计 cpu 耗时占用的时间间隔
          */
         threadParams.put("interval", "100");
-        future = ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.scheduleAtFixedRate(new Runnable() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -175,7 +175,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
 
     @Override
-    public void onUnload() throws Throwable {
+    public void onFrozen() throws Throwable {
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
         }

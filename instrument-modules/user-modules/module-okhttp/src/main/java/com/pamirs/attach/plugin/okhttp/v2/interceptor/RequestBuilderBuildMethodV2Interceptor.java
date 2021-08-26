@@ -16,11 +16,15 @@ package com.pamirs.attach.plugin.okhttp.v2.interceptor;
 
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.HttpUrl;
 import com.squareup.okhttp.Request;
 
@@ -53,31 +57,36 @@ public class RequestBuilderBuildMethodV2Interceptor extends TraceInterceptorAdap
     }
 
     @Override
-    public void beforeFirst(Advice advice) {
+    public void beforeFirst(Advice advice) throws ProcessControlException {
         ClusterTestUtils.validateClusterTest();
-        if (Pradar.isClusterTest()){
+        if (Pradar.isClusterTest()) {
             Object target = advice.getTarget();
             Request.Builder builder = (Request.Builder) target;
             Object httpUrl = Reflect.on(builder).get(OKHttpConstants.DYNAMIC_FIELD_URL);
 
+
+            String url = null;
             //2的低版本
-            if (httpUrl instanceof URL){
-                String url = null;
+            if (httpUrl instanceof URL) {
                 if (httpUrl == null) {
                     url = Reflect.on(builder).get(OKHttpConstants.DYNAMIC_FIELD_URL_STRING);
                 } else {
-                    url = getService(((URL)httpUrl).getProtocol(), ((URL)httpUrl).getHost(), ((URL)httpUrl).getPort(), ((URL)httpUrl).getPath());
+                    url = getService(((URL) httpUrl).getProtocol(), ((URL) httpUrl).getHost(), ((URL) httpUrl).getPort(), ((URL) httpUrl).getPath());
                 }
-                ClusterTestUtils.validateHttpClusterTest(url);
             } else {//2的高版本
-                String url = null;
                 if (httpUrl == null) {
                     url = Reflect.on(builder).get(OKHttpConstants.DYNAMIC_FIELD_URL_STRING);
                 } else {
-                    url = getService(((HttpUrl)httpUrl).scheme(), ((HttpUrl)httpUrl).host(), ((HttpUrl)httpUrl).port(), ((HttpUrl)httpUrl).encodedPath());
+                    url = getService(((HttpUrl) httpUrl).scheme(), ((HttpUrl) httpUrl).host(), ((HttpUrl) httpUrl).port(), ((HttpUrl) httpUrl).encodedPath());
                 }
-                ClusterTestUtils.validateHttpClusterTest(url);
             }
+            MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+            Headers.Builder header = Reflect.on(builder).get(OKHttpConstants.DYNAMIC_FIELD_HEADER);
+            String check = header.get(PradarService.PRADAR_WHITE_LIST_CHECK);
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, check);
+            config.addArgs("url", url);
+            config.addArgs("isInterface", Boolean.FALSE);
+            config.getStrategy().processBlock(advice.getClassLoader(), config);
         }
     }
 

@@ -26,7 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.rocketmq.common.message.MessageExt;
 
 /**
- * @Author: Hengyu
+ * @Author: guohz
  * @ClassName: TransactionCheckInterceptor
  * @Package: com.pamirs.attach.plugin.aliyun.rocketmq.interceptor
  * @Date: 2019/10/24 11:31 下午

@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.api.instrument;
 
-import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 
 /**
@@ -43,5 +42,5 @@ public interface InstrumentMethod {
      * @param listeners
      * @param types
      */
-    void addInterceptor(Listeners listeners, EventType... types);
+    void addInterceptor(Listeners listeners, int... types);
 }

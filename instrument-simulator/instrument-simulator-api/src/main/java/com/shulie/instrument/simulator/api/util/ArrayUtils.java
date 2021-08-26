@@ -21,6 +21,7 @@ package com.shulie.instrument.simulator.api.util;
  * @since 2020/10/23 10:45 下午
  */
 public class ArrayUtils {
+    public static final int[] EMPTY_INT_ARRAY = new int[0];
 
     /**
      * 判断数组是否为空
@@ -58,4 +59,38 @@ public class ArrayUtils {
                 : 0;
     }
 
+    /**
+     *
+     * @param array
+     * @return
+     */
+    public static int[] toPrimitive(Integer[] array) {
+        if (array == null) {
+            return null;
+        } else if (array.length == 0) {
+            return EMPTY_INT_ARRAY;
+        }
+        final int[] result = new int[array.length];
+        for (int i = 0; i < array.length; i++) {
+            result[i] = array[i].intValue();
+        }
+        return result;
+    }
+
+    public static String join(int[] array) {
+        if (array == null) {
+            return null;
+        }
+        if (array.length == 0) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0, len = array.length; i < len; i++) {
+            builder.append(array[i]).append(',');
+        }
+        if (builder.length() > 0) {
+            builder.deleteCharAt(builder.length() - 1);
+        }
+        return builder.toString();
+    }
 }

@@ -14,26 +14,20 @@
  */
 package com.pamirs.attach.plugin.es.shadowserver.transport.definition;
 
-import java.util.Collection;
-import java.util.Collections;
-
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.client.transport.TransportClient.HostFailureListener;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
+import java.util.Collection;
+import java.util.Collections;
+
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/04/09 6:26 下午
  */
 public class PreBuiltTransportClientDefinition extends AbstractTransportClientDefinition {
-
-    private static final PreBuiltTransportClientDefinition INSTANCE = new PreBuiltTransportClientDefinition();
-
-    public static PreBuiltTransportClientDefinition getInstance() {return INSTANCE;}
-
-    private PreBuiltTransportClientDefinition() {}
 
     @Override
     protected TransportClient doSolve(Settings settings, TransportClient target) {

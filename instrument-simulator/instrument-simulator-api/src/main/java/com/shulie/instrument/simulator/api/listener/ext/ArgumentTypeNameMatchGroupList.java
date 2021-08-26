@@ -52,7 +52,7 @@ public class ArgumentTypeNameMatchGroupList {
      * @param index       参数索引号
      * @param pattern     规则
      */
-    public void addArgumentTypeNameMatch(PatternType patternType, int index, String pattern) {
+    public void addArgumentTypeNameMatch(int patternType, int index, String pattern) {
         ArgumentTypeNameMatch match = new ArgumentTypeNameMatch(patternType, pattern);
         argumentTypeNameMatches.put(index, match);
         this.exactlyMatched = false;
@@ -64,7 +64,7 @@ public class ArgumentTypeNameMatchGroupList {
      * @param patternType
      * @param patterns
      */
-    public void addArgumentTypeNameMatch(PatternType patternType, String... patterns) {
+    public void addArgumentTypeNameMatch(int patternType, String... patterns) {
         if (ArrayUtils.isEmpty(patterns)) {
             return;
         }

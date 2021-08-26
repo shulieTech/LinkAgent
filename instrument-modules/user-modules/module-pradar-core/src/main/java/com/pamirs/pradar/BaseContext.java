@@ -61,6 +61,11 @@ abstract class BaseContext {
      */
     boolean isDebug;
 
+    /**
+     * 下一次白名单呢校验是否直接通行
+     */
+    boolean passCheck;
+
     long logTime = 0L;
 
     /**
@@ -262,6 +267,14 @@ abstract class BaseContext {
     public abstract String getTraceNode();
 
     public abstract String getNodeId();
+
+    public boolean isPassCheck() {
+        return passCheck;
+    }
+
+    public void setPassCheck(boolean passCheck) {
+        this.passCheck = passCheck;
+    }
 }
 
 

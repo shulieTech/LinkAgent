@@ -18,8 +18,10 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import org.apache.commons.lang.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
@@ -28,14 +30,25 @@ import java.util.Set;
  * @since : 2020/9/8 17:36
  */
 public class CacheKeyAllowList implements IChange<Set<String>, ApplicationConfig> {
-
-    private static final CacheKeyAllowList INSTANCE = new CacheKeyAllowList();
+    private final static Logger LOGGER = LoggerFactory.getLogger(CacheKeyAllowList.class);
+    private static CacheKeyAllowList INSTANCE;
 
     private CacheKeyAllowList() {
     }
 
     public static CacheKeyAllowList getInstance() {
+        if (INSTANCE == null) {
+            synchronized (CacheKeyAllowList.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new CacheKeyAllowList();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -48,6 +61,7 @@ public class CacheKeyAllowList implements IChange<Set<String>, ApplicationConfig
         applicationConfig.setCacheKeyAllowList(newValue);
         GlobalConfig.getInstance().setCacheKeyWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.CACHE_KEY_ALLOW_LIST);
+        LOGGER.info("publish cache key whitelist config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 }

@@ -166,10 +166,21 @@ public class SimulatorGuard {
     /**
      * Simulator守护者单例
      */
-    private static final SimulatorGuard INSTANCE = new SimulatorGuard();
+    private static SimulatorGuard INSTANCE;
 
 
     public static SimulatorGuard getInstance() {
+        if (INSTANCE == null) {
+            synchronized (SimulatorGuard.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new SimulatorGuard();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 }

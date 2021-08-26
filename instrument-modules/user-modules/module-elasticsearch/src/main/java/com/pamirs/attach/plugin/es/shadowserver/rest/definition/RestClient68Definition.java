@@ -25,12 +25,6 @@ import org.elasticsearch.client.WarningsHandler;
  */
 public class RestClient68Definition extends AbstractRestClientDefinition {
 
-    private static final RestClient68Definition INSTANCE = new RestClient68Definition();
-
-    public static RestClient68Definition getInstance() {return INSTANCE;}
-
-    private RestClient68Definition() {}
-
     @Override
     protected void doAssembleBuilder(RestClient target, RestClientBuilder builder) {
         NodeSelector nodeSelector = reflectSilence(target, "nodeSelector");

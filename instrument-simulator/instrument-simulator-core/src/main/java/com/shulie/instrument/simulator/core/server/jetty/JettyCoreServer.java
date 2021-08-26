@@ -14,28 +14,29 @@
  */
 package com.shulie.instrument.simulator.core.server.jetty;
 
-import com.shulie.instrument.simulator.api.GlobalSwitch;
+import java.io.File;
+import java.io.IOException;
+import java.lang.instrument.Instrumentation;
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.shulie.instrument.simulator.api.LoadMode;
+import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.Simulator;
+import com.shulie.instrument.simulator.core.manager.impl.DefaultDeploymentManager;
 import com.shulie.instrument.simulator.core.server.CoreServer;
 import com.shulie.instrument.simulator.core.server.jetty.servlet.ModuleHttpServlet;
 import com.shulie.instrument.simulator.core.util.Initializer;
 import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.instrument.Instrumentation;
-import java.net.InetSocketAddress;
-import java.util.concurrent.*;
 
 import static com.shulie.instrument.simulator.core.util.NetworkUtils.isPortInUsing;
 import static java.lang.String.format;
@@ -48,13 +49,18 @@ public class JettyCoreServer implements CoreServer {
 
     private static volatile CoreServer coreServer;
     private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final Initializer initializer = new Initializer(true);
+    private Initializer initializer;
 
     private Server httpServer;
     private CoreConfigure config;
     private Simulator simulator;
-    private ExecutorService loadUserModuleService;
     private ModuleHttpServlet moduleHttpServlet;
+    // is destroyed already
+    private AtomicBoolean isDestroyed = new AtomicBoolean(false);
+
+    public JettyCoreServer() {
+        initializer = new Initializer(true);
+    }
 
     /**
      * 单例
@@ -124,12 +130,12 @@ public class JettyCoreServer implements CoreServer {
             throw new IOException("server was not bind yet.");
         }
 
-        ServerConnector scc = null;
+        SelectChannelConnector scc = null;
         final Connector[] connectorArray = httpServer.getConnectors();
         if (null != connectorArray) {
             for (final Connector connector : connectorArray) {
-                if (connector instanceof ServerConnector) {
-                    scc = (ServerConnector) connector;
+                if (connector instanceof SelectChannelConnector) {
+                    scc = (SelectChannelConnector) connector;
                     break;
                 }
             }
@@ -140,8 +146,8 @@ public class JettyCoreServer implements CoreServer {
         }
 
         return new InetSocketAddress(
-            scc.getHost(),
-            scc.getLocalPort()
+                scc.getHost(),
+                scc.getLocalPort()
         );
     }
 
@@ -161,7 +167,8 @@ public class JettyCoreServer implements CoreServer {
         if (logger.isInfoEnabled()) {
             logger.info("SIMULATOR: initializing http-handler. path={}", contextPath + "/*");
         }
-        this.moduleHttpServlet = new ModuleHttpServlet(config, simulator.getCoreModuleManager());
+        DeploymentManager deploymentManager = new DefaultDeploymentManager(config.getAgentLauncherClass());
+        this.moduleHttpServlet = new ModuleHttpServlet(config, simulator.getCoreModuleManager(), deploymentManager);
         context.addServlet(
                 new ServletHolder(this.moduleHttpServlet),
                 pathSpec
@@ -183,41 +190,22 @@ public class JettyCoreServer implements CoreServer {
             ));
         }
 
-        QueuedThreadPool qtp = new QueuedThreadPool();
+        int maxThreads = Math.max(Runtime.getRuntime().availableProcessors(), 8);
+        int minThreads = Math.max(maxThreads / 2, 1);
+        QueuedThreadPool qtp = new QueuedThreadPool(maxThreads);
+        qtp.setMinThreads(minThreads);
         /**
          * jetty线程设置为daemon，防止应用启动失败进程无法正常退出
          */
         qtp.setDaemon(true);
         qtp.setName("simulator-jetty-qtp-" + qtp.hashCode());
-
-        httpServer = new Server(qtp);
-
-        InetSocketAddress inetSocketAddress = new InetSocketAddress(serverIp, serverPort);
-
-        ServerConnector connector=new ServerConnector(httpServer);
-        connector.setHost(inetSocketAddress.getHostName());
-        connector.setPort(inetSocketAddress.getPort());
-        httpServer.setConnectors(new Connector[]{connector});
-
+        httpServer = new Server(new InetSocketAddress(serverIp, serverPort));
+        httpServer.setThreadPool(qtp);
     }
 
     @Override
     public synchronized void bind(final CoreConfigure config, final Instrumentation inst) throws IOException {
         this.config = config;
-        this.loadUserModuleService = new ThreadPoolExecutor(1, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "Load-User-Module-Thread");
-                t.setDaemon(true);
-                t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                    @Override
-                    public void uncaughtException(Thread t, Throwable e) {
-                        logger.error("Thread {} caught a unknow exception with UncaughtExceptionHandler", t.getName(), e);
-                    }
-                });
-                return t;
-            }
-        });
         try {
             initializer.initProcess(new Initializer.Processor() {
                 @Override
@@ -235,28 +223,8 @@ public class JettyCoreServer implements CoreServer {
                     httpServer.start();
                 }
             });
-
-            // 初始化加载所有的模块
-            GlobalSwitch.setModuleLoader(new GlobalSwitch.ModuleLoader() {
-                @Override
-                public void load(Runnable runnable) {
-                    loadUserModuleService.submit(runnable);
-                }
-
-                @Override
-                public void unload(Runnable runnable) {
-                }
-            });
-            this.loadUserModuleService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        simulator.getCoreModuleManager().reset();
-                    } catch (Throwable cause) {
-                        logger.warn("SIMULATOR: reset occur error when initializing.", cause);
-                    }
-                }
-            });
+            config.setSocketAddress(getLocal());
+            simulator.getCoreModuleManager().reset();
 
             final InetSocketAddress local = getLocal();
             if (logger.isInfoEnabled()) {
@@ -286,6 +254,10 @@ public class JettyCoreServer implements CoreServer {
 
     @Override
     public void destroy() {
+        // avoid multi invoke
+        if (!isDestroyed.compareAndSet(false, true)) {
+            return;
+        }
         /**
          * 先标记一下对外 http server 正在销毁中，防止请求时出现资源再一次加载
          */
@@ -306,6 +278,11 @@ public class JettyCoreServer implements CoreServer {
 
         // 关闭LOGBACK
         LogbackUtils.destroy();
+        this.httpServer = null;
+        this.config = null;
+        this.simulator = null;
+        this.moduleHttpServlet = null;
+        coreServer = null;
     }
 
     @Override

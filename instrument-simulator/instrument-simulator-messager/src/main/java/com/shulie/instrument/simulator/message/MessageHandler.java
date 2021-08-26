@@ -108,4 +108,8 @@ public interface MessageHandler {
      */
     Result handleOnReturn(int listenerId, Class clazz, Object object) throws Throwable;
 
+    /**
+     * destroy all resources
+     */
+    void destroy();
 }

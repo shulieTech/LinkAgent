@@ -16,11 +16,13 @@ package com.pamirs.attach.plugin.alibaba.druid.obj;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.druid.pool.DruidPooledConnection;
+import com.pamirs.attach.plugin.alibaba.druid.util.DruidDatasourceUtils;
 import com.pamirs.attach.plugin.common.datasource.WrappedDbMediatorDataSource;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +64,14 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
                 } else {
                     //影子库
                     if (dataSourcePerformanceTest == null) {
-                        throw new PressureMeasureError("Performance dataSource is null.");
+                        synchronized (this) {
+                            if (dataSourcePerformanceTest == null) {
+                                dataSourcePerformanceTest = DruidDatasourceUtils.generateDatasourceFromConfiguration(dataSourceBusiness, GlobalConfig.getInstance().getShadowDatasourceConfigs());
+                            }
+                        }
+                        if (dataSourcePerformanceTest == null) {
+                            throw new PressureMeasureError("Performance dataSource is null. can't get shadow datasource config with business config. bizUrl=" + dataSourceBusiness.getUrl() + ", bizUser=" + dataSourceBusiness.getUsername());
+                        }
                     }
                     DruidPooledConnection druidPooledConnection = dataSourcePerformanceTest.getConnection();
                     return new DruidPooledPressureConnection(druidPooledConnection,
@@ -74,17 +83,17 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0001")
                         .setMessage("数据源获取链接失败！" + ((Pradar.isClusterTest() ? "(压测流量)" : "") + ", url="
-                                + dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()
-                                + ", username=" + dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()))
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                                + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())))
                         .setDetail("get connection failed by dbMediatorDataSource, url="
-                                + dataSourceBusiness == null ? null : dataSourceBusiness.getUrl() +
-                                ", username=" + dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()
+                                + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()) +
+                                ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())
                                 + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
 //                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
                 throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
-                        + dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()
-                        + ", username=" + dataSourceBusiness == null ? null : dataSourceBusiness.getUsername(), e);
+                        + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
+                        + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()), e);
             }
         } else {
             final DruidPooledConnection connection = dataSourceBusiness.getConnection();

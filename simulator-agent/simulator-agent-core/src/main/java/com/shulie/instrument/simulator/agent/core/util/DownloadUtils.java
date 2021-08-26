@@ -14,16 +14,24 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.shulie.instrument.simulator.agent.core.exception.AgentDownloadException;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.net.*;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 下载工具
@@ -46,7 +54,7 @@ public class DownloadUtils {
                 // 连接类的父类，抽象类
                 URLConnection urlConnection = url.openConnection();
                 // http的连接类
-                HttpURLConnection httpURLConnection = (HttpURLConnection) urlConnection;
+                HttpURLConnection httpURLConnection = (HttpURLConnection)urlConnection;
                 httpURLConnection.setDoOutput(true);// 使用 URL 连接进行输出
                 httpURLConnection.setDoInput(true);// 使用 URL 连接进行输入
                 httpURLConnection.setUseCaches(false);
@@ -56,6 +64,8 @@ public class DownloadUtils {
                 httpURLConnection.setRequestProperty("Connection", "Keep-Alive");
                 // 设置字符编码
                 httpURLConnection.setRequestProperty("Charset", "UTF-8");
+                httpURLConnection.setConnectTimeout(3000);
+                httpURLConnection.setReadTimeout(50000);
                 // 打开到此 URL 引用的资源的通信链接（如果尚未建立这样的连接）。
                 httpURLConnection.connect();
 
@@ -63,8 +73,7 @@ public class DownloadUtils {
                 int fileLength = httpURLConnection.getContentLength();
 
                 // 文件名
-                String filePathUrl = httpURLConnection.getURL().getFile();
-                String fileFullName = filePathUrl.substring(filePathUrl.lastIndexOf(File.separatorChar) + 1);
+                String fileFullName = getFileName(httpURLConnection);
                 if (fileFullName != null && fileFullName.indexOf('?') != -1) {
                     fileFullName = fileFullName.substring(0, fileFullName.indexOf('?'));
                 }
@@ -102,16 +111,17 @@ public class DownloadUtils {
 
                 File file = new File(path);
                 if (!file.exists()) {
-                    throw new AgentDownloadException(String.format("agent file %s is not exists!", file.getAbsolutePath()));
+                    throw new AgentDownloadException(
+                        String.format("agent file %s is not exists!", file.getAbsolutePath()));
                 }
 
                 FileInputStream bin = new FileInputStream(file);
                 if (file.getName().endsWith(".jar")) {
-                    JarUtils.writeFile(bin, downloadDir, file.getName(), (int) file.length(), logger);
+                    JarUtils.writeFile(bin, downloadDir, file.getName(), (int)file.length(), logger);
                 } else if (file.getName().endsWith(".zip")) {
-                    ZipUtils.writeFile(bin, downloadDir, file.getName(), (int) file.length(), logger);
+                    ZipUtils.writeFile(bin, downloadDir, file.getName(), (int)file.length(), logger);
                 } else if (file.getName().endsWith(".tar.gz") || file.getName().endsWith(".tgz")) {
-                    TarGzUtils.writeFile(bin, downloadDir, file.getName(), (int) file.length(), logger);
+                    TarGzUtils.writeFile(bin, downloadDir, file.getName(), (int)file.length(), logger);
                 } else {
                     throw new RuntimeException("文件只能以.jar、.zip、.tgz或者.tar.gz结尾: " + file.getName());
                 }
@@ -126,6 +136,22 @@ public class DownloadUtils {
                 throw new AgentDownloadException("Download file from remote server err. " + path, e);
             }
         }
+    }
+
+    private static String getFileName(HttpURLConnection httpURLConnection) {
+        String disposition = httpURLConnection.getHeaderField("Content-Disposition");
+        if (StringUtils.isEmpty(disposition)) {
+            throw new AgentDownloadException(
+                "Download file from remote server err. can not resolve file name from " + httpURLConnection.getURL()
+                    .getPath());
+        }
+        int idx = disposition.indexOf("filename=");
+        if (idx < 0) {
+            throw new AgentDownloadException(
+                "Download file from remote server err. can not resolve file name from " + httpURLConnection.getURL()
+                    .getPath());
+        }
+        return disposition.substring(idx + 9);
     }
 
     private static Map<String, String> createQueryParams(String query) throws UnsupportedEncodingException {
@@ -149,4 +175,5 @@ public class DownloadUtils {
         }
         return result;
     }
+
 }

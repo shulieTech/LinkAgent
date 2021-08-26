@@ -15,7 +15,7 @@
 package com.pamirs.pradar.pressurement.agent.shared.util;
 
 /**
- * @Author: Hengyu
+ * @author guohz
  * @since 2020/7/30 3:55 下午
  */
 public class TbScheduleUtil {
@@ -30,5 +30,8 @@ public class TbScheduleUtil {
         return factory;
     }
 
+    public static void release() {
+        factory = null;
+    }
 
 }

@@ -14,18 +14,20 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
-import com.pamirs.pradar.*;
-import com.pamirs.pradar.common.FormatUtils;
-import com.pamirs.pradar.debug.DebugTestInfoPusher;
-import com.pamirs.pradar.debug.model.DebugTestInfo;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.pamirs.pradar.ConfigNames;
+import com.pamirs.pradar.ErrorTypeEnum;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.common.FormatUtils;
+import com.pamirs.pradar.debug.DebugHelper;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 用于错误信息汇报
@@ -173,11 +175,11 @@ public class ErrorReporter {
         @Override
         public String toString() {
             return "{"
-                    + "\"errorCode\":" + "\"" + errorCode + "\","
-                    + "\"message\":" + "\"" + message + "\","
-                    + "\"detail\":" + "\"" + detail + "\","
-                    + "\"occurTime\":" + "\"" + occurTime + "\""
-                    + "}";
+                + "\"errorCode\":" + "\"" + errorCode + "\","
+                + "\"message\":" + "\"" + message + "\","
+                + "\"detail\":" + "\"" + detail + "\","
+                + "\"occurTime\":" + "\"" + occurTime + "\""
+                + "}";
         }
 
         public void report() {
@@ -185,7 +187,7 @@ public class ErrorReporter {
             PradarSwitcher.setErrorMsg(message);
             this.occurTime = FormatUtils.formatTimeRange(new Date());
             ErrorReporter.getInstance()
-                    .addError(this.errorType.getErrorCnDesc() + ":" + this.toString().hashCode(), this.toString());
+                .addError(this.errorType.getErrorCnDesc() + ":" + this.toString().hashCode(), this.toString());
             if (this.isClosePradar) {
                 LOGGER.error("close cluster switch!error msg:{}", this.toString());
                 // 需要关闭全局压测开关
@@ -207,31 +209,14 @@ public class ErrorReporter {
             if (!Pradar.isDebug()) {
                 return;
             }
-            final DebugTestInfo debugTestInfo = new DebugTestInfo();
-            debugTestInfo.setTraceId(Pradar.getTraceId());
-            debugTestInfo.setRpcId(Pradar.getInvokeId());
-            debugTestInfo.setLogType(Pradar.getLogType());
-            debugTestInfo.setAgentId(Pradar.getAgentId());
-            debugTestInfo.setAppName(AppNameUtils.appName());
-            final boolean clusterTest = Pradar.isClusterTest();
-            debugTestInfo.setLogCallback(new DebugTestInfo.LogCallback() {
-                @Override
-                public DebugTestInfo.Log getLog() {
-                    StringBuilder builder = new StringBuilder();
-                    builder.append("traceId:").append(debugTestInfo.getTraceId()).append("|");
-                    builder.append("rpcId:").append(debugTestInfo.getRpcId()).append("|");
-                    builder.append("isPressure:").append(clusterTest).append("|");
-                    builder.append("errorType:").append(errorType).append("|");
-                    builder.append("errorCode:").append(errorCode).append("|");
-                    builder.append("message:").append(message).append("|");
-                    builder.append("detail:").append(detail).append("|");
-                    DebugTestInfo.Log log = new DebugTestInfo.Log();
-                    log.setLevel("ERROR");
-                    log.setContent(builder.toString());
-                    return log;
-                }
-            });
-            DebugTestInfoPusher.addDebugInfo(debugTestInfo);
+            String builder = "traceId:" + Pradar.getTraceId() + "|"
+                + "rpcId:" + Pradar.getInvokeId() + "|"
+                + "isPressure:" + Pradar.isClusterTest() + "|"
+                + "errorType:" + errorType + "|"
+                + "errorCode:" + errorCode + "|"
+                + "message:" + message + "|"
+                + "detail:" + detail + "|";
+            DebugHelper.addDebugInfo("ERROR", builder);
         }
 
     }

@@ -22,13 +22,28 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * 线程安全
  */
 public class Initializer {
+    /**
+     * 初始状态(未初始化)
+     */
+    private final static int NEW = 1;
+
+    /**
+     * 初始化完成
+     */
+    private final static int INITIALIZED = 2;
+
+    /**
+     * 销毁完成
+     */
+    private final static int DESTROYED = 4;
+
 
     // 是否循环状态
     private final boolean isCycleState;
     // 读写锁
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock(true);
     // 初始化状态
-    private volatile State state = State.NEW;
+    private volatile int state = NEW;
 
     /**
      * 构造初始化器(默认为非循环状态)
@@ -52,7 +67,7 @@ public class Initializer {
      * @return 是否未初始化
      */
     public final boolean isNew() {
-        return getState() == State.NEW;
+        return getState() == NEW;
     }
 
     /**
@@ -61,7 +76,7 @@ public class Initializer {
      * @return 是否已初始化完成
      */
     public final boolean isInitialized() {
-        return getState() == State.INITIALIZED;
+        return getState() == INITIALIZED;
     }
 
     /**
@@ -70,7 +85,7 @@ public class Initializer {
      * @return 是否已被销毁
      */
     public final boolean isDestroyed() {
-        return getState() == State.DESTROYED;
+        return getState() == DESTROYED;
     }
 
     /**
@@ -78,7 +93,7 @@ public class Initializer {
      *
      * @return 当前状态
      */
-    public final State getState() {
+    public final int getState() {
         rwLock.readLock().lock();
         try {
             return state;
@@ -97,12 +112,12 @@ public class Initializer {
         rwLock.writeLock().lock();
         try {
 
-            if (State.NEW != state) {
+            if (NEW != state) {
                 throw new IllegalStateException("init process fail, because state != NEW");
             }
 
             processor.process();
-            state = State.INITIALIZED;
+            state = INITIALIZED;
 
         } finally {
             rwLock.writeLock().unlock();
@@ -120,48 +135,19 @@ public class Initializer {
         rwLock.writeLock().lock();
         try {
 
-            if (State.INITIALIZED != state) {
+            if (INITIALIZED != state) {
                 throw new IllegalStateException("destroy process fail, because state != INITIALIZED");
             }
 
             processor.process();
             state = isCycleState
-                    ? State.NEW
-                    : State.DESTROYED
+                    ? NEW
+                    : DESTROYED
             ;
 
         } finally {
             rwLock.writeLock().unlock();
         }
-    }
-
-    /**
-     * 状态枚举
-     * <p>
-     * 非循环状态
-     * NEW -> INITIALIZED -> DESTROYED
-     * </p>
-     * <p>
-     * 循环状态
-     * NEW -> INITIALIZED -> NEW
-     * </p>
-     */
-    enum State {
-
-        /**
-         * 初始状态(未初始化)
-         */
-        NEW,
-
-        /**
-         * 初始化完成
-         */
-        INITIALIZED,
-
-        /**
-         * 销毁完成
-         */
-        DESTROYED
     }
 
     /**

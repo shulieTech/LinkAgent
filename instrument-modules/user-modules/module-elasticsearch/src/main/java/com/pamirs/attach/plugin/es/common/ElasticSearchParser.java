@@ -35,6 +35,11 @@ public class ElasticSearchParser {
         return doParseAddressAndPort(abstractClient);
     }
 
+    public static void release() {
+        getAddressMethod = null;
+        getPortMethod = null;
+    }
+
     private static void initMethod(TransportClient client) {
         if (client == null) {
             return;

@@ -44,7 +44,7 @@ public class CoreConfig {
     private final static String DEFAULT_LOG_LEVEL = "info";
 
     private static final String RESULT_FILE_PATH = System.getProperties().getProperty("user.home")
-            + File.separator + "%s" + File.separator + ".simulator.token";
+            + File.separator + "%s" + File.separator + "%s" + File.separator + ".simulator.token";
     /**
      * 存放所有的 agent 配置
      */
@@ -99,6 +99,7 @@ public class CoreConfig {
         this.logConfigFilePath = this.configFilePath + File.separator + "simulator-agent-logback.xml";
         File configFile = new File(configFilePath, "agent.properties");
         Properties properties = new Properties();
+        properties.putAll(System.getProperties());
         InputStream configIn = null;
         try {
             if (!configFile.exists() || !configFile.canRead()) {
@@ -414,13 +415,36 @@ public class CoreConfig {
         return value;
     }
 
+    public String getTroWebUrl() {
+        String value = getProperty("tro.web.url", null);
+        if (StringUtils.isBlank(value)) {
+            value = System.getProperty("tro.web.url");
+        }
+        if (StringUtils.isBlank(value)) {
+            value = System.getenv("tro.web.url");
+        }
+        return value;
+    }
+
+    public String getUserId() {
+        String value = getProperty("pradar.user.id", null);
+        if (StringUtils.isBlank(value)) {
+            value = System.getProperty("pradar.user.id");
+        }
+        if (StringUtils.isBlank(value)) {
+            value = System.getenv("pradar.user.id");
+        }
+        return value;
+    }
+
+
     /**
      * 获取 agent结果文件路径
      *
      * @return
      */
     public String getAgentResultFilePath() {
-        return String.format(RESULT_FILE_PATH, getNamespace());
+        return String.format(RESULT_FILE_PATH, getNamespace(), this.getAppName());
     }
 
     /**
@@ -460,4 +484,6 @@ public class CoreConfig {
     public String getAttachName() {
         return this.attachName;
     }
+
+
 }

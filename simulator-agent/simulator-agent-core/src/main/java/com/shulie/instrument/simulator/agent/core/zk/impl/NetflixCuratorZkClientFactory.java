@@ -14,18 +14,15 @@
  */
 package com.shulie.instrument.simulator.agent.core.zk.impl;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.CuratorFrameworkFactory;
-import com.netflix.curator.retry.ExponentialBackoffRetry;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import com.shulie.instrument.simulator.agent.core.zk.ZkClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -37,8 +34,6 @@ import java.util.concurrent.ThreadFactory;
 public class NetflixCuratorZkClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(NetflixCuratorZkClientFactory.class);
-
-    private static Cache<String, ZkClient> cache = CacheBuilder.newBuilder().build();
 
     private static final class NetflixCuratorZkClientFactoryHolder {
         public final static NetflixCuratorZkClientFactory INSTANCE = new NetflixCuratorZkClientFactory();
@@ -55,30 +50,25 @@ public class NetflixCuratorZkClientFactory {
         if (StringUtils.isBlank(spec.getZkServers())) {
             throw new RuntimeException("zookeeper servers is empty.");
         }
-        return cache.get(spec.getZkServers(), new Callable<ZkClient>() {
-            @Override
-            public ZkClient call() throws Exception {
-                String path = ZooKeeper.class.getProtectionDomain().getCodeSource().getLocation().toString();
-                logger.info("Load ZooKeeper from {}", path);
+        String path = ZooKeeper.class.getProtectionDomain().getCodeSource().getLocation().toString();
+        logger.info("Load ZooKeeper from {}", path);
 
-                CuratorFramework client = CuratorFrameworkFactory.builder()
-                        .connectString(spec.getZkServers())
-                        .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-                        .connectionTimeoutMs(spec.getConnectionTimeoutMillis())
-                        .sessionTimeoutMs(spec.getSessionTimeoutMillis())
-                        .threadFactory(new ThreadFactory() {
-                            @Override
-                            public Thread newThread(Runnable r) {
-                                return new Thread(r, spec.getThreadName());
-                            }
-                        })
-                        .build();
-                client.start();
-                logger.info("ZkClient started: {}", spec.getZkServers());
+        CuratorFramework client = CuratorFrameworkFactory.builder()
+                .connectString(spec.getZkServers())
+                .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                .connectionTimeoutMs(spec.getConnectionTimeoutMillis())
+                .sessionTimeoutMs(spec.getSessionTimeoutMillis())
+                .threadFactory(new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, spec.getThreadName());
+                    }
+                })
+                .build();
+        client.start();
+        logger.info("ZkClient started: {}", spec.getZkServers());
 
-                NetflixCuratorZkClient theClient = new NetflixCuratorZkClient(client, spec.getZkServers());
-                return theClient;
-            }
-        });
+        NetflixCuratorZkClient theClient = new NetflixCuratorZkClient(client, spec.getZkServers());
+        return theClient;
     }
 }

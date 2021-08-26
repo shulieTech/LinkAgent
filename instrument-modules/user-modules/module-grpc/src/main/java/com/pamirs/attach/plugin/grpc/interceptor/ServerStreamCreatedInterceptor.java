@@ -80,9 +80,10 @@ public class ServerStreamCreatedInterceptor extends TraceInterceptorAdaptor {
         final String fullMethodName = String.valueOf(args[1]);
         String method = fullMethodName;
         String service = "";
-        if (fullMethodName.indexOf(".") != -1) {
-            service = fullMethodName.substring(0, fullMethodName.lastIndexOf("."));
-            method = fullMethodName.substring(fullMethodName.lastIndexOf(".") + 1);
+        final int indexOfDot = fullMethodName.lastIndexOf(".");
+        if (indexOfDot != -1) {
+            service = fullMethodName.substring(0, indexOfDot);
+            method = fullMethodName.substring(indexOfDot + 1);
         }
         record.setMethod(method);
         record.setService(service);

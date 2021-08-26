@@ -15,6 +15,10 @@
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
 import com.alibaba.fastjson.JSON;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.api.GetChildrenBuilder;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
@@ -48,6 +52,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ZookeeperRegister implements Register {
     private final static Logger LOGGER = LoggerFactory.getLogger(ZookeeperRegister.class.getName());
+
+    public static void main(String[] args) throws Exception {
+        CuratorFramework client = CuratorFrameworkFactory.builder()
+                .connectString("127.0.0.1:2181,127.0.0.1:2181,127.0.0.1:2181")
+                .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                .connectionTimeoutMs(60000)
+                .sessionTimeoutMs(30000)
+                .threadFactory(new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "2222");
+                    }
+                })
+                .build();
+        client.start();
+        GetChildrenBuilder children = client.getChildren();
+        for (String s : children.forPath("/config")) {
+            System.out.println(s);
+        }
+    }
     /**
      * 基础路径
      */
@@ -92,6 +116,7 @@ public class ZookeeperRegister implements Register {
         map.put("errorMsg", AgentStatus.getErrorMessage());
         map.put("agentLanguage", "JAVA");
         map.put("agentVersion", agentConfig.getAgentVersion());
+        map.put("simulatorVersion", AgentStatus.getSimulatorVersion());
         String str = JSON.toJSONString(map);
         try {
             return str.getBytes("UTF-8");

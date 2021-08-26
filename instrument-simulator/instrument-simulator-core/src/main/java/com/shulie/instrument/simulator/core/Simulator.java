@@ -14,6 +14,9 @@
  */
 package com.shulie.instrument.simulator.core;
 
+import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
+import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.resource.ModuleLoader;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.DefaultClassLoaderService;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
@@ -21,14 +24,16 @@ import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
 import com.shulie.instrument.simulator.core.manager.impl.DefaultCoreLoadedClassDataSource;
 import com.shulie.instrument.simulator.core.manager.impl.DefaultCoreModuleManager;
 import com.shulie.instrument.simulator.core.manager.impl.DefaultProviderManager;
+import com.shulie.instrument.simulator.core.manager.impl.DefaultSwitcherManager;
 import com.shulie.instrument.simulator.core.util.MessageUtils;
-import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.core.util.ThreadLocalCleaner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 仿真器
@@ -46,13 +51,13 @@ public class Simulator {
         earlyLoadSimulatorClassNameList.add("com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructureImplByAsm");
     }
 
-    private final CoreConfigure config;
-    private final CoreModuleManager coreModuleManager;
-    private final ClassLoaderService classLoaderService;
+    private CoreConfigure config;
+    private CoreModuleManager coreModuleManager;
+    private ClassLoaderService classLoaderService;
 
     public Simulator(final CoreConfigure config,
                      final Instrumentation inst) {
-        EventListenerHandler.getSingleton();
+        EventListenerHandler eventListenerHandler = new EventListenerHandler(config.getNamespace());
         this.config = config;
         this.classLoaderService = new DefaultClassLoaderService();
         this.classLoaderService.init();
@@ -61,15 +66,26 @@ public class Simulator {
                 inst,
                 new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe()),
                 new DefaultProviderManager(config),
-                classLoaderService
+                classLoaderService,
+                eventListenerHandler,
+                new DefaultSwitcherManager(new ModuleLoader() {
+                    @Override
+                    public void load(Runnable runnable) {
+                        runnable.run();
+                    }
+
+                    @Override
+                    public void unload(Runnable runnable) {
+                    }
+                })
         ));
 
-        init();
+        init(eventListenerHandler);
     }
 
-    private void init() {
+    private void init(EventListenerHandler eventListenerHandler) {
         doEarlyLoadSimulatorClass();
-        MessageUtils.init(config.getNamespace());
+        MessageUtils.init(config.getNamespace(), eventListenerHandler);
         this.coreModuleManager.onStartup();
     }
 
@@ -103,18 +119,25 @@ public class Simulator {
             LOGGER.info("SIMULATOR: prepare to destroying simulator instance. namespace: {}, appName: {}", config.getNamespace(), config.getAppName());
         }
 
-        // 卸载所有的模块
+        // uninstall all modules
         coreModuleManager.unloadAll();
 
-        // 清理Messager
+        // clean MessageHandler with namespace
         MessageUtils.clean(config.getNamespace());
-
+        // shutdown executor service factory
+        ExecutorServiceFactory.getFactory().shutdown();
+        /// shutdown CoreModuleManager
         this.coreModuleManager.onShutdown();
         //关闭classLoader service
         classLoaderService.dispose();
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("SIMULATOR: simulator instance is destroyed success. namespace: {}, appName: {}", config.getNamespace(), config.getAppName());
         }
+        SimulatorGuard.release();
+        ThreadLocalCleaner.clear();
+        this.config = null;
+        this.coreModuleManager = null;
+        this.classLoaderService = null;
     }
 
 }

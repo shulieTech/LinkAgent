@@ -18,6 +18,7 @@ import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.event.InvokeEvent;
 import com.shulie.instrument.simulator.api.util.LazyGet;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +31,7 @@ import java.util.Set;
  * 当方法内调用启用新的线程执行方法，则会产生新的 Advice
  * <p>
  * 一个 Advice 只支持同时 attach 一个对象，不支持多个，可以同时支持 mark 多个
- *
+ * <p>
  * 注意: Advice 的内容会在方法调用周期结束后进行清理，内部的数据将会全部清空
  * 这样做是为了内存回收的速度加快，所以如果需要在方法调用生命周期外引用 Advice
  * 需要提前将内部的数据引用
@@ -44,7 +45,7 @@ public class Advice implements Attachment {
     private final int invokeId;
 
     private Class targetClass;
-    private ClassLoader classLoader;
+    private WeakReference<ClassLoader> classLoader;
     private LazyGet<Behavior> behaviorLazyGet;
     private Object[] parameterArray;
     private Object target;
@@ -57,7 +58,7 @@ public class Advice implements Attachment {
 
     private Advice top = this;
     private Advice parent = this;
-    private EventType state = EventType.BEFORE;
+    private int state = EventType.BEFORE;
 
     /**
      * 构造通知
@@ -80,7 +81,9 @@ public class Advice implements Attachment {
         this.invokeId = invokeId;
         this.behaviorLazyGet = behaviorLazyGet;
         this.targetClass = targetClass;
-        this.classLoader = classLoader;
+        if (classLoader != null) {
+            this.classLoader = new WeakReference<ClassLoader>(classLoader);
+        }
         this.parameterArray = parameterArray;
         this.target = target;
     }
@@ -185,7 +188,7 @@ public class Advice implements Attachment {
      * @return 触发事件的行为所在的ClassLoader
      */
     public ClassLoader getClassLoader() {
-        return classLoader;
+        return classLoader == null ? null : classLoader.get();
     }
 
     /**
@@ -362,7 +365,6 @@ public class Advice implements Attachment {
         marks = null;
         top = null;
         parent = null;
-        state = null;
     }
 }
 

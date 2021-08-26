@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.hbase.interceptor;
 
 import com.pamirs.attach.plugin.hbase.HbaseConstants;
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.attach.plugin.hbase.util.HBaseTableNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -22,6 +23,7 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.hadoop.hbase.client.HTable;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
  * @package: com.pamirs.attach.plugin.hbase.interceptor
  * @Date 2019-09-12 17:04
  */
+@Destroyable(HbaseDestroyed.class)
 public class HbaseInterceptor extends TraceInterceptorAdaptor {
     private final static Logger LOGGER = LoggerFactory.getLogger(HbaseInterceptor.class.getName());
 
@@ -99,7 +102,7 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
      * @param tableName
      */
     private void check(String tableName) {
-        if (tableName.equals("hbase:meta")){
+        if (tableName.equals("hbase:meta")) {
             return;
         }
         tableName = HBaseTableNameUtils.getTableNameNoContainsNameSpace(tableName);
@@ -116,5 +119,4 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
             }
         }
     }
-
 }

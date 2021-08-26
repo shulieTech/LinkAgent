@@ -23,11 +23,14 @@ import java.util.*;
  * 匹配结果
  */
 public class MatchingResult {
-    public final static MatchingResult UN_MATCHED = new MatchingResult(false);
     private boolean isMatched;
 
     public MatchingResult(boolean isMatched) {
         this.isMatched = isMatched;
+    }
+
+    public static MatchingResult unMatched() {
+        return new MatchingResult(false);
     }
 
     private final Map<BehaviorStructure, Set<BuildingForListeners>> behaviorStructureListMap = new HashMap<BehaviorStructure, Set<BuildingForListeners>>();

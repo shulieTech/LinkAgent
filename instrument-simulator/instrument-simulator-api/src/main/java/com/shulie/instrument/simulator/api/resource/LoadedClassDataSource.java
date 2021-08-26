@@ -51,4 +51,11 @@ public interface LoadedClassDataSource {
      */
     Iterator<Class<?>> iteratorForLoadedClasses();
 
+    /**
+     * 获取所有已加载的类
+     *
+     * @return
+     */
+    Class[] getAllForLoadedClasses();
+
 }

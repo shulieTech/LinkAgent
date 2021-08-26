@@ -17,7 +17,6 @@ package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
 import com.shulie.instrument.simulator.api.scope.InterceptorScopeInvocation;
 import org.slf4j.Logger;
@@ -31,18 +30,15 @@ public class ScopedAroundInterceptor extends AroundInterceptor {
 
     private final AroundInterceptor interceptor;
     private final InterceptorScope scope;
-    private final ExecutionPolicy policy;
+    private final int policy;
 
-    public ScopedAroundInterceptor(AroundInterceptor interceptor, ExecutionPolicy policy) {
+    public ScopedAroundInterceptor(AroundInterceptor interceptor, int policy) {
         this(interceptor, null, policy);
     }
 
-    public ScopedAroundInterceptor(AroundInterceptor interceptor, InterceptorScope scope, ExecutionPolicy policy) {
+    public ScopedAroundInterceptor(AroundInterceptor interceptor, InterceptorScope scope, int policy) {
         if (interceptor == null) {
             throw new NullPointerException("interceptor must not be null");
-        }
-        if (policy == null) {
-            throw new NullPointerException("policy must not be null");
         }
         this.interceptor = interceptor;
         this.scope = scope;
@@ -59,7 +55,8 @@ public class ScopedAroundInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
-        final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
+        final InterceptorScope scope = getScope(advice);
+        final InterceptorScopeInvocation transaction = scope.getCurrentInvocation();
         final boolean success = transaction.tryEnter(policy);
         if (success) {
             interceptor.doBefore(advice);
@@ -72,7 +69,8 @@ public class ScopedAroundInterceptor extends AroundInterceptor {
 
     @Override
     public void doAfter(Advice advice) throws Throwable {
-        final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
+        final InterceptorScope scope = getScope(advice);
+        final InterceptorScopeInvocation transaction = scope.getCurrentInvocation();
         boolean success = transaction.canLeave(policy);
         try {
             if (success) {

@@ -38,7 +38,7 @@ public final class ModuleSpecUtils {
     private final static Logger LOGGER = LoggerFactory.getLogger(ModuleSpecUtils.class);
 
     public static ModuleSpec loadModuleSpec(File file, boolean isSystemModule) {
-        if (file == null) {
+        if (file == null || file.isHidden()) {
             return null;
         }
         ModuleSpec moduleSpec = getModuleInfo(file);
@@ -55,6 +55,9 @@ public final class ModuleSpecUtils {
         }
         List<ModuleSpec> moduleSpecs = new ArrayList<ModuleSpec>();
         for (File file : files) {
+            if (file.isHidden()) {
+                continue;
+            }
             ModuleSpec moduleSpec = getModuleInfo(file);
             if (moduleSpec != null) {
                 moduleSpec.setSystemModule(isSystemModule);

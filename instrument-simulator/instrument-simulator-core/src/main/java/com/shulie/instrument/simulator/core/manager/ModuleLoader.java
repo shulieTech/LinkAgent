@@ -14,8 +14,6 @@
  */
 package com.shulie.instrument.simulator.core.manager;
 
-import com.shulie.instrument.simulator.api.ModuleRepositoryMode;
-
 import java.io.File;
 
 /**
@@ -25,12 +23,6 @@ import java.io.File;
  * @since 2020/10/27 3:35 下午
  */
 public interface ModuleLoader {
-    /**
-     * 支持的模块类型
-     *
-     * @return
-     */
-    ModuleRepositoryMode supportMode();
 
     /**
      * 加载模块类库文件

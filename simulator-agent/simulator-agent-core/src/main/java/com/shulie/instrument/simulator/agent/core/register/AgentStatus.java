@@ -25,7 +25,10 @@ public class AgentStatus {
     private final static String INSTALLED = "INSTALLED";
     private final static String UNINSTALL = "UNINSTALL";
     private final static String INSTALLING = "INSTALLING";
-    private final static String INSTALL_FAILED = "FAILED";
+    private final static String INSTALL_FAILED = "INSTALL_FAILED";
+    private final static String UNINSTALL_FAILED = "UNINSTALL_FAILED";
+    private final static String UNINSTALLING = "UNINSTALLING";
+
 
     private static Set<AgentStatusListener> listeners = new HashSet<AgentStatusListener>();
 
@@ -41,6 +44,8 @@ public class AgentStatus {
      * 错误信息
      */
     private static volatile String ERROR_MESSAGE = "";
+
+    private static volatile String SIMULATOR_VERSION = "";
 
     /**
      * 设置错误
@@ -87,8 +92,9 @@ public class AgentStatus {
     /**
      * 将 agent 状态置为已安装状态
      */
-    public static void installed() {
+    public static void installed(String simulatorVersion) {
         AGENT_STATUS = INSTALLED;
+        SIMULATOR_VERSION = simulatorVersion;
         clearError();
         trigger();
     }
@@ -96,9 +102,10 @@ public class AgentStatus {
     /**
      * 将 agent 状态置为未安装状态
      */
-    public static void uninstall(String errorMessage) {
+    public static void uninstall() {
         AGENT_STATUS = UNINSTALL;
-        setError(errorMessage);
+        SIMULATOR_VERSION = "";
+        clearError();
         trigger();
     }
 
@@ -107,6 +114,16 @@ public class AgentStatus {
      */
     public static void installing() {
         AGENT_STATUS = INSTALLING;
+        SIMULATOR_VERSION = "";
+        clearError();
+        trigger();
+    }
+
+    /**
+     * 将 agent 状态置成安装中状态
+     */
+    public static void uninstalling() {
+        AGENT_STATUS = UNINSTALLING;
         clearError();
         trigger();
     }
@@ -116,6 +133,13 @@ public class AgentStatus {
      */
     public static void installFailed(String errorMessage) {
         AGENT_STATUS = INSTALL_FAILED;
+        SIMULATOR_VERSION = "";
+        setError(errorMessage);
+        trigger();
+    }
+
+    public static void uninstallFailed(String errorMessage) {
+        AGENT_STATUS = UNINSTALL_FAILED;
         setError(errorMessage);
         trigger();
     }
@@ -129,9 +153,15 @@ public class AgentStatus {
         return AGENT_STATUS;
     }
 
+    public static String getSimulatorVersion() {
+        return SIMULATOR_VERSION;
+    }
+
     private static void trigger() {
         for (AgentStatusListener listener : listeners) {
             listener.onListen();
         }
     }
+
+
 }

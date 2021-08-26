@@ -34,7 +34,7 @@ import java.util.Map;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "env", version = "1.0.0", author = "xiaobin@shulie.io", description = "环境变量模块")
 public class EnvModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(EnvModule.class);
+    private final Logger logger = LoggerFactory.getLogger(EnvModule.class);
 
     @Command(value = "info", description = "查看环境变量信息")
     public CommandResponse info(final Map<String, String> args) {

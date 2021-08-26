@@ -14,6 +14,13 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.hook;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.pamirs.attach.plugin.apache.rocketmq.RocketmqConstants;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceBean;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceConstants;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceContext;
@@ -31,12 +38,6 @@ import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 消费消息时的pradar埋点
@@ -96,8 +97,7 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 } else {
                     storeHost = StringUtils.substring(msg.getStoreHost().toString(), 1);
                 }
-                traceBean.setStoreHost(storeHost);
-                traceBean.setPort(port);
+                traceBean.setStoreHost(msg.getProperty(RocketmqConstants.NAME_SERVER_ADDRESS));
                 traceBean.setStoreTime(msg.getStoreTimestamp());
                 traceBean.setBrokerName(context.getMq().getBrokerName());
                 traceBean.setQueueId(msg.getQueueId());

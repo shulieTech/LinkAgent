@@ -31,7 +31,12 @@ public class DefaultInterceptorScope implements InterceptorScope {
 
             @Override
             protected InterceptorScopeInvocation initialValue() {
-                return new DefaultInterceptorScopeInvocation(name);
+                return new DefaultInterceptorScopeInvocation(name, new Runnable() {
+                    @Override
+                    public void run() {
+                        remove();
+                    }
+                });
             }
 
         };
@@ -45,5 +50,10 @@ public class DefaultInterceptorScope implements InterceptorScope {
     @Override
     public InterceptorScopeInvocation getCurrentInvocation() {
         return threadLocal.get();
+    }
+
+    @Override
+    public void remove() {
+        this.threadLocal.remove();
     }
 }

@@ -35,6 +35,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
@@ -48,6 +49,8 @@ import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.SaslConfigs;
+import org.apache.kafka.common.security.JaasContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,24 +77,35 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     private final long allowMaxLag;
 
-    public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup, long maxLagMillSecond) {
-        this(consumer, topicAndGroup, maxLagMillSecond, new PollingSelector());
+    private final long currentPollTime;
+
+    public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup, long maxLagMillSecond, long timeout) {
+        this(consumer, topicAndGroup, maxLagMillSecond, new PollingSelector(), timeout);
     }
 
     public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup,
-        long maxLagMillSecond, PollConsumerSelector consumerSelector) {
+        long maxLagMillSecond, PollConsumerSelector consumerSelector,  long timeout) {
         this.bizConsumer = consumer;
         this.allowMaxLag = maxLagMillSecond;
+        this.currentPollTime = timeout;
         this.ptConsumer = createPtConsumer(consumer, topicAndGroup);
         this.topicAndGroup = topicAndGroup;
         this.consumerSelector = consumerSelector;
+    }
+
+    public Consumer getPtConsumer() {
+        return ptConsumer;
+    }
+
+    public Consumer getBizConsumer() {
+        return bizConsumer;
     }
 
     @Override
     public Set<TopicPartition> assignment() {
         Set<TopicPartition> set1 = this.bizConsumer.assignment();
         Set<TopicPartition> set2 = this.ptConsumer.assignment();
-        Set<TopicPartition> result = new HashSet<>();
+        Set<TopicPartition> result = new HashSet();
         result.addAll(set1);
         result.addAll(set2);
         return result;
@@ -101,7 +115,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     public Set<String> subscription() {
         Set<String> set1 = this.bizConsumer.subscription();
         Set<String> set2 = this.ptConsumer.subscription();
-        Set<String> result = new HashSet<>();
+        Set<String> result = new HashSet();
         result.addAll(set1);
         result.addAll(set2);
         return result;
@@ -143,6 +157,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     @Override
     public ConsumerRecords<K, V> poll(long timeout) {
         if (lag > allowMaxLag) {
+            log.warn("biz lag : {} over allowMaxLagMillSecond : {}, so priority use biz consumer", lag, allowMaxLag);
             return doBizPoll(timeout);
         }
         if (consumerSelector.select() == ConsumerType.SHADOW) {
@@ -175,11 +190,15 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             lag = 0L;
             return;
         }
-        lag = System.currentTimeMillis() - getEarliestRecordTime(consumerRecords);
+        long earliest = getEarliestRecordTime(consumerRecords);
+        if (earliest <= 0) {
+            return;
+        }
+        lag = System.currentTimeMillis() - earliest;
     }
 
     private long getEarliestRecordTime(ConsumerRecords<K, V> consumerRecords) {
-        long earliest = 0L;
+        long earliest = Long.MAX_VALUE;
         for (ConsumerRecord consumerRecord : consumerRecords) {
             earliest = Math.min(consumerRecord.timestamp(), earliest);
         }
@@ -295,7 +314,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     @Override
     public Map<String, List<PartitionInfo>> listTopics() {
-        Map<String, List<PartitionInfo>> result = new HashMap<>();
+        Map<String, List<PartitionInfo>> result = new HashMap();
         Map<String, List<PartitionInfo>> map1 = this.bizConsumer.listTopics();
         Map<String, List<PartitionInfo>> map2 = this.ptConsumer.listTopics();
         result.putAll(map1);
@@ -307,7 +326,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     public Set<TopicPartition> paused() {
         Set<TopicPartition> set1 = this.bizConsumer.paused();
         Set<TopicPartition> set2 = this.ptConsumer.paused();
-        Set<TopicPartition> result = new HashSet<>();
+        Set<TopicPartition> result = new HashSet();
         result.addAll(set1);
         result.addAll(set2);
         return result;
@@ -316,7 +335,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     @Override
     public Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions) {
         TopicPartitions topicPartitions = TopicPartitions.split(partitions);
-        Map<TopicPartition, Long> result = new HashMap<>();
+        Map<TopicPartition, Long> result = new HashMap();
         Map<TopicPartition, Long> map1 = this.bizConsumer.endOffsets(topicPartitions.bizCollection);
         Map<TopicPartition, Long> map2 = this.ptConsumer.endOffsets(topicPartitions.ptCollection);
         result.putAll(map1);
@@ -327,7 +346,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     @Override
     public Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions) {
         TopicPartitions topicPartitions = TopicPartitions.split(partitions);
-        Map<TopicPartition, Long> result = new HashMap<>();
+        Map<TopicPartition, Long> result = new HashMap();
         Map<TopicPartition, Long> map1 = this.bizConsumer.beginningOffsets(topicPartitions.bizCollection);
         Map<TopicPartition, Long> map2 = this.ptConsumer.beginningOffsets(topicPartitions.ptCollection);
         result.putAll(map1);
@@ -337,8 +356,8 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     @Override
     public Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch) {
-        Map<TopicPartition, Long> bizMap = new HashMap<>();
-        Map<TopicPartition, Long> ptMap = new HashMap<>();
+        Map<TopicPartition, Long> bizMap = new HashMap();
+        Map<TopicPartition, Long> ptMap = new HashMap();
         for (Entry<TopicPartition, Long> entry : timestampsToSearch.entrySet()) {
             if (Pradar.isClusterTestPrefix(entry.getKey().topic())) {
                 ptMap.put(entry.getKey(), entry.getValue());
@@ -346,7 +365,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
                 bizMap.put(entry.getKey(), entry.getValue());
             }
         }
-        Map<TopicPartition, OffsetAndTimestamp> result = new HashMap<>();
+        Map<TopicPartition, OffsetAndTimestamp> result = new HashMap();
         Map<TopicPartition, OffsetAndTimestamp> map1 = this.bizConsumer.offsetsForTimes(bizMap);
         Map<TopicPartition, OffsetAndTimestamp> map2 = this.ptConsumer.offsetsForTimes(ptMap);
         result.putAll(map1);
@@ -372,7 +391,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         return Pradar.isClusterTest() ? ptConsumer : bizConsumer;
     }
 
-    private OffsetCommitCallback wrapShadowCommitCallback(OffsetCommitCallback callback) {
+    private OffsetCommitCallback wrapShadowCommitCallback(final OffsetCommitCallback callback) {
         if (callback == null) {
             return null;
         }
@@ -416,13 +435,42 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             , Reflect.on(consumer).get("keyDeserializer").getClass());
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG
             , Reflect.on(consumer).get("valueDeserializer").getClass());
-        config.put(ConsumerConfig.CLIENT_ID_CONFIG, Pradar.addClusterTestPrefix(Reflect.on(consumer).get("clientId")));
+        config.put(ConsumerConfig.CLIENT_ID_CONFIG,
+            Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(consumer).get("clientId"))));
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, consumerMetaData.getBootstrapServers());
         config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (this.allowMaxLag * 2 * 3) + "");
-        config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, (this.allowMaxLag * 2) + "");
-        config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, (this.allowMaxLag * 2) + "");
+        config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
+            (Math.max(this.allowMaxLag * 2, this.currentPollTime * 2) + 5000) + "");
+        config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, (this.allowMaxLag * 3) + "");
         putSlience(config, ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, consumer, "requestTimeoutMs");
         putSlience(config, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, consumer, "retryBackoffMs");
+
+        /**
+         * 认证配置
+         */
+        Object selector = Reflect.on(kafkaClient).get("selector");
+        Object channelBuilder = Reflect.on(selector).get("channelBuilder");
+        if (channelBuilder.getClass().getName().equals("org.apache.kafka.common.network.SaslChannelBuilder")) {
+            String clientSaslMechanism = Reflect.on(channelBuilder).get("clientSaslMechanism");
+            config.put(SaslConfigs.SASL_MECHANISM, clientSaslMechanism);
+            config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, Reflect.on(channelBuilder).get("securityProtocol"));
+            if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
+                Map jaasContexts = ReflectUtil.reflectSlience(channelBuilder, "jaasContexts");
+                if (jaasContexts == null) {
+                    throw new RuntimeException("未支持的kafka版本，无法获取jaasContexts");
+                }
+                JaasContext jaasContext = (JaasContext)jaasContexts.get(clientSaslMechanism);
+                if (jaasContext != null) {
+                    String password = jaasContext.dynamicJaasConfig().value();
+                    config.put(SaslConfigs.SASL_JAAS_CONFIG, password);
+                } else {
+                    log.warn("business kafka consumer using sasl but jaasContext not found jaasContexts is : {}",
+                        jaasContexts);
+                }
+            } else {
+                log.warn("business kafka consumer using sasl but clientSaslMechanism is blank");
+            }
+        }
 
         Object interceptors = ReflectUtil.reflectSlience(consumer, "interceptors");
         if (interceptors != null) {
@@ -497,8 +545,8 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         }
 
         private static TopicPartitions split(Collection<TopicPartition> collection) {
-            Collection<TopicPartition> biz = new ArrayList<>();
-            Collection<TopicPartition> pt = new ArrayList<>();
+            Collection<TopicPartition> biz = new ArrayList();
+            Collection<TopicPartition> pt = new ArrayList();
             for (TopicPartition partition : collection) {
                 if (Pradar.isClusterTestPrefix(partition.topic())) {
                     pt.add(partition);

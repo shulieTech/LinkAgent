@@ -14,9 +14,11 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.hbase.async.HBaseRpc;
 import org.hbase.async.Scanner;
@@ -27,6 +29,7 @@ import org.hbase.async.Scanner;
  * @Date: 2020/7/26 10:16
  * @Description:
  */
+@Destroyable(HbaseDestroyed.class)
 public class AsyncHbaseTableInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override

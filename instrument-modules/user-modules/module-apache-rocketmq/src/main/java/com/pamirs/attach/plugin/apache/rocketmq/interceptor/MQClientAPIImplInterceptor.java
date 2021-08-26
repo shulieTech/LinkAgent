@@ -26,7 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.rocketmq.common.message.Message;
 
 /**
- * @Author: Hengyu
+ * @Author: guohz
  * @ClassName: MQClientAPIImplInterceptor
  * @Package: com.pamirs.attach.plugin.apache.rocketmq.interceptor
  * @Date: 2019/10/24 11:31 下午

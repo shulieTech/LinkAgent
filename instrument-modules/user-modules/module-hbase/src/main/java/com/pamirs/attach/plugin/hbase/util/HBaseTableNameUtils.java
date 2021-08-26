@@ -34,6 +34,7 @@ public class HBaseTableNameUtils {
     public static final String HBASE_META = "meta";
 
     private static final List<String> excludeReplace = new ArrayList<String>(2);
+
     static {
         excludeReplace.add("namespace");
         excludeReplace.add("meta");
@@ -46,8 +47,8 @@ public class HBaseTableNameUtils {
      * @return
      */
     public static String replaceShadowTableName(String tableName) {
-        if (StringUtils.indexOf(tableName, NAMESPACE_SPLIT) != -1) {
-            int index = StringUtils.indexOf(tableName, NAMESPACE_SPLIT);
+        int index = StringUtils.indexOf(tableName, NAMESPACE_SPLIT);
+        if (index != -1) {
             String namespace = StringUtils.substring(tableName, 0, index);
             String table = StringUtils.substring(tableName, index + 1);
             if (!excludeReplace.contains(table) && !table.startsWith(HBASE_METASPACE) && !Pradar.isClusterTestPrefix(table)) {
@@ -66,16 +67,11 @@ public class HBaseTableNameUtils {
 
 
     public static String getTableNameNoContainsNameSpace(String tableName) {
-        if (StringUtils.indexOf(tableName, NAMESPACE_SPLIT) != -1) {
-            int index = StringUtils.indexOf(tableName, NAMESPACE_SPLIT);
+        int index = StringUtils.indexOf(tableName, NAMESPACE_SPLIT);
+        if (index != -1) {
             String table = StringUtils.substring(tableName, index + 1);
             return table;
         }
         return tableName;
-    }
-
-    public static void main(String[] args) {
-        String tableNameNoContainsNameSpace = HBaseTableNameUtils.getTableNameNoContainsNameSpace("value:PT_aa");
-        System.out.println(tableNameNoContainsNameSpace);
     }
 }

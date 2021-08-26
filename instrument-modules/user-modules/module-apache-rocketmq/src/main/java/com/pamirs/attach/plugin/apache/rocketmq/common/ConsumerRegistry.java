@@ -14,6 +14,12 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.common;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import com.pamirs.attach.plugin.apache.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -38,28 +44,31 @@ import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/26 10:56 下午
  */
-public final class ConsumerRegistry {
+public class ConsumerRegistry {
     private final static Logger logger = LoggerFactory.getLogger(ConsumerRegistry.class);
     private final static Object EMPTY = new Object();
 
-    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*business consumer*/, DefaultMQPushConsumer/*shadow consumer*/> caches = new ConcurrentWeakHashMap<DefaultMQPushConsumer, DefaultMQPushConsumer>(new DestroyHook<DefaultMQPushConsumer, DefaultMQPushConsumer>() {
-        @Override
-        public void destroy(DefaultMQPushConsumer businessConsumer, DefaultMQPushConsumer defaultMQPushConsumer) {
-            removeListener(businessConsumer);
-            defaultMQPushConsumer.shutdown();
-        }
-    });
-    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
-    private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners = new ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener>();
+    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*business consumer*/, DefaultMQPushConsumer/*shadow
+    consumer*/>
+        caches = new ConcurrentWeakHashMap<DefaultMQPushConsumer, DefaultMQPushConsumer>(
+        new DestroyHook<DefaultMQPushConsumer, DefaultMQPushConsumer>() {
+            @Override
+            public void destroy(DefaultMQPushConsumer businessConsumer, DefaultMQPushConsumer defaultMQPushConsumer) {
+                removeListener(businessConsumer);
+                defaultMQPushConsumer.shutdown();
+            }
+        });
+
+    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers
+        = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
+    private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners
+        = new ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener>();
+    private static Set<DefaultMQPushConsumer/*shadow consumer*/> businessConsumerHookedSet
+        = new HashSet<DefaultMQPushConsumer>();
 
     public static void destroy() {
         for (Map.Entry<DefaultMQPushConsumer, DefaultMQPushConsumer> entry : caches.entrySet()) {
@@ -67,11 +76,14 @@ public final class ConsumerRegistry {
                 removeListener(entry.getKey());
                 entry.getValue().shutdown();
             } catch (Throwable e) {
-                logger.error("Apache-RocketMQ: shutdown rocketmq consumer err! {}", entry.getValue().getDefaultMQPushConsumerImpl().getSubscriptionInner().toString());
+                logger.error("Apache-RocketMQ: shutdown rocketmq consumer err! {}",
+                    entry.getValue().getDefaultMQPushConsumerImpl().getSubscriptionInner().toString());
             }
         }
         caches.clear();
         shadowConsumers.clear();
+        listeners.clear();
+        businessConsumerHookedSet.clear();
     }
 
     public static DefaultMQPushConsumer getConsumer(Object target) {
@@ -125,6 +137,15 @@ public final class ConsumerRegistry {
      */
     public static boolean registerConsumer(DefaultMQPushConsumer businessConsumer) {
 
+        if (!businessConsumerHookedSet.contains(businessConsumer)) {
+            synchronized (ConsumerRegistry.class) {
+                if (!businessConsumerHookedSet.contains(businessConsumer)) {
+                    businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
+                    businessConsumerHookedSet.add(businessConsumer);
+                }
+            }
+        }
+
         DefaultMQPushConsumer shadowConsumer = caches.get(businessConsumer);
         if (shadowConsumer != null) {
             return false;
@@ -141,15 +162,16 @@ public final class ConsumerRegistry {
         } else {
             try {
                 shadowConsumer.start();
-                businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
             } catch (Throwable e) {
                 ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.MQ)
-                        .setErrorCode("MQ-0001")
-                        .setMessage("Apache-RocketMQ消费端启动失败！")
-                        .setDetail("subscription:" + shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner() + "||" + e.getMessage())
-                        .report();
-                logger.error("Apache-RocketMQ: start shadow DefaultMQPushConsumer err! subscription:{}", shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner(), e);
+                    .setErrorType(ErrorTypeEnum.MQ)
+                    .setErrorCode("MQ-0001")
+                    .setMessage("Apache-RocketMQ消费端启动失败！")
+                    .setDetail("subscription:" + shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner() + "||"
+                        + e.getMessage())
+                    .report();
+                logger.error("Apache-RocketMQ: start shadow DefaultMQPushConsumer err! subscription:{}",
+                    shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner(), e);
                 caches.remove(businessConsumer);
                 return false;
             }
@@ -161,7 +183,6 @@ public final class ConsumerRegistry {
         }
         return true;
     }
-
 
     private static String getInstanceName() {
         String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
@@ -185,7 +206,8 @@ public final class ConsumerRegistry {
         if (instanceName != null && !instanceName.equals("DEFAULT")) {
             defaultMQPushConsumer.setInstanceName(Pradar.CLUSTER_TEST_PREFIX + instanceName);
         } else {
-            defaultMQPushConsumer.setInstanceName(Pradar.addClusterTestPrefix(businessConsumer.getConsumerGroup() + instanceName));
+            defaultMQPushConsumer.setInstanceName(
+                Pradar.addClusterTestPrefix(businessConsumer.getConsumerGroup() + instanceName));
         }
 
         defaultMQPushConsumer.setNamesrvAddr(businessConsumer.getNamesrvAddr());
@@ -225,9 +247,9 @@ public final class ConsumerRegistry {
         MessageListener messageListener = businessConsumer.getMessageListener();
         if (messageListener != null) {
             if (messageListener instanceof MessageListenerConcurrently) {
-                defaultMQPushConsumer.registerMessageListener((MessageListenerConcurrently) messageListener);
+                defaultMQPushConsumer.registerMessageListener((MessageListenerConcurrently)messageListener);
             } else if (messageListener instanceof MessageListenerOrderly) {
-                defaultMQPushConsumer.registerMessageListener((MessageListenerOrderly) messageListener);
+                defaultMQPushConsumer.registerMessageListener((MessageListenerOrderly)messageListener);
             }
         }
 
@@ -252,13 +274,17 @@ public final class ConsumerRegistry {
                         defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString, filterClassSource);
                     } catch (MQClientException e) {
                         ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.MQ)
-                                .setErrorCode("MQ-0001")
-                                .setMessage("Apache-RocketMQ消费端subscribe失败！")
-                                .setDetail("topic:" + topic + " fullClassName:" + subString + " filterClassSource:" + filterClassSource + "||" + e.getMessage())
-                                .report();
-                        logger.error("Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} fullClassName:{} filterClassSource:{}",
-                                topic, subString, filterClassSource, e);
+                            .setErrorType(ErrorTypeEnum.MQ)
+                            .setErrorCode("MQ-0001")
+                            .setMessage("Apache-RocketMQ消费端subscribe失败！")
+                            .setDetail(
+                                "topic:" + topic + " fullClassName:" + subString + " filterClassSource:" + filterClassSource
+                                    + "||" + e.getMessage())
+                            .report();
+                        logger.error(
+                            "Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} fullClassName:{} "
+                                + "filterClassSource:{}",
+                            topic, subString, filterClassSource, e);
                         return null;
                     }
                 } else {
@@ -266,13 +292,14 @@ public final class ConsumerRegistry {
                         defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString);
                     } catch (MQClientException e) {
                         ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.MQ)
-                                .setErrorCode("MQ-0001")
-                                .setMessage("Apache-RocketMQ消费端subscribe失败！")
-                                .setDetail("topic:" + topic + " subExpression:" + subString + "||" + e.getMessage())
-                                .report();
-                        logger.error("Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} subExpression:{}",
-                                topic, subString, e);
+                            .setErrorType(ErrorTypeEnum.MQ)
+                            .setErrorCode("MQ-0001")
+                            .setMessage("Apache-RocketMQ消费端subscribe失败！")
+                            .setDetail("topic:" + topic + " subExpression:" + subString + "||" + e.getMessage())
+                            .report();
+                        logger.error(
+                            "Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} subExpression:{}",
+                            topic, subString, e);
                         return null;
                     }
                 }
@@ -296,7 +323,7 @@ public final class ConsumerRegistry {
     private static boolean isPermitInitConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         String key = topic + "#" + businessConsumer.getConsumerGroup();
-        if (!mqWhiteList.contains(key) && !mqWhiteList.contains(topic)) {
+        if (PradarSwitcher.whiteListSwitchOn() && !mqWhiteList.contains(key) && !mqWhiteList.contains(topic)) {
             return false;
         }
         return true;
@@ -325,7 +352,8 @@ public final class ConsumerRegistry {
                         }
                     } catch (MQClientException e) {
                         logger.error(e.getMessage());
-                        return EventResult.error("apache-rocketmq-plugin-open", "Apache-RocketMQ PT Consumer start failed: " + e.getMessage());
+                        return EventResult.error("apache-rocketmq-plugin-open",
+                            "Apache-RocketMQ PT Consumer start failed: " + e.getMessage());
                     }
                     return EventResult.success("apache-rocketmq-plugin-open");
                 } else if (event instanceof ClusterTestSwitchOffEvent) {
@@ -338,7 +366,8 @@ public final class ConsumerRegistry {
                         }
                     } catch (Throwable e) {
                         logger.error("", e);
-                        return EventResult.error("apache-rocketmq-plugin-close", "Apache-RocketMQ PT Consumer close failed: " + e.getMessage());
+                        return EventResult.error("apache-rocketmq-plugin-close",
+                            "Apache-RocketMQ PT Consumer close failed: " + e.getMessage());
                     }
                     return EventResult.success("apache-rocketmq-plugin-close");
                 }

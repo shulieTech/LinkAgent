@@ -15,20 +15,22 @@
 package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.ExtensionModule;
-import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleSpec;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
+import com.shulie.instrument.simulator.core.exception.SimulatorException;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ServiceLoader;
 
 class ModuleJarLoader {
 
@@ -42,13 +44,13 @@ class ModuleJarLoader {
     /**
      * 仿真器加载模式
      */
-    private final LoadMode loadMode;
+    private final int loadMode;
 
     private final ModuleSpec moduleSpec;
     private final ClassLoaderService classLoaderService;
 
     ModuleJarLoader(final ModuleSpec moduleSpec,
-                    final LoadMode loadMode,
+                    final int loadMode,
                     final ClassLoaderService classLoaderService) {
         this.moduleJarFile = moduleSpec.getFile();
         this.loadMode = loadMode;
@@ -56,6 +58,22 @@ class ModuleJarLoader {
         this.classLoaderService = classLoaderService;
     }
 
+    private String join(int[] array) {
+        if (array == null) {
+            return null;
+        }
+        if (array.length == 0) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0, len = array.length; i < len; i++) {
+            builder.append(array[i]).append(',');
+        }
+        if (builder.length() > 0) {
+            builder.deleteCharAt(builder.length() - 1);
+        }
+        return builder.toString();
+    }
 
     private boolean loadingModules(final SimulatorConfig simulatorConfig,
                                    final ClassLoaderFactory moduleClassLoader,
@@ -90,13 +108,13 @@ class ModuleJarLoader {
                 logger.warn("SIMULATOR: loading module instance failed: launch-mode is not match module required, will be ignored. module={};launch-mode={};required-mode={};class={};module-jar={};",
                         moduleSpec.getModuleId(),
                         loadMode,
-                        StringUtils.join(moduleSpec.getSupportedModes(), ","),
+                        com.shulie.instrument.simulator.api.util.ArrayUtils.join(moduleSpec.getSupportedModes()),
                         classOfModule,
                         moduleJarFile
                 );
                 continue;
             }
-            if(module != null) {
+            if (module != null) {
                 moduleList.add(module);
             }
         }
@@ -149,6 +167,9 @@ class ModuleJarLoader {
         }
         try {
             classLoaderFactory = classLoaderService.getModuleClassLoaderFactory(moduleSpec.getModuleId());
+            if (classLoaderFactory == null) {
+                throw new SimulatorException("can't found ModuleClassLoaderFactory. moduleId=" + moduleSpec.getModuleId());
+            }
 
             final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
             ClassLoader moduleClassLoader = classLoaderFactory.getDefaultClassLoader();
@@ -163,7 +184,7 @@ class ModuleJarLoader {
         } finally {
             if (!hasModuleLoadedSuccessFlag
                     && null != classLoaderFactory) {
-                logger.warn("SIMULATOR: loading module-jar completed, but NONE module loaded, will be close ModuleJarClassLoader. module-jar={};", moduleJarFile);
+                logger.warn("SIMULATOR: loading module-jar completed, but NONE module loaded, will be close ModuleClassLoader. module-jar={};", moduleJarFile);
                 classLoaderFactory.release();
             }
         }

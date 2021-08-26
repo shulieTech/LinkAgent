@@ -19,21 +19,31 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig;
-import org.apache.commons.lang.ObjectUtils;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author wangjian
  * @since 2020/9/8 17:29
  */
 public class GlobalSwitch implements IChange<Boolean, ClusterTestConfig> {
-
-    private static final GlobalSwitch INSTANCE = new GlobalSwitch();
-
-    private GlobalSwitch() {
-    }
+    private final static Logger LOGGER = LoggerFactory.getLogger(GlobalSwitch.class);
+    private static GlobalSwitch INSTANCE;
 
     public static GlobalSwitch getInstance() {
+        if (INSTANCE == null) {
+            synchronized (GlobalSwitch.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new GlobalSwitch();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -55,6 +65,8 @@ public class GlobalSwitch implements IChange<Boolean, ClusterTestConfig> {
             PradarSwitcher.turnClusterTestSwitchOff();
             config.setGlobalSwitchOn(false);
         }
+
+        LOGGER.info("publish global switch config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 }

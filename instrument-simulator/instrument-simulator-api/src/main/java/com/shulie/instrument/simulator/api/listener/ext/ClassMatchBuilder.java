@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
 import static java.util.regex.Pattern.quote;
 
 /**
@@ -42,7 +44,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
     private final ModuleEventWatcher moduleEventWatcher;
     private final String[] pattern;
     private String[] superPatterns;
-    private final PatternType patternType;
+    private final int patternType;
     private int withAccess = 0;
     private boolean isIncludeSubClasses = false;
     private boolean isIncludeBootstrap = true;
@@ -56,15 +58,15 @@ class ClassMatchBuilder implements IClassMatchBuilder {
      *
      * @param pattern 类名匹配模版
      */
-    ClassMatchBuilder(final ModuleEventWatcher moduleEventWatcher, final PatternType patternType, final String... pattern) {
+    ClassMatchBuilder(final ModuleEventWatcher moduleEventWatcher, final int patternType, final String... pattern) {
         this.moduleEventWatcher = moduleEventWatcher;
         this.patternType = patternType;
         if (ArrayUtils.isEmpty(pattern)) {
-            this.pattern = this.patternType == PatternType.WILDCARD ? PATTERN_WILDCARD : PATTERN_REGEX;
+            this.pattern = this.patternType == WILDCARD ? PATTERN_WILDCARD : PATTERN_REGEX;
         } else {
             this.pattern = pattern;
         }
-        this.superPatterns = this.patternType == PatternType.WILDCARD ? PATTERN_WILDCARD : PATTERN_REGEX;
+        this.superPatterns = this.patternType == WILDCARD ? PATTERN_WILDCARD : PATTERN_REGEX;
     }
 
     @Override
@@ -87,7 +89,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
         return pattern;
     }
 
-    public PatternType getPatternType() {
+    public int getPatternType() {
         return patternType;
     }
 
@@ -399,7 +401,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
      */
     private static boolean patternMatching(final String string,
                                            final String[] patterns,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 if (patterns == null || patterns.length == 0) {

@@ -81,18 +81,20 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
 
         String host = getEndPoint(target);
         String port = "";
-        if (host.indexOf(":") != -1) {
-            port = host.substring(host.lastIndexOf(":") + 1);
-            host = host.substring(0, host.lastIndexOf(":"));
+        final int index = host.lastIndexOf(":");
+        if (index != -1) {
+            port = host.substring(index + 1);
+            host = host.substring(0, index);
         }
         record.setRemoteIp(host);
         record.setPort(port);
         final String fullMethodName = getMethodName(target);
         String method = fullMethodName;
         String service = "";
-        if (fullMethodName.indexOf("/") != -1) {
-            service = fullMethodName.substring(0, fullMethodName.lastIndexOf("/"));
-            method = fullMethodName.substring(fullMethodName.lastIndexOf("/") + 1);
+        final int indexOfMethodName = fullMethodName.lastIndexOf(".");
+        if (indexOfMethodName != -1) {
+            service = fullMethodName.substring(0, indexOfMethodName);
+            method = fullMethodName.substring(indexOfMethodName + 1);
         }
 
         record.setService(service);

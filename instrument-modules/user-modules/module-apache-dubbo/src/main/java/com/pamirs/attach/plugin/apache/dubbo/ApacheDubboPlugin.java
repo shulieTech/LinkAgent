@@ -49,16 +49,17 @@ public class ApacheDubboPlugin extends ModuleLifecycleAdapter implements Extensi
             }
         });
 
-        this.enhanceTemplate.enhance(this, "org.apache.dubbo.rpc.filter.ConsumerContextFilter", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod invokeMethod = target.getDeclaredMethod("invoke", "org.apache.dubbo.rpc.Invoker", "org.apache.dubbo.rpc.Invocation");
-                if (invokeMethod != null) {
-                    invokeMethod
-                            .addInterceptor(Listeners.of(ConsumerContextFilterInterceptor.class));
-                }
-            }
-        });
+        // 最终都会执行 AbstractInvoker， 不需要拦截filter。ConsumerContextFilterInterceptor 只实现了拦截，不记录trace
+//        this.enhanceTemplate.enhance(this, "org.apache.dubbo.rpc.filter.ConsumerContextFilter", new EnhanceCallback() {
+//            @Override
+//            public void doEnhance(InstrumentClass target) {
+//                final InstrumentMethod invokeMethod = target.getDeclaredMethod("invoke", "org.apache.dubbo.rpc.Invoker", "org.apache.dubbo.rpc.Invocation");
+//                if (invokeMethod != null) {
+//                    invokeMethod
+//                            .addInterceptor(Listeners.of(ConsumerContextFilterInterceptor.class));
+//                }
+//            }
+//        });
 
         this.enhanceTemplate.enhance(this, "org.apache.dubbo.rpc.proxy.AbstractProxyInvoker", new EnhanceCallback() {
             @Override

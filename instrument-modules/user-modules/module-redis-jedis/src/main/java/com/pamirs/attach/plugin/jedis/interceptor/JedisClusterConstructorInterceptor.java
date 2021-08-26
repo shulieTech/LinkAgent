@@ -15,8 +15,10 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.jedis.RedisConstants;
+import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
@@ -34,6 +36,7 @@ import java.util.Set;
  * @package: com.pamirs.attach.plugin.jedis.interceptor
  * @Date 2020/12/2 4:43 下午
  */
+@Destroyable(JedisDestroyed.class)
 public class JedisClusterConstructorInterceptor extends AroundInterceptor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JedisClusterConstructorInterceptor.class.getName());
@@ -66,5 +69,4 @@ public class JedisClusterConstructorInterceptor extends AroundInterceptor {
         }
         RedisConstants.jedisInstance.put(target, config);
     }
-
 }

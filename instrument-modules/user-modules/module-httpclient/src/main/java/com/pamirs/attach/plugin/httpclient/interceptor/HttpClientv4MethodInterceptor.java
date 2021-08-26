@@ -14,17 +14,27 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.ExecutionCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.methods.*;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.message.BasicStatusLine;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -57,23 +67,57 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeLast(Advice advice) {
+    public void beforeLast(Advice advice) throws ProcessControlException {
         Object[] args = advice.getParameterArray();
         HttpHost httpHost = (HttpHost) args[0];
         final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
             return;
         }
+
         String host = httpHost.getHostName();
         int port = httpHost.getPort();
         String path = httpHost.getHostName();
         if (request instanceof HttpUriRequest) {
             path = ((HttpUriRequest) request).getURI().getPath();
         }
-
         //判断是否在白名单中
         String url = getService(httpHost.getSchemeName(), host, port, path);
-        ClusterTestUtils.validateHttpClusterTest(url);
+
+        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        Header[] headers = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
+        if (headers != null && headers.length > 0) {
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, headers[0].getValue());
+        }
+        config.addArgs("url", url);
+        config.addArgs("request", request);
+        config.addArgs("method", "uri");
+        config.addArgs("isInterface", Boolean.FALSE);
+        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+            @Override
+            public Object call(Object param) {
+                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+
+                try {
+                    HttpEntity entity = null;
+                    if (param instanceof String) {
+                        entity = new StringEntity(String.valueOf(param), "UTF-8");
+                    } else {
+                        entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                    }
+                    BasicHttpResponse response = new BasicHttpResponse(statusline);
+                    response.setEntity(entity);
+
+                    if (HttpClientConstants.clazz == null) {
+                        HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                    }
+                    return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+
+                } catch (Exception e) {
+                }
+                return null;
+            }
+        });
     }
 
     private Map toMap(String queryString) {

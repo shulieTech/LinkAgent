@@ -117,6 +117,10 @@ public final class PradarService {
      */
     static public final String PRADAR_FAST_DEBUG_ID = PRADAR_HEADER_PREFIX + "pradar-fast-debug-id";
 
+    /**
+     * 是否校验白名单，不进行远程传输
+     */
+    static public final String PRADAR_WHITE_LIST_CHECK = "p-pradar-ischeck";
 
     /**
      * 上下文 的入口节点的 key

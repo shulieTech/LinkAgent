@@ -16,10 +16,7 @@ package com.shulie.instrument.module.pradar.core.service;
 
 import com.pamirs.pradar.internal.IGlobalConfigService;
 import com.pamirs.pradar.internal.adapter.JobAdapter;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 
 import java.util.Map;
@@ -171,12 +168,12 @@ public class DefaultGlobalConfigService implements IGlobalConfigService {
     }
 
     @Override
-    public Set<String> getUrlWhiteList() {
+    public Set<MatchConfig> getUrlWhiteList() {
         return GlobalConfig.getInstance().getUrlWhiteList();
     }
 
     @Override
-    public Set<String> getDubboNameWhiteList() {
+    public Set<MatchConfig> getDubboNameWhiteList() {
         return GlobalConfig.getInstance().getRpcNameWhiteList();
     }
 }

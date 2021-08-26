@@ -16,6 +16,9 @@ package com.shulie.instrument.simulator.api.listener.ext;
 
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
+
 /**
  * 参数类型名称匹配规则
  *
@@ -29,14 +32,14 @@ public class ArgumentTypeNameMatch {
      *
      * @see PatternType
      */
-    private PatternType patternType;
+    private int patternType;
 
     /**
      * 匹配模式，支持两种规则，一种是通配符，一种是正则表达式
      */
     private String pattern;
 
-    public ArgumentTypeNameMatch(PatternType patternType, String pattern) {
+    public ArgumentTypeNameMatch(int patternType, String pattern) {
         this.patternType = patternType;
         this.pattern = pattern;
     }
@@ -61,7 +64,7 @@ public class ArgumentTypeNameMatch {
      */
     private static boolean patternMatching(final String string,
                                            final String pattern,
-                                           final PatternType patternType) {
+                                           final int patternType) {
         switch (patternType) {
             case WILDCARD:
                 return StringUtil.matching(string, pattern);

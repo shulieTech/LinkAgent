@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since 2020/9/18 3:26 下午
  */
 public class TraceListener extends AdviceListener {
-    private final static Logger logger = LoggerFactory.getLogger(TraceListener.class);
+    private final Logger logger = LoggerFactory.getLogger(TraceListener.class);
 
     @Resource
     private ModuleEventWatcher moduleEventWatcher;
@@ -343,7 +343,7 @@ public class TraceListener extends AdviceListener {
                                                 .onClass(implClass.getName()).includeSubClasses()
                                                 .onBehavior(traceNode.getMethodName())
                                                 .withInvoke().withCall()
-                                                .onListener(Listeners.of(getClass(), false, latch, traceViews, traceMethods, eventWatchers, condition, express, level - 1, limits, stopInMills))
+                                                .onListener(Listeners.of(getClass(), new Object[]{false, latch, traceViews, traceMethods, eventWatchers, condition, express, level - 1, limits, stopInMills}))
                                                 .onClass().onWatch();
                                         eventWatchers.add(watcher);
                                     }
@@ -354,7 +354,7 @@ public class TraceListener extends AdviceListener {
                                     .onClass(clazz.getName()).includeSubClasses()
                                     .onBehavior(traceNode.getMethodName())
                                     .withInvoke().withCall()
-                                    .onListener(Listeners.of(getClass(), false, latch, traceViews, traceMethods, eventWatchers, condition, express, level - 1, limits, stopInMills))
+                                    .onListener(Listeners.of(getClass(), new Object[]{false, latch, traceViews, traceMethods, eventWatchers, condition, express, level - 1, limits, stopInMills}))
                                     .onClass().onWatch();
                             eventWatchers.add(watcher);
                         }
@@ -367,7 +367,7 @@ public class TraceListener extends AdviceListener {
                         .onClass(traceNode.getClassName()).includeSubClasses()
                         .onBehavior(traceNode.getMethodName())
                         .withInvoke().withCall()
-                        .onListener(Listeners.of(getClass(), false, latch, traceViews, traceMethods, eventWatchers, condition, express, level - 1, limits, stopInMills))
+                        .onListener(Listeners.of(getClass(), new Object[]{false, latch, traceViews, traceMethods, eventWatchers, condition, express, level - 1, limits, stopInMills}))
                         .onClass().onWatch();
                 eventWatchers.add(watcher);
             }

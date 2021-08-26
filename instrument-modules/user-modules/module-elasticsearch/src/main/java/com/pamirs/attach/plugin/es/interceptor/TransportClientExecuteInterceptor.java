@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.es.interceptor;
 
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
+import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.attach.plugin.es.shadowserver.ShadowEsClientHolder;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.ErrorTypeEnum;
@@ -25,6 +26,7 @@ import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.elasticsearch.action.Action;
@@ -37,6 +39,7 @@ import org.elasticsearch.client.transport.TransportClient;
  * @author vincent
  * @version v0.1 2016/12/29 11:10
  */
+@Destroyable(ElasticSearchDestroy.class)
 public class TransportClientExecuteInterceptor extends CutoffInterceptorAdaptor {
 
     private static boolean usingActionType;
@@ -72,26 +75,26 @@ public class TransportClientExecuteInterceptor extends CutoffInterceptorAdaptor 
             return CutOffResult.PASSED;
         }
         if (!(args[1] instanceof ActionRequest)
-            || !(args[2] instanceof ActionListener)) {
+                || !(args[2] instanceof ActionListener)) {
             return CutOffResult.PASSED;
         }
         try {
             TransportClient ptTransportClient =
-                ShadowEsClientHolder.getShadowTransportClient((TransportClient)advice.getTarget());
+                    ShadowEsClientHolder.getShadowTransportClient((TransportClient) advice.getTarget());
             if (usingActionType) {
-                ptTransportClient.execute((ActionType)args[0], (ActionRequest)args[1], (ActionListener)args[2]);
+                ptTransportClient.execute((ActionType) args[0], (ActionRequest) args[1], (ActionListener) args[2]);
             } else {
-                ptTransportClient.execute((Action)args[0], (ActionRequest)args[1], (ActionListener)args[2]);
+                ptTransportClient.execute((Action) args[0], (ActionRequest) args[1], (ActionListener) args[2]);
             }
             return CutOffResult.cutoff(null);
         } catch (PressureMeasureError e) {
             LOGGER.error(e.getMessage(), e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.ShadowEsServer)
-                .setErrorCode("redisServer-0001")
-                .setMessage("获取影子数据源失败！")
-                .setDetail(ExceptionUtils.getStackTrace(e))
-                .report();
+                    .setErrorType(ErrorTypeEnum.ShadowEsServer)
+                    .setErrorCode("redisServer-0001")
+                    .setMessage("获取影子数据源失败！")
+                    .setDetail(ExceptionUtils.getStackTrace(e))
+                    .report();
             throw e;
         }
     }
@@ -108,5 +111,4 @@ public class TransportClientExecuteInterceptor extends CutoffInterceptorAdaptor 
         requestIndexRename.reindex(args[1]);
         return CutOffResult.PASSED;
     }
-
 }

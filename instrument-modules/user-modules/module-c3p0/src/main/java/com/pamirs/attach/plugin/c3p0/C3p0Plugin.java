@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.c3p0;
 
 import com.pamirs.attach.plugin.c3p0.interceptor.DataSourceGetConnectionArgsCutoffInterceptor;
 import com.pamirs.attach.plugin.c3p0.interceptor.DataSourceGetConnectionCutoffInterceptor;
-import com.pamirs.attach.plugin.c3p0.utils.DataSourceWrapUtil;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -54,10 +53,5 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
 
             }
         });
-    }
-
-    @Override
-    public void onUnload() throws Throwable {
-        DataSourceWrapUtil.destroy();
     }
 }

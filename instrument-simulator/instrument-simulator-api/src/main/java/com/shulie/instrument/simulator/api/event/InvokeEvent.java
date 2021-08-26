@@ -43,7 +43,7 @@ public abstract class InvokeEvent extends Event {
      * @param invokeId  调用ID
      * @param eventType 事件类型
      */
-    protected InvokeEvent(int processId, int invokeId, EventType eventType) {
+    protected InvokeEvent(int processId, int invokeId, int eventType) {
         super(eventType);
         this.processId = processId;
         this.invokeId = invokeId;

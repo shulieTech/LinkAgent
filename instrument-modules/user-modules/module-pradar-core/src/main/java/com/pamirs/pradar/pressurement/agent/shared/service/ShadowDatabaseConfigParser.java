@@ -19,6 +19,7 @@ import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author xiaobin.zfb | xiaobin@shulie.io
@@ -100,7 +101,7 @@ public class ShadowDatabaseConfigParser {
         if (StringUtils.isNotBlank(shadowTableConfig)) {
             String[] arr = StringUtils.split(shadowTableConfig, ',');
             if (arr != null && arr.length != 0) {
-                Map<String, String> businessTables = new HashMap<String, String>();
+                Map<String, String> businessTables = new ConcurrentHashMap<String, String>();
                 for (String str : arr) {
                     if (StringUtils.isNotBlank(str)) {
                         /**

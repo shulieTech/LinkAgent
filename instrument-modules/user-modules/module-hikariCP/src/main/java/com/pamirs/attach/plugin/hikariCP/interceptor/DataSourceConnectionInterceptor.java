@@ -1,13 +1,27 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.hikariCP.interceptor;
 
 import com.pamirs.attach.plugin.hikariCP.ListenerRegisterStatus;
+import com.pamirs.attach.plugin.hikariCP.destroy.HikariCPDestroy;
 import com.pamirs.attach.plugin.hikariCP.utils.DataSourceWrapUtil;
 import com.pamirs.attach.plugin.hikariCP.utils.HikariMediaDataSource;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
@@ -16,7 +30,9 @@ import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang.StringUtils;
@@ -34,6 +50,7 @@ import java.util.Set;
  * @Date: 2020/3/29 13:01
  * @Description:
  */
+@Destroyable(HikariCPDestroy.class)
 public class DataSourceConnectionInterceptor extends CutoffInterceptorAdaptor {
     private static Logger logger = LoggerFactory.getLogger(DataSourceConnectionInterceptor.class.getName());
 

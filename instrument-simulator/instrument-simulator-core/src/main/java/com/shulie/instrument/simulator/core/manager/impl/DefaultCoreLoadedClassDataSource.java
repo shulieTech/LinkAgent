@@ -15,11 +15,11 @@
 package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.filter.Filter;
+import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.core.manager.CoreLoadedClassDataSource;
 import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
-import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.core.util.SimulatorStringUtils;
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
@@ -55,6 +55,11 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
             classes.add(clazz);
         }
         return classes;
+    }
+
+    @Override
+    public Class[] getAllForLoadedClasses() {
+        return inst.getAllLoadedClasses();
     }
 
     @Override
@@ -97,10 +102,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                 return classes;
             }
 
-            final Iterator<Class<?>> itForLoaded = iteratorForLoadedClasses();
-            while (itForLoaded.hasNext()) {
-                final Class<?> clazz = itForLoaded.next();
-
+            for (Class<?> clazz : getAllForLoadedClasses()) {
                 // 过滤掉Simulator家族的类
                 if (SimulatorClassUtils.isComeFromSimulatorFamily(SimulatorStringUtils.toInternalClassName(clazz.getName()), clazz.getClassLoader())) {
                     continue;
@@ -135,10 +137,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                     return classes;
                 }
 
-                final Iterator<Class<?>> itForLoaded = iteratorForLoadedClasses();
-                while (itForLoaded.hasNext()) {
-                    final Class<?> clazz = itForLoaded.next();
-
+                for (Class<?> clazz : getAllForLoadedClasses()) {
                     // 过滤掉Simulator家族的类
                     if (SimulatorClassUtils.isComeFromSimulatorFamily(SimulatorStringUtils.toInternalClassName(clazz.getName()), clazz.getClassLoader())) {
                         continue;
@@ -174,10 +173,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                     return classes;
                 }
 
-                final Iterator<Class<?>> itForLoaded = iteratorForLoadedClasses();
-                while (itForLoaded.hasNext()) {
-                    final Class<?> clazz = itForLoaded.next();
-
+                for (Class<?> clazz : getAllForLoadedClasses()) {
                     // 过滤掉Simulator家族的类
                     if (SimulatorClassUtils.isComeFromSimulatorFamily(SimulatorStringUtils.toInternalClassName(clazz.getName()), clazz.getClassLoader())) {
                         continue;
@@ -211,15 +207,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                 return classes;
             }
 
-            final Iterator<Class<?>> itForLoaded = iteratorForLoadedClasses();
-            while (itForLoaded.hasNext()) {
-                final Class<?> clazz = itForLoaded.next();
-
-                // 过滤掉Simulator家族的类
-                if (SimulatorClassUtils.isComeFromSimulatorFamily(SimulatorStringUtils.toInternalClassName(clazz.getName()), clazz.getClassLoader())) {
-                    continue;
-                }
-
+            for (Class<?> clazz : getAllForLoadedClasses()) {
                 // 过滤掉对于JVM认为不可修改的类
                 if (isRemoveUnsupported
                         && !inst.isModifiableClass(clazz)) {

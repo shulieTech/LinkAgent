@@ -19,13 +19,15 @@ import com.shulie.instrument.simulator.api.event.BeforeEvent;
 import com.shulie.instrument.simulator.api.event.Event;
 import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.event.InvokeEvent;
+import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.core.classloader.BizClassLoaderHolder;
 import com.shulie.instrument.simulator.core.util.ReflectUtils;
-import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructureImplByAsm;
 import com.shulie.instrument.simulator.message.MessageHandler;
 import com.shulie.instrument.simulator.message.Messager;
 import com.shulie.instrument.simulator.message.Result;
+import com.shulie.instrument.simulator.message.exception.ExceptionHandler;
 import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,9 +36,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.shulie.instrument.simulator.api.ProcessControlException.*;
 import static com.shulie.instrument.simulator.message.Result.newNone;
 import static com.shulie.instrument.simulator.message.Result.newThrows;
-import static org.apache.commons.lang.StringUtils.join;
 
 /**
  * 事件处理
@@ -52,18 +54,20 @@ public class EventListenerHandler implements MessageHandler {
     private final Map<Integer/*LISTENER_ID*/, InvokeProcessor> mappingOfEventProcessor
             = new ConcurrentHashMap<Integer, InvokeProcessor>();
 
-    /**
-     * 全局的单例
-     */
-    private static EventListenerHandler singleton = new EventListenerHandler();
+    // owner namespace
+    private String namespace;
 
-    /**
-     * 获取事件监听器处理的单例
-     *
-     * @return {@link EventListenerHandler}
-     */
-    public static EventListenerHandler getSingleton() {
-        return singleton;
+    private volatile ExceptionHandler exceptionHandler;
+
+    private ExceptionHandler getExceptionHandler() {
+        if (exceptionHandler == null) {
+            exceptionHandler = Messager.getExceptionHandler(namespace);
+        }
+        return exceptionHandler;
+    }
+
+    public EventListenerHandler(String namespace) {
+        this.namespace = namespace;
     }
 
     /**
@@ -75,13 +79,13 @@ public class EventListenerHandler implements MessageHandler {
      */
     public void active(final int listenerId,
                        final EventListener listener,
-                       final EventType[] eventEventTypes) {
+                       final int[] eventEventTypes) {
         mappingOfEventProcessor.put(listenerId, new InvokeProcessor(listenerId, listener, eventEventTypes));
         if (logger.isInfoEnabled()) {
             logger.info("SIMULATOR: activated listener[id={};target={};] event={}",
                     listenerId,
                     listener,
-                    join(eventEventTypes, ",")
+                    com.shulie.instrument.simulator.api.util.ArrayUtils.join(eventEventTypes)
             );
         }
     }
@@ -159,9 +163,9 @@ public class EventListenerHandler implements MessageHandler {
                 logger.warn("SIMULATOR: EventProcessor is closed. {}", clazz.getName());
                 return Result.newNone();
             }
-            final InvokeProcessor.InvokeProcess invokeProcess = processor.processRef.get();
+            final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
 
-            final ProcessControlException.State state = pce.getState();
+            final int state = pce.getState();
             if (logger.isDebugEnabled()) {
                 logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, process-changed: {}. isIgnoreProcessEvent={};",
                         event.getType(),
@@ -292,9 +296,10 @@ public class EventListenerHandler implements MessageHandler {
                 /**
                  * 普通事件处理器则可以打个日志后,直接放行
                  */
-                if (Messager.getExceptionHandler() != null) {
-                    Messager.getExceptionHandler().handleException(throwable,
-                            String.format("on-event: event -> eventType=%s, processId=%s, invokeId=%s, listenerId=%s occur an error.", event.getType().name(), String.valueOf(processId), String.valueOf(invokeId), String.valueOf(listenerId)),
+                ExceptionHandler exceptionHandler = getExceptionHandler();
+                if (exceptionHandler != null) {
+                    exceptionHandler.handleException(throwable,
+                            String.format("on-event: event -> eventType=%s, processId=%s, invokeId=%s, listenerId=%s occur an error.", EventType.name(event.getType()), processId, invokeId, listenerId),
                             listener);
                 } else {
                     logger.warn("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} occur an error.",
@@ -335,14 +340,14 @@ public class EventListenerHandler implements MessageHandler {
         final InvokeEvent iEvent = (InvokeEvent) event;
         final Event compensateEvent;
 
-        if (pce.getState() == ProcessControlException.State.RETURN_IMMEDIATELY) {
+        if (pce.getState() == ProcessControlException.RETURN_IMMEDIATELY) {
             /**
              * 构建补偿立即返回事件
              */
             compensateEvent = invokeProcess
                     .getEventFactory()
                     .buildImmediatelyReturnEvent(iEvent.getProcessId(), iEvent.getInvokeId(), pce.getResult());
-        } else if (pce.getState() == ProcessControlException.State.THROWS_IMMEDIATELY) {
+        } else if (pce.getState() == ProcessControlException.THROWS_IMMEDIATELY) {
             /**
              * 构建补偿立即抛出事件
              */
@@ -437,49 +442,53 @@ public class EventListenerHandler implements MessageHandler {
         /**
          * 获取调用流程
          */
-        final InvokeProcessor.InvokeProcess invokeProcess = processor.processRef.get();
+        final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
 
-        /**
-         * 如果当前处理ID被忽略，则立即返回
-         */
-        if (invokeProcess.isIgnoreProcess()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("SIMULATOR: listener={} is marked ignore process!", listenerId);
-            }
-            return newNone();
-        }
-
-        /**
-         * BEFORE 事件时产生新的 invokeId
-         */
-        int invokeId = invokeIdSequencer.getAndIncrement();
-        invokeProcess.pushInvokeId(invokeId);
-
-        /**
-         * 调用过程ID
-         */
-        final int processId = invokeProcess.getProcessId();
-
-        ClassLoader javaClassLoader = clazz.getClassLoader();
-        /**
-         * 放置业务类加载器
-         */
-        BizClassLoaderHolder.setBizClassLoader(javaClassLoader);
-        final BeforeEvent event = invokeProcess.getEventFactory().buildBeforeEvent(
-                processId,
-                invokeId,
-                javaClassLoader,
-                clazz,
-                javaMethodName,
-                javaMethodDesc,
-                target,
-                argumentArray
-        );
         try {
-            return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
+            /**
+             * 如果当前处理ID被忽略，则立即返回
+             */
+            if (invokeProcess.isIgnoreProcess()) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("SIMULATOR: listener={} is marked ignore process!", listenerId);
+                }
+                return newNone();
+            }
+
+            /**
+             * BEFORE 事件时产生新的 invokeId
+             */
+            int invokeId = invokeIdSequencer.getAndIncrement();
+            invokeProcess.pushInvokeId(invokeId);
+
+            /**
+             * 调用过程ID
+             */
+            final int processId = invokeProcess.getProcessId();
+
+            ClassLoader javaClassLoader = clazz.getClassLoader();
+            /**
+             * 放置业务类加载器
+             */
+            BizClassLoaderHolder.setBizClassLoader(javaClassLoader);
+            final BeforeEvent event = invokeProcess.getEventFactory().buildBeforeEvent(
+                    processId,
+                    invokeId,
+                    javaClassLoader,
+                    clazz,
+                    javaMethodName,
+                    javaMethodDesc,
+                    target,
+                    argumentArray
+            );
+            try {
+                return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
+            } finally {
+                invokeProcess.getEventFactory().destroy(event);
+                BizClassLoaderHolder.clearBizClassLoader();
+            }
         } finally {
-            invokeProcess.getEventFactory().destroy(event);
-            BizClassLoaderHolder.clearBizClassLoader();
+            processor.cleanIfEmpty();
         }
     }
 
@@ -501,6 +510,16 @@ public class EventListenerHandler implements MessageHandler {
         } finally {
             BizClassLoaderHolder.clearBizClassLoader();
         }
+    }
+
+    @Override
+    public void destroy() {
+        for (Map.Entry<Integer, InvokeProcessor> entry : mappingOfEventProcessor.entrySet()) {
+            entry.getValue().clean();
+        }
+        this.mappingOfEventProcessor.clear();
+        ClassStructureImplByAsm.clear();
+        exceptionHandler = null;
     }
 
 
@@ -538,50 +557,54 @@ public class EventListenerHandler implements MessageHandler {
             return newNone();
         }
 
-        final InvokeProcessor.InvokeProcess invokeProcess = processor.processRef.get();
-
-        // 如果当前调用过程信息堆栈是空的,说明
-        // 1. BEFORE/RETURN错位
-        // 2. super.<init>
-        // 处理方式是直接返回,不做任何事件的处理和代码流程的改变,放弃对super.<init>的观察
-        if (invokeProcess.isEmptyStack()) {
-            return newNone();
-        }
-
-        // 如果异常来自于ImmediatelyException，则忽略处理直接返回抛异常
-        final boolean isExceptionFromImmediately = !isReturn && invokeProcess.rollingIsExceptionFromImmediately();
-        if (isExceptionFromImmediately) {
-            return newThrows((Throwable) object);
-        }
-
-        // 继续异常处理
-        final int processId = invokeProcess.getProcessId();
-        final int invokeId = invokeProcess.popInvokeId();
-
-        // 忽略事件处理
-        // 放在stack.pop()后边是为了对齐执行栈
-        if (invokeProcess.isIgnoreProcess()) {
-            return newNone();
-        }
-
-        // 如果ProcessId==InvokeId说明已经到栈顶，此时需要核对堆栈是否为空
-        // 如果不为空需要输出日志进行告警
-        if (checkProcessStack(processId, invokeId, invokeProcess.isEmptyStack())) {
-            logger.warn("SIMULATOR: ERROR process-stack. pid={};iid={};listener={};",
-                    processId,
-                    invokeId,
-                    listenerId
-            );
-        }
-
-        final Event event = isReturn
-                ? invokeProcess.getEventFactory().buildReturnEvent(processId, invokeId, object)
-                : invokeProcess.getEventFactory().buildThrowsEvent(processId, invokeId, (Throwable) object);
+        final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
 
         try {
-            return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
+            // 如果当前调用过程信息堆栈是空的,说明
+            // 1. BEFORE/RETURN错位
+            // 2. super.<init>
+            // 处理方式是直接返回,不做任何事件的处理和代码流程的改变,放弃对super.<init>的观察
+            if (invokeProcess.isEmptyStack()) {
+                return newNone();
+            }
+
+            // 如果异常来自于ImmediatelyException，则忽略处理直接返回抛异常
+            final boolean isExceptionFromImmediately = !isReturn && invokeProcess.rollingIsExceptionFromImmediately();
+            if (isExceptionFromImmediately) {
+                return newThrows((Throwable) object);
+            }
+
+            // 继续异常处理
+            final int processId = invokeProcess.getProcessId();
+            final int invokeId = invokeProcess.popInvokeId();
+
+            // 忽略事件处理
+            // 放在stack.pop()后边是为了对齐执行栈
+            if (invokeProcess.isIgnoreProcess()) {
+                return newNone();
+            }
+
+            // 如果ProcessId==InvokeId说明已经到栈顶，此时需要核对堆栈是否为空
+            // 如果不为空需要输出日志进行告警
+            if (checkProcessStack(processId, invokeId, invokeProcess.isEmptyStack())) {
+                logger.warn("SIMULATOR: ERROR process-stack. pid={};iid={};listener={};",
+                        processId,
+                        invokeId,
+                        listenerId
+                );
+            }
+
+            final Event event = isReturn
+                    ? invokeProcess.getEventFactory().buildReturnEvent(processId, invokeId, object)
+                    : invokeProcess.getEventFactory().buildThrowsEvent(processId, invokeId, (Throwable) object);
+
+            try {
+                return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
+            } finally {
+                invokeProcess.getEventFactory().destroy(event);
+            }
         } finally {
-            invokeProcess.getEventFactory().destroy(event);
+            processor.cleanIfEmpty();
         }
 
     }
@@ -613,8 +636,7 @@ public class EventListenerHandler implements MessageHandler {
             return;
         }
 
-        final InvokeProcessor.InvokeProcess invokeProcess = wrap.processRef.get();
-
+        final InvokeProcessor.InvokeProcess invokeProcess = wrap.getOrCreate();
         // 如果当前调用过程信息堆栈是空的,有两种情况
         // 1. CALL_BEFORE事件和BEFORE事件错位
         // 2. 当前方法是<init>，而CALL_BEFORE事件触发是当前方法在调用父类的<init>
@@ -624,23 +646,28 @@ public class EventListenerHandler implements MessageHandler {
             return;
         }
 
-        final int processId = invokeProcess.getProcessId();
-        final int invokeId = invokeProcess.getInvokeId();
-
-        // 如果事件处理流被忽略，则直接返回，不产生后续事件
-        if (invokeProcess.isIgnoreProcess()) {
-            return;
-        }
-
-        final Event event = invokeProcess
-                .getEventFactory()
-                .buildCallBeforeEvent(processId, invokeId, lineNumber, isInterface, owner, name, desc);
         try {
-            BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
-            handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+
+            final int processId = invokeProcess.getProcessId();
+            final int invokeId = invokeProcess.getInvokeId();
+
+            // 如果事件处理流被忽略，则直接返回，不产生后续事件
+            if (invokeProcess.isIgnoreProcess()) {
+                return;
+            }
+
+            final Event event = invokeProcess
+                    .getEventFactory()
+                    .buildCallBeforeEvent(processId, invokeId, lineNumber, isInterface, owner, name, desc);
+            try {
+                BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
+                handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            } finally {
+                invokeProcess.getEventFactory().destroy(event);
+                BizClassLoaderHolder.clearBizClassLoader();
+            }
         } finally {
-            invokeProcess.getEventFactory().destroy(event);
-            BizClassLoaderHolder.clearBizClassLoader();
+            wrap.cleanIfEmpty();
         }
     }
 
@@ -670,28 +697,32 @@ public class EventListenerHandler implements MessageHandler {
             return;
         }
 
-        final InvokeProcessor.InvokeProcess invokeProcess = wrap.processRef.get();
+        final InvokeProcessor.InvokeProcess invokeProcess = wrap.getOrCreate();
         if (invokeProcess.isEmptyStack()) {
             return;
         }
 
-        final int processId = invokeProcess.getProcessId();
-        final int invokeId = invokeProcess.getInvokeId();
-
-        // 如果事件处理流被忽略，则直接返回，不产生后续事件
-        if (invokeProcess.isIgnoreProcess()) {
-            return;
-        }
-
-        final Event event = invokeProcess
-                .getEventFactory()
-                .buildCallReturnEvent(processId, invokeId, isInterface);
         try {
-            BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
-            handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            final int processId = invokeProcess.getProcessId();
+            final int invokeId = invokeProcess.getInvokeId();
+
+            // 如果事件处理流被忽略，则直接返回，不产生后续事件
+            if (invokeProcess.isIgnoreProcess()) {
+                return;
+            }
+
+            final Event event = invokeProcess
+                    .getEventFactory()
+                    .buildCallReturnEvent(processId, invokeId, isInterface);
+            try {
+                BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
+                handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            } finally {
+                invokeProcess.getEventFactory().destroy(event);
+                BizClassLoaderHolder.clearBizClassLoader();
+            }
         } finally {
-            invokeProcess.getEventFactory().destroy(event);
-            BizClassLoaderHolder.clearBizClassLoader();
+            wrap.cleanIfEmpty();
         }
     }
 
@@ -721,28 +752,32 @@ public class EventListenerHandler implements MessageHandler {
             return;
         }
 
-        final InvokeProcessor.InvokeProcess invokeProcess = wrap.processRef.get();
+        final InvokeProcessor.InvokeProcess invokeProcess = wrap.getOrCreate();
         if (invokeProcess.isEmptyStack()) {
             return;
         }
 
-        final int processId = invokeProcess.getProcessId();
-        final int invokeId = invokeProcess.getInvokeId();
-
-        // 如果事件处理流被忽略，则直接返回，不产生后续事件
-        if (invokeProcess.isIgnoreProcess()) {
-            return;
-        }
-
-        final Event event = invokeProcess
-                .getEventFactory()
-                .buildCallThrowsEvent(processId, invokeId, isInterface, e);
         try {
-            BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
-            handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            final int processId = invokeProcess.getProcessId();
+            final int invokeId = invokeProcess.getInvokeId();
+
+            // 如果事件处理流被忽略，则直接返回，不产生后续事件
+            if (invokeProcess.isIgnoreProcess()) {
+                return;
+            }
+
+            final Event event = invokeProcess
+                    .getEventFactory()
+                    .buildCallThrowsEvent(processId, invokeId, isInterface, e);
+            try {
+                BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
+                handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            } finally {
+                invokeProcess.getEventFactory().destroy(event);
+                BizClassLoaderHolder.clearBizClassLoader();
+            }
         } finally {
-            invokeProcess.getEventFactory().destroy(event);
-            BizClassLoaderHolder.clearBizClassLoader();
+            wrap.cleanIfEmpty();
         }
     }
 
@@ -772,7 +807,7 @@ public class EventListenerHandler implements MessageHandler {
             return;
         }
 
-        final InvokeProcessor.InvokeProcess invokeProcess = wrap.processRef.get();
+        final InvokeProcessor.InvokeProcess invokeProcess = wrap.getOrCreate();
 
         // 如果当前调用过程信息堆栈是空的,说明BEFORE/LINE错位
         // 处理方式是直接返回,不做任何事件的处理和代码流程的改变
@@ -780,21 +815,25 @@ public class EventListenerHandler implements MessageHandler {
             return;
         }
 
-        final int processId = invokeProcess.getProcessId();
-        final int invokeId = invokeProcess.getInvokeId();
-
-        // 如果事件处理流被忽略，则直接返回，不产生后续事件
-        if (invokeProcess.isIgnoreProcess()) {
-            return;
-        }
-
-        final Event event = invokeProcess.getEventFactory().buildLineEvent(processId, invokeId, lineNumber);
         try {
-            BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
-            handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            final int processId = invokeProcess.getProcessId();
+            final int invokeId = invokeProcess.getInvokeId();
+
+            // 如果事件处理流被忽略，则直接返回，不产生后续事件
+            if (invokeProcess.isIgnoreProcess()) {
+                return;
+            }
+
+            final Event event = invokeProcess.getEventFactory().buildLineEvent(processId, invokeId, lineNumber);
+            try {
+                BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
+                handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
+            } finally {
+                invokeProcess.getEventFactory().destroy(event);
+                BizClassLoaderHolder.clearBizClassLoader();
+            }
         } finally {
-            invokeProcess.getEventFactory().destroy(event);
-            BizClassLoaderHolder.clearBizClassLoader();
+            wrap.cleanIfEmpty();
         }
     }
 }

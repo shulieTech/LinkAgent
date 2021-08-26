@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.agent.spi.impl;
 
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
-import com.shulie.instrument.simulator.agent.api.model.AppConfig;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
@@ -31,13 +30,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 
 /**
  * 基于 http 模式的 agent 调试器，负责 agent 加载、卸载、升级等一系列操作的调度工作
@@ -60,8 +61,6 @@ public class HttpAgentScheduler implements AgentScheduler {
      * 命令执行器
      */
     private CommandExecutor commandExecutor;
-
-    private AtomicBoolean isInited = new AtomicBoolean(false);
 
     /**
      * 调度参数
@@ -111,12 +110,13 @@ public class HttpAgentScheduler implements AgentScheduler {
     /**
      * 卸载框架
      */
-    private Result uninstall() {
+    private Result uninstall(CommandPacket commandPacket) {
         try {
             if (!commandExecutor.isInstalled()) {
                 return Result.SUCCESS;
             }
-            commandExecutor.execute(new StopCommand());
+            commandExecutor.execute(new StopCommand(commandPacket));
+            logger.info("AGENT: simulator uninstall successful! ");
             return Result.SUCCESS;
         } catch (Throwable e) {
             logger.error("AGENT: shutdown agent err. ", e);
@@ -151,32 +151,6 @@ public class HttpAgentScheduler implements AgentScheduler {
     @Override
     public void setCommandExecutor(CommandExecutor commandExecutor) {
         this.commandExecutor = commandExecutor;
-    }
-
-    /**
-     * 第一次安装
-     *
-     * @throws Throwable
-     */
-    private Result installFirstTime() {
-        /**
-         * 先获取应用状态，查看是否可以允许节点自启动
-         */
-        AppConfig appConfig = externalAPI.getAppConfig();
-        if (!appConfig.isRunning()) {
-            return Result.SUCCESS;
-        }
-
-        try {
-            /**
-             * 第一次启动就使用本地的安装包,如果本地没有simulator 安装包，则直接会忽略这次启动操作
-             */
-            commandExecutor.execute(new StartCommand());
-            return Result.SUCCESS;
-        } catch (Throwable t) {
-            logger.error("AGENT: prepare to start agent failed.", t);
-            return Result.errorResult(t);
-        }
     }
 
     /**
@@ -236,23 +210,15 @@ public class HttpAgentScheduler implements AgentScheduler {
      * 安装框架
      */
     private Result install(CommandPacket commandPacket) {
-        AppConfig appConfig = externalAPI.getAppConfig();
-        if (!appConfig.isRunning()) {
-            return Result.SUCCESS;
-        }
         try {
+            if (StringUtils.isBlank(commandPacket.getDataPath()) && !commandPacket.isUseLocal()) {
+                throw new RuntimeException("missing agent download path from command packet!");
+            }
             if (commandExecutor.isInstalled()) {
-                uninstall();
+                uninstall(commandPacket);
             }
-            File file = new File(agentConfig.getSimulatorHome());
-            File f = externalAPI.downloadAgent(commandPacket.getDataPath(), file.getAbsolutePath() + "_tmp");
-            if (f != null) {
-                if (file.exists()) {
-                    FileUtils.delete(file);
-                }
-                f.renameTo(file);
-            }
-            commandExecutor.execute(new StartCommand());
+            commandExecutor.execute(new StartCommand(commandPacket));
+            logger.info("AGENT: simulator install successful! ");
             return Result.SUCCESS;
         } catch (Throwable t) {
             logger.error("AGENT: prepare to start agent failed.", t);
@@ -281,9 +247,9 @@ public class HttpAgentScheduler implements AgentScheduler {
                 case CommandPacket.OPERATE_TYPE_INSTALL:
                     return install(commandPacket);
                 case CommandPacket.OPERATE_TYPE_UNINSTALL:
-                    return uninstall();
+                    return uninstall(commandPacket);
                 case CommandPacket.OPERATE_TYPE_UPGRADE:
-                    Result result = uninstall();
+                    Result result = uninstall(commandPacket);
                     if (!result.isSuccess) {
                         return result;
                     }
@@ -324,51 +290,66 @@ public class HttpAgentScheduler implements AgentScheduler {
 
     @Override
     public void start() {
+        //install local if no latest command packet found
+        CommandPacket commandPacket = getLatestCommandPacket();
+        if (commandPacket == null) {
+            installLocal();
+        }
+        startScheduler();
+    }
+
+    /**
+     * get latest command packet
+     *
+     * @return
+     */
+    private CommandPacket getLatestCommandPacket() {
+        CommandPacket commandPacket = externalAPI.getLatestCommandPacket();
+        if (commandPacket == null || commandPacket == CommandPacket.NO_ACTION_PACKET) {
+            return null;
+        }
+        if (commandPacket.getLiveTime() != -1
+                && System.currentTimeMillis() - commandPacket.getCommandTime() > commandPacket
+                .getLiveTime()) {
+            return null;
+        }
+        return commandPacket;
+    }
+
+    /**
+     * use local jar installed if exists
+     */
+    private void installLocal() {
+        CommandPacket commandPacket = new CommandPacket();
+        commandPacket.setCommandType(CommandPacket.COMMAND_TYPE_FRAMEWORK);
+        commandPacket.setOperateType(CommandPacket.OPERATE_TYPE_INSTALL);
+        commandPacket.setUseLocal(true);
+        install(commandPacket);
+    }
+
+    private void startScheduler() {
         this.scheduledExecutorService.schedule(new Runnable() {
             @Override
             public void run() {
                 while (!isShutdown) {
                     try {
                         /**
-                         * agent启动后第一次运行
+                         * 获取最新的命令包
                          */
-                        if (isInit.compareAndSet(false, true)) {
-                            try {
-                                installFirstTime();
-                            } catch (Throwable throwable) {
-                                logger.error("start simulator first time failed. retry next.", throwable);
-                                continue;
+                        CommandPacket commandPacket = getLatestCommandPacket();
+                        if (commandPacket == null) {
+                            continue;
+                        }
+                        try {
+                            Result result = executeCommandPacket(commandPacket);
+                            if (result != null) {
+                                executeCommandId = commandPacket.getId();
+                                reportCommandExecuteResult(commandPacket.getId(), result.isSuccess, result.errorMsg);
                             }
-                        } else {
-                            /**
-                             * 获取最新的命令包
-                             */
-                            CommandPacket commandPacket = externalAPI.getLatestCommandPacket();
-                            if (commandPacket == null) {
-                                continue;
-                            }
-
-                            /**
-                             * 忽略已经失效的命令
-                             */
-                            if (commandPacket.getLiveTime() != -1 && System.currentTimeMillis() - commandPacket.getCommandTime() > commandPacket.getLiveTime()) {
-                                continue;
-                            }
-                            try {
-                                Result result = executeCommandPacket(commandPacket);
-                                if (result != null) {
-                                    if (result.isSuccess) {
-                                        /**
-                                         * 如果成功则将已执行的命令 ID 置成当前的命令 ID
-                                         */
-                                        executeCommandId = commandPacket.getId();
-                                    }
-                                    reportCommandExecuteResult(commandPacket.getId(), result.isSuccess, result.errorMsg);
-                                }
-                            } catch (Throwable throwable) {
-                                logger.error("execute command failed. command={}", commandPacket, throwable);
-                                reportCommandExecuteResult(commandPacket.getId(), false, HttpAgentScheduler.toString(throwable));
-                            }
+                        } catch (Throwable throwable) {
+                            logger.error("execute command failed. command={}", commandPacket, throwable);
+                            reportCommandExecuteResult(commandPacket.getId(), false,
+                                    HttpAgentScheduler.toString(throwable));
                         }
                     } catch (Throwable t) {
                         logger.error("execute scheduler failed. ", t);
@@ -380,25 +361,21 @@ public class HttpAgentScheduler implements AgentScheduler {
                     }
                 }
             }
-        }, schedulerArgs.getDelay() < 0 ? 0 : schedulerArgs.getDelay(), schedulerArgs.getDelayUnit());
+        }, Math.max(schedulerArgs.getDelay(), 0), schedulerArgs.getDelayUnit());
     }
 
     public static String toString(Throwable throwable) {
         if (throwable == null) {
             return null;
         }
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        PrintWriter writer = new PrintWriter(bos);
+        StringWriter sw = new StringWriter();
+        PrintWriter writer = new PrintWriter(sw);
         try {
             throwable.printStackTrace(writer);
-            try {
-                return new String(bos.toByteArray(), "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                return new String(bos.toByteArray());
-            }
+            return sw.toString();
         } finally {
             try {
-                bos.close();
+                sw.close();
             } catch (IOException e) {
             }
             try {

@@ -27,7 +27,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public abstract class HttpUtils {
+    private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
+
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 
@@ -40,18 +46,18 @@ public abstract class HttpUtils {
         InputStream input = null;
         OutputStream output = null;
         Socket socket = null;
+        String request = "GET " + url + " HTTP/1.1\r\n"
+                + "Host: " + host + ":" + port + "\r\n"
+                + "Connection: Keep-Alive\r\n"
+                + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
+                + "\r\n";
         try {
             SocketAddress address = new InetSocketAddress(host, port);
-            String request = "GET " + url + " HTTP/1.1\r\n"
-                    + "Host: " + host + ":" + port + "\r\n"
-                    + "Connection: Keep-Alive\r\n"
-                    + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
-                    + "\r\n";
             socket = new Socket();
             // 设置建立连接超时时间 1s
-            socket.connect(address, 1000);
+            socket.connect(address, 2000);
             // 设置读取数据超时时间 5s
-            socket.setSoTimeout(5000);
+            socket.setSoTimeout(10000);
             output = socket.getOutputStream();
             output.write(request.getBytes(UTF_8));
             output.flush();
@@ -64,6 +70,7 @@ public abstract class HttpUtils {
             input = wrapperInput(headers, input);
             return toString(input);
         } catch (IOException e) {
+            logger.warn("do http request fail!: url=" + url + "; reqeust:" + request, e);
             return null;
         } finally {
             closeQuietly(input);
@@ -83,26 +90,26 @@ public abstract class HttpUtils {
         }
     }
 
-    public static String doPost(String url, String userAppKey, String body) {
+    public static HttpResult doPost(String url, String userAppKey, String body) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         return doPost(hostPort.host, hostPort.port, hostPort.url, userAppKey, body);
     }
 
-    public static String doPost(String host, int port, String url, String userAppKey, String body) {
+    public static HttpResult doPost(String host, int port, String url, String userAppKey, String body) {
         InputStream input = null;
         OutputStream output = null;
         Socket socket = null;
+        String request =
+                "POST " + url + " HTTP/1.1\r\nHost: " + host + ":" + port
+                        + "\r\nConnection: Keep-Alive\r\n"
+                        + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n");
         try {
             SocketAddress address = new InetSocketAddress(host, port);
             socket = new Socket();
-            socket.connect(address, 1000); // 设置建立连接超时时间 1s
-            socket.setSoTimeout(5000); // 设置读取数据超时时间 5s
+            socket.connect(address, 2000); // 设置建立连接超时时间 1s
+            socket.setSoTimeout(10000); // 设置读取数据超时时间 5s
             output = socket.getOutputStream();
 
-            String request =
-                    "POST " + url + " HTTP/1.1\r\nHost: " + host + ":" + port
-                            + "\r\nConnection: Keep-Alive\r\n"
-                            + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n");
             if (body != null && !body.isEmpty()) {
                 request = request + "Content-Length: " + body.getBytes().length + "\r\n";
                 request = request + "Content-Type: application/json\r\n";
@@ -116,15 +123,19 @@ public abstract class HttpUtils {
             output.flush();
 
             input = socket.getInputStream();
-            String status = readLine(input);
-            if (status == null || !status.contains("200")) {
-                return null;
+            String statusStr = StringUtils.trim(readLine(input));
+            String[] statusArr = StringUtils.split(statusStr, ' ');
+            int status = 500;
+            try {
+                status = Integer.valueOf(statusArr[1]);
+            } catch (Throwable e) {
             }
             Map<String, List<String>> headers = readHeaders(input);
             input = wrapperInput(headers, input);
             String result = toString(input);
-            return result;
+            return HttpResult.result(status, result);
         } catch (IOException e) {
+            logger.warn("do http request fail!: url=" + url + "; reqeust:" + request, e);
             return null;
         } finally {
             closeQuietly(input);
@@ -289,6 +300,44 @@ public abstract class HttpUtils {
                     ", port=" + port +
                     ", url='" + url + '\'' +
                     '}';
+        }
+    }
+
+    public static class HttpResult {
+        /**
+         * 是否成功
+         */
+        private int status;
+        /**
+         * 结果
+         */
+        private String result;
+
+        public static HttpResult result(int status, String result) {
+            HttpResult httpResult = new HttpResult();
+            httpResult.setStatus(status);
+            httpResult.setResult(result);
+            return httpResult;
+        }
+
+        public int getStatus() {
+            return status;
+        }
+
+        public void setStatus(int status) {
+            this.status = status;
+        }
+
+        public boolean isSuccess() {
+            return status == 200;
+        }
+
+        public String getResult() {
+            return result;
+        }
+
+        public void setResult(String result) {
+            this.result = result;
         }
     }
 

@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.redisson.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.attach.plugin.redisson.factory.RedissonFactory;
 import com.pamirs.attach.plugin.redisson.utils.CutOffSwitcher;
 import com.pamirs.pradar.CutOffResult;
@@ -23,6 +24,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 
@@ -31,6 +33,7 @@ import com.shulie.instrument.simulator.api.reflect.Reflect;
  * @Date: 2020/11/27 02:46
  * @Description:
  */
+@Destroyable(RedissonDestroy.class)
 public class ShadowDbMethodInterceptor extends CutoffInterceptorAdaptor {
     @Override
     public CutOffResult cutoff0(Advice advice) {
@@ -54,7 +57,7 @@ public class ShadowDbMethodInterceptor extends CutoffInterceptorAdaptor {
         try {
             CutOffSwitcher.turnOn();
 
-            Object client = RedissonFactory.RedissonHolder.getFactory().getClient(target);
+            Object client = RedissonFactory.getFactory().getClient(target);
             return CutOffResult.cutoff(Reflect.on(client).call(methodName, args));
         } catch (Throwable e) {
             if (Pradar.isClusterTest()) {

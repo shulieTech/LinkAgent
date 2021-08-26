@@ -20,23 +20,31 @@ package com.shulie.instrument.simulator.api.listener.ext;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:47 下午
  */
-public enum PatternType {
+public abstract class PatternType {
     /**
      * 通配符表达式
      */
-    WILDCARD,
+    public final static int WILDCARD = 1;
 
     /**
      * 正则表达式
      */
-    REGEX;
+    public final static int REGEX = 2;
 
-    public static PatternType of(String name) {
-        for (PatternType patternType : PatternType.values()) {
-            if (patternType.name().equalsIgnoreCase(name)) {
-                return patternType;
-            }
+    public static int of(String name) {
+        if ("REGEX".equalsIgnoreCase(name)) {
+            return REGEX;
         }
         return PatternType.WILDCARD;
+    }
+
+    public static String name(int type) {
+        if (type == REGEX) {
+            return "REGEX";
+        }
+        if (type == WILDCARD) {
+            return "WILDCARD";
+        }
+        return "UNKNOW";
     }
 }

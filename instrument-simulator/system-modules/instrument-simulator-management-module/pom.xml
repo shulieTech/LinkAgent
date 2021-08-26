@@ -4,12 +4,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.shulie.instrument.simulator</groupId>
+        <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>system-modules</artifactId>
-        <version>1.0.1</version>
+        <version>5.0.0</version>
     </parent>
     <artifactId>instrument-simulator-management-module</artifactId>
-    <name>instrument-simulator-management-module</name>
+    <name>instrument-simulator-management-module ${simulator.major.version}</name>
 
     <build>
         <finalName>instrument-simulator-management-module-${project.version}</finalName>

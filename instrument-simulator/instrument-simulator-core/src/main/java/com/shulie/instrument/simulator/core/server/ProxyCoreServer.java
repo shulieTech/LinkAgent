@@ -23,9 +23,6 @@ import java.net.InetSocketAddress;
 
 public class ProxyCoreServer implements CoreServer {
 
-    private final static Class<? extends CoreServer> classOfCoreServerImpl
-            = JettyCoreServer.class;
-
     private final CoreServer proxy;
 
     private ProxyCoreServer(CoreServer proxy) {
@@ -66,7 +63,7 @@ public class ProxyCoreServer implements CoreServer {
     public static CoreServer getInstance() {
         try {
             return new ProxyCoreServer(
-                    (CoreServer) classOfCoreServerImpl
+                    (CoreServer) JettyCoreServer.class
                             .getMethod("getInstance")
                             .invoke(null)
             );

@@ -45,7 +45,7 @@ public class ModuleInf implements Serializable {
     /**
      * 支持的启动模式
      */
-    private LoadMode[] supportedModes;
+    private int[] supportedModes;
 
     /**
      * 是否启动时就激活
@@ -170,11 +170,11 @@ public class ModuleInf implements Serializable {
      */
     private  Set<String> switchControl;
 
-    public LoadMode[] getSupportedModes() {
+    public int[] getSupportedModes() {
         return supportedModes;
     }
 
-    public void setSupportedModes(LoadMode[] supportedModes) {
+    public void setSupportedModes(int[] supportedModes) {
         this.supportedModes = supportedModes;
     }
 

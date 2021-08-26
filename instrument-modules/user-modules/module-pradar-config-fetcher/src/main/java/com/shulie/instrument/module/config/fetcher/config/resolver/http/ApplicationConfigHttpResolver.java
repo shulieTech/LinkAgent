@@ -20,6 +20,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
@@ -35,8 +36,13 @@ import com.pamirs.pradar.pressurement.agent.shared.service.ShadowDatabaseConfigP
 import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.pamirs.pradar.pressurement.mock.ForwardStrategy;
+import com.pamirs.pradar.pressurement.mock.MockStrategy;
+import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
@@ -66,7 +72,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     /**
      * 压测白名单查询接口
      */
-    private static final String WHITELIST_FILE_URL = "/api/confcenter/wbmnt/query/";
+//    private static final String WHITELIST_FILE_URL = "/api/confcenter/wbmnt/query/";
+    private static final String WHITELIST_FILE_URL = "/api/remote/call/configs/pull";
     /**
      * 拉取影子库表配置的接口
      */
@@ -88,10 +95,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * 上报错误的影子job接口
      */
     public static final String TRO_REPORT_ERROR_SHADOW_JOB_URL = "/api/shadow/job/update";
-    /**
-     * 上报应用的接口
-     */
-    private static final String APP_INSERT_URL = "/api/application/center/app/info";
     /**
      * 上报应用状态的接口
      */
@@ -135,15 +138,26 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private static final String W_LISTS = "wLists";
     private static final String REDIS_KEY = "REDIS_KEY";
     private static final String DUBBO = "dubbo";
+    private static final String FEIGN = "feign";
     private static final String RPC = "rpc";
     private static final String MQ = "mq";
     private static final String SEARCH = "search";
     private static final String HTTP = "http";
     private static final String TYPE2 = "TYPE";
+    private static final String TYPE3 = "checkType";
+    private static final String MOCK = "mock";
+    private static final String MOCK_CONTENT = "content";
+    private static final String FORWARD = "forward";
+    private static final String FORWARD_URL = "forwardUrl";
+    private static final String WHITE = "white";
     private static final String GLOBAL = "isGlobal";
     private static final String APP_NAMES = "appNames";
     private static final String INTERFACE_NAME = "INTERFACE_NAME";
     private static final String PLUGIN_MAX_REDIS_EXPIRE_TIME = "maxRedisExpireTime";
+
+    private final ExecutionStrategy forwardStrategy = new ForwardStrategy();
+    private final ExecutionStrategy mockStrategy = new MockStrategy();
+    private final ExecutionStrategy whiteListStrategy = new WhiteListStrategy();
 
     //新增应用参数
     private static final String NODE_UNIQUE_KEY = UUID.randomUUID().toString().replace("_", "");
@@ -151,9 +165,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
     private AtomicBoolean whiteListPullSwitch = new AtomicBoolean(Boolean.TRUE);
     private AtomicBoolean shadowConfigPullSwitch = new AtomicBoolean(Boolean.TRUE);
+    protected SwitcherManager switcherManager;
 
-    public ApplicationConfigHttpResolver(int interval, TimeUnit timeUnit) {
+    public ApplicationConfigHttpResolver(SwitcherManager switcherManager, int interval, TimeUnit timeUnit) {
         super("application-config-fetch-scheduled", interval, timeUnit);
+        this.switcherManager = switcherManager;
         EventRouter.router().addListener(new PradarEventListener() {
 
             @Override
@@ -201,10 +217,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         // 获取配置
         String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
         /**
-         * 检查并自动生成应用,如果自动生成应用失败可以忽略
-         */
-        checkAndGenerateApp(troControlWebUrl);
-        /**
          * 上传应用接入状态,如果上报失败可以忽略
          */
         uploadAccessStatus(troControlWebUrl);
@@ -224,9 +236,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         /**
          * 拉取插件配置
          */
-        /*if (getPluginConfig(troControlWebUrl, applicationConfig)) {
+        if (getPluginConfig(troControlWebUrl, applicationConfig)) {
             ApplicationConfig.getPlugin = Boolean.TRUE;
-        }*/
+        }
 
         boolean isSuccess;
         if (whiteListPullSwitch.get()) {
@@ -316,6 +328,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 LOGGER.info("SIMULATOR: successful to fetched config.");
             }
             PradarSwitcher.clusterTestReady();
+            switcherManager.switchOn(ConfigFetcherConstants.MODULE_NAME);
         } else {
             // 本次配置没有成功拉取 并且 历史无成功拉取配置
             // 中断压测,配置如果从未成功过，会导致module模块无法加载，所有模块无法生效
@@ -323,6 +336,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 LOGGER.info("SIMULATOR: failed to fetched config.");
             }
             PradarSwitcher.clusterTestPrepare();
+            switcherManager.switchOff(ConfigFetcherConstants.MODULE_NAME);
         }
         return applicationConfig;
     }
@@ -356,12 +370,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     continue;
                 }
 
-                int type = 1;
-                final String typeStr = (String) map.get("type");
-                if (NumberUtils.isDigits(typeStr)) {
-                    type = Integer.valueOf(typeStr);
-                }
-
                 if (methodInfo.indexOf("#") == -1) {
                     continue;
                 }
@@ -388,7 +396,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 mockConfig.setClassName(StringUtils.trim(classMethod[0]));
                 mockConfig.setMethodName(StringUtils.trim(classMethod[1]));
                 mockConfig.setCodeScript(script);
-                mockConfig.setType(type);
                 if (StringUtils.isNotBlank(params)) {
                     String[] argTypes = StringUtils.split(params, ',');
                     List<String> parameterTypes = new ArrayList<String>();
@@ -407,7 +414,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             LOGGER.warn("link guard config parse err!", e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
-                    .setErrorCode("link-guard-enhance-0002")
+                    .setErrorCode("mock-enhance-0002")
                     .setMessage("获取挡板列表失败！")
                     .setDetail("获取挡板列表失败:" + e.getMessage())
                     .report();
@@ -478,7 +485,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     String key = entry.getKey();
                     List<String> values = entry.getValue();
                     for (int j = 0; j < values.size(); j++) {
-                        String value = key + "#" + values.get(i);
+                        String value = key + "#" + values.get(j);
                         mqList.add(value);
                     }
                 }
@@ -795,7 +802,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 LOGGER.warn("SIMULATOR: upload app info error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
                 return;
             }
-            if (httpResult.getResult() != null && httpResult.getResult().contains("data=true")) {
+            if (httpResult.getResult() != null && (httpResult.getResult().contains("data=true") || httpResult.getResult().contains("data:true"))) {
                 final StringBuilder url2 = new StringBuilder(troWebUrl).append(UPLOAD_APP_INFO);
                 HttpUtils.HttpResult httpResult1 = HttpUtils.doPost(url2.toString(), JSON.toJSONString(appInfo));
                 if (!httpResult1.isSuccess()) {
@@ -836,7 +843,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(result));
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("上传应用接入状态失败. url={}, result={}", url.toString(), httpResult.getResult());
+                LOGGER.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(), JSON.toJSONString(result));
+            }else{
+                LOGGER.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(), JSON.toJSONString(result));
             }
             // TODO 存在一个隐患，去除了清空内存中异常信息，改为agent全量发送异常数据
             // 内存消耗会加重，等tro控制台调整异常展示时同步调整
@@ -846,29 +855,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
     }
 
-    /**
-     * 上报控制台，自动生成项目
-     *
-     * @param troWeb
-     */
-    private void checkAndGenerateApp(String troWeb) {
-        Map<String, Object> map = new HashMap<String, Object>();
-        map.put(APP_COLUMN_APPLICATION_NAME, AppNameUtils.appName());
-        map.put(APP_COLUMN_DDL_PATH, AppNameUtils.appName() + "/ddl.sh");
-        map.put(APP_COLUMN_CLEAN_PATH, AppNameUtils.appName() + "/clean.sh");
-        map.put(APP_COLUMN_READY_PATH, AppNameUtils.appName() + "/ready.sh");
-        map.put(APP_COLUMN_BASIC_PATH, AppNameUtils.appName() + "/basic.sh");
-        map.put(APP_COLUMN_CACHE_PATH, AppNameUtils.appName() + "/cache.sh");
-        final StringBuilder url = new StringBuilder(troWeb).append(APP_INSERT_URL);
-        try {
-            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(map));
-            if (!httpResult.isSuccess()) {
-                LOGGER.warn("上报应用失败 url={}, result={}", url.toString(), httpResult.getResult());
-            }
-        } catch (Throwable e) {
-            LOGGER.warn("自动增加应用失败 url={}", url.toString(), e);
-        }
-    }
 
     /**
      * 拉取es名单信息,这一期先从文件中读取，后续可以改成接口拉取
@@ -1029,7 +1015,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             if (null != data && !data.isEmpty()) {
                 for (Map datum : data) {
                     ShadowJob shaDowJob = new ShadowJob();
-                    shaDowJob.setId(Long.valueOf(NumberFormat.getInstance().format(datum.get("id"))));
+                    shaDowJob.setId(Long.valueOf(datum.get("id").toString()));
                     shaDowJob.setActive(Integer.valueOf(NumberFormat.getInstance().format(datum.get("active"))));
                     shaDowJob.setClassName((String) datum.get("name"));
                     shaDowJob.setStatus(NumberFormat.getInstance().format(datum.get("status")));
@@ -1183,14 +1169,12 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private boolean getWhiteList(String troWebUrl, ApplicationConfig applicationConfig) {
         final StringBuilder url = new StringBuilder(troWebUrl)
                 .append(WHITELIST_FILE_URL)
-                .append(userAppKey());
+                .append("?appName=")
+                .append(AppNameUtils.appName());
         try {
-//                    .append("?appName=")
-//                    .append(AppNameUtils.appName());
-
             return loadList(url, applicationConfig);
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", url, e);
+            LOGGER.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
@@ -1221,9 +1205,10 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             return false;
         }
 
-        final Set<String> urlWarList = new HashSet<String>();
+        final Set<MatchConfig> urlWarList = new HashSet<MatchConfig>();
+        final Set<MatchConfig> rpcClassMethodName = new HashSet<MatchConfig>();
+
         final Set<String> mqList = new HashSet<String>();
-        final Set<String> rpcClassMethodName = new HashSet<String>();
         final Set<String> redisKeyWhiteList = new HashSet<String>();
         final Set<String> blockList = new HashSet<String>();
         final Set<String> searchWhiteList = new HashSet<String>();
@@ -1241,20 +1226,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             final JSONObject jsonObject1 = whitelist.getJSONObject(i);
             final String name = StringUtils.trim(jsonObject1.getString(INTERFACE_NAME));
             final String type = jsonObject1.getString(TYPE2);
-            boolean isGlobal = true;
-            if (jsonObject1.containsKey(GLOBAL)) {
-                isGlobal = jsonObject1.getBoolean(GLOBAL);
-            }
-            JSONArray appNames = null;
-            if (jsonObject1.containsKey(APP_NAMES)) {
-                appNames = jsonObject1.getJSONArray(APP_NAMES);
-            }
-            /**
-             * 如果是部分生效，但是生效的应用中未包含当前应用，则忽略当前这份配置
-             */
-            if (!isGlobal && (appNames == null || !appNames.contains(AppNameUtils.appName()))) {
-                continue;
-            }
+            final String checkType = jsonObject1.getString(TYPE3);
 
             if (HTTP.equals(type)) {
                 if (name.startsWith("mq:")) {
@@ -1264,12 +1236,15 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 } else if (name.startsWith("search:")) {
                     searchWhiteList.add(name.substring(7));
                 } else {
-                    urlWarList.add(name);
+                    MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
+                    urlWarList.add(matchConfig);
                 }
-            } else if (DUBBO.equals(type)) {
-                rpcClassMethodName.add(name);
+            } else if (DUBBO.equals(type) || FEIGN.equals(type)) {
+                MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
+                rpcClassMethodName.add(matchConfig);
             } else if (RPC.equals(type)) {
-                rpcClassMethodName.add(name);
+                MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
+                rpcClassMethodName.add(matchConfig);
             } else if (MQ.equals(type)) {
                 mqList.add(name);
             } else if (SEARCH.equals(type)) {
@@ -1286,6 +1261,109 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         applicationConfig.setSearchWhiteList(searchWhiteList);
         return true;
     }
+
+    public MatchConfig getMatchConfig(String type, String value, JSONObject jsonObject) {
+        MatchConfig config = new MatchConfig();
+        if (MOCK.equals(type)) {
+            String content = jsonObject.getString(MOCK_CONTENT);
+            config.setScriptContent(content);
+            config.setStrategy(mockStrategy);
+        } else if (FORWARD.equals(type)) {
+            String url = jsonObject.getString(FORWARD_URL);
+            config.setForwarding(url);
+            config.setStrategy(forwardStrategy);
+        } else {
+            config.setStrategy(whiteListStrategy);
+        }
+        config.setUrl(value);
+        return config;
+    }
+//
+//    /**
+//     * 加载配置列表
+//     *
+//     * @param url
+//     * @param applicationConfig
+//     */
+//    private boolean loadList(final StringBuilder url,
+//                             ApplicationConfig applicationConfig) {
+//        final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
+//        if (!httpResult.isSuccess()) {
+//            LOGGER.warn("SIMULATOR: [FetchConfig] get whitelist config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
+//            ErrorReporter.buildError()
+//                    .setErrorType(ErrorTypeEnum.AgentError)
+//                    .setErrorCode("agent-0004")
+//                    .setMessage("获取白名单列表失败")
+//                    .setDetail("获取白名单列表失败,status: " + httpResult.getStatus() + ", result: " + httpResult.getResult())
+//                    .report();
+//            return false;
+//        }
+//
+//        final Set<String> urlWarList = new HashSet<String>();
+//        final Set<String> mqList = new HashSet<String>();
+//        final Set<String> rpcClassMethodName = new HashSet<String>();
+//        final Set<String> redisKeyWhiteList = new HashSet<String>();
+//        final Set<String> blockList = new HashSet<String>();
+//        final Set<String> searchWhiteList = new HashSet<String>();
+//
+//        JSONObject dataMap = JSON.parseObject(httpResult.getResult());
+//        JSONObject dataObj = dataMap.getJSONObject(DATA);
+//        JSONArray blackList = dataObj.getJSONArray(B_LISTS);
+//        for (int i = 0; i < blackList.size(); i++) {
+//            JSONObject blackMap = blackList.getJSONObject(i);
+//            Object keyObj = blackMap.get(REDIS_KEY);
+//            redisKeyWhiteList.add(String.valueOf(keyObj));
+//        }
+//        final JSONArray whitelist = dataObj.getJSONArray(W_LISTS);
+//        for (int i = 0; i < whitelist.size(); i++) {
+//            final JSONObject jsonObject1 = whitelist.getJSONObject(i);
+//            final String name = StringUtils.trim(jsonObject1.getString(INTERFACE_NAME));
+//            final String type = jsonObject1.getString(TYPE2);
+//            boolean isGlobal = true;
+//            if (jsonObject1.containsKey(GLOBAL)) {
+//                isGlobal = jsonObject1.getBoolean(GLOBAL);
+//            }
+//            JSONArray appNames = null;
+//            if (jsonObject1.containsKey(APP_NAMES)) {
+//                appNames = jsonObject1.getJSONArray(APP_NAMES);
+//            }
+//            /**
+//             * 如果是部分生效，但是生效的应用中未包含当前应用，则忽略当前这份配置
+//             */
+//            if (!isGlobal && (appNames == null || !appNames.contains(AppNameUtils.appName()))) {
+//                continue;
+//            }
+//
+//            if (HTTP.equals(type)) {
+//                if (name.startsWith("mq:")) {
+//                    mqList.add(name.substring(3));
+//                } else if (name.startsWith("rabbitmq:")) {
+//                    mqList.add(name.substring(9));
+//                } else if (name.startsWith("search:")) {
+//                    searchWhiteList.add(name.substring(7));
+//                } else {
+//                    urlWarList.add(name);
+//                }
+//            } else if (DUBBO.equals(type)) {
+//                rpcClassMethodName.add(name);
+//            } else if (RPC.equals(type)) {
+//                rpcClassMethodName.add(name);
+//            } else if (MQ.equals(type)) {
+//                mqList.add(name);
+//            } else if (SEARCH.equals(type)) {
+//                searchWhiteList.add(name);
+//            } else if ("block".equals(type)) {
+//                blockList.add(name);
+//            }
+//        }
+//        applicationConfig.setUrlWhiteList(urlWarList);
+//        applicationConfig.setRpcNameWhiteList(rpcClassMethodName);
+//        applicationConfig.setCacheKeyAllowList(redisKeyWhiteList);
+//        applicationConfig.setContextPathBlockList(blockList);
+//        applicationConfig.setMqList(mqList);
+//        applicationConfig.setSearchWhiteList(searchWhiteList);
+//        return true;
+//    }
 
     private String getAgentVersion() {
         if (StringUtils.isBlank(VERSION)) {
@@ -1365,27 +1443,30 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
 
-            Map<String, ShadowHbaseConfig> shadowHbaseConfigMap = new HashMap<String, ShadowHbaseConfig>();
-            ;
-            for (Map<String, Object> map : dataMapList) {
-                Map<String, Object> configMap = JSONObject.parseObject((String) map.get("config"));
-                if (configMap != null) {
-                    Map<String, Object> business = (Map<String, Object>) configMap.get("dataSourceBusiness");
-                    Map<String, Object> performance = (Map<String, Object>) configMap.get("dataSourcePerformanceTest");
-                    if (performance != null && business != null) {
-                        ShadowHbaseConfig bconfig = convertConfig(business);
-                        ShadowHbaseConfig pconfig = convertConfig(performance);
-                        shadowHbaseConfigMap.put(bconfig.toKey(), pconfig);
+            if (dataMapList != null) {
+                Map<String, ShadowHbaseConfig> shadowHbaseConfigMap = new HashMap<String, ShadowHbaseConfig>();
+
+                for (Map<String, Object> map : dataMapList) {
+                    Map<String, Object> configMap = JSONObject.parseObject((String) map.get("config"));
+                    if (configMap != null) {
+                        Map<String, Object> business = (Map<String, Object>) configMap.get("dataSourceBusiness");
+                        Map<String, Object> performance = (Map<String, Object>) configMap.get("dataSourcePerformanceTest");
+                        if (performance != null && business != null) {
+                            ShadowHbaseConfig bconfig = convertConfig(business);
+                            ShadowHbaseConfig pconfig = convertConfig(performance);
+                            shadowHbaseConfigMap.put(bconfig.toKey(), pconfig);
+                        }
                     }
                 }
-            }
+                if (shadowHbaseConfigMap.size() > 0) {
+                    GlobalConfig.getInstance().setShadowHbaseServer(true);
+                    ;
+                }
 
-            if (shadowHbaseConfigMap.size() > 0) {
-                GlobalConfig.getInstance().setShadowHbaseServer(true);
-                ;
+                applicationConfig.setShadowHbaseConfigs(shadowHbaseConfigMap);
+            }else{
+                LOGGER.warn("获取hbase数据源配置为空：{}", result.getResult());
             }
-
-            applicationConfig.setShadowHbaseConfigs(shadowHbaseConfigMap);
 
         } catch (Throwable e) {
             LOGGER.error("[pradar] get shadow hbase config with a err response. got a unknow err. url={}", url, e);

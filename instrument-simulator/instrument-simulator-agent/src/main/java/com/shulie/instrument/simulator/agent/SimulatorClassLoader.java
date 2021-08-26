@@ -23,16 +23,17 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.Vector;
 import java.util.jar.JarFile;
 
 /**
  * 加载Simulator用的ClassLoader
  */
 class SimulatorClassLoader extends URLClassLoader {
-    private final String toString;
-    private final String path;
+    private String toString;
+    private String path;
 
-    private final ClassLoader parentClassLoader;
+    private ClassLoader parentClassLoader;
 
     SimulatorClassLoader(final String namespace,
                          final String simulatorCoreJarFilePath) throws MalformedURLException {
@@ -60,7 +61,10 @@ class SimulatorClassLoader extends URLClassLoader {
             return url;
         }
         url = parentClassLoader.getResource(name);
-        return url;
+        if (null != url) {
+            return url;
+        }
+        return getBizClassLoader().getResource(name);
     }
 
     @Override
@@ -70,7 +74,10 @@ class SimulatorClassLoader extends URLClassLoader {
             return urls;
         }
         urls = parentClassLoader.getResources(name);
-        return urls;
+        if (null != urls) {
+            return urls;
+        }
+        return getBizClassLoader().getResources(name);
     }
 
     @Override
@@ -87,8 +94,36 @@ class SimulatorClassLoader extends URLClassLoader {
             }
             return aClass;
         } catch (Throwable t) {
-            return parentClassLoader.loadClass(name);
+            try {
+                return parentClassLoader.loadClass(name);
+            } catch (Throwable e) {
+                try {
+                    return getBizClassLoader().loadClass(name);
+                } catch (Throwable ex) {
+                    if (t instanceof ClassNotFoundException) {
+                        throw (ClassNotFoundException) t;
+                    }
+                    if (t instanceof Error) {
+                        throw (Error) t;
+                    }
+                    throw new ClassNotFoundException("class " + name + " not found.", t);
+                }
+            }
         }
+    }
+
+    private ClassLoader getBizClassLoader() {
+        ClassLoader classLoader = SimulatorClassLoader.class.getClassLoader();
+        if (classLoader == null) {
+            classLoader = Thread.currentThread().getContextClassLoader();
+            if (classLoader instanceof SimulatorClassLoader){
+                classLoader = null;
+            }
+        }
+        if (classLoader == null) {
+            classLoader = ClassLoader.getSystemClassLoader();
+        }
+        return classLoader;
     }
 
     @Override
@@ -118,6 +153,7 @@ class SimulatorClassLoader extends URLClassLoader {
             } catch (Throwable cause) {
                 // ignore...
             }
+            releaseClasses();
             return;
         }
 
@@ -137,11 +173,27 @@ class SimulatorClassLoader extends URLClassLoader {
                     // if we got this far, this is probably not a JAR loader so skip it
                 }
             }
-
+            releaseClasses();
         } catch (Throwable cause) {
             // ignore...
         }
+        parentClassLoader = null;
+        path = null;
+        toString = null;
+    }
 
+    private void releaseClasses() {
+        try {
+            final Object classes = forceGetDeclaredFieldValue(ClassLoader.class, "classes", this);
+            if (classes == null) {
+                return;
+            }
+            if (!(classes instanceof Vector)) {
+                return;
+            }
+            ((Vector) classes).clear();
+        } catch (Throwable e) {
+        }
     }
 
     private <T> T forceGetDeclaredFieldValue(Class<?> clazz, String name, Object target) throws NoSuchFieldException, IllegalAccessException {

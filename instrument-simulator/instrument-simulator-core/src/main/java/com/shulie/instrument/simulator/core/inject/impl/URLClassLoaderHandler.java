@@ -72,6 +72,11 @@ public class URLClassLoaderHandler implements ClassInjector {
         throw new SimulatorException("invalid ClassLoader");
     }
 
+    @Override
+    public void destroy() {
+
+    }
+
 
     private void injectClass0(URLClassLoader classLoader, String className) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, ClassNotFoundException {
         final URL[] urls = classLoader.getURLs();

@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 
@@ -51,6 +52,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
 
 
     private int clientHash;
+    private ScheduledFuture future;
 
     public DefaultServerAddrProvider(final ServerProviderOptions serverProviderOptions) {
         if (serverProviderOptions == null) {
@@ -83,7 +85,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
             LOGGER.error("ensureParentExists err:{}!", serverProviderOptions.getServerZkPath(), e);
         }
         this.zkServerPath = this.zkClient.createPathChildrenCache(serverProviderOptions.getServerZkPath());
-        this.zkServerPath.setUpdateExecutor(ExecutorServiceFactory.GLOBAL_EXECUTOR_SERVICE);
+        this.zkServerPath.setUpdateExecutor(ExecutorServiceFactory.getFactory().getGlobalExecutorService());
         zkServerPath.setUpdateListener(new Runnable() {
             @Override
             public void run() {
@@ -96,7 +98,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
         });
 
 
-        ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(new Runnable() {
+        future = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -107,7 +109,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
                     fetchLogServer();
                 } catch (Throwable e) {
                     LOGGER.error("fail to watch log server path status from zookeeper, path={}. retry next times.", serverProviderOptions.getServerZkPath(), e);
-                    ExecutorServiceFactory.GLOBAL_SCHEDULE_EXECUTOR_SERVICE.schedule(this, 3, TimeUnit.SECONDS);
+                    future = ExecutorServiceFactory.getFactory().schedule(this, 3, TimeUnit.SECONDS);
                 }
             }
         }, 0, TimeUnit.SECONDS);
@@ -199,20 +201,21 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
 
         Node node = null;
         long total = Long.MAX_VALUE;
+
         /**
-         * 取的逻辑是错误越少并且最近出错的时间越远的节点
-         * 计算逻辑取出错次数 * 最近出错时间来进行计算
+         * 排除最近20s有异常的连接， 如果最近20s都有异常，则直接使用所有的连接池
          */
-        for (Node n : this.availableNodes) {
-            /**
-             * 避免值过大，错误时间只取到秒级即可
-             */
-            long lastErrorTime = n.getLastErrorTimeSec();
-            if (n.getErrorCount() * lastErrorTime < total) {
-                node = n;
-                total = n.getErrorCount() * lastErrorTime;
+        List<Node> nowAvailableNode = new ArrayList<Node>();
+        for (Node availableNode : availableNodes) {
+            //最近 20s 有异常的排除在外
+            if (availableNode.getLastErrorTimeSec() > 20) {
+                nowAvailableNode.add(availableNode);
             }
         }
+        if (nowAvailableNode.isEmpty()) {
+            nowAvailableNode = availableNodes;
+        }
+        node = nowAvailableNode.get(Math.abs(clientHash % nowAvailableNode.size()));
 
         ConnectInfo connectInfo = new ConnectInfo();
         connectInfo.setServerAddr(node.getHost());
@@ -233,6 +236,23 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
                     && node.getPort() == connectInfo.getPort()) {
                 node.error();
                 break;
+            }
+        }
+    }
+
+    @Override
+    public void release() {
+        if (future != null && !future.isCancelled() && !future.isDone()) {
+            future.cancel(true);
+        }
+        if (zkServerPath.isRunning()) {
+            zkServerPath.stop();
+        }
+        if (zkClient != null && zkClient.isRunning()) {
+            try {
+                zkClient.stop();
+            } catch (Throwable e) {
+                LOGGER.error("stop log server address provider zkClient failed.", e);
             }
         }
     }

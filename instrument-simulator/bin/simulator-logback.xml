@@ -10,7 +10,7 @@
             <totalSizeCap>300MB</totalSizeCap>  <!-- 总日志大小 -->
         </rollingPolicy>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%SIMULATOR_NAMESPACE] %-5level %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
@@ -24,7 +24,7 @@
             <totalSizeCap>300MB</totalSizeCap>  <!-- 总日志大小 -->
         </rollingPolicy>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%SIMULATOR_NAMESPACE] %-5level %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>

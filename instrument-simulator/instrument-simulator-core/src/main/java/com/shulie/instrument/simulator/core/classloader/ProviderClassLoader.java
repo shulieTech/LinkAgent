@@ -15,17 +15,28 @@
 package com.shulie.instrument.simulator.core.classloader;
 
 import com.shulie.instrument.simulator.api.annotation.Stealth;
+import com.shulie.instrument.simulator.core.util.ReflectUtils;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Collection;
+import java.util.Vector;
+import java.util.jar.JarFile;
 
 /**
  * 服务提供库ClassLoader
- *
  */
 @Stealth
 public class ProviderClassLoader extends RoutingURLClassLoader {
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
+    private File providerJarFile;
 
     public ProviderClassLoader(final File providerJarFile,
                                final ClassLoader simulatorClassLoader) throws IOException {
@@ -36,13 +47,94 @@ public class ProviderClassLoader extends RoutingURLClassLoader {
                         "com.shulie.instrument.simulator.api.*",
                         "com.shulie.instrument.simulator.spi.*",
                         "org.apache.commons.lang.*",
-                        "org.codehaus.groovy.*",
-                        "groovy.*",
                         "org.slf4j.*",
                         "ch.qos.logback.*",
                         "org.objectweb.asm.*",
                         "javax.annotation.Resource*"
                 )
         );
+        this.providerJarFile = providerJarFile;
+    }
+
+    public void closeIfPossible() {
+        try {
+
+            // 如果是JDK7+的版本, URLClassLoader实现了Closeable接口，直接调用即可
+            if (this instanceof Closeable) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("SIMULATOR: JDK is 1.7+, use URLClassLoader[file={}].close()", providerJarFile);
+                }
+                try {
+                    ((Closeable) this).close();
+                } catch (Throwable cause) {
+                    logger.warn("SIMULATOR: close ProviderClassLoader[file={}] failed. JDK7+", providerJarFile, cause);
+                }
+                if (routingArray != null) {
+                    for (Routing routing : routingArray) {
+                        routing.clean();
+                    }
+                    routingArray = null;
+                }
+                releaseClasses();
+                return;
+            }
+
+
+            // 对于JDK6的版本，URLClassLoader要关闭起来就显得有点麻烦，这里弄了一大段代码来稍微处理下
+            // 而且还不能保证一定释放干净了，至少释放JAR文件句柄是没有什么问题了
+            try {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("SIMULATOR: JDK is less then 1.7+, use File.release()");
+                }
+                final Object ucp = ReflectUtils.getDeclaredJavaFieldValueUnCaught(URLClassLoader.class, "ucp", this);
+                final Object loaders = ReflectUtils.getDeclaredJavaFieldValueUnCaught(ucp.getClass(), "loaders", ucp);
+
+                for (Object loader :
+                        ((Collection) loaders).toArray()) {
+                    try {
+                        final JarFile jarFile = ReflectUtils.getDeclaredJavaFieldValueUnCaught(
+                                loader.getClass(),
+                                "jar",
+                                loader
+                        );
+                        jarFile.close();
+                    } catch (Throwable t) {
+                        // if we got this far, this is probably not a JAR loader so skip it
+                    }
+                }
+
+                if (routingArray != null) {
+                    for (Routing routing : routingArray) {
+                        routing.clean();
+                    }
+                    routingArray = null;
+                }
+
+                releaseClasses();
+            } catch (Throwable cause) {
+                logger.warn("SIMULATOR: close ProviderClassLoader[file={}] failed. probably not a HOTSPOT VM", providerJarFile, cause);
+            }
+
+        } finally {
+
+            // 在这里删除掉临时文件
+            FileUtils.deleteQuietly(providerJarFile);
+            classLoadingLock.release();
+        }
+
+    }
+
+    private void releaseClasses() {
+        try {
+            final Object classes = ReflectUtils.getDeclaredJavaFieldValueUnCaught(ClassLoader.class, "classes", this);
+            if (classes == null) {
+                return;
+            }
+            if (!(classes instanceof Vector)) {
+                return;
+            }
+            ((Vector) classes).clear();
+        } catch (Throwable e) {
+        }
     }
 }

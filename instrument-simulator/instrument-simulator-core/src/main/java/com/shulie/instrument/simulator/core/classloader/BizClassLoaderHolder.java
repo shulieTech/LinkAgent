@@ -14,6 +14,8 @@
  */
 package com.shulie.instrument.simulator.core.classloader;
 
+import java.lang.ref.WeakReference;
+
 /**
  * 业务类加载器持有者
  * 业务类加载器持有者是一个链式结构，因为每一级的调用都会设置自己的业务 ClassLoader,多层级之间的调用
@@ -75,7 +77,7 @@ public class BizClassLoaderHolder {
             }
             return Thread.currentThread().getContextClassLoader();
         }
-        ClassLoader classLoader = stack.classLoader;
+        ClassLoader classLoader = stack.getClassLoader();
         return classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
     }
 
@@ -84,12 +86,18 @@ public class BizClassLoaderHolder {
      * 对应每一个调用层级为一个节点
      */
     static class ClassLoaderNode {
-        ClassLoader classLoader;
+        WeakReference<ClassLoader> classLoader;
         ClassLoaderNode parent;
 
         ClassLoaderNode(ClassLoader classLoader, ClassLoaderNode parent) {
-            this.classLoader = classLoader;
+            if (parent != null) {
+                this.classLoader = new WeakReference<ClassLoader>(classLoader);
+            }
             this.parent = parent;
+        }
+
+        ClassLoader getClassLoader() {
+            return classLoader == null ? null : classLoader.get();
         }
     }
 }

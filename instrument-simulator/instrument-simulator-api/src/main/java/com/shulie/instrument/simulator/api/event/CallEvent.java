@@ -37,7 +37,7 @@ public class CallEvent extends InvokeEvent {
      * @param invokeId  调用ID
      * @param eventType 事件类型
      */
-    protected CallEvent(int processId, int invokeId, boolean isInterface, EventType eventType) {
+    protected CallEvent(int processId, int invokeId, boolean isInterface, int eventType) {
         super(processId, invokeId, eventType);
         this.isInterface = isInterface;
     }

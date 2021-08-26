@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.interceptor;
 
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -27,12 +28,12 @@ public abstract class TraceInterceptorAdaptor extends TraceInterceptor {
     public final static String BEFORE_TRACE_SUCCESS = "before-trace-success";
 
     @Override
-    public void beforeFirst(Advice advice) {
+    public void beforeFirst(Advice advice) throws Exception {
 
     }
 
     @Override
-    public void beforeLast(Advice advice) {
+    public void beforeLast(Advice advice) throws ProcessControlException {
 
     }
 
@@ -42,7 +43,7 @@ public abstract class TraceInterceptorAdaptor extends TraceInterceptor {
     }
 
     @Override
-    public void afterFirst(Advice advice) {
+    public void afterFirst(Advice advice) throws ProcessControlException {
 
     }
 

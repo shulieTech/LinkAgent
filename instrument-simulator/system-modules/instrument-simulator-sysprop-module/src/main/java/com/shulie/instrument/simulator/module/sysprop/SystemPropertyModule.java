@@ -36,7 +36,7 @@ import java.util.Properties;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "sysprop", version = "1.0.0", author = "xiaobin@shulie.io", description = "系统变量模块")
 public class SystemPropertyModule extends ParamSupported implements ExtensionModule {
-    private final static Logger logger = LoggerFactory.getLogger(SystemPropertyModule.class);
+    private final Logger logger = LoggerFactory.getLogger(SystemPropertyModule.class);
 
     @Command(value = "info", description = "查看系统变量")
     public CommandResponse info(final Map<String, String> args) {

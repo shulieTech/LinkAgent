@@ -14,13 +14,7 @@
  */
 package com.pamirs.attach.plugin.es;
 
-import com.pamirs.attach.plugin.es.interceptor.ElasticSearchExecuteInterceptor;
-import com.pamirs.attach.plugin.es.interceptor.RestClientPerformAsyncLowVersionRequestInterceptor;
-import com.pamirs.attach.plugin.es.interceptor.RestClientPerformAsyncRequestInterceptor;
-import com.pamirs.attach.plugin.es.interceptor.RestClientPerformRequestInterceptor;
-import com.pamirs.attach.plugin.es.interceptor.RestHighLevelClientInterceptor;
-import com.pamirs.attach.plugin.es.interceptor.TransportClientExecuteInterceptor;
-import com.pamirs.attach.plugin.es.interceptor.TransportClientTraceInterceptor;
+import com.pamirs.attach.plugin.es.interceptor.*;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -38,7 +32,7 @@ import org.kohsuke.MetaInfServices;
  */
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = ElasticsearchConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",
-    description = "elasticsearch 搜索引擎，支持5.x、6.x、7.x，支持 transport、rest")
+        description = "elasticsearch 搜索引擎，支持5.x、6.x、7.x，支持 transport、rest")
 public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
@@ -54,39 +48,39 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethod("execute", "org.elasticsearch.action.Action",
-                    "org.elasticsearch.action.ActionRequest", "org.elasticsearch.action.ActionListener");
+                        "org.elasticsearch.action.ActionRequest", "org.elasticsearch.action.ActionListener");
                 method.addInterceptor(Listeners.of(TransportClientExecuteInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 method.addInterceptor(Listeners.of(TransportClientTraceInterceptor.class));
 
                 InstrumentMethod methodHighVersion = target.getDeclaredMethod("execute",
-                    "org.elasticsearch.action.ActionType",
-                    "org.elasticsearch.action.ActionRequest",
-                    "org.elasticsearch.action.ActionListener");
+                        "org.elasticsearch.action.ActionType",
+                        "org.elasticsearch.action.ActionRequest",
+                        "org.elasticsearch.action.ActionListener");
                 methodHighVersion.addInterceptor(Listeners.of(TransportClientExecuteInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 methodHighVersion.addInterceptor(Listeners.of(TransportClientTraceInterceptor.class));
 
                 //org.elasticsearch.client.support.AbstractClient.prepareIndex(java.lang.String, java.lang.String,
                 // java.lang.String)
                 InstrumentMethod prepareIndexMethod = target.getDeclaredMethod("prepareIndex",
-                    "java.lang.String"
-                    , "java.lang.String"
-                    , "java.lang.String");
+                        "java.lang.String"
+                        , "java.lang.String"
+                        , "java.lang.String");
                 prepareIndexMethod.addInterceptor(Listeners.of(ElasticSearchExecuteInterceptor.class));
 
                 //org.elasticsearch.client.support.AbstractClient.prepareDelete(java.lang.String, java.lang.String,
                 // java.lang.String)
                 InstrumentMethod prepareDelete = target.getDeclaredMethod("prepareDelete",
-                    "java.lang.String",
-                    "java.lang.String",
-                    "java.lang.String");
+                        "java.lang.String",
+                        "java.lang.String",
+                        "java.lang.String");
                 prepareDelete.addInterceptor(Listeners.of(ElasticSearchExecuteInterceptor.class));
 
                 //org.elasticsearch.client.support.AbstractClient.prepareGet(java.lang.String, java.lang.String, java
                 // .lang.String)
                 InstrumentMethod prepareGet = target.getDeclaredMethod("prepareGet",
-                    "java.lang.String",
-                    "java.lang.String",
-                    "java.lang.String");
+                        "java.lang.String",
+                        "java.lang.String",
+                        "java.lang.String");
                 prepareGet.addInterceptor(Listeners.of(ElasticSearchExecuteInterceptor.class));
 
             }
@@ -101,10 +95,10 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethods("internalPerformRequest",
-                    "internalPerformRequestAsync");
+                        "internalPerformRequestAsync");
                 method.addInterceptor(Listeners
-                    .of(RestHighLevelClientInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
+                        .of(RestHighLevelClientInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
 
             }
         });
@@ -114,29 +108,28 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod performRequestMethod = target.getDeclaredMethod("performRequest",
-                    "org.elasticsearch.client.Request");
+                        "org.elasticsearch.client.Request");
                 performRequestMethod.addInterceptor(Listeners
-                    .of(RestClientPerformRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
+                        .of(RestClientPerformRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
 
                 InstrumentMethod performRequestAsyncMethod = target.getDeclaredMethod("performRequestAsync", "org.elasticsearch.client.Request", "org.elasticsearch.client.ResponseListener");
 
                 InstrumentMethod performRequestAsyncMethodLowVersion = target.getDeclaredMethod("performRequestAsync",
-                    "java.lang.String", "java.lang.String", "java.util.Map", "org.apache.http.HttpEntity",
-                    "org.elasticsearch.client.HttpAsyncResponseConsumerFactory", "org.elasticsearch.client.ResponseListener",
-                    "org.apache.http.Header[]");
+                        "java.lang.String", "java.lang.String", "java.util.Map", "org.apache.http.HttpEntity",
+                        "org.elasticsearch.client.HttpAsyncResponseConsumerFactory", "org.elasticsearch.client.ResponseListener",
+                        "org.apache.http.Header[]");
 
-                if(performRequestAsyncMethod != null){
-                    performRequestAsyncMethod.addInterceptor(Listeners.of(RestClientPerformAsyncRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY));
+                if (performRequestAsyncMethod != null) {
+                    performRequestAsyncMethod.addInterceptor(Listeners.of(RestClientPerformAsyncRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 }
 
-                if(performRequestAsyncMethodLowVersion != null){
+                if (performRequestAsyncMethodLowVersion != null) {
                     performRequestAsyncMethodLowVersion.addInterceptor(
-                        Listeners.of(RestClientPerformAsyncLowVersionRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY));
+                            Listeners.of(RestClientPerformAsyncLowVersionRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 }
             }
         });
 
     }
-
 }

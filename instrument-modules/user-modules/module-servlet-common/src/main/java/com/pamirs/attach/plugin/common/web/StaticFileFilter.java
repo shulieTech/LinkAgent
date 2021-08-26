@@ -51,14 +51,17 @@ public class StaticFileFilter {
             return null;
         }
         String fileSuffix = urlPath.toLowerCase();
-        if (fileSuffix.indexOf('/') != -1) {
-            fileSuffix = fileSuffix.substring(fileSuffix.lastIndexOf('/') + 1);
+        final int indexOfSlash = fileSuffix.lastIndexOf('/');
+        if (indexOfSlash != -1) {
+            fileSuffix = fileSuffix.substring(indexOfSlash + 1);
         }
-        if (fileSuffix.indexOf('?') != -1) {
-            fileSuffix = fileSuffix.substring(0, fileSuffix.indexOf('?'));
+        final int indexOfQuestion = fileSuffix.indexOf('?');
+        if (indexOfQuestion != -1) {
+            fileSuffix = fileSuffix.substring(0, indexOfQuestion);
         }
-        if (fileSuffix.indexOf(';') != -1) {
-            fileSuffix = fileSuffix.substring(0, fileSuffix.indexOf(';'));
+        final int indexOfComma = fileSuffix.indexOf(';');
+        if (indexOfComma != -1) {
+            fileSuffix = fileSuffix.substring(0, indexOfComma);
         }
         if (fileSuffix.indexOf('.') == -1) {
             return null;

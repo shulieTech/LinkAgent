@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.agent.core;
 
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
+import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.core.classloader.ProviderClassLoader;
 import com.shulie.instrument.simulator.agent.core.config.AgentConfigImpl;
 import com.shulie.instrument.simulator.agent.core.config.CoreConfig;
@@ -23,6 +24,8 @@ import com.shulie.instrument.simulator.agent.core.exception.AgentDownloadExcepti
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterFactory;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
+import com.shulie.instrument.simulator.agent.core.uploader.ApplicationUploader;
+import com.shulie.instrument.simulator.agent.core.uploader.HttpApplicationUploader;
 import com.shulie.instrument.simulator.agent.core.util.JarUtils;
 import com.shulie.instrument.simulator.agent.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
@@ -189,11 +192,16 @@ public class CoreLauncher {
      * @throws Throwable
      */
     public void start() throws Throwable {
-        RegisterFactory.init(agentConfig);
         this.startService.schedule(new Runnable() {
             @Override
             public void run() {
                 try {
+                    //delay了之后再启动，防止一些zk等的类加载问题
+                    RegisterFactory.init(agentConfig);
+
+                    ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
+                    applicationUploader.checkAndGenerateApp();
+
                     Register register = RegisterFactory.getRegister(agentConfig.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
@@ -204,15 +212,15 @@ public class CoreLauncher {
                         @Override
                         public void execute(Command command) throws Throwable {
                             if (command instanceof StartCommand) {
-                                launcher.startup();
+                                launcher.startup(((StartCommand) command));
                             } else if (command instanceof StopCommand) {
-                                launcher.shutdown();
+                                launcher.shutdown((StopCommand) command);
                             } else if (command instanceof LoadModuleCommand) {
-                                launcher.loadModule(((LoadModuleCommand) command).getPath());
+                                launcher.loadModule(((LoadModuleCommand) command));
                             } else if (command instanceof UnloadModuleCommand) {
-                                launcher.unloadModule(((UnloadModuleCommand) command).getModuleId());
+                                launcher.unloadModule(((UnloadModuleCommand) command));
                             } else if (command instanceof ReloadModuleCommand) {
-                                launcher.reloadModule(((ReloadModuleCommand) command).getModuleId());
+                                launcher.reloadModule(((ReloadModuleCommand) command));
                             }
                         }
 
@@ -249,12 +257,22 @@ public class CoreLauncher {
             }
             LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay, unit.toString());
         }
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    launcher.shutdown(new StopCommand<CommandPacket>(null));
+                } catch (Throwable e) {
+                    LOGGER.error("SIMULATOR: execute shutdown hook error.", e);
+                }
+            }
+        }));
     }
 
     private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {
         RegisterOptions registerOptions = new RegisterOptions();
         registerOptions.setAppName(agentConfig.getAppName());
-        registerOptions.setRegisterBasePath(agentConfig.getProperty("simulator.client.zk.path", "/config/log/simulator/client"));
+        registerOptions.setRegisterBasePath(agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
         registerOptions.setRegisterName(agentConfig.getProperty("simulator.hearbeat.register.name", "zookeeper"));
         registerOptions.setZkServers(agentConfig.getProperty("simulator.zk.servers", "localhost:2181"));
         registerOptions.setConnectionTimeoutMillis(agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));

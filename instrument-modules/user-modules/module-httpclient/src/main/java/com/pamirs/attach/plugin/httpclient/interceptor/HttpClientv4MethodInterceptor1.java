@@ -14,21 +14,6 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
-import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.common.HeaderMark;
-import com.pamirs.pradar.interceptor.ContextTransfer;
-import com.pamirs.pradar.interceptor.SpanRecord;
-import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
-import com.pamirs.pradar.pressurement.ClusterTestUtils;
-import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,10 +21,47 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.alibaba.fastjson.JSONObject;
+
+import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.common.HeaderMark;
+import com.pamirs.pradar.interceptor.ContextTransfer;
+import com.pamirs.pradar.interceptor.SpanRecord;
+import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.ExecutionCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpOptions;
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpTrace;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.message.BasicStatusLine;
+
 /**
  * Created by xiaobin on 2016/12/15.
  */
 public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
+
     @Override
     public String getPluginName() {
         return HttpClientConstants.PLUGIN_NAME;
@@ -60,19 +82,54 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeLast(Advice advice) {
+    public void beforeLast(Advice advice) throws ProcessControlException {
         Object[] args = advice.getParameterArray();
-        final HttpUriRequest request = (HttpUriRequest) args[0];
+        final HttpUriRequest request = (HttpUriRequest)args[0];
         if (request == null) {
             return;
         }
+
         String host = request.getURI().getHost();
         int port = request.getURI().getPort();
         String path = request.getURI().getPath();
 
         //判断是否在白名单中
         String url = getService(request.getURI().getScheme(), host, port, path);
-        ClusterTestUtils.validateHttpClusterTest(url);
+
+        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        Header[] headers = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
+        if (headers.length > 0) {
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, headers[0].getValue());
+        }
+        config.addArgs("url", url);
+        config.addArgs("request", request);
+        config.addArgs("method", "uri");
+        config.addArgs("isInterface", Boolean.FALSE);
+        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+            @Override
+            public Object call(Object param) {
+                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+
+                try {
+                    HttpEntity entity = null;
+                    if (param instanceof String) {
+                        entity = new StringEntity(String.valueOf(param));
+                    } else {
+                        entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                    }
+                    BasicHttpResponse response = new BasicHttpResponse(statusline);
+                    response.setEntity(entity);
+
+                    if (HttpClientConstants.clazz == null) {
+                        HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                    }
+                    return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+
+                } catch (Exception e) {
+                }
+                return null;
+            }
+        });
     }
 
     private Map toMap(String queryString) {
@@ -113,11 +170,11 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     private Map getParameters(HttpRequest httpRequest) {
         if (httpRequest instanceof HttpGet) {
-            HttpGet httpGet = (HttpGet) httpRequest;
+            HttpGet httpGet = (HttpGet)httpRequest;
             return toMap(httpGet.getURI().getQuery());
         }
         if (httpRequest instanceof HttpPost) {
-            HttpPost httpPost = (HttpPost) httpRequest;
+            HttpPost httpPost = (HttpPost)httpRequest;
             HttpEntity httpEntity = httpPost.getEntity();
             Map parameters = toMap(httpPost.getURI().getQuery());
             InputStream in = null;
@@ -137,7 +194,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
         }
 
         if (httpRequest instanceof HttpPut) {
-            HttpPut httpPut = (HttpPut) httpRequest;
+            HttpPut httpPut = (HttpPut)httpRequest;
             HttpEntity httpEntity = httpPut.getEntity();
             Map parameters = toMap(httpPut.getURI().getQuery());
             InputStream in = null;
@@ -157,27 +214,27 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
         }
 
         if (httpRequest instanceof HttpDelete) {
-            HttpDelete httpDelete = (HttpDelete) httpRequest;
+            HttpDelete httpDelete = (HttpDelete)httpRequest;
             return toMap(httpDelete.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpHead) {
-            HttpHead httpHead = (HttpHead) httpRequest;
+            HttpHead httpHead = (HttpHead)httpRequest;
             return toMap(httpHead.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpOptions) {
-            HttpOptions httpOptions = (HttpOptions) httpRequest;
+            HttpOptions httpOptions = (HttpOptions)httpRequest;
             return toMap(httpOptions.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpTrace) {
-            HttpTrace httpTrace = (HttpTrace) httpRequest;
+            HttpTrace httpTrace = (HttpTrace)httpRequest;
             return toMap(httpTrace.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpPatch) {
-            HttpPatch httpPatch = (HttpPatch) httpRequest;
+            HttpPatch httpPatch = (HttpPatch)httpRequest;
             HttpEntity httpEntity = httpPatch.getEntity();
             Map parameters = toMap(httpPatch.getURI().getQuery());
             InputStream in = null;
@@ -201,7 +258,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
-        final HttpUriRequest request = (HttpUriRequest) args[0];
+        final HttpUriRequest request = (HttpUriRequest)args[0];
         if (request == null) {
             return null;
         }
@@ -209,7 +266,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
             @Override
             public void transfer(String key, String value) {
                 if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
-                        request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                    request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
                     request.setHeader(key, value);
                 }
             }
@@ -219,7 +276,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        final HttpUriRequest request = (HttpUriRequest) args[0];
+        final HttpUriRequest request = (HttpUriRequest)args[0];
         if (request == null) {
             return null;
         }
@@ -251,10 +308,10 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpUriRequest request = (HttpUriRequest) args[0];
+        HttpUriRequest request = (HttpUriRequest)args[0];
         SpanRecord record = new SpanRecord();
         if (advice.getReturnObj() instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) advice.getReturnObj();
+            HttpResponse response = (HttpResponse)advice.getReturnObj();
 
             try {
                 record.setResponseSize(response == null ? 0 : response.getEntity().getContentLength());
@@ -278,11 +335,10 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     }
 
-
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpRequest request = (HttpRequest) args[0];
+        HttpRequest request = (HttpRequest)args[0];
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         record.setResponse(advice.getThrowable());

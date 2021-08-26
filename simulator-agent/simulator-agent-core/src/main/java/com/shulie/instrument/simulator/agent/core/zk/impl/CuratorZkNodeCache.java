@@ -14,12 +14,12 @@
  */
 package com.shulie.instrument.simulator.agent.core.zk.impl;
 
-import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.api.BackgroundCallback;
-import com.netflix.curator.framework.api.CuratorEvent;
-import com.netflix.curator.framework.state.ConnectionState;
-import com.netflix.curator.framework.state.ConnectionStateListener;
-import com.netflix.curator.utils.ZKPaths;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.utils.ZKPaths;
 import com.shulie.instrument.simulator.agent.core.zk.ZkNodeCache;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -154,7 +154,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
         if (dataIsCompressed && newData != null) {
             try {
                 dataToSet = ZipCompressionProvider.decompress(path, newData);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.warn("fail to decompress NodeCache of path={}", path, e);
                 return;
             }
@@ -195,7 +195,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
                             reset();
                             internalRebuild();
                             logger.info("recovered from RECONNECTED event, path={}", path);
-                        } catch (Exception e) {
+                        } catch (Throwable e) {
                             logger.error("fail to reset after reconnection, path={}", path, e);
                         }
                     }
@@ -220,7 +220,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
             try {
                 logger.trace("WatchedEvent: {}", event.getType());
                 reset();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.warn("fail to reset in watch event, path={}", path, e);
             }
         }

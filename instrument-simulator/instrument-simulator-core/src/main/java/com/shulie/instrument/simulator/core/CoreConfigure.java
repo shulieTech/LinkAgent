@@ -17,7 +17,6 @@ package com.shulie.instrument.simulator.core;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.shulie.instrument.simulator.api.LoadMode;
-import com.shulie.instrument.simulator.api.ModuleRepositoryMode;
 import com.shulie.instrument.simulator.core.util.FeatureCodec;
 import com.shulie.instrument.simulator.core.util.HttpUtils;
 import org.apache.commons.io.IOUtils;
@@ -30,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.lang.instrument.Instrumentation;
+import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.*;
 
@@ -37,7 +37,7 @@ import java.util.*;
  * 内核启动配置
  */
 public class CoreConfigure {
-    private final static Logger LOGGER = LoggerFactory.getLogger(CoreConfigure.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(CoreConfigure.class);
 
     private static final String KEY_NAMESPACE = "namespace";
     private static final String DEFAULT_VAL_NAMESPACE = "default";
@@ -103,7 +103,7 @@ public class CoreConfigure {
     // 用户配置和系统默认配置都可以，需要进行合并的key，例如user_module
     private static final String[] MULTI_KEY_ARRAY = {KEY_USER_MODULE_LIB_PATH};
 
-    private static final FeatureCodec codec = new FeatureCodec(';', '=');
+    private final FeatureCodec codec;
 
     private final Map<String, String> featureMap = new LinkedHashMap<String, String>();
 
@@ -122,9 +122,22 @@ public class CoreConfigure {
      */
     private final String simulatorVersion;
 
-    private CoreConfigure(final String featureString,
+    /**
+     * agentLauncherClass
+     */
+    private Class agentLauncherClass;
+
+    /**
+     * socket address
+     */
+    private InetSocketAddress socketAddress;
+
+    private CoreConfigure(final Class agentLauncherClass,
+                          final String featureString,
                           final String propertiesFilePath,
                           final Instrumentation instrumentation) {
+        this.agentLauncherClass = agentLauncherClass;
+        this.codec = new FeatureCodec(';', '=');
         final Map<String, String> featureMap = toFeatureMap(featureString);
         String appName = getProperty(featureMap, KEY_APP_NAME, KEY1_APP_NAME, KEY2_APP_NAME);
         if (appName == null) {
@@ -173,7 +186,7 @@ public class CoreConfigure {
      * @param md5FilePath md5文件路径
      * @return
      */
-    private static String readMd5(String md5FilePath) {
+    private String readMd5(String md5FilePath) {
         File md5File = new File(md5FilePath);
         if (!md5File.exists()) {
             return "";
@@ -373,14 +386,8 @@ public class CoreConfigure {
 
     }
 
-    private static volatile CoreConfigure instance;
-
-    public static CoreConfigure toConfigure(final String featureString, final String propertiesFilePath, final Instrumentation inst) {
-        return instance = new CoreConfigure(featureString, propertiesFilePath, inst);
-    }
-
-    public static CoreConfigure getInstance() {
-        return instance;
+    public static CoreConfigure toConfigure(final Class agentLauncherClass, final String featureString, final String propertiesFilePath, final Instrumentation inst) {
+        return new CoreConfigure(agentLauncherClass, featureString, propertiesFilePath, inst);
     }
 
     /**
@@ -587,12 +594,7 @@ public class CoreConfigure {
     }
 
     public String[] getUserModulePaths() {
-        if (isModuleRepositoryLocal()) {
-            return getUserModuleLibPaths();
-        } else if (isModuleRepositoryRemote()) {
-            return new String[]{getRemoteModuleRepositoryAddr()};
-        }
-        return null;
+        return getUserModuleLibPaths();
     }
 
     /**
@@ -651,7 +653,7 @@ public class CoreConfigure {
      *
      * @return 仿真器的启动模式
      */
-    public LoadMode getLaunchMode() {
+    public int getLaunchMode() {
         if (isLaunchByAgentMode()) {
             return LoadMode.AGENT;
         }
@@ -659,22 +661,6 @@ public class CoreConfigure {
             return LoadMode.ATTACH;
         }
         return LoadMode.ATTACH;
-    }
-
-    /**
-     * 获取模块仓库模式，默认为本地仓库模式
-     *
-     * @return 模块仓库模式
-     */
-    public ModuleRepositoryMode getModuleRepositoryMode() {
-        if (isModuleRepositoryLocal()) {
-            return ModuleRepositoryMode.LOCAL;
-        }
-
-        if (isModuleRepositoryRemote()) {
-            return ModuleRepositoryMode.REMOTE;
-        }
-        return ModuleRepositoryMode.LOCAL;
     }
 
     /**
@@ -722,6 +708,24 @@ public class CoreConfigure {
      */
     public int getServerPort() {
         return NumberUtils.toInt(featureMap.get(KEY_SERVER_PORT), 0);
+    }
+
+    /**
+     * get server socket
+     *
+     * @return
+     */
+    public InetSocketAddress getServerAddress() {
+        return socketAddress;
+    }
+
+    /**
+     * set socket address
+     *
+     * @param socketAddress
+     */
+    public void setSocketAddress(InetSocketAddress socketAddress) {
+        this.socketAddress = socketAddress;
     }
 
     /**
@@ -989,5 +993,14 @@ public class CoreConfigure {
      */
     public String getSimulatorMd5() {
         return md5;
+    }
+
+    /**
+     * get AgentLauncher class
+     *
+     * @return
+     */
+    public Class getAgentLauncherClass() {
+        return agentLauncherClass;
     }
 }

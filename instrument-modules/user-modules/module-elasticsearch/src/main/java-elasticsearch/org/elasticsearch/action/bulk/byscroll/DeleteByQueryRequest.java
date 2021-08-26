@@ -18,21 +18,9 @@ import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.support.IndicesOptions;
-import org.elasticsearch.common.logging.DeprecationLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.tasks.TaskId;
 
-import static org.elasticsearch.action.ValidateActions.addValidationError;
-
 public class DeleteByQueryRequest extends AbstractBulkByScrollRequest<DeleteByQueryRequest> implements IndicesRequest.Replaceable {
-
-    private static final DeprecationLogger DEPRECATION_LOGGER = new DeprecationLogger(Loggers.getLogger(DeleteByQueryRequest.class));
-
-    public DeleteByQueryRequest() {
-    }
-
-    public DeleteByQueryRequest(SearchRequest search) {
-    }
 
     @Override
     protected DeleteByQueryRequest self() {

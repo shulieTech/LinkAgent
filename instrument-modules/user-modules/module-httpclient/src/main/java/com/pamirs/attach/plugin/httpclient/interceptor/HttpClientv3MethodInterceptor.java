@@ -14,28 +14,35 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSONObject;
 
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.URI;
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.params.DefaultHttpParams;
 import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.lang.StringUtils;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -60,7 +67,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeLast(Advice advice) {
+    public void beforeLast(Advice advice) throws ProcessControlException {
         Object[] args = advice.getParameterArray();
         try {
             final HttpMethod method = (HttpMethod) args[1];
@@ -70,12 +77,41 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             int port = method.getURI().getPort();
             String path = method.getURI().getPath();
             String url = getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
-            ClusterTestUtils.validateHttpClusterTest(url);
+            final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+            Header header = method.getRequestHeader(PradarService.PRADAR_WHITE_LIST_CHECK);
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());
+            config.addArgs("url", url);
+            config.addArgs("isInterface", Boolean.FALSE);
+            config.getStrategy().processNonBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+                @Override
+                public Object call(Object param) throws ProcessControlException {
+                    try {
+                        byte[] bytes = JSONObject.toJSONBytes(param);
+                        Reflect.on(method).set("responseBody", bytes);
+                        ProcessController.returnImmediately(200);
+                    } catch (ProcessControlException e) {
+                        throw e;
+                    }
+                    return true;
+                }
+
+                @Override
+                public Object forward(Object param) throws ProcessControlException {
+                    String forwarding = config.getForwarding();
+                    try {
+                        method.setURI(new URI(forwarding));
+                    } catch (URIException e) {
+                    }
+                    return null;
+                }
+            });
         } catch (URIException e) {
             LOGGER.error("", e);
             if (Pradar.isClusterTest()) {
                 throw new PressureMeasureError(e);
             }
+        } catch (ProcessControlException pce) {
+            throw pce;
         } catch (Throwable t) {
             LOGGER.error("", t);
             if (Pradar.isClusterTest()) {
@@ -197,7 +233,11 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             String msg = method.getURI().toString() + "->" + code;
             record.setResultCode(code + "");
             record.setResponse(msg);
-            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
+            /**
+             * http3的getResponseBody的方法会打印一下warn日志，考虑size没啥用，暂时去除
+             * org.apache.commons.httpclient.HttpMethodBase| Going to buffer response body of large or unknown size. Using getResponseBodyAsStream instead is recommended.
+             */
+//            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
             return record;
         } catch (Throwable e) {
             Pradar.responseSize(0);
@@ -219,7 +259,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
             record.setRequest(method.getParams());
             record.setResponse(advice.getThrowable());
-            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
+//            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
             return record;
         } catch (Throwable e) {
             Pradar.responseSize(0);

@@ -21,9 +21,11 @@ import com.pamirs.pradar.pressurement.agent.event.impl.MockConfigRemoveEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
+import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,14 +37,23 @@ import java.util.Set;
  * @since 2020/10/24 6:19 下午
  */
 public class MockConfigChanger implements IChange<Set<MockConfig>, ApplicationConfig> {
+    private final static Logger LOGGER = LoggerFactory.getLogger(MockConfigChanger.class);
 
-    private static final MockConfigChanger INSTANCE = new MockConfigChanger();
-
-    private MockConfigChanger() {
-    }
+    private static MockConfigChanger INSTANCE;
 
     public static MockConfigChanger getInstance() {
+        if (INSTANCE == null) {
+            synchronized (MockConfigChanger.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new MockConfigChanger();
+                }
+            }
+        }
         return INSTANCE;
+    }
+
+    public static void release() {
+        INSTANCE = null;
     }
 
     @Override
@@ -83,6 +94,7 @@ public class MockConfigChanger implements IChange<Set<MockConfig>, ApplicationCo
             EventRouter.router().publish(modifyEvent);
         }
         GlobalConfig.getInstance().setMockConfigs(newValue);
+        LOGGER.info("publish mock config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 

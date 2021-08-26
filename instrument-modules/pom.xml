@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.shulie.instrument.module</groupId>
+    <groupId>io.shulie.instrument.module</groupId>
     <artifactId>instrument-modules</artifactId>
     <version>1.0.0</version>
 
@@ -11,7 +11,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <simulator.version>1.0.0</simulator.version>
+        <simulator.version>5.0.0</simulator.version>
     </properties>
 
     <profiles>
@@ -154,21 +154,21 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-api</artifactId>
-            <version>1.0.1</version>
+            <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-base-api</artifactId>
-            <version>1.0.1</version>
+            <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.shulie.instrument.simulator</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-messager</artifactId>
-            <version>1.0.1</version>
+            <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

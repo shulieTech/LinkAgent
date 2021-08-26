@@ -14,8 +14,10 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
+import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
 import com.pamirs.pradar.CutOffResult;
+import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -24,6 +26,7 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/05/13 2:21 下午
  */
+@Destroyable(KafkaDestroy.class)
 public class ConsumerOtherMethodInterceptor extends AbstractProxiedConsumerInterceptor {
 
     @Override

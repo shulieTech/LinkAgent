@@ -36,6 +36,10 @@ public class RegisterFactory {
         registers.put(zkRegister.getName(), zkRegister);
     }
 
+    public static void release() {
+        registers.clear();
+    }
+
     /**
      * 获取注册器
      *

@@ -38,6 +38,10 @@ public final class BootLoaderFactory {
     private BootLoaderFactory() {
     }
 
+    public static void release() {
+        bootLoader = null;
+    }
+
     /**
      * 初始化 BootLoader
      * 如果是 java9及以后版本，则使用 Java9的 BootLoader

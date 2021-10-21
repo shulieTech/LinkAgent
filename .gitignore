@@ -15,6 +15,7 @@
 ### Common ###
 target
 logs
+deploy
 
 ### Project ###
 hadoop

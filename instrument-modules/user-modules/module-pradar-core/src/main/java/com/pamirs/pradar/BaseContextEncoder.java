@@ -50,6 +50,8 @@ class DefaultInvokeContextEncoder extends BaseContextEncoder {
         }
 
         //Pradar TODO
+        //traceId|日志是开时间|agentID|traceNode|nodeId|invokeId|日志类型|应用名称|开始应用名称|上游应用名称|耗时|中间件名称|服务名称|方法名称|ip|端口|
+        //响应结果编码|请求体长度|响应体长度|请求体序列化|响应结果序列化|是否压测
         StringBuilder buffer = this.buffer;
         buffer.delete(0, buffer.length());
         buffer.append(ctx.getTraceId() == null ? "" : ctx.getTraceId()).append('|')

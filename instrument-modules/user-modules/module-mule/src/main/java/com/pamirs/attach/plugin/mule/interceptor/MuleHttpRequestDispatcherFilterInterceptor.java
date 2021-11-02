@@ -67,7 +67,7 @@ public class MuleHttpRequestDispatcherFilterInterceptor extends AroundIntercepto
 
             config.addArgs("url", requestUri);
             config.addArgs("isInterface", Boolean.FALSE);
-            config.getStrategy().processBlock(advice.getClassLoader(), config);
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
     }
 

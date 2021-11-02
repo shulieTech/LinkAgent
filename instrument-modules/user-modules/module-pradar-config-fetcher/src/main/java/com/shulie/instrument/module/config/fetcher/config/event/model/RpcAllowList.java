@@ -54,7 +54,9 @@ public class RpcAllowList implements IChange<Set<MatchConfig>, ApplicationConfig
         GlobalConfig.getInstance().setRpcNameWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.RPC_WHITE_LIST);
         ArbiterHttpExit.clearRpcMatch();
-        LOGGER.info("publish rpc whitelist config successful. config={}", newValue);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish rpc whitelist config successful. config={}", newValue);
+        }
         // 变更后配置更新到内存
         return Boolean.TRUE;
     }

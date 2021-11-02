@@ -33,6 +33,7 @@ import com.pamirs.pradar.pressurement.datasource.util.SqlMetadataParser;
 import com.pamirs.pradar.upload.uploader.AgentOnlineUploader;
 import com.pamirs.pradar.utils.MonitorCollector;
 import com.shulie.instrument.module.pradar.core.handler.DefaultExceptionHandler;
+import com.shulie.instrument.module.pradar.core.handler.DefaultExecutionTagSupplier;
 import com.shulie.instrument.module.pradar.core.service.DefaultGlobalConfigService;
 import com.shulie.instrument.module.pradar.core.service.DefaultPradarInternalService;
 import com.shulie.instrument.module.pradar.core.service.DefaultPradarService;
@@ -64,7 +65,7 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
     private ModuleCommandInvoker moduleCommandInvoker;
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         //将simulator home路径和plugin相关的配置全部导入到system property中
         String home = simulatorConfig.getSimulatorHome();
         if (home != null) {
@@ -98,10 +99,15 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         /**
          * 注册自定义的异常处理器
          */
-        Messager.registerExceptionHandler(simulatorConfig.getNamespace(), new DefaultExceptionHandler());
+        Messager.registerExceptionHandler(new DefaultExceptionHandler());
+        /**
+         * 注册自定义的执行 tag 提供者
+         */
+        Messager.registerExecutionTagSupplier(new DefaultExecutionTagSupplier());
 
         monitorCollector = MonitorCollector.getInstance();
         monitorCollector.start();
+        return true;
     }
 
     @Override

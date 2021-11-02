@@ -14,8 +14,8 @@
  */
 package com.pamirs.attach.plugin.jdk.http.interceptor;
 
-
 import com.pamirs.attach.plugin.jdk.http.JdkHttpConstants;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.ContextTransfer;
@@ -23,18 +23,26 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
 
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 
+@ListenerBehavior(isFilterBusinessData = true)
 public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
     private final static String MARK_CONNECTING = "connecting";
     private final static String MARK_CONNECTED = "connected";
+
+    private static volatile Field CONNECTED_FiELD = null;
+    private static volatile Field CONNECTING_FiELD = null;
 
     private static String getService(String schema, String host, int port, String path) {
         String url = schema + "://" + host;
@@ -56,6 +64,9 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
         Object target = advice.getTarget();
         final HttpURLConnection request = (HttpURLConnection) target;
         final URL url = request.getURL();
@@ -73,7 +84,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "url");
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config);
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
     }
 
     @Override
@@ -95,19 +106,22 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        InnerWhiteListCheckUtil.check();
         Object target = advice.getTarget();
         final HttpURLConnection request = (HttpURLConnection) target;
 
         boolean connected = false;
         try {
-            connected = Reflect.on(target).get(JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
+            initConnectedField(target);
+            connected = Reflect.on(target).get(CONNECTED_FiELD);
         } catch (ReflectException e) {
             LOGGER.warn("{} has not field {}", target.getClass().getName(), JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
         }
 
         boolean connecting = false;
         try {
-            connecting = Reflect.on(target).get(JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
+            initConnectingField(target);
+            connecting = Reflect.on(target).get(CONNECTING_FiELD);
         } catch (ReflectException e) {
             LOGGER.warn("{} has not field {}", target.getClass().getName(), JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
         }
@@ -132,6 +146,26 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         return record;
     }
 
+    private void initConnectedField(Object target) {
+        if (CONNECTED_FiELD == null) {
+            synchronized (HttpURLConnectionInterceptor.class) {
+                if (CONNECTED_FiELD == null) {
+                    CONNECTED_FiELD = Reflect.on(target).field0(JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
+                }
+            }
+        }
+    }
+
+    private void initConnectingField(Object target) {
+        if (CONNECTING_FiELD == null) {
+            synchronized (HttpURLConnectionInterceptor.class) {
+                if (CONNECTING_FiELD == null) {
+                    CONNECTING_FiELD = Reflect.on(target).field0(JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
+                }
+            }
+        }
+    }
+
     @Override
     public SpanRecord afterTrace(Advice advice) {
         try {
@@ -142,6 +176,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
             }
             SpanRecord record = new SpanRecord();
             record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
+            InnerWhiteListCheckUtil.check();
             return record;
         } finally {
             advice.unMark(MARK_CONNECTING);
@@ -158,8 +193,14 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
                 return null;
             }
             SpanRecord record = new SpanRecord();
-            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+            if (advice.getThrowable() instanceof SocketTimeoutException) {
+                record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+            } else {
+                record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+            }
             record.setResponse(advice.getThrowable());
+            InnerWhiteListCheckUtil.check();
+
             return record;
         } finally {
             advice.unMark(MARK_CONNECTING);

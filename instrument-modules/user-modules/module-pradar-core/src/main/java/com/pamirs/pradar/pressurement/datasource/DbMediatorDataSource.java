@@ -14,6 +14,8 @@
  */
 package com.pamirs.pradar.pressurement.datasource;
 
+import com.pamirs.pradar.pressurement.datasource.util.SqlMetaData;
+
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -28,15 +30,6 @@ import java.util.logging.Logger;
  */
 @SuppressWarnings("all")
 public abstract class DbMediatorDataSource<T> {
-
-
-    protected String ptAppName;
-
-
-    protected String ptDbType;
-
-
-    protected String lowerCase;
 
     /**
      * <p>{@code } instances should NOT be constructed in
@@ -78,6 +71,11 @@ public abstract class DbMediatorDataSource<T> {
     protected String dbType = "";
 
     /**
+     * 业务数据库类型
+     */
+    protected volatile String bizDbType = "";
+
+    /**
      * url
      */
     protected String url;
@@ -86,6 +84,8 @@ public abstract class DbMediatorDataSource<T> {
      * 用户名
      */
     protected String username;
+
+    protected SqlMetaData sqlMetaData;
 
     /**
      * @param dataSource the dataSource to set
@@ -108,31 +108,6 @@ public abstract class DbMediatorDataSource<T> {
         this.dataSourcePerformanceTest = dataSourcePerformanceTest;
     }
 
-    public String getPtAppName() {
-        return ptAppName;
-    }
-
-    public void setPtAppName(String ptAppName) {
-        this.ptAppName = ptAppName;
-    }
-
-    public String getPtDbType() {
-        return ptDbType;
-    }
-
-    public void setPtDbType(String ptDbType) {
-        this.ptDbType = ptDbType;
-    }
-
-    public String getLowerCase() {
-        return lowerCase;
-    }
-
-    public void setLowerCase(String lowerCase) {
-        this.lowerCase = lowerCase;
-
-    }
-
     public abstract Connection getConnection() throws SQLException;
 
     public abstract Connection getConnection(String username, String password) throws SQLException;
@@ -150,6 +125,14 @@ public abstract class DbMediatorDataSource<T> {
     public abstract int getLoginTimeout() throws SQLException;
 
     public abstract Logger getParentLogger() throws Exception;
+
+    public SqlMetaData getSqlMetaData() {
+        return sqlMetaData;
+    }
+
+    public void setSqlMetaData(SqlMetaData sqlMetaData) {
+        this.sqlMetaData = sqlMetaData;
+    }
 
     /**
      * 关闭数据源

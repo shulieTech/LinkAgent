@@ -85,12 +85,4 @@ public class CallBeforeEvent extends CallEvent {
     public String getDesc() {
         return desc;
     }
-
-    @Override
-    public void destroy() {
-        super.destroy();
-        owner = null;
-        name = null;
-        desc = null;
-    }
 }

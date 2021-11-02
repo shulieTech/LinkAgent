@@ -30,7 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SimulatorGuard {
 
-    private Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
 
     private final ThreadLocal<AtomicInteger> guardThreadLocal = new ThreadLocal<AtomicInteger>() {
         @Override
@@ -46,7 +47,7 @@ public class SimulatorGuard {
      */
     public int enter() {
         final int referenceCount = guardThreadLocal.get().getAndIncrement();
-        if (logger.isDebugEnabled()) {
+        if (isDebugEnabled) {
             logger.debug("SIMULATOR: thread:{} enter protect:{}", Thread.currentThread(), referenceCount);
         }
         return referenceCount;
@@ -62,11 +63,11 @@ public class SimulatorGuard {
         assert referenceCount >= 0;
         if (referenceCount == 0) {
             guardThreadLocal.remove();
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: thread:{} exit protect:{} with clean", Thread.currentThread(), referenceCount);
             }
         } else if (referenceCount > 0) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: thread:{} exit protect:{}", Thread.currentThread(), referenceCount);
             }
         } else {

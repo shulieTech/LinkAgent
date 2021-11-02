@@ -20,8 +20,6 @@ import com.shulie.instrument.simulator.api.util.ThreadUnsafeSimulatorStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * 调用流程处理器
  * <p>
@@ -30,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class InvokeProcessor {
 
     private final Logger logger = LoggerFactory.getLogger(InvokeProcessor.class);
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
     /**
      * 事件监听器 ID
      */
@@ -51,7 +50,7 @@ class InvokeProcessor {
     /**
      * 调用流程处理器的运行状态¬
      */
-    final AtomicBoolean isRunning = new AtomicBoolean(true);
+    volatile boolean isRunning = true;
 
     /**
      * 调用流程处理器构建器
@@ -74,22 +73,23 @@ class InvokeProcessor {
      *
      * @return
      */
-    boolean isRunning() {
-        return isRunning.get();
+    final boolean isRunning() {
+        return isRunning;
     }
 
     /**
      * 清理
      */
-    void clean() {
-        if (!isRunning.compareAndSet(true, false)) {
+    final void clean() {
+        if (!isRunning) {
             return;
         }
+        isRunning = false;
         listener.clean();
         processRef.remove();
     }
 
-    InvokeProcess getOrCreate() {
+    final InvokeProcess getOrCreate() {
         InvokeProcess invokeProcess = processRef.get();
         if (invokeProcess == null) {
             invokeProcess = new InvokeProcess();
@@ -98,14 +98,14 @@ class InvokeProcessor {
         return invokeProcess;
     }
 
-    InvokeProcess get() {
+    final InvokeProcess get() {
         return processRef.get();
     }
 
     /**
      * clean if empty
      */
-    void cleanIfEmpty() {
+    final void cleanIfEmpty() {
         InvokeProcess process = get();
         if (process == null) {
             return;
@@ -122,12 +122,6 @@ class InvokeProcessor {
      * 当所有的栈被清空时表明当前的调用流程已经结束
      */
     class InvokeProcess {
-
-        /**
-         * 事件工厂，一个流程有一个单独的事件工厂
-         */
-        private final EventBuilderFactory eventBuilderFactory
-                = new EventBuilderFactory();
 
         /**
          * 一次方法调用流程的堆栈
@@ -152,9 +146,9 @@ class InvokeProcessor {
          *
          * @param invokeId 调用ID
          */
-        void pushInvokeId(int invokeId) {
+        final void pushInvokeId(int invokeId) {
             stack.push(invokeId);
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: push process-stack, process-id={};invoke-id={};deep={};listener={};",
                         stack.peekLast(),
                         invokeId,
@@ -169,9 +163,9 @@ class InvokeProcessor {
          *
          * @return 调用ID
          */
-        int popInvokeId() {
+        final int popInvokeId() {
             final int invokeId = stack.pop();
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 final int processId = stack.peekLast();
                 logger.debug("SIMULATOR: pop process-stack, process-id={};invoke-id={};deep={};listener={};",
                         processId,
@@ -182,7 +176,7 @@ class InvokeProcessor {
             }
             if (stack.isEmpty()) {
                 processRef.remove();
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: clean TLS: event-processor, listener={};", listenerId);
                 }
             }
@@ -194,7 +188,7 @@ class InvokeProcessor {
          *
          * @return 调用ID
          */
-        int getInvokeId() {
+        final int getInvokeId() {
             return stack.peek();
         }
 
@@ -203,7 +197,7 @@ class InvokeProcessor {
          *
          * @return 调用过程ID
          */
-        int getProcessId() {
+        final int getProcessId() {
             return stack.peekLast();
         }
 
@@ -212,7 +206,7 @@ class InvokeProcessor {
          *
          * @return TRUE:是；FALSE：否
          */
-        boolean isEmptyStack() {
+        final boolean isEmptyStack() {
             return stack.isEmpty();
         }
 
@@ -221,14 +215,14 @@ class InvokeProcessor {
          *
          * @return TRUE：需要忽略；FALSE：不需要忽略
          */
-        boolean isIgnoreProcess() {
+        final boolean isIgnoreProcess() {
             return isIgnoreProcess;
         }
 
         /**
          * 标记调用过程需要被忽略
          */
-        void markIgnoreProcess() {
+        final void markIgnoreProcess() {
             isIgnoreProcess = true;
         }
 
@@ -238,7 +232,7 @@ class InvokeProcessor {
          *
          * @return TRUE:来自于；FALSE：不来自于
          */
-        boolean rollingIsExceptionFromImmediately() {
+        final boolean rollingIsExceptionFromImmediately() {
             if (isExceptionFromImmediately) {
                 isExceptionFromImmediately = false;
                 return true;
@@ -249,18 +243,8 @@ class InvokeProcessor {
         /**
          * 标记当前调用异常来自于ImmediatelyThrowsException
          */
-        void markExceptionFromImmediately() {
+        final void markExceptionFromImmediately() {
             isExceptionFromImmediately = true;
         }
-
-        /**
-         * 获取事件工厂
-         *
-         * @return 事件工厂
-         */
-        EventBuilderFactory getEventFactory() {
-            return eventBuilderFactory;
-        }
-
     }
 }

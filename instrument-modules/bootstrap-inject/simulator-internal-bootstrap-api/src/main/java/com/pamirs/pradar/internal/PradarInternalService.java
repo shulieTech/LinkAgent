@@ -166,6 +166,12 @@ public class PradarInternalService {
         service.startTrace(traceId, invokeId, serviceName, methodName);
     }
 
+    public static void startTrace(String traceId, String invokeId, String serviceName, String methodName, String middlewareName) {
+        if (service == null) {
+            return;
+        }
+        service.startTrace(traceId, invokeId, serviceName, methodName,middlewareName);
+    }
 
     public static void setClusterTest(boolean isClusterTest) {
         if (service == null) {

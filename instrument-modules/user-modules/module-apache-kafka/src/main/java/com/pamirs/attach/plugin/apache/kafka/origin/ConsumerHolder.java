@@ -14,20 +14,15 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -37,7 +32,8 @@ public class ConsumerHolder {
 
     public static boolean isZTO;
 
-    private static final Logger log = LoggerFactory.getLogger(ConsumerHolder.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConsumerHolder.class);
+    private static final boolean isInfoEnabled = logger.isInfoEnabled();
 
     static {
         try {
@@ -51,16 +47,21 @@ public class ConsumerHolder {
     private static final Set<Consumer<?, ?>> WORK_WITH_SPRING = Collections.synchronizedSet(
             new HashSet<Consumer<?, ?>>());
 
-    private static final Map<KafkaConsumer, ConsumerProxy> PROXY_MAPPING = new HashMap<KafkaConsumer, ConsumerProxy>();
+    private static final Map<Integer, ConsumerProxy> PROXY_MAPPING = new HashMap<Integer, ConsumerProxy>();
+    /**
+     * key topic+groupid
+     * value 业务消费组consumer对象的hashcode
+     */
+    private static final Map<String, Integer> SHADOW_PROXY_MAPPING = new HashMap<String, Integer>();
 
-    private final static Map<KafkaConsumer, ConsumerMetaData> cache = new ConcurrentHashMap();
+    private final static Map<Integer, ConsumerMetaData> cache = new ConcurrentHashMap();
 
     public static void release() {
         WORK_WITH_SPRING.clear();
         cache.clear();
-        Iterator<Map.Entry<KafkaConsumer, ConsumerProxy>> it = PROXY_MAPPING.entrySet().iterator();
+        Iterator<Map.Entry<Integer, ConsumerProxy>> it = PROXY_MAPPING.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<KafkaConsumer, ConsumerProxy> entry = it.next();
+            Map.Entry<Integer, ConsumerProxy> entry = it.next();
             it.remove();
             Consumer consumer = entry.getValue().getPtConsumer();
             if (consumer != null) {
@@ -79,7 +80,7 @@ public class ConsumerHolder {
     }
 
     public static ConsumerProxy getProxy(Object target) {
-        return PROXY_MAPPING.get(target);
+        return PROXY_MAPPING.get(System.identityHashCode(target));
     }
 
     public static ConsumerMetaData getConsumerMetaData(KafkaConsumer consumer) {
@@ -89,28 +90,53 @@ public class ConsumerHolder {
                 consumerMetaData = cache.get(consumer);
                 if (consumerMetaData == null) {
                     consumerMetaData = ConsumerMetaData.build(consumer);
-                    cache.put(consumer, consumerMetaData);
+                    cache.put(System.identityHashCode(consumer), consumerMetaData);
                 }
             }
         }
         return consumerMetaData;
     }
 
+    private static String getConsumerMetaDataKey(ConsumerMetaData consumerMetaData){
+        StringBuilder s= new StringBuilder();
+        for (Object key : consumerMetaData.getTopics().toArray()){
+            s.append(key).append("#");
+        }
+        s.append(consumerMetaData.getGroupId());
+        return s.toString();
+    }
+
+    public static Map<Integer, ConsumerProxy> getProxyMapping() {
+        return PROXY_MAPPING;
+    }
+
+    public static Map<String, Integer> getShadowProxyMapping() {
+        return SHADOW_PROXY_MAPPING;
+    }
+
+    public static Map<Integer, ConsumerMetaData> getCache() {
+        return cache;
+    }
+
     public static ConsumerProxy getProxyOrCreate(KafkaConsumer consumer, long timeout) {
+        int code = System.identityHashCode(consumer);
         ConsumerMetaData consumerMetaData = getConsumerMetaData(consumer);
-        ConsumerProxy consumerProxy = ConsumerHolder.PROXY_MAPPING.get(consumer);
+        ConsumerProxy consumerProxy = ConsumerHolder.PROXY_MAPPING.get(code);
         if (consumerProxy == null) {
             synchronized (ConsumerHolder.PROXY_MAPPING) {
-                consumerProxy = ConsumerHolder.PROXY_MAPPING.get(consumer);
+                consumerProxy = ConsumerHolder.PROXY_MAPPING.get(code);
                 if (consumerProxy == null) {
                     try {
                         consumerProxy = new ConsumerProxy(consumer, consumerMetaData, getAllowMaxLag(), timeout);
-                        log.info("shadow consumer create successful! with biz group id : {} biz topic : {} pt group id : {} pt_topic : {}",
-                            consumerMetaData.getGroupId(), consumerMetaData.getTopics(),
-                            consumerMetaData.getPtGroupId(), consumerMetaData.getShadowTopics());
-                        ConsumerHolder.PROXY_MAPPING.put(consumer, consumerProxy);
+                        if (isInfoEnabled) {
+                            logger.info("shadow consumer create successful! with biz group id : {} biz topic : {} pt group id : {} pt_topic : {}",
+                                    consumerMetaData.getGroupId(), consumerMetaData.getTopics(),
+                                    consumerMetaData.getPtGroupId(), consumerMetaData.getShadowTopics());
+                        }
+                        ConsumerHolder.PROXY_MAPPING.put(code, consumerProxy);
+                        ConsumerHolder.SHADOW_PROXY_MAPPING.put(getConsumerMetaDataKey(consumerMetaData), code);
                     } catch (Exception e) {
-                        log.error("shadow consumer create fail!", e);
+                        logger.error("shadow consumer create fail!", e);
                         return null;
                     }
                 }

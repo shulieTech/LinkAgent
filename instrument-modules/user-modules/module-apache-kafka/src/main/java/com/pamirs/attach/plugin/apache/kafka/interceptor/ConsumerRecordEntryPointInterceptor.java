@@ -23,22 +23,27 @@ import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
+import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.BytesUtils;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.Node;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
@@ -48,6 +53,7 @@ import org.apache.kafka.common.header.Headers;
  * @Date 2019-08-05 19:34
  */
 @Destroyable(KafkaDestroy.class)
+@ListenerBehavior(isNoSilence = true)
 public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor {
     @Resource
     protected DynamicFieldManager manager;
@@ -85,7 +91,28 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         long consumerCell = System.currentTimeMillis() - consumerRecord.timestamp();
         String remoteAddress = null;
         if (args.length >= 3) {
-            remoteAddress = getRemoteAddress(args[2]);
+            remoteAddress = KafkaUtils.getRemoteAddress(args[2], manager);
+        }
+        if (remoteAddress == null) {
+            Object metadata = Reflect.on(consumer).get("metadata");
+            Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
+            Iterable<Node> nodes = null;
+            if (cluster != null) {
+                nodes = Reflect.on(cluster).get("nodes");
+            } else {
+                Object cache = ReflectUtil.reflectSlience(metadata, "cache");
+                if (cache != null) {
+                    nodes = ReflectUtil.reflectSlience(cache, "nodes");
+                }
+            }
+            StringBuilder sb = new StringBuilder();
+            if (nodes != null) {
+                for (Node node : nodes) {
+                    sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
+                        .toString()).append(",");
+                }
+                remoteAddress = sb.toString();
+            }
         }
         String group = null;
         if (groupGlobal == null) {
@@ -97,14 +124,15 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                     Field groupId = ReflectUtil.getField(consumer, "groupId");
                     group = (String)groupId.get(consumer);
                 } catch (Throwable e) {
-                    LOGGER.warn("groupId filed error {}", e);
+                    Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
+                    group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
                     groupGlobal = Thread.currentThread().getName().split("-")[0];
                 }
             }
         }
 
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setRemoteIp(remoteAddress == null ? "172.0.0.1:9092" : remoteAddress);
+        spanRecord.setRemoteIp(remoteAddress == null ? "127.0.0.1:9092" : remoteAddress);
         if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
             HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(consumerRecord);
             Map<String, String> ctx = headerProcessor.getHeaders(consumerRecord);
@@ -115,16 +143,6 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         spanRecord.setMethod(group == null ? groupGlobal : group);
         spanRecord.setCallbackMsg(consumerCell + "");
         return spanRecord;
-    }
-
-    private String getRemoteAddress(Object remoteAddressFieldAccessor) {
-        String remoteAddress = manager.removeField(remoteAddressFieldAccessor, KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS);
-
-        if (StringUtils.isEmpty(remoteAddress)) {
-            return KafkaConstants.UNKNOWN;
-        } else {
-            return remoteAddress;
-        }
     }
 
     @Override
@@ -167,6 +185,9 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         }
         if (isClusterTest) {
             Pradar.setClusterTest(true);
+        }
+        if (PradarService.isSilence() && isClusterTest) {
+            throw new PressureMeasureError("[kafka check]silence module ! can not handle cluster test data");
         }
     }
 }

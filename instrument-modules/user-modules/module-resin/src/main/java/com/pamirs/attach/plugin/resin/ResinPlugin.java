@@ -35,7 +35,7 @@ import org.kohsuke.MetaInfServices;
 public class ResinPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         enhanceTemplate.enhance(this, "com.caucho.server.http.HttpServletRequestImpl", new EnhanceCallback() {
             @Override
@@ -56,6 +56,7 @@ public class ResinPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 }
             }
         });
+        return true;
     }
 
 }

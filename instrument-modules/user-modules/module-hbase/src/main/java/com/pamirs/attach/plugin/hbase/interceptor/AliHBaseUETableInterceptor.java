@@ -16,6 +16,8 @@ package com.pamirs.attach.plugin.hbase.interceptor;
 
 import com.pamirs.attach.plugin.hbase.HbaseConstants;
 import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -45,7 +47,7 @@ public class AliHBaseUETableInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         return spanRecord;
     }
@@ -57,7 +59,7 @@ public class AliHBaseUETableInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         spanRecord.setResponse(advice.getReturnObj());
         return spanRecord;
@@ -69,15 +71,19 @@ public class AliHBaseUETableInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         spanRecord.setResponse(advice.getThrowable());
+        spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         return spanRecord;
     }
 
 
     private String getTableName(AliHBaseUETable target) {
         String nameAsString = target.getName().getNameAsString();
+        if(Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(nameAsString)){
+            nameAsString = Pradar.addClusterTestPrefix(nameAsString);
+        }
         return nameAsString;
     }
 }

@@ -35,7 +35,7 @@ import org.kohsuke.MetaInfServices;
 public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         addDdlTracer();
 
         enhanceTemplate.enhance(this, "com.flipkart.hbaseobjectmapper.WrappedHBTable", new EnhanceCallback() {
@@ -84,6 +84,17 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
         enhanceTemplate.enhance(this, "org.apache.hadoop.hbase.ipc.AbstractRpcClient", new RpcClientImplTransform());
 
 
+        enhanceTemplate.enhance(this, "org.hbase.async.HBaseClient", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+
+                InstrumentMethod method = target.getDeclaredMethod("sendRpcToRegion", "org.hbase.async.HBaseRpc");
+                method.addInterceptor(Listeners.of(AsyncHbaseMethodInterceptor.class));
+
+            }
+        });
+
+        //影子表模式
         enhanceTemplate.enhance(this, "org.apache.hadoop.hbase.TableName", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -104,6 +115,7 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+        //影子表模式
         enhanceTemplate.enhance(this, "com.alibaba.lindorm.client.core.LindormWideColumnService",
                 new EnhanceCallback() {
                     @Override
@@ -449,17 +461,8 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
-        enhanceTemplate.enhance(this, "org.hbase.async.HBaseClient", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
 
-                InstrumentMethod method = target.getDeclaredMethod("sendRpcToRegion", "org.hbase.async.HBaseRpc");
-                method.addInterceptor(Listeners.of(AsyncHbaseMethodInterceptor.class));
-
-            }
-        });
-
-
+        return true;
     }
 
     public static class RpcClientImplTransform implements EnhanceCallback {

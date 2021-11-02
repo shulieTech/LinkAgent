@@ -14,9 +14,13 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
-import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
@@ -25,18 +29,14 @@ import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
-
-import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @Author: guohz
@@ -70,7 +70,7 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
             }
         } catch (Throwable e) {
             if (e instanceof ReflectException) {
-                throw (ReflectException) e;
+                throw (ReflectException)e;
             }
             Reflect.on(target).set(RabbitmqConstants.REFLECT_FIELD_HEADERS, value);
         }
@@ -81,8 +81,8 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
         ClusterTestUtils.validateClusterTest();
         Object[] args = advice.getParameterArray();
         if (Pradar.isClusterTest()) {
-            String exchange = (String) args[0];
-            String routingKey = (String) args[1];
+            String exchange = (String)args[0];
+            String routingKey = (String)args[1];
             if (!StringUtils.isBlank(exchange)) {
                 if (!Pradar.isClusterTestPrefix(exchange)) {
                     exchange = Pradar.addClusterTestPrefix(exchange);
@@ -91,7 +91,7 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
             }
 
             if (PradarSwitcher.isRabbitmqRoutingkeyEnabled()
-                    && !StringUtils.isEmpty(routingKey)) {
+                && !StringUtils.isEmpty(routingKey)) {
                 if (!Pradar.isClusterTestPrefix(routingKey)) {
                     routingKey = Pradar.addClusterTestPrefix(routingKey);
                     args[1] = routingKey;
@@ -106,8 +106,9 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
-        AMQP.BasicProperties properties = (AMQP.BasicProperties) args[4];
-        final Map<String, Object> headers = properties.getHeaders() == null ? new HashMap<String, Object>() : new HashMap<String, Object>(properties.getHeaders());
+        AMQP.BasicProperties properties = (AMQP.BasicProperties)args[4];
+        final Map<String, Object> headers = properties.getHeaders() == null ? new HashMap<String, Object>()
+            : new HashMap<String, Object>(properties.getHeaders());
         headers.putAll(Pradar.getInvokeContextTransformMap());
 
         if (headers.containsKey(X_ORIGINAL_ROUTINGKEY)) {
@@ -135,11 +136,15 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
             return null;
         }
 
-        String exchange = (String) args[0];
-        String routingKey = (String) args[1];
-        byte[] body = (byte[]) args[5];
+        String exchange = (String)args[0];
+        String routingKey = (String)args[1];
+        byte[] body = (byte[])args[5];
 
         SpanRecord record = new SpanRecord();
+        Channel channel = (Channel)advice.getTarget();
+        Connection connection = channel.getConnection();
+        record.setRemoteIp(connection.getAddress().getHostAddress());
+        record.setPort(connection.getPort() + "");
         record.setService(exchange);
         record.setMethod(routingKey);
         record.setRequestSize(body.length);

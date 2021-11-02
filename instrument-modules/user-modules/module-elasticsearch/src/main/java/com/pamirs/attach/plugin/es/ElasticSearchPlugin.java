@@ -36,10 +36,11 @@ import org.kohsuke.MetaInfServices;
 public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         System.setProperty("es.set.netty.runtime.available.processors", "false");
         addTransportClientInterceptor();
         addRestClientInterceptor();
+        return true;
     }
 
     private void addTransportClientInterceptor() {

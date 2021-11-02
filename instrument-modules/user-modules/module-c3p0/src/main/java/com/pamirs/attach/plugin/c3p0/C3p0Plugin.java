@@ -41,7 +41,7 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
     private static Logger logger = LoggerFactory.getLogger(C3p0Plugin.class);
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "com.mchange.v2.c3p0.impl.AbstractPoolBackedDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -53,5 +53,6 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
 
             }
         });
+        return true;
     }
 }

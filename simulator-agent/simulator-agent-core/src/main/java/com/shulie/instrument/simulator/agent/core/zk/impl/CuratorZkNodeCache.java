@@ -155,7 +155,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
             try {
                 dataToSet = ZipCompressionProvider.decompress(path, newData);
             } catch (Throwable e) {
-                logger.warn("fail to decompress NodeCache of path={}", path, e);
+                logger.error("fail to decompress NodeCache of path={}", path, e);
                 return;
             }
         } else {
@@ -221,7 +221,7 @@ public class CuratorZkNodeCache implements ZkNodeCache {
                 logger.trace("WatchedEvent: {}", event.getType());
                 reset();
             } catch (Throwable e) {
-                logger.warn("fail to reset in watch event, path={}", path, e);
+                logger.error("fail to reset in watch event, path={}", path, e);
             }
         }
     };

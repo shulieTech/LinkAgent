@@ -32,11 +32,11 @@ import org.kohsuke.MetaInfServices;
 public class JettyPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
-        addServerInterceptor();
+    public boolean onActive() throws Throwable {
+        return addServerInterceptor();
     }
 
-    private void addServerInterceptor() {
+    private boolean addServerInterceptor() {
         enhanceTemplate.enhance(this, "org.eclipse.jetty.server.handler.HandlerWrapper", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -65,6 +65,7 @@ public class JettyPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 startAsyncMethod0.addInterceptor(Listeners.of(RequestStartAsyncInterceptor.class));
             }
         });
+        return true;
     }
 
 }

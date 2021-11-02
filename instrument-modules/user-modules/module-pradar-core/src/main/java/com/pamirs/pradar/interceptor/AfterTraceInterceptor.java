@@ -198,6 +198,7 @@ abstract class AfterTraceInterceptor extends BaseInterceptor {
              */
             Pradar.setInvokeContext(ctx);
             advice.mark(BEFORE_TRACE_SUCCESS);
+            advice.setInvokeContext(ctx);
         }
     }
 

@@ -96,16 +96,18 @@ public class StandardHostValveInvokeInterceptor extends AroundInterceptor implem
         Request request = (Request) advice.getParameterArray()[0];
         Response response = (Response) advice.getParameterArray()[1];
         if (servletApiHelper.isAsyncDispatcherBefore(request)) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Skip async servlet request event. isAsyncStarted={}, dispatcherType={}", request.isAsyncStarted(), request.getDispatcherType());
-            }
             return;
         }
+        boolean isStartTrace = false;
         try {
-            advice.changeParameter(0, CatalinaVersion.getRequest(request));
-            requestTracer.startTrace(request, response, Pradar.WEB_SERVER_NAME);
+            isStartTrace = requestTracer.startTrace(request, response, Pradar.WEB_SERVER_NAME);
+            if (isStartTrace) {
+                advice.changeParameter(0, CatalinaVersion.getRequest(request));
+            }
         } finally {
-            advice.mark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS);
+            if (isStartTrace) {
+                advice.mark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS);
+            }
         }
     }
 
@@ -121,10 +123,10 @@ public class StandardHostValveInvokeInterceptor extends AroundInterceptor implem
     @Override
     public void doAfter(Advice advice) throws Throwable {
         try {
-            Response response = (Response) advice.getParameterArray()[1];
             if (!advice.hasMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS)) {
                 return;
             }
+            Response response = (Response) advice.getParameterArray()[1];
             Request request = (Request) advice.getParameterArray()[0];
             if (servletApiHelper.isAsyncDispatcherAfter(request)) {
                 if (logger.isDebugEnabled()) {

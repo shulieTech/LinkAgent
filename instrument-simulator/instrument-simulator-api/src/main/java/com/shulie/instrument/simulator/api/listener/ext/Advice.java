@@ -16,7 +16,6 @@ package com.shulie.instrument.simulator.api.listener.ext;
 
 import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.event.InvokeEvent;
-import com.shulie.instrument.simulator.api.util.LazyGet;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -46,7 +45,8 @@ public class Advice implements Attachment {
 
     private Class targetClass;
     private WeakReference<ClassLoader> classLoader;
-    private LazyGet<Behavior> behaviorLazyGet;
+    private Behavior behavior;
+    private String behaviorName;
     private Object[] parameterArray;
     private Object target;
 
@@ -54,17 +54,21 @@ public class Advice implements Attachment {
     private Throwable throwable;
 
     private Object attachment;
+    private Object callTarget;
     private Set<String> marks = new HashSet<String>();
 
     private Advice top = this;
     private Advice parent = this;
     private int state = EventType.BEFORE;
 
+    private Object invokeContext;
+
     /**
      * 构造通知
      *
      * @param processId       {@link InvokeEvent#getProcessId()}
      * @param invokeId        {@link InvokeEvent#getInvokeId()}
+     * @param behaviorName    行为名称
      * @param behaviorLazyGet 触发事件的行为(懒加载)
      * @param classLoader     触发事件的行为所在ClassLoader
      * @param parameterArray  触发事件的行为入参
@@ -72,14 +76,16 @@ public class Advice implements Attachment {
      */
     Advice(final int processId,
            final int invokeId,
-           final LazyGet<Behavior> behaviorLazyGet,
+           final String behaviorName,
+           final Behavior behaviorLazyGet,
            final Class targetClass,
            final ClassLoader classLoader,
            final Object[] parameterArray,
            final Object target) {
         this.processId = processId;
         this.invokeId = invokeId;
-        this.behaviorLazyGet = behaviorLazyGet;
+        this.behaviorName = behaviorName;
+        this.behavior = behaviorLazyGet;
         this.targetClass = targetClass;
         if (classLoader != null) {
             this.classLoader = new WeakReference<ClassLoader>(classLoader);
@@ -170,7 +176,16 @@ public class Advice implements Attachment {
      * @return 触发事件的行为
      */
     public Behavior getBehavior() {
-        return behaviorLazyGet.get();
+        return behavior;
+    }
+
+    /**
+     * 获取方法名称
+     *
+     * @return
+     */
+    public String getBehaviorName() {
+        return behaviorName;
     }
 
     /**
@@ -351,12 +366,48 @@ public class Advice implements Attachment {
     }
 
     /**
+     * 获取绑定的上下文信息
+     *
+     * @return
+     */
+    public Object getInvokeContext() {
+        return invokeContext;
+    }
+
+    /**
+     * 绑定当前上下文
+     *
+     * @param invokeContext
+     */
+    public void setInvokeContext(Object invokeContext) {
+        this.invokeContext = invokeContext;
+    }
+
+    /**
+     * 设置当前 advice 下的 call 对象
+     *
+     * @param callTarget
+     */
+    public void setCallTarget(Object callTarget) {
+        this.callTarget = callTarget;
+    }
+
+    /**
+     * 获取当前 advice 下的 call 对象
+     *
+     * @return
+     */
+    public Object getCallTarget() {
+        return callTarget;
+    }
+
+    /**
      * 销毁 advice
      */
     public void destroy() {
         targetClass = null;
         classLoader = null;
-        behaviorLazyGet = null;
+        behavior = null;
         parameterArray = null;
         target = null;
         returnObj = null;
@@ -365,6 +416,7 @@ public class Advice implements Attachment {
         marks = null;
         top = null;
         parent = null;
+        invokeContext = null;
     }
 }
 

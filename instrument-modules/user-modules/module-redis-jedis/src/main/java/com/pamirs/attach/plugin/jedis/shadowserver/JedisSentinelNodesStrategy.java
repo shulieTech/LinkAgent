@@ -15,18 +15,18 @@
 package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
-import com.pamirs.attach.plugin.jedis.RedisConstants;
-import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisSentinelPool;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @Author qianfan
- * @package: com.pamirs.attach.plugin.lettuce.factory
+ * @package: jedis sentinel
  * @Date 2020/11/26 11:23 上午
  */
 public class JedisSentinelNodesStrategy implements RedisServerNodesStrategy {
@@ -36,18 +36,33 @@ public class JedisSentinelNodesStrategy implements RedisServerNodesStrategy {
     @Override
     public List<String> match(Object obj) {
         List<String> nodes = new ArrayList<String>();
+        String master = null;
         try {
-            JedisConstructorConfig jedisConfig = RedisConstants.jedisInstance.get(obj);
-            if (CollectionUtils.isNotEmpty(jedisConfig.getSentinels())) {
-                nodes.addAll(jedisConfig.getSentinels());
+            if (Jedis.class.isAssignableFrom(obj.getClass())) {
+                Object datasource = Reflect.on(obj).get("dataSource");
+                if (datasource == null || !(datasource instanceof JedisSentinelPool)) {
+                    return Collections.emptyList();
+                }
+                HashSet masterListeners = Reflect.on(datasource).get("masterListeners");
+                if (CollectionUtils.isEmpty(masterListeners)) {
+                    return nodes;
+                }
+                //masterListeners是一个内部类(JedisSentinelPool$MasterListener)，不能直接访问，用反射访问
+                Iterator iterator = masterListeners.iterator();
+
+                while (iterator.hasNext()) {
+                    Object next = iterator.next();
+                    Reflect t = Reflect.on(next);
+                    master = t.get("masterName");
+                    String host = t.get("host");
+                    String port = String.valueOf(t.get("port"));
+                    nodes.add(host.concat(":").concat(port));
+                }
             }
+            nodes.add(master);
         } catch (Throwable e) {
             LOGGER.error("", e);
         }
         return nodes;
-    }
-
-    public String getKey(String host, int port) {
-        return host + ":" + port;
     }
 }

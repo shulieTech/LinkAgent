@@ -32,7 +32,7 @@ import org.kohsuke.MetaInfServices;
 public class HttpServerPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "com.sun.net.httpserver.Filter$Chain", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -40,5 +40,6 @@ public class HttpServerPlugin extends ModuleLifecycleAdapter implements Extensio
                 method.addInterceptor(Listeners.of(FilterChainDoFilterInterceptor.class, "HTTPSERVER_DO_FILTER", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
+        return true;
     }
 }

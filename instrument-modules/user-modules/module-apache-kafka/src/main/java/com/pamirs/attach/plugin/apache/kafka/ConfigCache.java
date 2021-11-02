@@ -12,10 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.apache.kafka;
+package com.pamirs.attach.plugin.apache.kafka.util;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -28,6 +30,7 @@ public final class ConfigCache {
     private static Map<Integer, String> groups = new HashMap<Integer, String>();
     private static ConcurrentMap<Integer, Boolean> isInited = new ConcurrentHashMap<Integer, Boolean>();
 
+
     public static void release() {
         servers.clear();
         groups.clear();
@@ -36,13 +39,19 @@ public final class ConfigCache {
 
     public static boolean isInited(Object target) {
         int code = System.identityHashCode(target);
-        Boolean old = isInited.putIfAbsent(code, Boolean.TRUE);
-        if (old != null) {
-            return true;
-        }
-        return false;
+        return isInited.get(code) != null && isInited.get(code);
     }
 
+    public static void setInited(Object target) {
+        int code = System.identityHashCode(target);
+        isInited.put(code, true);
+
+    }
+
+
+    public static ConcurrentMap<Integer, Boolean> getIsInited() {
+        return isInited;
+    }
 
     public static void setServers(Object target, String server) {
         servers.put(System.identityHashCode(target), server);

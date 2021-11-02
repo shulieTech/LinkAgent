@@ -190,7 +190,7 @@ public class JadModule extends ParamSupported implements ExtensionModule {
             Set<Class<?>> matchedClasses = loadedClassDataSource.find(new NameRegexFilter(cnPattern, ".*", true, true));
             if (matchedClasses == null || matchedClasses.isEmpty()) {
                 return processNoMatch(cnPattern);
-            } else if (matchedClasses.size() > 1) {
+            } else if (matchedClasses.size() > 1 && classloader == null) {
                 return processMatches(matchedClasses, cnPattern);
             } else { // matchedClasses size is 1
                 // find inner classes.

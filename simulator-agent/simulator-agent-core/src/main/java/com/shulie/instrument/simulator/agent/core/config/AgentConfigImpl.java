@@ -19,6 +19,8 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -79,16 +81,6 @@ public class AgentConfigImpl implements AgentConfig {
     }
 
     @Override
-    public String getNamespace() {
-        return coreConfig.getNamespace();
-    }
-
-    @Override
-    public String getToken() {
-        return coreConfig.getToken();
-    }
-
-    @Override
     public String getZkServers() {
         return coreConfig.getZkServers();
     }
@@ -110,7 +102,7 @@ public class AgentConfigImpl implements AgentConfig {
 
     @Override
     public String getAppName() {
-        return coreConfig.getAppName();
+        return coreConfig.getAppName() == null ? "default" : coreConfig.getAppName();
     }
 
     @Override
@@ -177,6 +169,11 @@ public class AgentConfigImpl implements AgentConfig {
     @Override
     public String getTroWebUrl() {
         return coreConfig.getTroWebUrl();
+    }
+
+    @Override
+    public Map<String, String> getAgentFileConfigs() {
+        return Collections.unmodifiableMap(coreConfig.getAgentFileConfigs());
     }
 
     /**

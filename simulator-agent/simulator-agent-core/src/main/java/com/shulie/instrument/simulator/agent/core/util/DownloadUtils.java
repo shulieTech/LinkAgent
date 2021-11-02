@@ -46,7 +46,7 @@ public class DownloadUtils {
     private static final String QUESTION_DELIMITER = "?";
     private static final String CHARSET = "utf-8";
 
-    public static File download(String path, String downloadDir) {
+    public static File download(String path, String downloadDir, String userAppKey) {
         if (StringUtils.startsWith(path, "http://") || StringUtils.startsWith(path, "https://")) {
             try {
                 // 统一资源
@@ -62,6 +62,7 @@ public class DownloadUtils {
                 httpURLConnection.setRequestMethod("GET");
                 httpURLConnection.setRequestProperty("Content-Type", "application/octet-stream");
                 httpURLConnection.setRequestProperty("Connection", "Keep-Alive");
+                httpURLConnection.setRequestProperty("userAppKey", userAppKey);
                 // 设置字符编码
                 httpURLConnection.setRequestProperty("Charset", "UTF-8");
                 httpURLConnection.setConnectTimeout(3000);
@@ -74,7 +75,7 @@ public class DownloadUtils {
 
                 // 文件名
                 String fileFullName = getFileName(httpURLConnection);
-                if (fileFullName != null && fileFullName.indexOf('?') != -1) {
+                if (fileFullName.indexOf('?') != -1) {
                     fileFullName = fileFullName.substring(0, fileFullName.indexOf('?'));
                 }
 
@@ -175,5 +176,4 @@ public class DownloadUtils {
         }
         return result;
     }
-
 }

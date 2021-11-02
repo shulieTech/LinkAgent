@@ -14,12 +14,11 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.common;
 
+import com.pamirs.pradar.Pradar;
+import com.rabbitmq.client.Consumer;
+
 import java.util.Collections;
 import java.util.Map;
-
-import com.rabbitmq.client.Consumer;
-import com.rabbitmq.client.impl.recovery.RecordedConsumer;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -27,29 +26,40 @@ import com.shulie.instrument.simulator.api.reflect.Reflect;
  */
 public class ConsumerMetaData {
 
-    private final String queue;
+    private String queue;
+    private String ptQueue;
     private final String consumerTag;
+    private final String ptConsumerTag;
     private final Consumer consumer;
     private final boolean exclusive;
     private final boolean autoAck;
+    private final int prefetchCount;
+    private final boolean noLocal;
     private final Map<String, Object> arguments;
+    private boolean routingKeyExchangeModel = false;
 
-    public ConsumerMetaData(RecordedConsumer recordedConsumer, Consumer consumer) {
-        this.queue = recordedConsumer.getQueue();
-        this.consumerTag = recordedConsumer.getConsumerTag();
-        this.consumer = consumer;
-        this.exclusive = Reflect.on(recordedConsumer).get("exclusive");
-        this.autoAck = Reflect.on(recordedConsumer).get("autoAck");
-        this.arguments = Reflect.on(recordedConsumer).get("arguments");
+    public boolean isRoutingKeyExchangeModel() {
+        return routingKeyExchangeModel;
     }
 
-    public ConsumerMetaData(String queue, String consumerTag, Consumer consumer) {
+    public void setRoutingKeyExchangeModel(boolean routingKeyExchangeModel) {
+        this.routingKeyExchangeModel = routingKeyExchangeModel;
+    }
+
+    public ConsumerMetaData(String queue, String consumerTag, Consumer consumer, boolean exclusive, boolean autoAck,
+                            int prefetchCount, boolean noLocal) {
         this.queue = queue;
         this.consumerTag = consumerTag;
         this.consumer = consumer;
-        this.exclusive = false;
-        this.autoAck = false;
+        this.exclusive = exclusive;
+        this.autoAck = autoAck;
+        this.prefetchCount = prefetchCount;
+        this.noLocal = noLocal;
         this.arguments = Collections.emptyMap();
+        if (queue != null) {
+            this.ptQueue = Pradar.addClusterTestPrefix(queue);
+        }
+        this.ptConsumerTag = Pradar.addClusterTestPrefix(consumerTag);
     }
 
     public String getQueue() {
@@ -70,6 +80,27 @@ public class ConsumerMetaData {
 
     public boolean isAutoAck() {
         return autoAck;
+    }
+
+    public void setQueue(String queue) {
+        this.ptQueue  = Pradar.addClusterTestPrefix(queue);
+        this.queue = queue;
+    }
+
+    public int getPrefetchCount() {
+        return prefetchCount;
+    }
+
+    public boolean isNoLocal() {
+        return noLocal;
+    }
+
+    public String getPtQueue() {
+        return ptQueue;
+    }
+
+    public String getPtConsumerTag() {
+        return ptConsumerTag;
     }
 
     public Map<String, Object> getArguments() {

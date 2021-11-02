@@ -42,6 +42,7 @@ import java.util.*;
 public class DefaultProviderManager implements ProviderManager {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
     private final Collection<ModuleJarLoadingChain> moduleJarLoadingChains = new ArrayList<ModuleJarLoadingChain>();
     private final Collection<ProviderClassLoader> providerClassLoaders = new ArrayList<ProviderClassLoader>();
     private final Collection<ModuleLoadingChain> moduleLoadingChains = new ArrayList<ModuleLoadingChain>();
@@ -79,7 +80,7 @@ public class DefaultProviderManager implements ProviderManager {
                 // load SimulatorLifecycleChain
                 inject(startupChains, SimulatorLifecycle.class, providerClassLoader, providerJarFile);
 
-                if (logger.isInfoEnabled()) {
+                if (isInfoEnabled) {
                     logger.info("SIMULATOR: loading provider-jar[{}] was success.", providerJarFile);
                 }
             } catch (IllegalAccessException cause) {
@@ -100,7 +101,7 @@ public class DefaultProviderManager implements ProviderManager {
         for (final T provider : serviceLoader) {
             injectResource(provider);
             collection.add(provider);
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: loading provider[{}] was success from provider-jar[{}], impl={}",
                         clazz.getName(), providerJarFile, provider.getClass().getName());
             }
@@ -174,16 +175,16 @@ public class DefaultProviderManager implements ProviderManager {
     }
 
     @Override
-    public void onStart(String namespace, SimulatorConfig simulatorConfig) {
+    public void onStart(SimulatorConfig simulatorConfig) {
         for (final SimulatorLifecycle simulatorLifecycle : startupChains) {
-            simulatorLifecycle.onStart(namespace, simulatorConfig);
+            simulatorLifecycle.onStart(simulatorConfig);
         }
     }
 
     @Override
-    public void onShutdown(String namespace, SimulatorConfig simulatorConfig) {
+    public void onShutdown(SimulatorConfig simulatorConfig) {
         for (final SimulatorLifecycle simulatorLifecycle : startupChains) {
-            simulatorLifecycle.onShutdown(namespace, simulatorConfig);
+            simulatorLifecycle.onShutdown(simulatorConfig);
         }
         startupChains.clear();
 

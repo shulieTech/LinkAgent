@@ -14,6 +14,9 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.util;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
@@ -26,22 +29,39 @@ public class PradarSpringUtil {
 
     private static volatile DefaultListableBeanFactory defaultListableBeanFactory;
 
+    private static final List<Runnable> onApplicationContextLoadListener = new CopyOnWriteArrayList<Runnable>();
+
+    public synchronized static void onApplicationContextLoad(Runnable runnable){
+        if(defaultListableBeanFactory == null){
+            onApplicationContextLoadListener.add(runnable);
+        }else {
+            runnable.run();
+        }
+    }
+    public synchronized static void triggerOnApplicationContextLoadEvent(){
+        for (Runnable runnable : onApplicationContextLoadListener) {
+            runnable.run();
+        }
+        onApplicationContextLoadListener.clear();
+    }
+
     public static void release() {
         defaultListableBeanFactory = null;
     }
 
-    public static void refreshBeanFactory(ApplicationContext applicationContextParam) throws BeansException {
+    public synchronized static void refreshBeanFactory(ApplicationContext applicationContextParam) throws BeansException {
         if (applicationContextParam == null) {
             return;
         }
         if (applicationContextParam.getAutowireCapableBeanFactory() == null) {
             return;
         }
-        defaultListableBeanFactory = (DefaultListableBeanFactory) applicationContextParam.getAutowireCapableBeanFactory();
+        refreshBeanFactory((DefaultListableBeanFactory) applicationContextParam.getAutowireCapableBeanFactory());
     }
 
-    public static void refreshBeanFactory(DefaultListableBeanFactory beanFactory) {
+    public synchronized static void refreshBeanFactory(DefaultListableBeanFactory beanFactory) {
         defaultListableBeanFactory = beanFactory;
+        triggerOnApplicationContextLoadEvent();
     }
 
     public static boolean isInit() {

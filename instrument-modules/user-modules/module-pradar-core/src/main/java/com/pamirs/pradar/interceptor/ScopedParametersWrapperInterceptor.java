@@ -17,6 +17,7 @@ package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
 import com.shulie.instrument.simulator.api.scope.InterceptorScopeInvocation;
@@ -27,7 +28,7 @@ import org.slf4j.LoggerFactory;
  * @author vincent
  * @version v0.1 2017/3/2 23:00
  */
-public class ScopedParametersWrapperInterceptor extends ParametersWrapperInterceptor {
+public class ScopedParametersWrapperInterceptor extends ParametersWrapperInterceptor implements ScopedInterceptor {
     private final Logger logger = LoggerFactory.getLogger(ScopedParametersWrapperInterceptor.class.getName());
 
     private final ParametersWrapperInterceptor interceptor;
@@ -55,7 +56,7 @@ public class ScopedParametersWrapperInterceptor extends ParametersWrapperInterce
         if (scope != null) {
             return scope;
         }
-        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
+        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehaviorName());
     }
 
     @Override
@@ -78,5 +79,10 @@ public class ScopedParametersWrapperInterceptor extends ParametersWrapperInterce
             }
         }
         return result;
+    }
+
+    @Override
+    public AdviceListener getUnderWrap() {
+        return interceptor;
     }
 }

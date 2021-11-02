@@ -62,7 +62,7 @@ public class CacheGetWithLoaderInterceptor extends AroundInterceptor {
                     , element.getTimeToLive()
                     , element.getTimeToIdle()
                     , element.getLastUpdateTime());
-            ProcessController.returnImmediately(ele);
+            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), ele);
         }
     }
 }

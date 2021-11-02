@@ -16,6 +16,9 @@ package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import com.alibaba.rocketmq.client.producer.DefaultMQProducer;
+import java.util.Map;
+
+import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import com.alibaba.rocketmq.client.producer.SendCallback;
 import com.alibaba.rocketmq.client.producer.SendResult;
 import com.alibaba.rocketmq.common.message.Message;
@@ -23,8 +26,8 @@ import com.alibaba.rocketmq.common.message.Message;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.SendMessageHookImpl;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
-import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.HashSet;
@@ -33,40 +36,36 @@ import java.util.Set;
 
 public class MQProducerSendInterceptor extends AroundInterceptor {
 
+
+    private Object lock = new Object();
+
+
     private static Set registerHookSet = new HashSet();
 
     @Override
     public void doBefore(Advice advice) {
-        DefaultMQProducerImpl defaultMQProducerImpl = null;
-        if (advice.getTarget() instanceof DefaultMQProducer) {
-            defaultMQProducerImpl = ((DefaultMQProducer)advice.getTarget()).getDefaultMQProducerImpl();
-        }
-        if (advice.getTarget() instanceof DefaultMQProducerImpl) {
-            defaultMQProducerImpl = (DefaultMQProducerImpl)advice.getTarget();
-        }
-        if (defaultMQProducerImpl != null) {
-            if (!registerHookSet.contains(defaultMQProducerImpl)) {
-                synchronized (this) {
-                    if (!registerHookSet.contains(defaultMQProducerImpl)) {
-                        ((DefaultMQProducerImpl)defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
-                        registerHookSet.add(defaultMQProducerImpl);
-                        LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
-                    }
+        if (advice.getTarget() instanceof DefaultMQProducerImpl && !((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
+            synchronized (lock){
+                if (!((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
+                    ((DefaultMQProducerImpl)advice.getTarget()).registerSendMessageHook(new SendMessageHookImpl());
+                    LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
                 }
             }
         }
 
-        Message msg = (Message) advice.getParameterArray()[0];
-        ClusterTestUtils.validateClusterTest();
-        if (Pradar.isClusterTest()) {
-            String topic = msg.getTopic();
-            if (topic != null && !Pradar.isClusterTestPrefix(topic)) {
-                msg.setTopic(Pradar.addClusterTestPrefix(topic));
+        Object[] args = advice.getParameterArray();
+        Message msg = (Message) args[0];
+        if (PradarSwitcher.isClusterTestEnabled()) {
+            if (Pradar.isClusterTest()) {
+                String topic = msg.getTopic();
+                if (topic != null
+                    && !Pradar.isClusterTestPrefix(topic)) {
+                    msg.setTopic(Pradar.addClusterTestPrefix(topic));
+                }
+                msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
             }
-            msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
         }
 
-        Object[] args = advice.getParameterArray();
         for (int i = 0, len = args.length; i < len; i++) {
             if (!(args[i] instanceof SendCallback)) {
                 continue;
@@ -95,13 +94,6 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
                 }
             });
         }
-    }
 
-    @Override
-    public void doAfter(Advice advice) {
-    }
-
-    @Override
-    public void doException(Advice advice) {
     }
 }

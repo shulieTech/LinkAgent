@@ -18,10 +18,6 @@ import com.pamirs.attach.plugin.proxool.destroy.ProxoolDestroy;
 import com.pamirs.attach.plugin.proxool.utils.ConnectionPoolUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
-import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
@@ -41,6 +37,7 @@ import java.util.Set;
 @Destroyable(ProxoolDestroy.class)
 public class ConnectionPoolManagerCreateConnectionPoolInterceptor extends CutoffInterceptorAdaptor {
     private final static Logger logger = LoggerFactory.getLogger(ConnectionPoolManagerCreateConnectionPoolInterceptor.class);
+    private final static boolean isInfoEnabled = logger.isInfoEnabled();
 
     private String url = null;
     private String username = null;
@@ -49,7 +46,7 @@ public class ConnectionPoolManagerCreateConnectionPoolInterceptor extends Cutoff
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
-        if (init){
+        if (init) {
             return CutOffResult.passed();
         }
         Object connectionPoolManager = advice.getTarget();
@@ -58,17 +55,17 @@ public class ConnectionPoolManagerCreateConnectionPoolInterceptor extends Cutoff
         try {
             Field connectionPoolsField = connectionPoolManager.getClass().getDeclaredField("connectionPools");
             connectionPoolsField.setAccessible(true);
-            Set connectionPools = (Set)connectionPoolsField.get(advice.getTarget());
+            Set connectionPools = (Set) connectionPoolsField.get(advice.getTarget());
 
             Field connectionPoolMapField = connectionPoolManager.getClass().getDeclaredField("connectionPoolMap");
             connectionPoolMapField.setAccessible(true);
-            Map connectionPoolMap = (Map)connectionPoolMapField.get(advice.getTarget());
+            Map connectionPoolMap = (Map) connectionPoolMapField.get(advice.getTarget());
 
             ConnectionPoolUtils.setConnectionPools(connectionPools);
             ConnectionPoolUtils.setConnectionPoolMap(connectionPoolMap);
 
 
-        }catch (Throwable e){
+        } catch (Throwable e) {
 
         }
 
@@ -76,43 +73,8 @@ public class ConnectionPoolManagerCreateConnectionPoolInterceptor extends Cutoff
         return CutOffResult.passed();
     }
 
-
-    private ShadowDatabaseConfig get(){
-        String key = DbUrlUtils.getKey(url, username);
-        logger.info("bus datasource key1 is {}", key);
-        for (Map.Entry<String, ShadowDatabaseConfig> entry : GlobalConfig.getInstance().getShadowDatasourceConfigs().entrySet()) {
-            logger.info("bus datasource config key  is {}", entry.getKey());
-        }
-        ShadowDatabaseConfig shadowDatabaseConfig = GlobalConfig.getInstance().getShadowDatasourceConfigs().get(key);
-        if (shadowDatabaseConfig == null) {
-            /**
-             * 解决现在影子表配置没有username的问题,再尝试使用非用户名的判断一次
-             */
-            key = DbUrlUtils.getKey(url, null);
-            logger.info("bus datasource key2 is {}", key);
-        } else {
-            return shadowDatabaseConfig;
-        }
-
-        shadowDatabaseConfig = GlobalConfig.getInstance().getShadowDatasourceConfigs().get(key);
-        if (shadowDatabaseConfig == null) {
-            return null;
-        }
-        return shadowDatabaseConfig;
-    }
-
-
-    public boolean shadowTable() {
-        try {
-            return DatabaseUtils.isTestTable(url, username);
-        } catch (Throwable e) {
-            return true;
-        }
-    }
-
-
-    private void setUrlAndUsername(Object target){
-        if (!StringUtils.isEmpty(url) && !StringUtils.isEmpty(username)){
+    private void setUrlAndUsername(Object target) {
+        if (!StringUtils.isEmpty(url) && !StringUtils.isEmpty(username)) {
             return;
         }
         Method getUrlMethod = null;
@@ -123,17 +85,17 @@ public class ConnectionPoolManagerCreateConnectionPoolInterceptor extends Cutoff
             getUserMethod = target.getClass().getDeclaredMethod("getUser");
             getUrlMethod.setAccessible(true);
             getUserMethod.setAccessible(true);
-            url = (String)getUrlMethod.invoke(target);
-            username = (String)getUserMethod.invoke(target);
+            url = (String) getUrlMethod.invoke(target);
+            username = (String) getUserMethod.invoke(target);
 
-        }  catch (NoSuchMethodException e) {
+        } catch (NoSuchMethodException e) {
         } catch (IllegalAccessException e) {
         } catch (InvocationTargetException e) {
         } finally {
-            if (getUrlMethod != null){
+            if (getUrlMethod != null) {
                 getUrlMethod.setAccessible(true);
             }
-            if (getUserMethod != null){
+            if (getUserMethod != null) {
                 getUserMethod.setAccessible(true);
             }
         }

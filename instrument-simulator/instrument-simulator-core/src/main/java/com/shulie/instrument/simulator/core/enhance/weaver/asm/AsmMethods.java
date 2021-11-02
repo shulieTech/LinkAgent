@@ -24,67 +24,75 @@ import org.objectweb.asm.commons.Method;
 public interface AsmMethods {
 
     /**
-     * asm method of {@link Messager#invokeOnBefore(Object[], String, int, String, Class, String, String, Object)}
+     * asm method of {@link Messager#invokeOnBefore(Object[], int, String, int, int, Class, String, String, Object)}
      */
     Method MESSAGER_INVOKE_ON_BEFORE = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnBefore",
-            Object[].class, String.class, int.class, String.class, Class.class, String.class, String.class, Object.class
+            Object[].class, int.class, String.class, int.class, int.class, Class.class, String.class, String.class, Object.class
     );
 
     /**
-     * asm method of {@link Messager#invokeOnReturn(Object, Class, String, int)}
+     * asm method of {@link Messager#invokeOnReturn(Object, Class, int, String, int, int)}
      */
     Method MESSAGER_INVOKE_ON_RETURN = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnReturn",
-            Object.class, Class.class, String.class, int.class
+            Object.class, Class.class, int.class, String.class, int.class, int.class
     );
 
     /**
-     * asm method of {@link Messager#invokeOnThrows(Throwable, Class, String, int)}
+     * asm method of {@link Messager#invokeOnThrows(Throwable, Class, int, String, int, int)}
      */
     Method MESSAGER_INVOKE_ON_THROWS = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnThrows",
-            Throwable.class, Class.class, String.class, int.class
+            Throwable.class, Class.class, int.class, String.class, int.class, int.class
     );
 
 
     /**
-     * asm method of {@link Messager#invokeOnLine(int, Class, String, int)}
+     * asm method of {@link Messager#invokeOnLine(int, Class, int, String, int, int)}
      */
     Method MESSAGER_INVOKE_ON_LINE = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnLine",
-            int.class, Class.class, String.class, int.class
+            int.class, Class.class, int.class, String.class, int.class, int.class
     );
 
     /**
-     * asm method of {@link Messager#invokeOnCallBefore(int, boolean, String, String, String, Class, String, int)}
+     * asm method of {@link Messager#invokeOnCallBefore(int, boolean, String, String, String, Class, int, String, int, int)}
      */
     Method MESSAGER_INVOKE_ON_CALL_BEFORE = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnCallBefore",
-            int.class, boolean.class, String.class, String.class, String.class, Class.class, String.class, int.class
+            int.class, boolean.class, String.class, String.class, String.class, Class.class, int.class, String.class, int.class, int.class
     );
 
     /**
-     * asm method of {@link Messager#invokeOnCallReturn(boolean, Class, String, int)}
+     * asm method of {@link Messager#invokeOnCallReturn(boolean, Class, int, String, int, int)}
      */
     Method MESSAGER_INVOKE_ON_CALL_RETURN = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnCallReturn",
-            boolean.class, Class.class, String.class, int.class
+            boolean.class, Class.class, int.class, String.class, int.class, int.class
     );
 
     /**
-     * asm method of {@link Messager#invokeOnCallThrows(Throwable, boolean, Class, String, int)}
+     * asm method of {@link Messager#invokeOnCallThrows(Throwable, boolean, Class, int, String, int, int)}
      */
     Method MESSAGER_INVOKE_ON_CALL_THROWS = AsmMethodHelper.getAsmMethod(
             Messager.class,
             "invokeOnCallThrows",
-            Throwable.class, boolean.class, Class.class, String.class, int.class
+            Throwable.class, boolean.class, Class.class, int.class, String.class, int.class, int.class
     );
 
+    /**
+     * asm method of {@link Messager#getExecutionTag(int)}}
+     */
+    Method GET_EXECUTION_TAG = AsmMethodHelper.getAsmMethod(
+            Messager.class,
+            "getExecutionTag",
+            int.class
+    );
 }

@@ -14,6 +14,9 @@
  */
 package com.pamirs.attach.plugin.okhttp.v2.interceptor;
 
+import java.net.URL;
+import java.util.Map;
+
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -21,15 +24,13 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.HttpUrl;
 import com.squareup.okhttp.Request;
-
-import java.net.URL;
-import java.util.Map;
 
 /**
  * @Description
@@ -86,7 +87,7 @@ public class RequestBuilderBuildMethodV2Interceptor extends TraceInterceptorAdap
             config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, check);
             config.addArgs("url", url);
             config.addArgs("isInterface", Boolean.FALSE);
-            config.getStrategy().processBlock(advice.getClassLoader(), config);
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
     }
 

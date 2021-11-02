@@ -14,12 +14,16 @@
  */
 package com.pamirs.attach.plugin.alibaba.druid.interceptor;
 
+import com.alibaba.druid.pool.DruidAbstractDataSource;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.destroy.DruidDestroy;
 import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
+import com.pamirs.attach.plugin.dynamic.*;
+import com.pamirs.attach.plugin.dynamic.template.DruidTemplate;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -33,7 +37,9 @@ import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +51,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Destroyable(DruidDestroy.class)
+@ListenerBehavior(isFilterBusinessData = true)
 public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdaptor {
     private static Logger logger = LoggerFactory.getLogger(DruidInjectGetConnectionInterceptor.class.getName());
 
@@ -52,12 +59,44 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
         addListener();
     }
 
+    void addAttachment(Advice advice) {
+        try {
+            DruidAbstractDataSource target = (DruidAbstractDataSource) advice.getTarget();
+            ResourceManager.set(new Attachment(
+                    target.getUrl(),
+                    "alibaba-druid",
+                    Type.DataBaseType.types(),
+                    new DruidTemplate()
+                            .setUrl(target.getUrl())
+                            .setUsername(target.getUsername())
+                            .setPassword(target.getPassword())
+                            .setDriverClassName(target.getDriverClassName())
+                            .setMaxActive(target.getMaxActive())
+                            .setInitialSize(target.getInitialSize())
+                            .setRemoveAbandoned(target.isRemoveAbandoned())
+                            .setRemoveAbandonedTimeout(target.getRemoveAbandonedTimeoutMillis())
+                            .setTestWhileIdle(target.isTestWhileIdle())
+                            .setTestOnBorrow(target.isTestOnBorrow())
+                            .setTestOnReturn(target.isTestOnReturn())
+                            .setValidationQuery(defaultValidateQuery(target.getValidationQuery()))
+                    )
+            );
+        } catch (Throwable t) {
+            logger.error(Throwables.getStackTraceAsString(t));
+        }
+    }
+
+    public String defaultValidateQuery(String validateQuery) {
+        return StringUtil.isEmpty(validateQuery) ? "SELECT 1 FROM DUAL" : validateQuery;
+    }
+
     @Override
     public CutOffResult cutoff0(Advice advice) {
         DruidDataSource target1 = (DruidDataSource) advice.getTarget();
+        addAttachment(advice);
         DataSourceMeta<DruidDataSource> dataSourceMeta = new DataSourceMeta<DruidDataSource>(target1.getUrl(), target1.getUsername(), target1);
         ClusterTestUtils.validateClusterTest();
-        DataSourceWrapUtil.doWrap(dataSourceMeta);
+        DbDruidMediatorDataSource mediatorDataSource = DataSourceWrapUtil.doWrap(dataSourceMeta);
         //判断带有压测标示，是否初始化
         //初始化
         Connection connection = null;
@@ -66,18 +105,11 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
          * 如果未找到配置情况下则当前流量为压测流量时返回null,非压测流量则执行业务连接池正常逻辑,此种情况可能由于数据源未配置的情况
          * 如果获取连接出错时如果流量为压测流量则返回null，非压测流量则执行业务连接池正常逻辑
          */
-        if (DataSourceWrapUtil.pressureDataSources.containsKey(dataSourceMeta)) {
-            DbDruidMediatorDataSource mediatorDataSource = DataSourceWrapUtil.pressureDataSources.get(dataSourceMeta);
-            if (mediatorDataSource != null) {
-                try {
-                    connection = mediatorDataSource.getConnection();
-                } catch (SQLException e) {
-                    throw new PressureMeasureError(e);
-                }
-            } else {
-                if (!Pradar.isClusterTest()) {
-                    return CutOffResult.passed();
-                }
+        if (mediatorDataSource != null) {
+            try {
+                connection = mediatorDataSource.getConnection();
+            } catch (SQLException e) {
+                throw new PressureMeasureError(e);
             }
             return CutOffResult.cutoff(connection);
         } else {
@@ -125,7 +157,9 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
                             it.remove();
                             try {
                                 value.close();
-                                logger.info("module-alibaba-druid: destroyed shadow{} datasource success. url:{} ,username:{}", config.isShadowTable() ? " table" : "", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-alibaba-druid: destroyed shadow{} datasource success. url:{} ,username:{}", config.isShadowTable() ? " table" : "", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-alibaba-druid: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }

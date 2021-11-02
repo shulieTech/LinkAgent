@@ -84,7 +84,7 @@ public class HttpExchangeRequestTracer extends RequestTracer<HttpExchange, HttpE
 
     @Override
     public String getParams(HttpExchange request) {
-        StringBuilder stringBuilder = new StringBuilder("{");
+        StringBuilder stringBuilder = new StringBuilder(64).append("{");
         String query = request.getRequestURI().getQuery();
         if (StringUtils.isNotBlank(query)) {
             String[] queryParams = query.split(AND_DELIMITER);

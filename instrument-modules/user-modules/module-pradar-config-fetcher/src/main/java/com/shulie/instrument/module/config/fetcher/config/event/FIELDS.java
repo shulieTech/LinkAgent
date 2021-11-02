@@ -29,6 +29,7 @@ public enum FIELDS {
     WHITE_LIST(ConfigNames.WHITE_LIST, "WHITE_LIST", null),
     RPC_ALLOW_LIST(ConfigNames.RPC_WHITE_LIST, "RPC_ALLOW_LIST", RpcAllowList.getInstance()),
     WHITE_LIST_SWITCHON(ConfigNames.WHITE_LIST_SWITCH_ON, "WHITE_LIST_SWITCH_ON", WhiteListSwitch.getInstance()),
+    SILENCE_SWITCH(ConfigNames.SILENCE_SWITCH, "SILENCE_SWITCH", SilenceSwitch.getInstance()),
     CONTEXT_PATH_BLOCK_LIST(ConfigNames.CONTEXT_PATH_BLOCK_LIST, "CONTEXT_PATH_BLOCK_LIST", ContextPathBlockList.getInstance()),
     SEARCH_KEY_WHITE_LIST(ConfigNames.SEARCH_KEY_WHITE_LIST, "SEARCH_KEY_WHITE_LIST", SearchKeyWhiteList.getInstance()),
     CACHE_KEY_ALLOW_LIST(ConfigNames.CACHE_KEY_ALLOW_LIST, "CACHE_KEY_ALLOW_LIST", CacheKeyAllowList.getInstance()),

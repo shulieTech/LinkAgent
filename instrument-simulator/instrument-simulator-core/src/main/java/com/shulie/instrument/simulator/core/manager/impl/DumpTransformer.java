@@ -50,17 +50,17 @@ public class DumpTransformer extends SimulatorClassFileTransformer {
     private final Map<Integer, EventListener> eventListeners = new HashMap<Integer, EventListener>();
     private final List<BuildingForListeners> listeners;
 
-    public static DumpTransformer build(CoreModule coreModule, SimulatorConfig profilerConfig, Matcher matcher, boolean isEnableUnsafe, int watchId) {
-        return new DumpTransformer(coreModule, profilerConfig, matcher, isEnableUnsafe, watchId);
+    public static DumpTransformer build(CoreModule coreModule, SimulatorConfig simulatorConfig, Matcher matcher, boolean isEnableUnsafe, int watchId) {
+        return new DumpTransformer(coreModule, simulatorConfig, matcher, isEnableUnsafe, watchId);
     }
 
-    public static DumpTransformer build(CoreModule coreModule, SimulatorConfig profilerConfig, int watchId) {
-        return new DumpTransformer(coreModule, profilerConfig, null, false, watchId);
+    public static DumpTransformer build(CoreModule coreModule, SimulatorConfig simulatorConfig, int watchId) {
+        return new DumpTransformer(coreModule, simulatorConfig, null, false, watchId);
     }
 
     private DumpTransformer(CoreModule coreModule, SimulatorConfig simulatorConfig, Matcher matcher, boolean isEnableUnsafe, int watchId) {
         if (simulatorConfig == null) {
-            throw new NullPointerException("profilerConfig must not be null");
+            throw new NullPointerException("simulatorConfig must not be null");
         }
         this.matcher = matcher;
         this.bytecodeDumpService = new ASMBytecodeDumpService(simulatorConfig);

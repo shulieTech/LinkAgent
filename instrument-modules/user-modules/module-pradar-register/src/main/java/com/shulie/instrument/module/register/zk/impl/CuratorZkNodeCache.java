@@ -14,13 +14,13 @@
  */
 package com.shulie.instrument.module.register.zk.impl;
 
+import com.shulie.instrument.module.register.zk.ZkNodeCache;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.utils.ZKPaths;
-import com.shulie.instrument.module.register.zk.ZkNodeCache;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CuratorZkNodeCache implements ZkNodeCache {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratorZkNodeCache.class);
+    private static final boolean isInfoEnabled = logger.isInfoEnabled();
 
     private CuratorFramework client;
 
@@ -190,7 +191,9 @@ public class CuratorZkNodeCache implements ZkNodeCache {
                         try {
                             reset();
                             internalRebuild();
-                            logger.info("recovered from RECONNECTED event, path={}", path);
+                            if (isInfoEnabled) {
+                                logger.info("recovered from RECONNECTED event, path={}", path);
+                            }
                         } catch (Throwable e) {
                             logger.error("fail to reset after reconnection, path={}", path, e);
                         }
@@ -251,7 +254,9 @@ public class CuratorZkNodeCache implements ZkNodeCache {
                 }
 
                 default:
-                    logger.info("Unknown CuratorEvent: {}", event.getType());
+                    if (isInfoEnabled) {
+                        logger.info("Unknown CuratorEvent: {}", event.getType());
+                    }
                     break;
             }
         }

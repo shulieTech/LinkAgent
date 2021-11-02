@@ -44,7 +44,7 @@ import java.util.jar.JarFile;
  */
 public class PlainClassLoaderHandler implements ClassInjector {
     private final Logger logger = LoggerFactory.getLogger(PlainClassLoaderHandler.class.getName());
-    private final boolean isDebug = logger.isDebugEnabled();
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
 
     private static final Method DEFINE_CLASS;
     private static final Method FIND_LOADED_CLASS;
@@ -123,7 +123,7 @@ public class PlainClassLoaderHandler implements ClassInjector {
     }
 
     private void injectClass0(ClassLoader classLoader, String className) throws IllegalAccessException, InvocationTargetException {
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("SIMULATOR: injectClass0 className:{} cl:{}", className, classLoader);
 
         }
@@ -158,7 +158,7 @@ public class PlainClassLoaderHandler implements ClassInjector {
     }
 
     private void defineJarClass(ClassLoader classLoader, ClassLoaderAttachment attachment, String className) {
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("SIMULATOR: define Jar:{}", simulatorConfig.getBizClassLoaderInjectFiles().get(className));
         }
 
@@ -211,13 +211,13 @@ public class PlainClassLoaderHandler implements ClassInjector {
         }
 
         final String superName = currentClass.getSuperClassName();
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("SIMULATOR: className:{} super:{}", currentClass.getClassName(), superName);
         }
         if (!"java.lang.Object".equals(superName)) {
             if (!isSkipClass(superName, classLoadingChecker)) {
                 SimpleClassMetadata superClassBinary = classMetaMap.get(superName);
-                if (isDebug) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: superClass dependency define super:{} ori:{}", superClassBinary.getClassName(), currentClass.getClassName());
                 }
                 define0(classLoader, attachment, superClassBinary, classMetaMap, classLoadingChecker);
@@ -228,7 +228,7 @@ public class PlainClassLoaderHandler implements ClassInjector {
         for (String interfaceName : interfaceList) {
             if (!isSkipClass(interfaceName, classLoadingChecker)) {
                 SimpleClassMetadata interfaceClassBinary = classMetaMap.get(interfaceName);
-                if (isDebug) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: interface dependency define interface:{} ori:{}", interfaceClassBinary.getClassName(), interfaceClassBinary.getClassName());
                 }
                 define0(classLoader, attachment, interfaceClassBinary, classMetaMap, classLoadingChecker);
@@ -246,7 +246,7 @@ public class PlainClassLoaderHandler implements ClassInjector {
         if (classLoader == null) {
             classLoader = ClassLoader.getSystemClassLoader();
         }
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("SIMULATOR: define class:{} cl:{}", classMetadata.getClassName(), classLoader);
         }
         // for debug
@@ -306,7 +306,7 @@ public class PlainClassLoaderHandler implements ClassInjector {
 
     private boolean isSkipClass(final String className, final ClassLoadingChecker classLoadingChecker) {
         if (!classLoadingChecker.isFirstLoad(className)) {
-            if (isDebug) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: skip already loaded class:{}", className);
             }
             return true;

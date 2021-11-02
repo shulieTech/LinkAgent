@@ -89,7 +89,7 @@ public class DefaultRedisServerMatch implements RedisServerMatchStrategy {
             }
         }
 
-        throw new PressureMeasureError("not found redis shadow server config error." + convertMessage(nodes));
+        throw new PressureMeasureError("not found redis shadow server config error3." + convertMessage(nodes));
     }
 
     public String collectionToString(Collection<String> nodes) {

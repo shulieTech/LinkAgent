@@ -149,7 +149,7 @@ public abstract class AbstractRedisServerFactory<T> {
                     .setDetail("没有配置影子Redis Server")
                     .report();
             // 抛出相关异常信息
-            throw new PressureMeasureError("not found redis shadow server config error.");
+            throw new PressureMeasureError("not found redis shadow server config error1.");
         }
 
 

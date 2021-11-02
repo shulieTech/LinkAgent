@@ -33,7 +33,7 @@ import org.kohsuke.MetaInfServices;
 public class SpringJmsPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "org.springframework.jms.core.JmsTemplate", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -100,6 +100,7 @@ public class SpringJmsPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
+        return true;
 
     }
 

@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.hbase.interceptor;
 
 import com.pamirs.attach.plugin.hbase.HbaseConstants;
 import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
+import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -43,7 +44,7 @@ public class DdlTracerInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         /* AliHBaseUEAdmin admin = (AliHBaseUEAdmin) target;*/
         SpanRecord spanRecord = new SpanRecord();
-        if ("createTable".equals(advice.getBehavior().getName())) {
+        if ("createTable".equals(advice.getBehaviorName())) {
             TableDescriptor descriptor = (TableDescriptor) advice.getParameterArray()[0];
             spanRecord.setService(descriptor.getTableName().getNameAsString());
         } else {
@@ -51,14 +52,14 @@ public class DdlTracerInterceptor extends TraceInterceptorAdaptor {
                     = (org.apache.hadoop.hbase.TableName) advice.getParameterArray()[0];
             spanRecord.setService(tableName.getNameAsString());
         }
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         return spanRecord;
     }
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object[] args = advice.getParameterArray();
         SpanRecord spanRecord = new SpanRecord();
         if ("createTable".equals(methodName)) {
@@ -77,7 +78,7 @@ public class DdlTracerInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object[] args = advice.getParameterArray();
         SpanRecord spanRecord = new SpanRecord();
         if ("createTable".equals(methodName)) {
@@ -91,6 +92,7 @@ public class DdlTracerInterceptor extends TraceInterceptorAdaptor {
         spanRecord.setMethod(methodName);
         spanRecord.setRequest(args[0]);
         spanRecord.setResponse(advice.getThrowable());
+        spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         return spanRecord;
     }
 }

@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.mongodb;
 
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorInterceptor;
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorTraceInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.MongoCollectionInternalTraceInterceptor;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -34,11 +33,11 @@ import org.kohsuke.MetaInfServices;
  * @date 2020/8/5 18:58
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "mongodb", version = "1.0.0", author = "angju@shulie.io", description = "mongdb 数据库")
+@ModuleInfo(id = "mongodb4", version = "1.0.0", author = "angju@shulie.io", description = "mongdb 数据库")
 public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         /**
          * 因为这个插件与mongodb322插件冲突，所以当mongodb322插件启用时此插件禁用
          */
@@ -73,6 +72,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 //            }
 //        });
 
+        return true;
     }
 
     @Override

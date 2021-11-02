@@ -22,6 +22,8 @@ import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
+import com.pamirs.pradar.pressurement.datasource.util.DbType;
+import com.pamirs.pradar.pressurement.datasource.util.SqlMetaData;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,15 +50,17 @@ public class DataSourceWrapUtil {
         pressureDataSources.clear();
     }
 
-    public static void doWrap(DataSourceMeta<DruidDataSource> dataSourceMeta) {
-        if (pressureDataSources.containsKey(dataSourceMeta) && pressureDataSources.get(dataSourceMeta) != null) {
-            return;
+    public static DbDruidMediatorDataSource doWrap(DataSourceMeta<DruidDataSource> dataSourceMeta) {
+        DbDruidMediatorDataSource cacheValue = pressureDataSources.get(dataSourceMeta);
+        if (cacheValue != null) {
+            return cacheValue;
         }
         DruidDataSource target = dataSourceMeta.getDataSource();
         if (isPerformanceDataSource(target)) {
             LOGGER.warn("[druid] current datasource is performance datasource. ignore it. url={}, username={}", target.getUrl(), target.getUsername());
-            return;
+            return null;
         }
+        boolean infoEnabled = LOGGER.isInfoEnabled();
         if (!DruidDatasourceUtils.configured(target)) {//没有配置对应的影子表或影子库
             LOGGER.error("[druid] No configuration found for datasource, url:{} username:{}", target.getUrl(), target.getUsername());
             ErrorReporter.buildError()
@@ -72,24 +76,31 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (infoEnabled) {
+                    LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
-            return;
+            return dbMediatorDataSource;
         }
         if (DruidDatasourceUtils.shadowTable(target)) {//影子表
             DbDruidMediatorDataSource dbMediatorDataSource = new DbDruidMediatorDataSource();
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (infoEnabled) {
+                    LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
+            return dbMediatorDataSource;
         } else {//影子库
             // 初始化影子数据源配置
             DbDruidMediatorDataSource dbMediatorDataSource = new DbDruidMediatorDataSource();
             dbMediatorDataSource.setDataSourceBusiness(target);
-            LOGGER.info("[druid] use db shadow config:{}", GlobalConfig.getInstance().getShadowDatasourceConfigs());
+            if (infoEnabled) {
+                LOGGER.info("[druid] use db shadow config:{}", GlobalConfig.getInstance().getShadowDatasourceConfigs());
+            }
             DruidDataSource ptDataSource = DruidDatasourceUtils.generateDatasourceFromConfiguration(target, GlobalConfig.getInstance().getShadowDatasourceConfigs());
             if (ptDataSource == null) {
                 LOGGER.error("[druid] create shadow datasource error. maybe datasource config is not correct, url: {} username:{} configurations:{}", target.getUrl(), target.getUsername(), GlobalConfig.getInstance().getShadowDatasourceConfigs());
@@ -100,15 +111,20 @@ public class DataSourceWrapUtil {
                         .setDetail("url: " + target.getUrl() + " username: " + target.getUsername())
                         .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                         .report();
-                return;
+                return null;
             }
             dbMediatorDataSource.setDataSourcePerformanceTest(ptDataSource);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (infoEnabled) {
+                    LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
-            LOGGER.info("[druid] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+            if (infoEnabled) {
+                LOGGER.info("[druid] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+            }
+            return dbMediatorDataSource;
         }
     }
 

@@ -24,18 +24,17 @@ import org.springframework.web.server.ServerWebExchange;
  * @Date: 2021/1/11 14:29
  * @Description:
  */
-public class HandlerResultInterceptor extends BaseHandlerInjector  {
+public class HandlerResultInterceptor extends BaseHandlerInjector {
 
 
     @Override
-    public void beforeFirst(Advice advice) {
-
+    public void doBefore(Advice advice) {
         doAfter((ServerWebExchange) advice.getParameterArray()[0], null, null);
         Cache.RequestHolder.remove();
     }
 
     @Override
-    public void exceptionFirst(Advice advice) {
+    public void doException(Advice advice) {
         doAfter((ServerWebExchange) advice.getParameterArray()[0], null, advice.getThrowable());
         Cache.RequestHolder.remove();
 

@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.lettuce;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.lettuce.interceptor.*;
+import com.pamirs.attach.plugin.lettuce.interceptor.spring.SpringRedisClientPerformanceInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -168,7 +169,7 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
     };
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         AbstractRedisServerFactory.setDynamicFieldManager(manager);
 
         addRedisClient();
@@ -177,7 +178,88 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         addMasterSlave();
 
         addPluginMaxRedisExpireTimeRedisCommands();
+        addSentinelConfig();
+
+        addSpringLettuceSupport();
+        addCloseConnectionSupport();
+
+
+        return true;
     }
+
+    /**
+     * 关闭连接
+     */
+    void addCloseConnectionSupport() {
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.RedisChannelHandler",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod closeMethod = target.getDeclaredMethods("closeAsync", "close");
+                        closeMethod.addInterceptor(Listeners.of(LettuceCloseInterceptor.class, "Lettuce_Close_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    }
+                });
+    }
+
+    private void addSpringLettuceSupport() {
+        /**
+         * spring lettce support
+         */
+        this.enhanceTemplate.enhance(this,
+                "org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod connectionMethod = target.getDeclaredMethod("getConnection");
+                        if (connectionMethod != null) {
+                            connectionMethod.addInterceptor(Listeners.of(SpringRedisClientPerformanceInterceptor.class, "Spring_Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                        }
+                    }
+                });
+    }
+
+    private void addSentinelConfig() {
+        //io.lettuce.core.masterreplica.MasterReplica
+
+        this.enhanceTemplate.enhance(this,
+                "io.lettuce.core.masterreplica.MasterReplica",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        // TODO: 2021/8/25 获取连接信息收集客户端连接信息
+
+                        InstrumentMethod getConnectionMethod =
+                                target.getDeclaredMethods("getConnection"
+                                        , "java.util.concurrent.CompletableFuture"
+                                        , "java.lang.Object");
+                        getConnectionMethod.addInterceptor(Listeners.of(ConnectionInterceptor.class));
+
+                    }
+                });
+
+        //哨兵模式映射后的节点不好拿，单独增强一下
+        //io.lettuce.core.masterslave.SentinelConnector.initializeConnection
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.masterslave.SentinelConnector",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod initializeConnection =
+                                target.getDeclaredMethods("initializeConnection");
+                        initializeConnection.addInterceptor(Listeners.of(SentinelConnectorInterceptor.class));
+                    }
+                });
+
+        //io.lettuce.core.masterslave.MasterSlaveTopologyRefresh.getConnections
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.masterslave.MasterSlaveTopologyRefresh",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod getConnectionsMethod =
+                                target.getDeclaredMethods("getConnections");
+                        getConnectionsMethod.addInterceptor(Listeners.of(MasterSlaveTopologyRefreshGetconnectionInteceptor.class));
+                    }
+                });
+    }
+
 
     private void addMasterSlave() {
         this.enhanceTemplate.enhance(this, "io.lettuce.core.masterslave.MasterSlave", new EnhanceCallback() {
@@ -185,7 +267,11 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethods("connect", "connectAsync");
                 // Attach endpoint
-                method.addInterceptor(Listeners.of(RedisMasterSlaveAttachRedisURIsInterceptor.class, "Lettuce_Scope",  ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(RedisMasterSlaveAttachRedisURIsInterceptor.class));
+
+/*
+                method.addInterceptor(Listeners.of(RedisMasterSlaveAttachRedisURIsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+*/
                 method.addInterceptor(Listeners.of(RedisMasterSlavePerformanceInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
@@ -210,6 +296,12 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod shutdownAsyncMethod = target.getDeclaredMethod("shutdownAsync", "long", "long", "java.util.concurrent.TimeUnit");
                 shutdownAsyncMethod.addInterceptor(Listeners.of(LettuceMethodShutdownInterceptor.class));
+                // TODO: 2021/8/25 获取连接信息收集客户端连接信息
+                InstrumentMethod connection1 = target.getDeclaredMethod("getConnection", "io.lettuce.core.ConnectionFuture");
+                InstrumentMethod connection2 = target.getDeclaredMethod("getConnection", "java.util.concurrent.CompletableFuture");
+                connection1.addInterceptor(Listeners.of(ConnectionInterceptor.class));
+                connection2.addInterceptor(Listeners.of(ConnectionInterceptor.class));
+
             }
         });
 
@@ -237,6 +329,7 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
     }
+
 
     private void addRedisCommands() {
         this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisAsyncCommands", callback);

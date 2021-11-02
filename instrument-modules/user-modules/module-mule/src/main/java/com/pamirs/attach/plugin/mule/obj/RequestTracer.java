@@ -56,12 +56,6 @@ public class RequestTracer {
      */
     public static final String PRADAR_REMOTE_CLASSIFIER_KEY = "re";
 
-
-    /**
-     * 本机生成的 TraceId 的前缀
-     */
-    private static final String LOCAL_TRACE_ID_PREFIX = Pradar.generateTraceId(null).substring(0, 8);
-
     private static boolean isNeedFilter(HttpRequestPacket request) {
         String checkTest = request.getRequestURI();
         return StaticFileFilter.needFilter(checkTest) || request.getAttribute(StaticFileFilter.PRADAR_FILTER) != null;
@@ -189,7 +183,7 @@ public class RequestTracer {
             request.setAttribute("isTrace", false);
         } else {
             Pradar.clearInvokeContext();
-            traceId = TraceIdGenerator.generate(ip);
+            traceId = TraceIdGenerator.generate(ip, isClusterTestRequest);
             Pradar.startTrace(traceId, url, StringUtils.upperCase(request.getMethod().getMethodString()));
             request.setAttribute("isTrace", true);
         }
@@ -308,7 +302,7 @@ public class RequestTracer {
     }
 
     private static final boolean checkIP(String ip) {
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+        if (ip == null || ip.length() == 0 || "unknown".equals(ip) || "UNKNOWN".equals(ip)) {
             return false;
         } else {
             return true;
@@ -342,7 +336,7 @@ public class RequestTracer {
             }
         }
 
-        StringBuilder stringBuilder = new StringBuilder("parameterString={");
+        StringBuilder stringBuilder = new StringBuilder(128).append("parameterString={");
         if (null != paramMap) {
             int index = 0;
             for (Object key : paramMap.keySet()) {

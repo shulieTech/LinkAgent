@@ -182,7 +182,7 @@ public final class PradarCoreUtils {
      * @see #appendLog(String, StringBuilder, char)
      */
     public static String filterInvalidCharacters(String str) {
-        StringBuilder appender = new StringBuilder(str.length());
+        StringBuilder appender = new StringBuilder(str.length()*2);
         return appendLog(str, appender, '|').toString();
     }
 

@@ -37,7 +37,7 @@ public class ClassStructureFactory {
      * @return JDK实现的类结构
      */
     public static ClassStructure createClassStructure(final Class<?> clazz) {
-        return new ClassStructureImplByJDK(clazz);
+        return new JdkClassStructure(clazz);
     }
 
     /**
@@ -50,7 +50,7 @@ public class ClassStructureFactory {
     public static ClassStructure createClassStructure(final InputStream classInputStream,
                                                       final ClassLoader loader) {
         try {
-            return new ClassStructureImplByAsm(classInputStream, loader);
+            return new AsmClassStructure(classInputStream, loader);
         } catch (IOException cause) {
             logger.warn("SIMULATOR: create class structure failed by using ASM, return null. loader={};", loader, cause);
             return null;
@@ -66,7 +66,7 @@ public class ClassStructureFactory {
      */
     public static ClassStructure createClassStructure(final byte[] classByteArray,
                                                       final ClassLoader loader) {
-        return new ClassStructureImplByAsm(classByteArray, loader);
+        return new AsmClassStructure(classByteArray, loader);
     }
 
 }

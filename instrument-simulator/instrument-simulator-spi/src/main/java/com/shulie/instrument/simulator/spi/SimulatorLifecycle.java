@@ -27,16 +27,14 @@ public interface SimulatorLifecycle {
     /**
      * 启动时调用
      *
-     * @param namespace
      * @param simulatorConfig
      */
-    void onStart(String namespace, SimulatorConfig simulatorConfig);
+    void onStart(SimulatorConfig simulatorConfig);
 
     /**
      * 关闭时调用
      *
-     * @param namespace
      * @param simulatorConfig
      */
-    void onShutdown(String namespace, SimulatorConfig simulatorConfig);
+    void onShutdown(SimulatorConfig simulatorConfig);
 }

@@ -15,7 +15,22 @@
 package com.pamirs.attach.plugin.shadowjob;
 
 import com.pamirs.attach.plugin.shadowjob.adapter.XxlJobAdapter;
-import com.pamirs.attach.plugin.shadowjob.interceptor.*;
+import com.pamirs.attach.plugin.shadowjob.interceptor.JobExecutionContextInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.JobExecutorFactoryGetJobExecutorInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.JobRunShellInitializeInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.JobRunShellInitializeInterceptor_1;
+import com.pamirs.attach.plugin.shadowjob.interceptor.JobRunnerHolderAddInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.LtsInitAdapterInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.LtsJobReceiverInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.MethodJobHandlerExecuteInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.QuartzInitAdapterInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.ReflectiveMethodInvocationProceedInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.RequestMappingHandlerAdapterInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.ScheduledMethodRunnableRunInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.SpringContextInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.TbScheduleManagerFactoryInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.XxlInitAdapterInterceptor;
+import com.pamirs.attach.plugin.shadowjob.util.ElasticJobRegisterUtil;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
@@ -24,6 +39,7 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.listener.impl.ShadowImplListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -42,7 +58,7 @@ import org.kohsuke.MetaInfServices;
 public class ShadowJobPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         final ShadowImplListener shaDowImplListener = new ShadowImplListener();
 
 
@@ -116,17 +132,6 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
-
-        //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.handlerMethodsInitialized
-        enhanceTemplate.enhance(this, "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping",
-                new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod getMethod = target.getDeclaredMethod("handlerMethodsInitialized", "java.util.Map");
-                        getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
-
-                    }
-                });
 
 
         /**
@@ -277,5 +282,19 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
 
             }
         });
+
+        try {
+            Class.forName("com.dangdang.ddframe.job.spring.schedule.SpringJobScheduler");
+            PradarSpringUtil.onApplicationContextLoad(new Runnable() {
+                @Override
+                public void run() {
+                    ElasticJobRegisterUtil.addShadowJob();
+                }
+            });
+        }catch (ClassNotFoundException e){
+            // do nothing
+        }
+        return true;
     }
+
 }

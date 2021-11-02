@@ -44,11 +44,4 @@ public abstract class Event {
     public int getType() {
         return type;
     }
-
-    /**
-     * 销毁事件
-     */
-    public void destroy() {
-
-    }
 }

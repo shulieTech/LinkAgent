@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = GrpcConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "grpc 远程调用框架")
 public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         /* *****GRPC client**** */
         enhanceNewCall("io.grpc.internal.ManagedChannelImpl$RealChannel");
@@ -57,6 +57,7 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 //        enhanceServerStreamListenerImplMessagesAvailable("io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl");
 
         /* *****GRPC server**** */
+        return true;
     }
 
     private void enhanceNewCall(String className) {

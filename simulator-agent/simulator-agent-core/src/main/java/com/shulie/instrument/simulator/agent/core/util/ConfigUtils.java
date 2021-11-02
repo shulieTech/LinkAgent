@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
+import com.alibaba.fastjson.JSON;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -38,6 +39,13 @@ public class ConfigUtils {
     private static final String EQUAL_DELIMITER = "=";
     private static final String QUESTION_DELIMITER = "?";
     private static final String CHARSET = "utf-8";
+    private static String userAppKey = "";
+    private static String agentId = "";
+    private static String appName = "";
+
+    //配置控制台地址
+    private static final String AGENT_CONFIG_URL = "/api/fast/agent/access/config/agentConfig";
+
 
     public static String doConfig(String url, String userAppKey) {
         if (StringUtils.startsWith(url, "http://") || StringUtils.startsWith(url, "https://")) {
@@ -78,5 +86,65 @@ public class ConfigUtils {
             result.put(key, value);
         }
         return result;
+    }
+
+
+    /**
+     * 获取控制台的固定配置信息
+     */
+    public static Map<String, Object> getFixedAgentConfigFromUrl(String troWebUrl, String appName, String configVersion, String userAppKey){
+        return getAgentConfigFromUrl(troWebUrl, appName, configVersion, "0", userAppKey);
+    }
+
+
+
+
+    /**
+     * 获取控制台的动态配置信息
+     */
+    public static Map<String, Object> getDynamicAgentConfigFromUrl(String troWebUrl, String appName, String configVersion, String userAppKey){
+        return getAgentConfigFromUrl(troWebUrl, appName, configVersion, "1", userAppKey);
+    }
+
+
+    private static Map<String, Object> getAgentConfigFromUrl(String troWebUrl, String appName, String configVersion, String type, String userAppKey){
+        final StringBuilder url = new StringBuilder(troWebUrl).append(AGENT_CONFIG_URL);
+
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("projectName", appName);
+        params.put("version", configVersion);
+        params.put("effectMechanism", type);//固定参数
+        HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), userAppKey, JSON.toJSONString(params));
+        if (httpResult == null || !httpResult.isSuccess()) {
+            logger.error("获取控制台配置信息失败 url={}, result={}, 参数类型={}", url, httpResult == null ? "null,接口请求异常" : httpResult.getResult(),
+                    type.equals("1") ? "动态" : "固定");
+            return null;
+        }
+        return JSON.parseObject(httpResult.getResult(), Map.class);
+    }
+
+    public static String getUserAppKey() {
+        return userAppKey;
+    }
+
+    public static void setUserAppKey(String userAppKey) {
+        ConfigUtils.userAppKey = userAppKey;
+    }
+
+
+    public static String getAgentId() {
+        return agentId;
+    }
+
+    public static void setAgentId(String agentId) {
+        ConfigUtils.agentId = agentId;
+    }
+
+    public static String getAppName() {
+        return appName;
+    }
+
+    public static void setAppName(String appName) {
+        ConfigUtils.appName = appName;
     }
 }

@@ -33,11 +33,11 @@ import org.kohsuke.MetaInfServices;
 public class GoogleHttpClientPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
-        addHttpRequestClass();
+    public boolean onActive() throws Throwable {
+        return addHttpRequestClass();
     }
 
-    private void addHttpRequestClass() {
+    private boolean addHttpRequestClass() {
         enhanceTemplate.enhance(this, "com.google.api.client.http.HttpRequest", new EnhanceCallback() {
 
             @Override
@@ -47,5 +47,6 @@ public class GoogleHttpClientPlugin extends ModuleLifecycleAdapter implements Ex
                 execute.addInterceptor(Listeners.of(HttpRequestExecuteMethodInterceptor.class));
             }
         });
+        return true;
     }
 }

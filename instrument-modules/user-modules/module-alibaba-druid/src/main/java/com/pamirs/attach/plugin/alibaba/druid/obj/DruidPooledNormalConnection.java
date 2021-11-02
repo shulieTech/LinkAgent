@@ -29,7 +29,6 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
-import com.pamirs.pradar.pressurement.datasource.util.DbType;
 import com.pamirs.pradar.pressurement.datasource.util.SqlMetaData;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -47,22 +46,16 @@ import java.util.concurrent.Executor;
  */
 public class DruidPooledNormalConnection extends DruidPooledConnection {
     private DruidPooledConnection target;
-    public DruidPooledNormalConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username, String dbType) {
+
+    public DruidPooledNormalConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username, String dbType, SqlMetaData sqlMetaData) {
         super(connection.getConnectionHolder());
         this.target = connection;
         this.dbConnectionKey = dbConnectionKey;
         this.url = url;
         this.username = username;
         this.dbType = dbType;
-        DbType type = DbType.nameOf(dbType);
-        if (type != null) {
-            try {
-                this.sqlMetaData = type.sqlMetaData(url);
-            } catch (Throwable e) {
-            }
-        }
+        this.sqlMetaData = sqlMetaData;
     }
-
 
     private String dbConnectionKey;
 

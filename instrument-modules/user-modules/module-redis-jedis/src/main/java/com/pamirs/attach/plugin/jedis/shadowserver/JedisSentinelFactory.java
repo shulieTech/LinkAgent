@@ -17,15 +17,17 @@ package com.pamirs.attach.plugin.jedis.shadowserver;
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
-import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
+import com.pamirs.attach.plugin.jedis.util.Model;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import redis.clients.jedis.HostAndPort;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisSentinelPool;
 
 import java.util.HashSet;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
 
 /**
  * Jedis 工厂
@@ -37,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentinelPool> {
 
     private static JedisSentinelFactory jedisFactory;
+
 
     private JedisSentinelFactory() {
         super(new JedisSentinelNodesStrategy());
@@ -63,29 +66,39 @@ public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentin
         jedisFactory = null;
     }
 
+    Model model = Model.INSTANCE();
+
     @Override
-    public RedisClientMediator<JedisSentinelPool> createMediator(Object client, ShadowRedisConfig shadowConfig) {
-        RedisClientMediator<JedisSentinelPool> mediator = null;
-        if (client instanceof JedisSentinelPool) {
-            JedisConstructorConfig jedisConfig = RedisConstants.jedisInstance.get(client);
-            if (jedisConfig == null) {
-                return null;
-            }
+    public RedisClientMediator createMediator(Object obj, ShadowRedisConfig shadowConfig) {
+        model.cachePressureNode(shadowConfig);
+        RedisClientMediator mediator = null;
+        if (Jedis.class.isAssignableFrom(obj.getClass())) {
 
-            HostAndPort next = next(shadowConfig.getNodeNums());
-            if (next == null) {
-                return null;
-            }
 
-            JedisSentinelPool pressureJedisPool = null;
-            if (100 == jedisConfig.getConstructorType()) {
-                pressureJedisPool = new JedisSentinelPool(jedisConfig.getMaster(),
-                        new HashSet<String>(shadowConfig.getNodeNums()), jedisConfig.getPoolConfig(),
-                        jedisConfig.getConnectionTimeout(), jedisConfig.getSoTimeout(),
-                        shadowConfig.getPassword(), jedisConfig.getDatabase(), jedisConfig.getClientName());
-            }
-            if (null != pressureJedisPool) {
-                mediator = new RedisClientMediator<JedisSentinelPool>(pressureJedisPool, (JedisSentinelPool) client, true);
+            Object datasource = Reflect.on(obj).get("dataSource");
+            if (datasource != null && JedisSentinelPool.class.isAssignableFrom(datasource.getClass())) {
+                JedisSentinelPool pressureJedisPool = null;
+
+                String masterName = shadowConfig.getMaster();
+                Set nodes = new HashSet(shadowConfig.getNodeNums());
+                String password = shadowConfig.getPassword();
+                GenericObjectPoolConfig poolConfig = Reflect.on(datasource).get("poolConfig");
+
+
+                password = StringUtil.isEmpty(password) ? null : password;
+
+                int database = shadowConfig.getDatabase() == null ? 0 : shadowConfig.getDatabase();
+
+                pressureJedisPool = new JedisSentinelPool(masterName, nodes, poolConfig,
+                        2000, password, database);
+
+               /* else if (StringUtil.isEmpty(password)) {
+                    pressureJedisPool = new JedisSentinelPool(masterName, nodes, poolConfig);
+
+                } else {
+                    pressureJedisPool = new JedisSentinelPool(masterName, nodes, poolConfig, password);
+                }*/
+                mediator = new RedisClientMediator<JedisSentinelPool>(pressureJedisPool, (JedisSentinelPool) datasource, true);
             }
         }
         return mediator;
@@ -97,24 +110,4 @@ public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentin
         RedisConstants.registerShadowNodes.clear();
     }
 
-    private AtomicInteger index = new AtomicInteger(0);
-
-    private HostAndPort next(List<String> nodes) {
-        for (String node : nodes) {
-            if (!RedisConstants.registerShadowNodes.contains(node)) {
-                return createNode(node);
-            }
-        }
-        // TODO 该怎么做？有可能会遇到业务IP * 3,影子IP * 2的情况
-        // 目前轮训选取
-        return createNode(nodes.get(index.getAndIncrement() % nodes.size()));
-    }
-
-    public HostAndPort createNode(String node) {
-        final int endIndex = node.indexOf(":");
-        String host = node.substring(0, endIndex);
-        int port = Integer.parseInt(node.substring(endIndex + 1));
-        RedisConstants.registerShadowNodes.add(node);
-        return new HostAndPort(host, port);
-    }
 }

@@ -49,10 +49,24 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
     private MongoClientDelegate mongoClientDelegate = null;
     private Field executorField = null;
 
+    static boolean skip = false;
+
+    static {
+        try {
+            Class.forName("com.mongodb.internal.operation.ReadOperation");
+            skip = false;
+        } catch (ClassNotFoundException e) {
+            skip = true;
+        }
+    }
+
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        if (skip) {
+            return null;
+        }
         Object target = advice.getTarget();
-        if(executorField == null){
+        if (executorField == null) {
             final Field tempField = ReflectionUtils.getDeclaredField(target, "executor");
             tempField.setAccessible(true);
             this.executorField = tempField;
@@ -62,7 +76,7 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
         try {
             executor = executorField.get(target);
         } catch (IllegalAccessException e) {
-            LOGGER.error("mongodb trace error",e);
+            LOGGER.error("mongodb trace error", e);
         }
         if (mongoClientDelegate == null) {
             Field field = null;
@@ -71,7 +85,8 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
                 field.setAccessible(true);
                 mongoClientDelegate = (MongoClientDelegate)field.get(executor);
             } catch (Throwable e) {
-                LOGGER.error(String.format("DelegateOperationExecutorInterceptor error,class:%s", executor.getClass().getName()) , e);
+                LOGGER.error(
+                    String.format("DelegateOperationExecutorInterceptor error,class:%s", executor.getClass().getName()), e);
             } finally {
                 if (field != null) {
                     field.setAccessible(false);
@@ -80,17 +95,21 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
         }
         MongoCollection mongoCollection = (MongoCollection)target;
         SpanRecord record = new SpanRecord();
-        ClusterSettings clusterSettings = (ClusterSettings)ReflectionUtils.getFieldValue(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"),"settings");
+        ClusterSettings clusterSettings = (ClusterSettings)ReflectionUtils.getFieldValue(
+            ReflectionUtils.getFieldValue(mongoClientDelegate, "cluster"), "settings");
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         record.setService(mongoCollection.getNamespace().getFullName());
         record.setRequest(advice.getParameterArray());
-        record.setMethod(advice.getBehavior().getName());
+        record.setMethod(advice.getBehaviorName());
         record.setRemoteIp(StringUtils.join(serverAddresses, ","));
         return record;
     }
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if (skip) {
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setRequest(advice.getParameterArray());
@@ -101,6 +120,9 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
+        if (skip) {
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         record.setRequest(advice.getParameterArray());

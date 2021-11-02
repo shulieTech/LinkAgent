@@ -30,6 +30,7 @@ import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -68,6 +69,9 @@ public class ConsumerPollInterceptor extends CutoffInterceptorAdaptor {
     }
 
     private CutOffResult doOriginIntercept(Advice advice) {
+        if(GlobalConfig.getInstance().getMqWhiteList() == null || GlobalConfig.getInstance().getMqWhiteList().isEmpty()){
+            return CutOffResult.PASSED;
+        }
         KafkaConsumer consumer = (KafkaConsumer)advice.getTarget();
         ConsumerMetaData consumerMetaData = ConsumerHolder.getConsumerMetaData(consumer);
         if (consumerMetaData == null) {

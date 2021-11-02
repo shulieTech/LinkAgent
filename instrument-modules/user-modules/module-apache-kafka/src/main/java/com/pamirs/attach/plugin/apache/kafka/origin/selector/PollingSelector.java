@@ -14,6 +14,8 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin.selector;
 
+import com.pamirs.pradar.PradarService;
+
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/05/12 5:27 下午
@@ -24,6 +26,9 @@ public class PollingSelector implements PollConsumerSelector {
 
     @Override
     public ConsumerType select() {
+        if (PradarService.isSilence()) {
+            return ConsumerType.BIZ;
+        }
         if (consumerType == ConsumerType.BIZ) {
             consumerType = ConsumerType.SHADOW;
         } else {

@@ -32,7 +32,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = PulsarConstants.PLUGIN_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "pulsar 消息中间件")
 public class PulsarPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "org.apache.pulsar.client.impl.ProducerImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -47,5 +47,6 @@ public class PulsarPlugin extends ModuleLifecycleAdapter implements ExtensionMod
                 method.addInterceptor(Listeners.of(PulsarTraceConsumerInterceptor.class));
             }
         });
+        return true;
     }
 }

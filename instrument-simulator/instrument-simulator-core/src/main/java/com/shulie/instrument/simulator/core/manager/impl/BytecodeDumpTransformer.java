@@ -48,12 +48,12 @@ public class BytecodeDumpTransformer extends SimulatorClassFileTransformer {
     private final Matcher matcher;
     private final String dumpByteCodePath;
 
-    public static BytecodeDumpTransformer wrap(SimulatorClassFileTransformer classFileTransformer, SimulatorConfig profilerConfig, Matcher matcher, boolean isDumpFile, boolean isEnableUnsafe) {
-        return new BytecodeDumpTransformer(classFileTransformer, profilerConfig, matcher, isDumpFile, isEnableUnsafe);
+    public static BytecodeDumpTransformer wrap(SimulatorClassFileTransformer classFileTransformer, SimulatorConfig simulatorConfig, Matcher matcher, boolean isDumpFile, boolean isEnableUnsafe) {
+        return new BytecodeDumpTransformer(classFileTransformer, simulatorConfig, matcher, isDumpFile, isEnableUnsafe);
     }
 
-    public static BytecodeDumpTransformer wrap(SimulatorClassFileTransformer classFileTransformer, SimulatorConfig profilerConfig) {
-        return new BytecodeDumpTransformer(classFileTransformer, profilerConfig, null, false, false);
+    public static BytecodeDumpTransformer wrap(SimulatorClassFileTransformer classFileTransformer, SimulatorConfig simulatorConfig) {
+        return new BytecodeDumpTransformer(classFileTransformer, simulatorConfig, null, false, false);
     }
 
     private BytecodeDumpTransformer(SimulatorClassFileTransformer delegate, SimulatorConfig simulatorConfig, Matcher matcher, boolean isDumpFile, boolean isEnableUnsafe) {
@@ -61,7 +61,7 @@ public class BytecodeDumpTransformer extends SimulatorClassFileTransformer {
             throw new NullPointerException("delegate must not be null");
         }
         if (simulatorConfig == null) {
-            throw new NullPointerException("profilerConfig must not be null");
+            throw new NullPointerException("simulatorConfig must not be null");
         }
         this.matcher = matcher;
         this.delegate = delegate;

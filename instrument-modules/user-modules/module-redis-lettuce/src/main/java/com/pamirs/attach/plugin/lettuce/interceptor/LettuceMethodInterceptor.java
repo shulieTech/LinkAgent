@@ -14,24 +14,39 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.lettuce.core.RedisChannelWriter;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.masterslave.MasterSlaveConnectionProvider;
 import io.lettuce.core.protocol.DefaultEndpoint;
 import io.netty.channel.Channel;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.sql.Ref;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
 
 @Destroyable(LettuceDestroy.class)
 public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
-
+    protected final static Logger logger = LoggerFactory.getLogger(LettuceMethodInterceptor.class);
     @Override
     public String getPluginName() {
         return LettuceConstants.PLUGIN_NAME;
@@ -42,10 +57,12 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         return LettuceConstants.PLUGIN_TYPE;
     }
 
+    @Resource
+    protected DynamicFieldManager manager;
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord spanRecord = new SpanRecord();
         appendEndPoint(target, spanRecord);
@@ -54,6 +71,21 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         spanRecord.setRequest(toArgs(args));
         spanRecord.setMiddlewareName(LettuceConstants.MIDDLEWARE_NAME);
         return spanRecord;
+    }
+    private void setRemoteIpAndPort(Object target,SpanRecord spanRecord){
+        final List<Object> redisUris = manager.getDynamicField(target, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS);
+        if(redisUris != null && !redisUris.isEmpty()){
+            final List<String> remoteIps = new ArrayList<String>();
+            for (Object redisUri : redisUris) {
+                final String host = Reflect.on(redisUri).get("host");
+                final Integer port = Reflect.on(redisUri).get("port");
+                remoteIps.add(host + ":" + port);
+            }
+            spanRecord.setRemoteIp(StringUtils.join(remoteIps,","));
+        }else {
+            spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
+        }
+
     }
 
     private Object[] toArgs(Object[] args) {
@@ -86,7 +118,32 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setMiddlewareName(LettuceConstants.MIDDLEWARE_NAME);
         spanRecord.setCallbackMsg(LettuceConstants.PLUGIN_NAME);
+        /**
+         * 附加属性
+         */
+        ext();
         return spanRecord;
+    }
+
+
+    void ext() {
+        try {
+            if (Pradar.isClusterTest()) {
+                return;
+            }
+            String index = Pradar.getInvokeContext().getRemoteIp()
+                    .concat(":")
+                    .concat(Pradar.getInvokeContext().getPort());
+
+            Object attachment =
+                    ResourceManager.get(index, LettuceConstants.MIDDLEWARE_NAME);
+            if (attachment != null) {
+                Pradar.getInvokeContext().setExt(attachment);
+            }
+
+        } catch (Throwable t) {
+
+        }
     }
 
     @Override
@@ -96,13 +153,58 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         spanRecord.setMiddlewareName(LettuceConstants.MIDDLEWARE_NAME);
         spanRecord.setCallbackMsg(LettuceConstants.PLUGIN_NAME);
+        /**
+         * 附加属性
+         */
+        ext();
         return spanRecord;
     }
 
     private void appendEndPoint(Object target, final SpanRecord spanRecord) {
         try {
             final Object connection = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_CONNECTION);
-            final DefaultEndpoint endpoint = Reflect.on(connection).get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
+
+            final Object t = Reflect.on(connection).get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
+            ;
+            DefaultEndpoint endpoint = null;
+            if ("io.lettuce.core.masterslave.MasterSlaveChannelWriter".equals(t.getClass().getName())) {
+                try {
+                    /**
+                     * 这是主从的
+                     */
+                    MasterSlaveConnectionProvider provider = Reflect.on(t).get("masterSlaveConnectionProvider");
+                    RedisURI redisUri = Reflect.on(provider).get("initialRedisUri");
+                    spanRecord.setRemoteIp(redisUri.getHost());
+                    spanRecord.setPort(redisUri.getPort());
+                } catch (Throwable thx) {
+                    spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
+                }
+                return;
+                /**
+                 * 这是哨兵的
+                 */
+            } else if ("io.lettuce.core.masterslave.SentinelConnector$1".equals(t.getClass().getName())) {
+                try {
+                    Object sentinelConnector = Reflect.on(t).get("this$0");
+                    RedisURI redisURI = Reflect.on(sentinelConnector).get("redisURI");
+                    List<RedisURI> sentinels = redisURI.getSentinels();
+                    RedisURI current = sentinels.get(0);
+                    spanRecord.setRemoteIp(current.getHost());
+                    spanRecord.setPort(current.getPort());
+                } catch (Throwable thx) {
+                    spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
+                }
+                return;
+            }
+            if (t instanceof DefaultEndpoint) {
+                endpoint = (DefaultEndpoint) t;
+            } else {
+                try {
+                    endpoint = Reflect.on(t).get(LettuceConstants.REFLECT_FIELD_DEFAULT_WRITER);
+                } catch (Throwable w) {
+                    endpoint = Reflect.on(t).get(LettuceConstants.REFLECT_FIELD_WRITER);
+                }
+            }
             if (endpoint == null) {
                 spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
                 return;

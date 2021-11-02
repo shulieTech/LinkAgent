@@ -14,6 +14,8 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
+import java.util.List;
+
 import com.pamirs.attach.plugin.es.ElasticsearchConstants;
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
@@ -30,7 +32,8 @@ import org.elasticsearch.client.support.AbstractClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
 
 import static com.pamirs.attach.plugin.es.common.ElasticSearchParser.parseAddressAndPort;
 
@@ -40,7 +43,7 @@ import static com.pamirs.attach.plugin.es.common.ElasticSearchParser.parseAddres
  */
 @Destroyable(ElasticSearchDestroy.class)
 public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
-    Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
     @Override
     public String getPluginName() {
@@ -62,9 +65,12 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
             LOGGER.error("elasticsearch {} is not supported", args[1].getClass().getName());
             return null;
         }
+        if(!Pradar.isClusterTest()){
+            record.setPassedCheck(true);
+        }
         AbstractClient client = (AbstractClient) target;
-        record.setService(toString(requestIndexRename.getIndex(args[1])));
-        record.setMethod(advice.getBehavior().getName());
+        record.setService(toString(new HashSet<String>(requestIndexRename.getIndex(args[1]))));
+        record.setMethod(advice.getBehaviorName());
         record.setRemoteIp(parseAddressAndPort(client));
         return record;
 
@@ -74,10 +80,10 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
     public void beforeLast(Advice advice) {
         Object[] args = advice.getParameterArray();
         Object target = advice.getTarget();
-        check(target, advice.getBehavior().getName(), args);
+        check(target, advice.getBehaviorName(), args);
     }
 
-    private String toString(List<String> list) {
+    private String toString(Collection<String> list) {
         StringBuilder builder = new StringBuilder();
         for (String str : list) {
             builder.append(str).append(',');
@@ -95,7 +101,7 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setRequest(args[1]);
-        record.setResponse(result);
+        //record.setResponse(result);
         return record;
 
     }
@@ -116,7 +122,7 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
             return;
         }
         RequestIndexRename requestIndexRename = RequestIndexRenameProvider.get(args[1]);
-        List<String> indexs = requestIndexRename.getIndex(args[1]);
+        Collection<String> indexs = new HashSet<String>(requestIndexRename.getIndex(args[1]));
         if (Pradar.isClusterTest()) {
             for (String index : indexs) {
                 if (!Pradar.isClusterTestPrefix(index)) {

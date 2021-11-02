@@ -34,6 +34,8 @@ import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RestClient;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -100,8 +102,11 @@ public class RestHighLevelClientInterceptor extends TraceInterceptorAdaptor {
             LOGGER.error("elasticsearch {} is not supported", args[0].getClass().getName());
             return null;
         }
-        record.setService(toString(requestIndexRename.getIndex(args[0])));
-        record.setMethod(advice.getBehavior().getName());
+        if(!Pradar.isClusterTest()){
+            record.setPassedCheck(true);
+        }
+        record.setService(toString(new HashSet<String>(requestIndexRename.getIndex(args[0]))));
+        record.setMethod(advice.getBehaviorName());
         String remoteIp = getRemoteIp(target);
         record.setRemoteIp(remoteIp);
         return record;
@@ -131,7 +136,7 @@ public class RestHighLevelClientInterceptor extends TraceInterceptorAdaptor {
         }
     }
 
-    private String toString(List<String> list) {
+    private String toString(Collection<String> list) {
         StringBuilder builder = new StringBuilder();
         for (String str : list) {
             builder.append(str).append(',');
@@ -149,7 +154,7 @@ public class RestHighLevelClientInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setRequest(args[0]);
-        record.setResponse(result);
+        //record.setResponse(result);
         return record;
 
     }

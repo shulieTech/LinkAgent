@@ -15,9 +15,7 @@
 package com.pamirs.attach.plugin.webflux.interceptor;
 
 import com.pamirs.attach.plugin.webflux.common.Cache;
-import com.pamirs.attach.plugin.webflux.common.WebFluxConstants;
-import com.pamirs.pradar.MiddlewareType;
-import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 
@@ -26,28 +24,13 @@ import org.springframework.http.server.reactive.AbstractServerHttpRequest;
  * @Date: 2021/1/11 22:13
  * @Description:
  */
-public class AbstractServerHttpRequestInterceptor extends TraceInterceptorAdaptor {
-
-
+public class AbstractServerHttpRequestInterceptor extends AroundInterceptor {
 
     @Override
-    public void afterFirst(Advice advice) {
-
+    public void doAfter(Advice advice) {
         if (advice.getTarget() instanceof AbstractServerHttpRequest) {
             Cache.RequestHolder.set(advice.getTarget());
         }
 
-    }
-
-
-
-    @Override
-    public String getPluginName() {
-        return WebFluxConstants.MODULE_NAME;
-    }
-
-    @Override
-    public int getPluginType() {
-        return MiddlewareType.TYPE_WEB_SERVER;
     }
 }

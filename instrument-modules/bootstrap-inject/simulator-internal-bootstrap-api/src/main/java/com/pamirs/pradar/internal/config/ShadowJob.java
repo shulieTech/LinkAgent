@@ -53,6 +53,23 @@ public class ShadowJob implements Serializable {
      * 执行的 cron 表达式
      */
     private String cron;
+
+    /**
+     * 固定延迟
+     */
+    private Long fixedDelay;
+
+    /**
+     * 固定频率
+     */
+    private Long fixedRate;
+
+    /**
+     * 初始延迟
+     */
+    private Long initialDelay;
+
+
     /**
      *
      */
@@ -136,6 +153,30 @@ public class ShadowJob implements Serializable {
         this.id = id;
     }
 
+    public Long getFixedDelay() {
+        return fixedDelay;
+    }
+
+    public void setFixedDelay(Long fixedDelay) {
+        this.fixedDelay = fixedDelay;
+    }
+
+    public Long getFixedRate() {
+        return fixedRate;
+    }
+
+    public void setFixedRate(Long fixedRate) {
+        this.fixedRate = fixedRate;
+    }
+
+    public Long getInitialDelay() {
+        return initialDelay;
+    }
+
+    public void setInitialDelay(Long initialDelay) {
+        this.initialDelay = initialDelay;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -174,6 +215,9 @@ public class ShadowJob implements Serializable {
                 ", jobType='" + jobType + '\'' +
                 ", jobDataType='" + jobDataType + '\'' +
                 ", cron='" + cron + '\'' +
+                ", fixedDelay='" + fixedDelay + '\'' +
+                ", fixedRate='" + fixedRate + '\'' +
+                ", initialDelay='" + initialDelay + '\'' +
                 ", listenerName='" + listenerName + '\'' +
                 ", errorMessage='" + errorMessage + '\'' +
                 ", extendParam=" + extendParam +

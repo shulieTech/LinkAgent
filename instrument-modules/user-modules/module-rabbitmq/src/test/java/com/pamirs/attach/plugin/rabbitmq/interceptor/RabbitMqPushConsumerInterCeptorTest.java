@@ -30,7 +30,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class RabbitMqPushConsumerInterCeptorTest {
 
-    public static final String RABBITMQ_NAMESERVER_ADDR = "192.168.1.240";
+    public static final String RABBITMQ_NAMESERVER_ADDR = "127.0.0.1";
     public static final int RABBITMQ_PORT = 5672;
     public static final String RABBITMQ_USERNAME = "guest";
     public static final String RABBITMQ_PASSWORD = "guest";

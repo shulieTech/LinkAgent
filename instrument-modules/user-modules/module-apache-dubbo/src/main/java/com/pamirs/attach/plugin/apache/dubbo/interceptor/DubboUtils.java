@@ -29,7 +29,7 @@ class DubboUtils {
     public static final String PLUGIN_NAME = "apache-dubbo";
 
     static boolean isLocalHost(String ip) {
-        return "127.0.0.1".equals(ip) || "localhost".equalsIgnoreCase(ip);
+        return "127.0.0.1".equals(ip) || "localhost".equals(ip) || "LOCALHOST".equals(ip);
     }
 
     static boolean equalsIgnoreCase(String str1, String str2) {

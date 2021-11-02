@@ -69,9 +69,6 @@ public class ThreadModule extends ParamSupported implements ExtensionModule {
             } else if (findMostBlockingThread) {
                 return processBlockingThread(sampleInterval);
             } else {
-                if (sampleInterval == null) {
-                    return CommandResponse.failure("arg [i](interval) can't not be null.");
-                }
                 return getAllThreadStats(state, sampleInterval);
             }
         } catch (Throwable t) {

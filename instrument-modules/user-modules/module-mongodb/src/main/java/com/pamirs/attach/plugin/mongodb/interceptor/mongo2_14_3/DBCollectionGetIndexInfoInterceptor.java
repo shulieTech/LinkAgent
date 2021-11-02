@@ -25,7 +25,7 @@ public class DBCollectionGetIndexInfoInterceptor extends AbstractDBCollectionInt
 
     @Override
     protected boolean check(Advice advice) {
-        return advice.getBehavior().getName().equals("getIndexInfo");
+        return advice.getBehaviorName().equals("getIndexInfo");
     }
 
     @Override

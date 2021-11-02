@@ -64,6 +64,7 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
 
     @Override
     public CutOffResult cutoff0(Advice advice) {
+        DataSourceWrapUtil.attachment(advice);
         Object target = advice.getTarget();
         BasicDataSource dataSource = (BasicDataSource) target;
         DataSourceMeta<BasicDataSource> dataSourceMeta = new DataSourceMeta<BasicDataSource>(dataSource.getUrl(), dataSource.getUsername(), dataSource);
@@ -139,7 +140,9 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
                             it.remove();
                             try {
                                 value.close();
-                                logger.info("module-dbcp: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-dbcp: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-dbcp: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }

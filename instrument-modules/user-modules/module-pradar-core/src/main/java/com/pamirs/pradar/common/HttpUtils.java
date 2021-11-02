@@ -48,10 +48,10 @@ public abstract class HttpUtils {
         try {
             SocketAddress address = new InetSocketAddress(host, port);
             String request = "GET " + url + " HTTP/1.1\r\n"
-                + "Host: " + host + ":" + port + "\r\n"
-                + "Connection: Keep-Alive\r\n"
-                + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
-                + "\r\n";
+                    + "Host: " + host + ":" + port + "\r\n"
+                    + "Connection: Keep-Alive\r\n"
+                    + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
+                    + "\r\n";
             socket = new Socket();
             // 设置建立连接超时时间 5s
             socket.connect(address, 5000);
@@ -111,9 +111,9 @@ public abstract class HttpUtils {
             output = socket.getOutputStream();
 
             String request =
-                "POST " + url + " HTTP/1.1\r\nHost: " + host + ":" + port
-                    + "\r\nConnection: Keep-Alive\r\n"
-                    + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n");
+                    "POST " + url + " HTTP/1.1\r\nHost: " + host + ":" + port
+                            + "\r\nConnection: Keep-Alive\r\n"
+                            + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n");
             if (body != null && !body.isEmpty()) {
                 request = request + "Content-Length: " + body.getBytes().length + "\r\n";
                 request = request + "Content-Type: application/json\r\n";
@@ -208,7 +208,7 @@ public abstract class HttpUtils {
             String encodings = transferEncodings.get(0);
             String[] elements = StringUtils.split(encodings, ';');
             int len = elements.length;
-            if (len > 0 && "chunked".equalsIgnoreCase(elements[len - 1])) {
+            if (len > 0 && ("chunked".equals(elements[len - 1]) || "CHUNKED".equals(elements[len - 1]))) {
                 return new ChunkedInputStream(input);
             }
             return input;
@@ -232,7 +232,7 @@ public abstract class HttpUtils {
     }
 
     public static Map<String, List<String>> readHeaders(InputStream input)
-        throws IOException {
+            throws IOException {
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
@@ -251,7 +251,7 @@ public abstract class HttpUtils {
     }
 
     public static void exhaustInputStream(InputStream inStream)
-        throws IOException {
+            throws IOException {
         byte buffer[] = new byte[1024];
         while (inStream.read(buffer) >= 0) {
         }
@@ -268,6 +268,10 @@ public abstract class HttpUtils {
     }
 
     private static Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?", Pattern.CASE_INSENSITIVE);
+
+    public static void main(String[] args) {
+        getHostPortUrlFromUrl("http://127.0.0.1/tro-web/api/link/ds/configs/pull?appName=test-druid");
+    }
 
     private static HostPort getHostPortUrlFromUrl(String url) {
         String domain = url;
@@ -300,10 +304,10 @@ public abstract class HttpUtils {
         @Override
         public String toString() {
             return "HostPort{" +
-                "host='" + host + '\'' +
-                ", port=" + port +
-                ", url='" + url + '\'' +
-                '}';
+                    "host='" + host + '\'' +
+                    ", port=" + port +
+                    ", url='" + url + '\'' +
+                    '}';
         }
     }
 

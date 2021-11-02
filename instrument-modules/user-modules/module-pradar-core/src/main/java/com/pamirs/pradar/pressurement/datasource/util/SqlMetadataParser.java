@@ -33,14 +33,7 @@ public class SqlMetadataParser {
         try {
             SqlMetaData sqlMetaData = sqlMetaDatas.get(url);
             if (sqlMetaData != null) {
-                SqlMetaData metaData = new SqlMetaData();
-                metaData.setHost(sqlMetaData.getHost());
-                metaData.setPort(sqlMetaData.getPort());
-                metaData.setDbType(sqlMetaData.getDbType());
-                metaData.setDbName(sqlMetaData.getDbName());
-                metaData.setUrl(sqlMetaData.getUrl());
-                metaData.setSql(sqlMetaData.getSql());
-                return metaData;
+                return SqlMetaData.copy(sqlMetaData);
             }
             sqlMetaData = dbType.readMetaData(url);
             if (sqlMetaData == null) {
@@ -51,14 +44,7 @@ public class SqlMetadataParser {
                 sqlMetaData = old;
             }
 
-            SqlMetaData metaData = new SqlMetaData();
-            metaData.setHost(sqlMetaData.getHost());
-            metaData.setPort(sqlMetaData.getPort());
-            metaData.setDbType(sqlMetaData.getDbType());
-            metaData.setDbName(sqlMetaData.getDbName());
-            metaData.setUrl(sqlMetaData.getUrl());
-            metaData.setSql(sqlMetaData.getSql());
-            return metaData;
+            return SqlMetaData.copy(sqlMetaData);
         } catch (Throwable e) {
             logger.error("Sql metadata parse err. maybe db type is not supported. dbType={}, url={}", dbType, url, e);
             return null;

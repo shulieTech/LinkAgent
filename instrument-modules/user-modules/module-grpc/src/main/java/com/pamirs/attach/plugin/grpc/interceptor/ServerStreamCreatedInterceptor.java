@@ -24,6 +24,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import io.grpc.Metadata;
 import org.apache.commons.lang.StringUtils;
 
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +119,11 @@ public class ServerStreamCreatedInterceptor extends TraceInterceptorAdaptor {
         }
         SpanRecord record = new SpanRecord();
         record.setResponse(advice.getThrowable());
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
         return record;
     }
 

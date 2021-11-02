@@ -51,7 +51,7 @@ public class CostDumpTransformer extends SimulatorClassFileTransformer {
             throw new NullPointerException("delegate must not be null");
         }
         if (simulatorConfig == null) {
-            throw new NullPointerException("profilerConfig must not be null");
+            throw new NullPointerException("simulatorConfig must not be null");
         }
 
         this.delegate = delegate;

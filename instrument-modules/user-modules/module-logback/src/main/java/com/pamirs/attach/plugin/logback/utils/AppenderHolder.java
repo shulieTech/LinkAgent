@@ -15,7 +15,9 @@
 package com.pamirs.attach.plugin.logback.utils;
 
 import java.io.File;
+import java.util.List;
 
+import ch.qos.logback.core.util.COWArrayList;
 import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -27,13 +29,15 @@ import com.shulie.instrument.simulator.message.ConcurrentWeakHashMap;
  */
 public class AppenderHolder {
 
+    private static ConcurrentWeakHashMap ptAppenderListCache = new ConcurrentWeakHashMap();
+
     private static ConcurrentWeakHashMap targetCache = new ConcurrentWeakHashMap();
 
     private static final Object NULL = new Object();
 
     //因为agent的类加载器已经加载过了logback的相关类，这里会有类冲突(报转型错误)，所以全部用反射处理
     public static Object getOrCreatePtAppender(ClassLoader bizClassLoader, Object appender, String bizShadowLogPath)
-        throws ClassNotFoundException {
+        throws Exception {
         String appenderName = Reflect.on(appender).call("getName").get();
         if (appenderName.startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
             return appender;
@@ -49,14 +53,37 @@ public class AppenderHolder {
 
     private static Object tryCreatePtAppender(ClassLoader bizClassLoader, Object appender, String appenderName,
         String bizShadowLogPath)
-        throws ClassNotFoundException {
-        if (!isFileAppender(bizClassLoader, appender)) {
+        throws Exception {
+        if (appender.getClass().getName().equals("ch.qos.logback.classic.AsyncAppender")) {
+            return createAsyncAppender(bizClassLoader, appender, appenderName, bizShadowLogPath);
+        } else {
+            if (!isFileAppender(bizClassLoader, appender)) {
+                return NULL;
+            }
+            if (appender.getClass().getName().equals("ch.qos.logback.core.rolling.RollingFileAppender")) {
+                return createRollingFileAppender(bizClassLoader, appender, appenderName, bizShadowLogPath);
+            }
             return NULL;
         }
-        if (appender.getClass().getName().equals("ch.qos.logback.core.rolling.RollingFileAppender")) {
-            return createRollingFileAppender(bizClassLoader, appender, appenderName, bizShadowLogPath);
+    }
+
+    private static Object createAsyncAppender(ClassLoader bizClassLoader, Object appender, String appenderName,
+        String bizShadowLogPath) throws Exception {
+        Object appenderAttachable = Reflect.on(appender).get("aai");
+        List appenderList = Reflect.on(appenderAttachable).get("appenderList");
+        if (appenderList == null) {
+            return NULL;
         }
-        return NULL;
+        Object ptAsyncAppender = Reflect.on(appender.getClass()).create().get();
+        for (Object subAppender : appenderList) {
+            Object ptAppender = AppenderHolder.getOrCreatePtAppender(bizClassLoader, subAppender, bizShadowLogPath);
+            if (ptAppender != null) {
+                Reflect.on(ptAsyncAppender).call("addAppender", ptAppender).get();
+            }
+        }
+        Reflect.on(ptAsyncAppender).call("setName", Pradar.addClusterTestPrefix(appenderName)).get();
+        Reflect.on(ptAsyncAppender).call("start").get();
+        return ptAsyncAppender;
     }
 
     private static Object createRollingFileAppender(ClassLoader bizClassLoader, Object appender, String appenderName,
@@ -107,8 +134,6 @@ public class AppenderHolder {
         Reflect.on(ptPolicy).call("setContext", Reflect.on(rollingPolicy).call("getContext").get());
         Reflect.on(ptPolicy).call("setMaxHistory", Reflect.on(rollingPolicy).call("getMaxHistory").get());
         Reflect.on(ptPolicy).call("setParent", ptAppender);
-        Reflect.on(ptPolicy).call("setTimeBasedFileNamingAndTriggeringPolicy",
-            Reflect.on(rollingPolicy).call("getTimeBasedFileNamingAndTriggeringPolicy").get());
         try {
             Reflect.on(ptPolicy).call("setMaxFileSize", Reflect.on(rollingPolicy).get("maxFileSize"));
         } catch (ReflectException ignore) {
@@ -130,6 +155,15 @@ public class AppenderHolder {
 
     public static void release() {
         targetCache.clear();
+        ptAppenderListCache.clear();
     }
 
+    public static COWArrayList<Object> getPtAppenders(Object appenderAttachable) {
+        return (COWArrayList<Object>)ptAppenderListCache.get(appenderAttachable);
+    }
+
+    public static void putPtAppenders(Object appenderAttachable,
+        COWArrayList<Object> ptAppenderList) {
+        ptAppenderListCache.put(appenderAttachable, ptAppenderList);
+    }
 }

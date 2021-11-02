@@ -38,7 +38,7 @@ public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements Ex
     private static Logger logger = LoggerFactory.getLogger(ApacheTomcatJdbcPlugin.class);
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         //jdbc pt table mechanism
         enhanceTemplate.enhance(this, "org.apache.tomcat.jdbc.pool.DataSourceProxy", new EnhanceCallback() {
             @Override
@@ -55,5 +55,6 @@ public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements Ex
 
             }
         });
+        return true;
     }
 }

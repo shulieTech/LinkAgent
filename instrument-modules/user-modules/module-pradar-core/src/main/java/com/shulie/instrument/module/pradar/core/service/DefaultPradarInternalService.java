@@ -14,11 +14,11 @@
  */
 package com.shulie.instrument.module.pradar.core.service;
 
+import java.util.Map;
+
 import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.IPradarInternalService;
-
-import java.util.Map;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -104,6 +104,11 @@ public class DefaultPradarInternalService implements IPradarInternalService {
     public void startTrace(String traceId, String invokeId, String serviceName, String methodName) {
         Pradar.startTrace(traceId, invokeId, serviceName, methodName);
     }
+    @Override
+    public void startTrace(String traceId, String invokeId, String serviceName, String methodName,String middlewareName) {
+        Pradar.startTrace(traceId, invokeId, serviceName, methodName,middlewareName);
+    }
+
 
     @Override
     public void setClusterTest(boolean isClusterTest) {

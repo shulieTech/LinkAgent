@@ -90,7 +90,7 @@ public class AreospikeScanAllInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setService(getService(advice.getBehavior().getName(), advice.getParameterArray()));
+        spanRecord.setService(getService(advice.getBehaviorName(), advice.getParameterArray()));
         spanRecord.setMethod(getMethod(advice.getParameterArray()));
         spanRecord.setRemoteIp(getRemoteIp(advice.getTarget()));
         spanRecord.setRequest(advice.getParameterArray());
@@ -100,7 +100,6 @@ public class AreospikeScanAllInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord afterTrace(Advice advice) {
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setRequest(advice.getParameterArray());
         spanRecord.setResponse(advice.getReturnObj());
         return spanRecord;
     }
@@ -108,7 +107,6 @@ public class AreospikeScanAllInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setRequest(advice.getParameterArray());
         spanRecord.setResponse(advice.getThrowable());
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         return spanRecord;

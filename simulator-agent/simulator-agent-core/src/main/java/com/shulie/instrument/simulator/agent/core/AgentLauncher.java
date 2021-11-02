@@ -21,6 +21,7 @@ import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
 import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
+import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
@@ -131,7 +132,9 @@ public class AgentLauncher {
             logger.debug("AGENT: prepare to attach agent: descriptor={}, agentJarPath={}, config={}", descriptor,
                     agentJarPath, config);
         }
-        if (usePremain) {
+        //针对docker pid小于等于5的使用premain方式
+        //如果是 main 方法执行， 强制使用 premain 模式
+        if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
             startWithPremain(agentJarPath, config);
             startMode = START_MODE_PREMAIN;
             logger.info("AGENT: simulator with premain mode start successful.");
@@ -196,13 +199,12 @@ public class AgentLauncher {
         try {
             if (!startCommand.getPacket().isUseLocal()) {
                 File file = new File(agentConfig.getSimulatorHome());
-                File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp");
-                if (f != null) {
-                    if (file.exists()) {
-                        FileUtils.delete(file);
-                    }
-                    f.renameTo(file);
+                File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp",
+                        agentConfig.getUserAppKey());
+                if (file.exists()) {
+                    FileUtils.delete(file);
                 }
+                f.renameTo(file);
             }
             if (!new File(agentConfig.getAgentJarPath()).exists()) {
                 if (startCommand.getPacket().isUseLocal()) {
@@ -224,10 +226,6 @@ public class AgentLauncher {
 
             this.baseUrl = null;
             StringBuilder builder = new StringBuilder();
-            if (StringUtils.isNotBlank(this.agentConfig.getNamespace())) {
-                builder.append("namespace=").append(encodeArg(this.agentConfig.getNamespace()));
-            }
-            builder.append(";token=").append(encodeArg(this.agentConfig.getToken()));
             if (StringUtils.isNotBlank(this.agentConfig.getAppName())) {
                 builder.append(";app.name=").append(encodeArg(this.agentConfig.getAppName()));
             }
@@ -245,6 +243,9 @@ public class AgentLauncher {
             }
             if (StringUtils.isNotBlank(this.agentConfig.getRegisterPath())) {
                 builder.append(";registerPath=").append(encodeArg(this.agentConfig.getRegisterPath()));
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getConfigFilePath())) {
+                builder.append(";agentConfigPath=").append(encodeArg(this.agentConfig.getConfigFilePath()));
             }
             builder.append(";zkConnectionTimeout=").append(this.agentConfig.getZkConnectionTimeout());
             builder.append(";zkSessionTimeout=").append(this.agentConfig.getZkSessionTimeout());
@@ -269,7 +270,7 @@ public class AgentLauncher {
                     if (System.currentTimeMillis() - startWaitTime > MAX_INSTALL_WAIT_TIME) {
                         logger.error("AGENT: launch on agent err. wait simulator install time out!");
                         AgentStatus.uninstall();
-                        throw new RuntimeException("AGENT: launch on agent err. wait simulator install time out!" );
+                        throw new RuntimeException("AGENT: launch on agent err. wait simulator install time out!");
                     }
                     Thread.sleep(100);
                     continue;
@@ -287,7 +288,7 @@ public class AgentLauncher {
             }
             String[] result = StringUtils.split(content, ';');
 
-            if (ArrayUtils.isEmpty(result) || result.length < 5) {
+            if (ArrayUtils.isEmpty(result) || result.length < 3) {
                 logger.error("AGENT: launch on agent err. can't get a correct result from result file [{}] : {}",
                         content, this.agentConfig.getAgentResultFilePath());
                 AgentStatus.uninstall();
@@ -295,19 +296,22 @@ public class AgentLauncher {
                         "AGENT: launch on agent err. can't get a correct result from result file [" + content + "] :"
                                 + this.agentConfig.getAgentResultFilePath());
             }
-            AgentStatus.installed(result[4]);
-            this.baseUrl = "http://" + result[2] + ":" + result[3] + "/" + this.agentConfig.getNamespace();
-            logger.info("AGENT: got a available agent url: {} version : {}", this.baseUrl, result[4]);
+            AgentStatus.installed(result[2]);
+            this.baseUrl = "http://" + result[0] + ":" + result[1] + "/simulator";
+            logger.info("AGENT: got a available agent url: {} version : {}", this.baseUrl, result[2]);
+            System.setProperty("ttl.disabled", "false");
         } catch (Throwable throwable) {
             try {
                 if (throwable instanceof NoClassDefFoundError) {
                     NoClassDefFoundError e = (NoClassDefFoundError) throwable;
                     if (e.getMessage().contains("com/sun/tools/attach/VirtualMachine")) {
-                        logger.error("add java start params : -Djdk.attach.allowAttachSelf=true -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar to fix this error");
+                        logger.error(
+                                "add java start params : -Djdk.attach.allowAttachSelf=true "
+                                        + "-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar to fix this error");
                     }
                 }
             } catch (Throwable e) {
-                logger.warn("", e);
+                logger.error("", e);
             }
             isRunning.set(false);
             AgentStatus.uninstall();
@@ -335,7 +339,8 @@ public class AgentLauncher {
              * 如果返回为空则视为已经停止
              */
             if (content == null) {
-                AgentStatus.setError("AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
+                AgentStatus.setError(
+                        "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
                 throw new RuntimeException(
                         "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
             }
@@ -471,6 +476,7 @@ public class AgentLauncher {
      */
     public void shutdown(StopCommand<CommandPacket> command) throws Throwable {
         if (!isRunning.compareAndSet(true, false)) {
+            System.setProperty("ttl.disabled", "true");
             return;
         }
 
@@ -531,6 +537,7 @@ public class AgentLauncher {
                          */
                         this.baseUrl = null;
                         AgentStatus.uninstall();
+                        System.setProperty("ttl.disabled", "true");
                         return;
                     }
                     try {

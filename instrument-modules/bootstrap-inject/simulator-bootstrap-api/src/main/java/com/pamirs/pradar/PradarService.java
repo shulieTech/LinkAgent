@@ -85,38 +85,30 @@ public final class PradarService {
      * 上下文  压测标 key
      */
     static public final String PRADAR_CLUSTER_TEST_KEY = PRADAR_HEADER_PREFIX + "p-pradar-cluster-test";
-
-    /**
-     * 上下文 http 压测标 key
-     */
-    static public final String PRADAR_HTTP_CLUSTER_TEST_KEY = "User-Agent";
-
     /**
      * 上下文 debug 标 key
      */
     static public final String PRADAR_DEBUG_KEY = PRADAR_HEADER_PREFIX + "p-pradar-debug";
-
-    /**
-     * 服务名称,只用于内部传输，不进行远程传输
-     */
-    static public final String PRADAR_SERVICE_NAME = "p-pradar-service";
-
-    /**
-     * 方法名称,只用于内部传输，不进行远程传输
-     */
-    static public final String PRADAR_METHOD_NAME = "p-pradar-method";
-
-    /**
-     * 中间件名称，只用于内部传输，不进行远程传输
-     */
-    static public final String PRADAR_MIDDLEWARE_NAME = "p-pradar-middleware";
-
-
     /**
      * 上下文 调试ID 标
      */
     static public final String PRADAR_FAST_DEBUG_ID = PRADAR_HEADER_PREFIX + "pradar-fast-debug-id";
-
+    /**
+     * 上下文 http 压测标 key
+     */
+    static public final String PRADAR_HTTP_CLUSTER_TEST_KEY = "User-Agent";
+    /**
+     * 服务名称,只用于内部传输，不进行远程传输
+     */
+    static public final String PRADAR_SERVICE_NAME = "p-pradar-service";
+    /**
+     * 方法名称,只用于内部传输，不进行远程传输
+     */
+    static public final String PRADAR_METHOD_NAME = "p-pradar-method";
+    /**
+     * 中间件名称，只用于内部传输，不进行远程传输
+     */
+    static public final String PRADAR_MIDDLEWARE_NAME = "p-pradar-middleware";
     /**
      * 是否校验白名单，不进行远程传输
      */
@@ -146,6 +138,13 @@ public final class PradarService {
             return "";
         }
         return value;
+    }
+
+    public static String printInvokeContext() {
+        if (service == null) {
+            return null;
+        }
+        return service.printInvokeContext();
     }
 
     /**
@@ -234,6 +233,18 @@ public final class PradarService {
         return service.getInvokeContext();
     }
 
+    public static String getTraceId() {
+        return service == null ? null : service.getTraceId();
+    }
+
+    public static boolean isSaveBusinessTrace() {
+        return service == null ? null : service.isSaveBusinessTrace();
+    }
+
+    public static boolean isSilence(){
+        return service != null && service.isSilence();
+    }
+
     /**
      * 返回当前压测是否可用
      *
@@ -244,5 +255,13 @@ public final class PradarService {
             return false;
         }
         return service.isClusterTestEnabled();
+    }
+
+
+    public static boolean setClusterTest(){
+        if (service == null){
+            return false;
+        }
+        return service.setClusterTest();
     }
 }

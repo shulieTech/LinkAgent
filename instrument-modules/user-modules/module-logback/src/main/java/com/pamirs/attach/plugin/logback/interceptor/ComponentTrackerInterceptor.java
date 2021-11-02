@@ -16,7 +16,9 @@ package com.pamirs.attach.plugin.logback.interceptor;
 
 import com.pamirs.attach.plugin.logback.utils.AppenderHolder;
 import com.pamirs.attach.plugin.logback.utils.ClusterTestMarker;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,7 @@ import org.slf4j.LoggerFactory;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/06/22 10:21 上午
  */
+@ListenerBehavior(isFilterClusterTest = true)
 public class ComponentTrackerInterceptor extends ResultInterceptorAdaptor {
 
     protected boolean isBusinessLogOpen;
@@ -39,6 +42,9 @@ public class ComponentTrackerInterceptor extends ResultInterceptorAdaptor {
 
     @Override
     public Object getResult0(Advice advice) {
+        if (!Pradar.isClusterTest()) {
+            return advice.getReturnObj();
+        }
         if (!this.isBusinessLogOpen) {
             return advice.getReturnObj();
         }
@@ -49,7 +55,7 @@ public class ComponentTrackerInterceptor extends ResultInterceptorAdaptor {
             if (ClusterTestMarker.isClusterTestThenClear()) {
                 return ptAppender == null ? appender : ptAppender;
             }
-        } catch (ClassNotFoundException e) {
+        } catch (Exception e) {
             log.error("get pt appender fail!", e);
         }
         return appender;

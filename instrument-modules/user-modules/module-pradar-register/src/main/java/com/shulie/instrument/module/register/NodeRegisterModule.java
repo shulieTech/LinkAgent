@@ -25,10 +25,12 @@ import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.resource.ModuleLoadInfoManager;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -43,8 +45,11 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
     private Register register;
     private volatile boolean isActive;
 
+    @Resource
+    public static ModuleLoadInfoManager moduleLoadInfoManager;
+
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         isActive = true;
         /**
          * 激活时初始化
@@ -61,13 +66,16 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
                     register = SimulatorGuard.getInstance().doGuard(Register.class, RegisterFactory.getRegister(registerOptions.getRegisterName()));
                     register.init(registerOptions);
                     register.start();
-                    logger.info("SIMULATOR: Register start successful. register to {}", register.getPath());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("SIMULATOR: Register start successful. register to {}", register.getPath());
+                    }
                 } catch (Throwable e) {
                     logger.warn("SIMULATOR: Register start failed. ", e);
                     ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 }
             }
         }, 0, TimeUnit.SECONDS);
+        return true;
     }
 
     private RegisterOptions buildRegisterOptions() {

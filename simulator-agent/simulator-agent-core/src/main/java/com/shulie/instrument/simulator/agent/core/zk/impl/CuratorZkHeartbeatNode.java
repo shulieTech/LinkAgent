@@ -161,7 +161,7 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
                 try {
                     reset();
                 } catch (Throwable e) {
-                    logger.warn("fail to reset in watch event, path={}", path, e);
+                    logger.error("fail to reset in watch event, path={}", path, e);
                 }
             }
         }

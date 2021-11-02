@@ -55,13 +55,12 @@ public class EventEnhancer implements Enhancer {
     @Override
     public byte[] toByteCodeArray(final ClassLoader targetClassLoader,
                                   final byte[] byteCodeArray,
-                                  final Map<String, Set<BuildingForListeners>> signCodes,
-                                  final String namespace) {
+                                  final Map<String, Set<BuildingForListeners>> signCodes) {
         final ClassReader cr = new ClassReader(byteCodeArray);
         final ClassWriter cw = createClassWriter(targetClassLoader, cr, byteCodeArray);
         cr.accept(
                 new AsmCodeEnhancer(
-                        ASM7, cw, namespace,
+                        ASM7, cw,
                         cr.getClassName(),
                         signCodes
                 ),

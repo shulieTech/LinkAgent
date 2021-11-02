@@ -17,9 +17,12 @@ package com.pamirs.attach.plugin.jedis.shadowserver;
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
-import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
+import com.pamirs.attach.plugin.jedis.util.Model;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisSlotBasedConnectionHandler;
 
@@ -36,26 +39,26 @@ import java.util.Set;
  */
 public class JedisClusterFactory extends AbstractRedisServerFactory<JedisSlotBasedConnectionHandler> {
 
-    private static JedisClusterFactory jedisFactory;
+    private static JedisClusterFactory jedisClusterFactory;
 
     private JedisClusterFactory() {
         super(new JedisClusterNodesStrategy());
     }
 
     public static JedisClusterFactory getFactory() {
-        if (jedisFactory == null) {
+        if (jedisClusterFactory == null) {
             synchronized (JedisClusterFactory.class) {
-                if (jedisFactory == null) {
-                    jedisFactory = new JedisClusterFactory();
+                if (jedisClusterFactory == null) {
+                    jedisClusterFactory = new JedisClusterFactory();
                 }
             }
         }
-        return jedisFactory;
+        return jedisClusterFactory;
     }
 
     public static void release() {
         JedisClusterFactory.destroy();
-        jedisFactory = null;
+        jedisClusterFactory = null;
     }
 
     @Override
@@ -63,31 +66,31 @@ public class JedisClusterFactory extends AbstractRedisServerFactory<JedisSlotBas
         return client;
     }
 
+    Model model = Model.INSTANCE();
+
     @Override
     public RedisClientMediator<JedisSlotBasedConnectionHandler> createMediator(Object connection, ShadowRedisConfig shadowConfig) {
+        model.cachePressureNode(shadowConfig);
         RedisClientMediator<JedisSlotBasedConnectionHandler> mediator = null;
         if (connection instanceof JedisSlotBasedConnectionHandler) {
-            JedisConstructorConfig jedisConfig = RedisConstants.jedisInstance.get(connection);
-            if (jedisConfig == null) {
-                return null;
-            }
+            Reflect reflect = Reflect.on(Reflect.on(connection).get("cache"));
 
 
+            GenericObjectPoolConfig poolConfig = reflect.get("poolConfig");
+            int connectionTimeout = reflect.get("connectionTimeout");
+            int soTimeout = reflect.get("soTimeout");
             JedisSlotBasedConnectionHandler pressureJedisPool = null;
-            if (200 == jedisConfig.getConstructorType()) {
+            String shadowPassword = shadowConfig.getPassword();
+            if (!StringUtil.isEmpty(shadowPassword)) {
                 pressureJedisPool = new JedisSlotBasedConnectionHandler(convert(shadowConfig.getNodeNums()),
-                        jedisConfig.getPoolConfig(), jedisConfig.getConnectionTimeout(), jedisConfig.getSoTimeout(),
-                        shadowConfig.getPassword(), jedisConfig.getClientName(), jedisConfig.isSsl(),
-                        jedisConfig.getSslSocketFactory(), jedisConfig.getSslParameters(), jedisConfig.getHostnameVerifier(),
-                        jedisConfig.getJedisMap());
-            } else if (201 == jedisConfig.getConstructorType()) {
-                pressureJedisPool = new JedisSlotBasedConnectionHandler(convert(shadowConfig.getNodeNums()),
-                        jedisConfig.getPoolConfig(), jedisConfig.getConnectionTimeout(), jedisConfig.getSoTimeout(),
+                        poolConfig, connectionTimeout, soTimeout,
                         shadowConfig.getPassword());
+            } else {
+                pressureJedisPool = new JedisSlotBasedConnectionHandler(convert(shadowConfig.getNodeNums()),
+                        poolConfig, connectionTimeout, soTimeout);
             }
-            if (null != pressureJedisPool) {
-                mediator = new RedisClientMediator<JedisSlotBasedConnectionHandler>(pressureJedisPool, (JedisSlotBasedConnectionHandler) connection, true);
-            }
+
+            mediator = new RedisClientMediator<JedisSlotBasedConnectionHandler>(pressureJedisPool, (JedisSlotBasedConnectionHandler) connection, true);
         }
         return mediator;
     }

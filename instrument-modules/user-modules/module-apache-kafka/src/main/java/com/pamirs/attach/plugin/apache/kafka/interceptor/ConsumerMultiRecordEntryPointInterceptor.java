@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
+import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -33,6 +34,7 @@ import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 
@@ -92,7 +94,7 @@ public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAd
         String remoteAddress = null;
         if (args.length >= 3) {
             group = manager.getDynamicField(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP);
-            remoteAddress = getRemoteAddress(consumer);
+            remoteAddress = KafkaUtils.getRemoteAddress(consumer, manager);
         }
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setRemoteIp(remoteAddress);
@@ -183,13 +185,4 @@ public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAd
         }
     }
 
-    private String getRemoteAddress(Object remoteAddressFieldAccessor) {
-        String remoteAddress = manager.getDynamicField(remoteAddressFieldAccessor, KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS);
-
-        if (StringUtils.isEmpty(remoteAddress)) {
-            return KafkaConstants.UNKNOWN;
-        } else {
-            return remoteAddress;
-        }
-    }
 }

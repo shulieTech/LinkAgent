@@ -47,10 +47,6 @@ public class Result {
         this.result = result;
     }
 
-    public static Result newNone() {
-        return RESULT_NONE;
-    }
-
     public static Result newReturn(Object object) {
         return new Result(RESULT_STATE_RETURN, object);
     }

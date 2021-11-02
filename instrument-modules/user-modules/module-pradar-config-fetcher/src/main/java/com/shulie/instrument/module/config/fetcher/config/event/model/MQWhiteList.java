@@ -16,12 +16,18 @@ package com.shulie.instrument.module.config.fetcher.config.event.model;
 
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.pressurement.agent.event.impl.ShadowConsumerDisableEvent;
+import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -56,10 +62,37 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
                 && mqWhiteList.containsAll(newValue)) {
             return Boolean.FALSE;
         }
+        // 仅对影子消费者禁用事件处理
+        for (String s : mqWhiteList) {
+
+            List<ShadowConsumerDisableInfo> disableInfos = new ArrayList<ShadowConsumerDisableInfo>();
+            if (!newValue.contains(s)) {
+                ShadowConsumerDisableInfo disableInfo = new ShadowConsumerDisableInfo();
+                if (s.contains("@")) {//rabbitmq routing使用方式，配置为direct-exchange#queue1@queue1
+                    disableInfo.setTopic(s.split("@")[1]);
+                } else if (s.contains("#")) {
+                    String[] topicGroup = s.split("#", 2);
+                    if (StringUtils.isBlank(topicGroup[0])) {
+                        disableInfo.setTopic(topicGroup[1]);
+                    } else {
+                        disableInfo.setTopic(topicGroup[0]);
+                        disableInfo.setConsumerGroup(topicGroup[1]);
+                    }
+                }
+                disableInfos.add(disableInfo);
+            }
+
+            if (!disableInfos.isEmpty()) {
+                EventRouter.router().publish(new ShadowConsumerDisableEvent(disableInfos));
+            }
+        }
         currentValue.setMqList(newValue);
-        GlobalConfig.getInstance().setMqWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.MQ_WHITE_LIST);
-        LOGGER.info("publish mq whitelist config successful. config={}", newValue);
+        GlobalConfig.getInstance().setMqWhiteList(newValue);
+
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish mq whitelist config successful. config={}", newValue);
+        }
         return Boolean.TRUE;
     }
 }

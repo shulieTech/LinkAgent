@@ -31,7 +31,10 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceConfigModifyEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
-import com.pamirs.pradar.pressurement.agent.shared.service.*;
+import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
+import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -61,7 +64,7 @@ import java.util.Set;
 @Destroyable(Neo4jDestroy.class)
 public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor {
 
-    private static Logger logger = LoggerFactory.getLogger(Neo4jSessionConstructorInterceptor.class);
+    private Logger logger = LoggerFactory.getLogger(Neo4jSessionConstructorInterceptor.class);
 
     public Neo4jSessionConstructorInterceptor() {
         addListener();
@@ -200,7 +203,9 @@ public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor 
                             it.remove();
                             try {
                                 value.close();
-                                logger.info("module-hikariCP: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-hikariCP: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-hikariCP: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }

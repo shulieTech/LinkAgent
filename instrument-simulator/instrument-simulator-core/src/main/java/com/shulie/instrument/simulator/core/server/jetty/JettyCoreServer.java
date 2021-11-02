@@ -14,12 +14,6 @@
  */
 package com.shulie.instrument.simulator.core.server.jetty;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.instrument.Instrumentation;
-import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
@@ -37,6 +31,12 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.instrument.Instrumentation;
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.shulie.instrument.simulator.core.util.NetworkUtils.isPortInUsing;
 import static java.lang.String.format;
@@ -155,10 +155,9 @@ public class JettyCoreServer implements CoreServer {
      * 初始化Jetty's ContextHandler
      */
     private void initHttpContextHandler() {
-        final String namespace = config.getNamespace();
         final ServletContextHandler context = new ServletContextHandler(NO_SESSIONS);
 
-        final String contextPath = "/" + namespace;
+        final String contextPath = "/simulator";
         context.setContextPath(contextPath);
         context.setClassLoader(getClass().getClassLoader());
 
@@ -211,7 +210,6 @@ public class JettyCoreServer implements CoreServer {
                 @Override
                 public void process() throws Throwable {
                     LogbackUtils.init(
-                            config.getNamespace(),
                             config.getConfigLibPath() + File.separator + "simulator-logback.xml"
                     );
                     if (logger.isInfoEnabled()) {

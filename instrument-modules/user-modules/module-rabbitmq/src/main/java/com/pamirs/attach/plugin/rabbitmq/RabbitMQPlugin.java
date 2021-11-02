@@ -30,56 +30,56 @@ import org.kohsuke.MetaInfServices;
  * @author guohz
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = RabbitmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "rabbitmq消息中间件")
+@ModuleInfo(id = RabbitmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",
+    description = "rabbitmq消息中间件")
 public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
-
     @Override
-    public void onActive() throws Throwable {
-        addHookRegisterInterceptor();
+    public boolean onActive() throws Throwable {
+        return addHookRegisterInterceptor();
     }
 
-    private void addHookRegisterInterceptor() {
+    private boolean addHookRegisterInterceptor() {
 
         if (simulatorConfig.getBooleanProperty("auto.create.queue.rabbitmq", false)) {
             this.enhanceTemplate.enhance(this,
-                    "org.springframework.amqp.rabbit.core.RabbitAdmin", new EnhanceCallback() {
-                        @Override
-                        public void doEnhance(InstrumentClass target) {
-                            InstrumentMethod handle = target.getDeclaredMethod("declareQueue", "org.springframework.amqp.core.Queue");
-                            handle.addInterceptor(Listeners.of(SpringRabbitRabbitAdminDeclareQueueInterceptor.class));
-                        }
-                    });
+                "org.springframework.amqp.rabbit.core.RabbitAdmin", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod handle = target.getDeclaredMethod("declareQueue", "org.springframework.amqp.core.Queue");
+                        handle.addInterceptor(Listeners.of(SpringRabbitRabbitAdminDeclareQueueInterceptor.class));
+                    }
+                });
         }
 
         //增强channel
         this.enhanceTemplate.enhance(this,
-                "com.rabbitmq.client.impl.ChannelN", new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        final InstrumentMethod basicPublishMethod = target.getDeclaredMethod("basicPublish", "java.lang.String", "java.lang.String", "boolean", "boolean", "com.rabbitmq.client.AMQP$BasicProperties", "byte[]");
-                        basicPublishMethod
-                                .addInterceptor(Listeners.of(ChannelNBasicPublishInterceptor.class));
+            "com.rabbitmq.client.impl.ChannelN", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod basicPublishMethod = target.getDeclaredMethod("basicPublish", "java.lang.String",
+                        "java.lang.String", "boolean", "boolean", "com.rabbitmq.client.AMQP$BasicProperties", "byte[]");
+                    basicPublishMethod
+                        .addInterceptor(Listeners.of(ChannelNBasicPublishInterceptor.class));
 
-                        final InstrumentMethod basicGetMethod = target.getDeclaredMethod("basicGet", "java.lang.String", "boolean");
-                        basicGetMethod
-                                .addInterceptor(Listeners.of(ChannelNBasicGetInterceptor.class));
+                    final InstrumentMethod basicGetMethod = target.getDeclaredMethod("basicGet", "java.lang.String",
+                        "boolean");
+                    basicGetMethod
+                        .addInterceptor(Listeners.of(ChannelNBasicGetInterceptor.class));
 
-                        final InstrumentMethod basicConsumeMethod = target.getDeclaredMethod("basicConsume", "java.lang.String", "boolean", "java.lang.String", "boolean", "boolean", "java.util.Map", "com.rabbitmq.client.Consumer");
-                        basicConsumeMethod
-                                .addInterceptor(Listeners.of(ChannelNBasicConsumeInterceptor.class));
+                    final InstrumentMethod processDeliveryMethod = target.getDeclaredMethod("processDelivery",
+                        "com.rabbitmq.client.Command", "com.rabbitmq.client.impl.AMQImpl$Basic$Deliver");
+                    processDeliveryMethod
+                        .addInterceptor(
+                            Listeners.of(ChannelNProcessDeliveryInterceptor.class, new Object[] {simulatorConfig}));
 
-                        final InstrumentMethod processDeliveryMethod = target.getDeclaredMethod("processDelivery", "com.rabbitmq.client.Command", "com.rabbitmq.client.impl.AMQImpl$Basic$Deliver");
-                        processDeliveryMethod
-                                .addInterceptor(Listeners.of(ChannelNProcessDeliveryInterceptor.class, new Object[]{simulatorConfig}));
+                    final InstrumentMethod basicCancelMethod = target.getDeclaredMethod("basicCancel", "java.lang.String");
+                    basicCancelMethod
+                        .addInterceptor(Listeners.of(ChannelNBasicCancelInterceptor.class));
 
-                        final InstrumentMethod basicCancelMethod = target.getDeclaredMethod("basicCancel", "java.lang.String");
-                        basicCancelMethod
-                                .addInterceptor(Listeners.of(ChannelNBasicCancelInterceptor.class));
-
-                        addAckInterceptor(target);
-                    }
-                });
+                    addAckInterceptor(target);
+                }
+            });
 
         this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.recovery.RecoveryAwareChannelN", new EnhanceCallback() {
             @Override
@@ -95,71 +95,109 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
         });
 
         this.enhanceTemplate.enhance(this,
-                "org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer", new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod method = target.getDeclaredMethod("executeListener", "com.rabbitmq.client.Channel", "org.springframework.amqp.core.Message");
-                        method.addInterceptor(Listeners.of(SpringBlockingQueueConsumerDeliveryInterceptor.class));
-                        InstrumentMethod method1 = target.getDeclaredMethod("executeListener", "com.rabbitmq.client.Channel", "java.lang.Object");
-                        method1.addInterceptor(Listeners.of(SpringBlockingQueueConsumerDeliveryInterceptor.class));
-                    }
-                });
-
+            "com.rabbitmq.client.QueueingConsumer", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod handle = target.getDeclaredMethod("handle",
+                        "com.rabbitmq.client.QueueingConsumer$Delivery");
+                    handle.addInterceptor(Listeners.of(QueueingConsumerHandleInterceptor.class));
+                }
+            });
 
         this.enhanceTemplate.enhance(this,
-                "com.rabbitmq.client.QueueingConsumer", new EnhanceCallback() {
+            "com.rabbitmq.client.impl.AMQConnection", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    target.getDeclaredMethods("close").addInterceptor(Listeners.of(AMQConnectionInterceptor.class));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.StrictExceptionHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("handleConsumerException").addInterceptor(
+                    Listeners.of(StrictExceptionHandlerInterceptor.class));
+            }
+        });
+
+        //spring 是异步消费的，这里要保留spring相关，否则压测标会丢失
+        if (simulatorConfig.getBooleanProperty("auto.create.queue.rabbitmq", false)) {
+            this.enhanceTemplate.enhance(this,
+                "org.springframework.amqp.rabbit.core.RabbitAdmin", new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod handle = target.getDeclaredMethod("handle", "com.rabbitmq.client.QueueingConsumer$Delivery");
-                        handle.addInterceptor(Listeners.of(QueueingConsumerHandleInterceptor.class));
+                        InstrumentMethod handle = target.getDeclaredMethod("declareQueue",
+                            "org.springframework.amqp.core.Queue");
+                        handle.addInterceptor(Listeners.of(SpringRabbitRabbitAdminDeclareQueueInterceptor.class));
                     }
                 });
+        }
+        this.enhanceTemplate.enhance(this,
+            "org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod method = target.getDeclaredMethod("executeListener", "com.rabbitmq.client.Channel",
+                        "org.springframework.amqp.core.Message");
+                    method.addInterceptor(Listeners.of(SpringBlockingQueueConsumerDeliveryInterceptor.class));
+                    InstrumentMethod method1 = target.getDeclaredMethod("executeListener", "com.rabbitmq.client.Channel",
+                        "java.lang.Object");
+                    method1.addInterceptor(Listeners.of(SpringBlockingQueueConsumerDeliveryInterceptor.class));
+                }
+            });
+        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.support.PublisherCallbackChannelImpl",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod handle = target.getDeclaredMethod("basicConsume", "java.lang.Boolean",
+                        "com.rabbitmq.client.DefaultConsumer");
+                    handle.addInterceptor(Listeners.of(ChannelNBasicConsumeInterceptor.class));
+                }
+            });
+        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$InternalConsumer",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod method = target.getDeclaredMethods("handleDelivery", "java.lang.String",
+                        "com.rabbitmq.client.Envelope", "com.rabbitmq.client.AMQP$BasicProperties", "byte[]");
+                    method.addInterceptor(Listeners.of(DefaultConsumerHandleDeliveryInterceptor.class, "Handle_Delivery",
+                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
-        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.support.PublisherCallbackChannelImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod handle = target.getDeclaredMethod("basicConsume", "java.lang.Boolean", "com.rabbitmq.client.DefaultConsumer");
-                handle.addInterceptor(Listeners.of(ChannelNBasicConsumeInterceptor.class));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod instrumentMethod = target.getDeclaredMethod("handle",
+                        "org.springframework.amqp.rabbit.support.Delivery");
+                    instrumentMethod.addInterceptor(Listeners.of(BlockingQueueConsumerConsumeFromQueueInterceptor.class));
+
             }
         });
-
-        /**
-         * 先把 spring 的先支持掉，如果使用原生的 rabbitmq 可能还是会有一些问题
-         */
-        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$InternalConsumer", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethods("handleDelivery", "java.lang.String", "com.rabbitmq.client.Envelope", "com.rabbitmq.client.AMQP$BasicProperties", "byte[]");
-                method.addInterceptor(Listeners.of(DefaultConsumerHandleDeliveryInterceptor.class, "Handle_Delivery", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-
-            }
-        });
-
-        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod instrumentMethod = target.getDeclaredMethod("handle", "org.springframework.amqp.rabbit.support.Delivery");
-                instrumentMethod.addInterceptor(Listeners.of(BlockingQueueConsumerConsumeFromQueueInterceptor.class));
-
-            }
-        });
+        return true;
     }
 
     private void addAckInterceptor(InstrumentClass target) {
         target.getDeclaredMethods("basicAck", "long", "boolean")
-                .addInterceptor(Listeners.of(ChannelNAckInterceptor.class));
+            .addInterceptor(Listeners.of(ChannelNAckInterceptor.class, "ack",
+                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[] {simulatorConfig}));
 
         target.getDeclaredMethods("basicAck", "long", "boolean", "boolean")
-                .addInterceptor(Listeners.of(ChannelNAckInterceptor.class));
+            .addInterceptor(Listeners.of(ChannelNAckInterceptor.class, "ack",
+                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[] {simulatorConfig}));
 
         target.getDeclaredMethods("basicNack", "long", "boolean")
-                .addInterceptor(Listeners.of(ChannelNAckInterceptor.class));
+            .addInterceptor(Listeners.of(ChannelNAckInterceptor.class, "ack",
+                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[] {simulatorConfig}));
 
         target.getDeclaredMethods("basicNack", "long", "boolean", "boolean")
-                .addInterceptor(Listeners.of(ChannelNAckInterceptor.class));
+            .addInterceptor(Listeners.of(ChannelNAckInterceptor.class, "ack",
+                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[] {simulatorConfig}));
 
         target.getDeclaredMethods("basicReject", "long", "boolean")
-                .addInterceptor(Listeners.of(ChannelNAckInterceptor.class));
+            .addInterceptor(Listeners.of(ChannelNAckInterceptor.class, "ack",
+                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[] {simulatorConfig}));
     }
 
 }

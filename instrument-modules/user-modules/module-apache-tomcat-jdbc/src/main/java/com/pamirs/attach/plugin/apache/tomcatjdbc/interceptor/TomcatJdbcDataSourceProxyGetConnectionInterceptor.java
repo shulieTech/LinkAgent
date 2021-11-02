@@ -138,7 +138,9 @@ public class TomcatJdbcDataSourceProxyGetConnectionInterceptor extends CutoffInt
                             it.remove();
                             try {
                                 value.close();
-                                logger.info("module-tomcat-jdbc: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-tomcat-jdbc: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-tomcat-jdbc: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }

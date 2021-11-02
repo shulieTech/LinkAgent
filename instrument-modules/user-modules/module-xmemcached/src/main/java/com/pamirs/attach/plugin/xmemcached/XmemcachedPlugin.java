@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 public class XmemcachedPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         this.enhanceTemplate.enhance(this, "net.rubyeye.xmemcached.XMemcachedClient", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -43,6 +43,7 @@ public class XmemcachedPlugin extends ModuleLifecycleAdapter implements Extensio
                 method.addInterceptor(Listeners.of(XmemcachedInterceptor.class));
             }
         });
+        return true;
     }
 
 

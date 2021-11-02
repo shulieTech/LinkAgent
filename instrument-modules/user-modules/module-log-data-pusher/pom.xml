@@ -53,7 +53,7 @@
         <dependency>
             <groupId>io.shulie.pradar</groupId>
             <artifactId>log-remoting</artifactId>
-            <version>2.0.3</version>
+            <version>2.0.5</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.pamirs.pradar</groupId>

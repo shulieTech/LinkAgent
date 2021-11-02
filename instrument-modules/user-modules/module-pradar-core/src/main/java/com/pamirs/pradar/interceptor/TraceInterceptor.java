@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.interceptor;
 
+import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
@@ -50,7 +51,26 @@ import static com.pamirs.pradar.interceptor.TraceInterceptorAdaptor.BEFORE_TRACE
  * Created by xiaobin on 2017/2/6.
  */
 abstract class TraceInterceptor extends BaseInterceptor {
-    protected final static Logger LOGGER = LoggerFactory.getLogger(TraceInterceptor.class);
+    protected final Logger LOGGER = LoggerFactory.getLogger(TraceInterceptor.class);
+    protected final boolean isDebugEnabled = LOGGER.isDebugEnabled();
+    private final EndCall endCallTrace = new EndCall() {
+        @Override
+        public void call(String resultCode, int type) {
+            Pradar.endTrace(resultCode, type);
+        }
+    };
+    private final EndCall endCallClient = new EndCall() {
+        @Override
+        public void call(String resultCode, int type) {
+            Pradar.endClientInvoke(resultCode, type);
+        }
+    };
+    private final EndCall endCallServer = new EndCall() {
+        @Override
+        public void call(String resultCode, int type) {
+            Pradar.endServerInvoke(resultCode, type);
+        }
+    };
 
     @Resource
     protected SimulatorConfig simulatorConfig;
@@ -217,19 +237,13 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
         } catch (PradarException e) {
             LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
+            throwable = e;
         } catch (PressureMeasureError e) {
             LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
+            throwable = e;
         } catch (Throwable e) {
             LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
+            throwable = e;
         } finally {
             try {
                 beforeLast(advice);
@@ -245,6 +259,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
         }
         if (throwable != null) {
+            boolean isClusterTest = Pradar.isClusterTest();
             if (advice.hasMark(BEFORE_TRACE_SUCCESS)) {
                 try {
                     if (Pradar.isExceptionOn()) {
@@ -257,19 +272,19 @@ abstract class TraceInterceptor extends BaseInterceptor {
                         LOGGER.error("Trace {} isClient execute error. use default value instead. {}", getClass().getName(), isClient, e);
                     }
                     if (isClient) {
-                        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType());
+                        endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType(), advice);
                     } else {
-                        Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType());
+                        endServerInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType(), advice);
                     }
                 } finally {
                     advice.unMark(BEFORE_TRACE_SUCCESS);
                 }
-            }else{
+            } else {
                 LOGGER.error("trace throw exception, but not BEFORE_TRACE_SUCCESS in {}.beforeTrace(...). loss trace log!", getClass().getName(), throwable);
             }
 
             //压测流量抛出异常，  业务流量只做记录
-            if (Pradar.isClusterTest()) {
+            if (isClusterTest) {
                 throw throwable;
             }
         }
@@ -293,14 +308,14 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
         }
         if (isTrace0(advice)) {
-            String traceId = TraceIdGenerator.generate(record.getRemoteIp());
+            String traceId = TraceIdGenerator.generate(record.getRemoteIp(), Pradar.isClusterTest());
             Pradar.clearInvokeContext();
             Pradar.startTrace(traceId, record.getService(), record.getMethod());
         } else {
             Pradar.startServerInvoke(record.getService(), record.getMethod(), null, record.getContext());
         }
 
-        InvokeContext invokeContext = Pradar.getInvokeContext();
+        InvokeContext invokeContext = readCurrentInvokeContext(advice);
         if (invokeContext == null) {
             return;
         }
@@ -311,6 +326,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
             invokeContext.setRequest(record.getRequest());
         }
         advice.mark(BEFORE_TRACE_SUCCESS);
+        advice.setInvokeContext(invokeContext);
         if (record.getRequestSize() != 0) {
             invokeContext.setRequestSize(record.getRequestSize());
         }
@@ -348,11 +364,13 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
 
             Pradar.startClientInvoke(record.getService(), record.getMethod());
-            InvokeContext invokeContext = Pradar.getInvokeContext();
-            advice.mark(BEFORE_TRACE_SUCCESS);
+            InvokeContext invokeContext = readCurrentInvokeContext(advice);
             if (invokeContext == null) {
                 return;
             }
+            advice.mark(BEFORE_TRACE_SUCCESS);
+            advice.setInvokeContext(invokeContext);
+
             if (record.getRequestSize() != 0) {
                 invokeContext.setRequestSize(record.getRequestSize());
             }
@@ -403,16 +421,18 @@ abstract class TraceInterceptor extends BaseInterceptor {
     private void endClientInvoke(Advice advice) throws Throwable {
         try {
             if (!advice.hasMark(BEFORE_TRACE_SUCCESS)) {
-                LOGGER.debug("{} before trace not finished.", getClass().getName());
+                if (isDebugEnabled) {
+                    LOGGER.debug("{} before trace not finished.", getClass().getName());
+                }
                 return;
             }
             SpanRecord record = afterTrace(advice);
             if (record == null) {
                 //如果上下文开始了，但是这里没有，则需要强制结束
-                Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
+                endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType(), advice);
                 return;
             }
-            InvokeContext invokeContext = Pradar.getInvokeContext();
+            InvokeContext invokeContext = readCurrentInvokeContext(advice);
             if (invokeContext == null) {
                 return;
             }
@@ -441,15 +461,52 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
-            Pradar.endClientInvoke(record.getResultCode(), getPluginType());
+            endClientInvoke(record.getResultCode(), getPluginType(), advice);
         } catch (Throwable e) {
             /**
              * 如果出错了，则强制将上下文提交
              */
-            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+            endClientInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
             throw e;
         } finally {
             advice.unMark(BEFORE_TRACE_SUCCESS);
+        }
+    }
+
+    private void endClientInvoke(String resultCode, int type, Advice advice) {
+        endInvoke(resultCode, type, advice, endCallClient);
+    }
+
+    private void endServerInvoke(String resultCode, int type, Advice advice) {
+        endInvoke(resultCode, type, advice, endCallServer);
+    }
+
+    private void endTrace(String resultCode, int type, Advice advice) {
+        endInvoke(resultCode, type, advice, endCallTrace);
+    }
+
+    private void endInvoke(String resultCode, int type, Advice advice, EndCall endCall) {
+        InvokeContext invokeContext = Pradar.getInvokeContext();
+        InvokeContext adviceInvokeContext = (InvokeContext) advice.getInvokeContext();
+        if (invokeContext != adviceInvokeContext) {
+            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), JSON.toJSONString(invokeContext), JSON.toJSONString(adviceInvokeContext));
+
+            try {
+                Pradar.setInvokeContext(adviceInvokeContext);
+                endCall.call(resultCode, type);
+            } finally {
+                Pradar.setInvokeContext(invokeContext);
+            }
+        } else {
+            endCall.call(resultCode, type);
+        }
+    }
+
+    private InvokeContext readCurrentInvokeContext(Advice advice) {
+        if (advice.getInvokeContext() == null) {
+            return Pradar.getInvokeContext();
+        } else {
+            return (InvokeContext) advice.getInvokeContext();
         }
     }
 
@@ -461,25 +518,27 @@ abstract class TraceInterceptor extends BaseInterceptor {
      */
     private void endServerInvoke(Advice advice) throws Throwable {
         if (!advice.hasMark(BEFORE_TRACE_SUCCESS)) {
-            LOGGER.debug("{} before trace not finished.", getClass().getName());
+            if (isDebugEnabled) {
+                LOGGER.debug("{} before trace not finished.", getClass().getName());
+            }
             return;
         }
         boolean isTrace = isTrace0(advice);
         try {
             SpanRecord record = afterTrace(advice);
             if (record == null) {
-                if (!Pradar.hasInvokeContext() || Pradar.getInvokeContext().isEmpty()) {
+                if (!Pradar.hasInvokeContext() || readCurrentInvokeContext(advice).isEmpty()) {
                     return;
                 }
                 //如果上下文开始了，但是这里没有，则需要强制结束
                 if (isTrace) {
-                    Pradar.endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+                    endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
                 } else {
-                    Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+                    endServerInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
                 }
                 return;
             }
-            InvokeContext invokeContext = Pradar.getInvokeContext();
+            InvokeContext invokeContext = readCurrentInvokeContext(advice);
             if (invokeContext == null) {
                 return;
             }
@@ -508,15 +567,15 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
 
             if (isTrace) {
-                Pradar.endTrace(record.getResultCode(), getPluginType());
+                endTrace(record.getResultCode(), getPluginType(), advice);
             } else {
-                Pradar.endServerInvoke(record.getResultCode(), getPluginType());
+                endServerInvoke(record.getResultCode(), getPluginType(), advice);
             }
         } catch (Throwable e) {
             if (isTrace) {
-                Pradar.endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+                endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
             } else {
-                Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+                endServerInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
             }
             throw e;
         } finally {
@@ -543,6 +602,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), t);
             throwable = t;
         }
+        boolean clusterTest = Pradar.isClusterTest();
         try {
             if (isClient(advice)) {
                 endClientInvoke(advice);
@@ -551,16 +611,16 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
         } catch (PradarException e) {
             LOGGER.error("TraceInterceptor after exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
+            if (clusterTest) {
                 throw e;
             }
         } catch (PressureMeasureError e) {
             LOGGER.error("TraceInterceptor after exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
+            if (clusterTest) {
                 throw e;
             }
         } catch (Throwable e) {
-            if (Pradar.isClusterTest()) {
+            if (clusterTest) {
                 LOGGER.error("TraceInterceptor after exec err:{}", this.getClass().getName(), e);
                 throw new PressureMeasureError(e);
             }
@@ -578,7 +638,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 throwable = t;
             }
         }
-        if (throwable != null && Pradar.isClusterTest()) {
+        if (throwable != null && clusterTest) {
             throw throwable;
         }
     }
@@ -601,6 +661,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), t);
             throwable = t;
         }
+        boolean clusterTest = Pradar.isClusterTest();
         try {
             if (isClient(advice)) {
                 endClientInvokeException(advice);
@@ -609,16 +670,16 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
         } catch (PradarException e) {
             LOGGER.error("TraceInterceptor exception exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
+            if (clusterTest) {
                 throw e;
             }
         } catch (PressureMeasureError e) {
             LOGGER.error("TraceInterceptor exception exec err:{}", this.getClass().getName(), e);
-            if (Pradar.isClusterTest()) {
+            if (clusterTest) {
                 throw e;
             }
         } catch (Throwable e) {
-            if (Pradar.isClusterTest()) {
+            if (clusterTest) {
                 LOGGER.error("TraceInterceptor exception exec err:{}", this.getClass().getName(), e);
                 throw new PressureMeasureError(e);
             }
@@ -636,7 +697,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 throwable = t;
             }
         }
-        if (throwable != null && Pradar.isClusterTest()) {
+        if (throwable != null && clusterTest) {
             throw throwable;
         }
     }
@@ -650,15 +711,17 @@ abstract class TraceInterceptor extends BaseInterceptor {
     private final void endClientInvokeException(Advice advice) throws Throwable {
         try {
             if (!advice.hasMark(BEFORE_TRACE_SUCCESS)) {
-                LOGGER.debug("{} before trace not finished.", getClass().getName());
+                if (isDebugEnabled) {
+                    LOGGER.debug("{} before trace not finished.", getClass().getName());
+                }
                 return;
             }
             SpanRecord record = exceptionTrace(advice);
             if (record == null) {
-                Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
+                endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType(), advice);
                 return;
             }
-            InvokeContext invokeContext = Pradar.getInvokeContext();
+            InvokeContext invokeContext = readCurrentInvokeContext(advice);
             if (invokeContext == null) {
                 return;
             }
@@ -683,9 +746,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
             if (record.getCallbackMsg() != null) {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
-            Pradar.endClientInvoke(record.getResultCode(), getPluginType());
+            endClientInvoke(record.getResultCode(), getPluginType(), advice);
         } catch (Throwable e) {
-            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+            endClientInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
             throw e;
         } finally {
             advice.unMark(BEFORE_TRACE_SUCCESS);
@@ -694,7 +757,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     private final void endServerInvokeException(Advice advice) throws Throwable {
         if (!advice.hasMark(BEFORE_TRACE_SUCCESS)) {
-            LOGGER.debug("{} before trace not finished.", getClass().getName());
+            if (isDebugEnabled) {
+                LOGGER.debug("{} before trace not finished.", getClass().getName());
+            }
             return;
         }
         boolean isTrace = isTrace0(advice);
@@ -702,13 +767,13 @@ abstract class TraceInterceptor extends BaseInterceptor {
             SpanRecord record = exceptionTrace(advice);
             if (record == null) {
                 if (isTrace) {
-                    Pradar.endTrace(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
+                    endTrace(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType(), advice);
                 } else {
-                    Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
+                    endServerInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType(), advice);
                 }
                 return;
             }
-            InvokeContext invokeContext = Pradar.getInvokeContext();
+            InvokeContext invokeContext = readCurrentInvokeContext(advice);
             if (invokeContext == null) {
                 return;
             }
@@ -735,15 +800,15 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
             if (isTrace) {
-                Pradar.endTrace(record.getResultCode(), getPluginType());
+                endTrace(record.getResultCode(), getPluginType(), advice);
             } else {
-                Pradar.endServerInvoke(record.getResultCode(), getPluginType());
+                endServerInvoke(record.getResultCode(), getPluginType(), advice);
             }
         } catch (Throwable e) {
             if (isTrace) {
-                Pradar.endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+                endTrace(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
             } else {
-                Pradar.endServerInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType());
+                endServerInvoke(ResultCode.INVOKE_RESULT_UNKNOWN, getPluginType(), advice);
             }
             throw e;
         } finally {
@@ -751,5 +816,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
         }
     }
 
+
+    private interface EndCall {
+        void call(String resultCode, int type);
+    }
 }
 

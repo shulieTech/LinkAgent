@@ -35,14 +35,13 @@ class SimulatorClassLoader extends URLClassLoader {
 
     private ClassLoader parentClassLoader;
 
-    SimulatorClassLoader(final String namespace,
-                         final String simulatorCoreJarFilePath) throws MalformedURLException {
+    SimulatorClassLoader(final String simulatorCoreJarFilePath) throws MalformedURLException {
         /**
          * 指定父类加载器为 null，防止类冲突问题
          */
         super(new URL[]{new URL("file:" + simulatorCoreJarFilePath)}, null);
         this.path = simulatorCoreJarFilePath;
-        this.toString = String.format("SimulatorClassLoader[namespace=%s;path=%s;]", namespace, path);
+        this.toString = String.format("SimulatorClassLoader[path=%s;]", path);
         this.parentClassLoader = getJdkClassLoader();
     }
 

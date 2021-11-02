@@ -18,7 +18,9 @@ import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.event.*;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.api.listener.Interruptable;
-import com.shulie.instrument.simulator.api.util.*;
+import com.shulie.instrument.simulator.api.util.SimulatorStack;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import com.shulie.instrument.simulator.api.util.ThreadUnsafeSimulatorStack;
 
 import static com.shulie.instrument.simulator.api.event.EventType.*;
 
@@ -80,20 +82,8 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                 final Advice advice = new Advice(
                         bEvent.getProcessId(),
                         bEvent.getInvokeId(),
-                        new LazyGet<Behavior>() {
-                            private final Class _clazz = bEvent.getClazz();
-                            private final String _javaMethodName = bEvent.getJavaMethodName();
-                            private final String _javaMethodDesc = bEvent.getJavaMethodDesc();
-
-                            @Override
-                            protected Behavior initialValue() throws Throwable {
-                                return toBehavior(
-                                        _clazz,
-                                        _javaMethodName,
-                                        _javaMethodDesc
-                                );
-                            }
-                        },
+                        bEvent.getJavaMethodName(),
+                        toBehavior(bEvent.getClazz(),bEvent.getJavaMethodName(),bEvent.getJavaMethodDesc()),
                         bEvent.getClazz(),
                         loader,
                         bEvent.getArgumentArray(),
@@ -110,7 +100,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
                 // 非顶层
                 else {
-                    parent = opStack.peek().advice;
+                    parent = opStack.peek();
                     top = parent.getProcessTop();
                 }
 
@@ -128,7 +118,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
             case IMMEDIATELY_THROWS:
             case IMMEDIATELY_RETURN: {
                 final InvokeEvent invokeEvent = (InvokeEvent) event;
-                WrapAdvice advice = opStack.popByExpectInvokeId(invokeEvent.getInvokeId());
+                Advice advice = opStack.popByExpectInvokeId(invokeEvent.getInvokeId());
                 if (advice != null) {
                     advice.destroy();
                 }
@@ -137,9 +127,9 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
             case RETURN: {
                 final ReturnEvent rEvent = (ReturnEvent) event;
-                final WrapAdvice wrapAdvice = opStack.popByExpectInvokeId(rEvent.getInvokeId());
+                final Advice wrapAdvice = opStack.popByExpectInvokeId(rEvent.getInvokeId());
                 if (null != wrapAdvice) {
-                    Advice advice = wrapAdvice.advice.applyReturn(rEvent.getReturnObj());
+                    Advice advice = wrapAdvice.applyReturn(rEvent.getReturnObj());
                     try {
                         adviceListener.afterReturning(advice);
                     } finally {
@@ -151,9 +141,9 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
             }
             case THROWS: {
                 final ThrowsEvent tEvent = (ThrowsEvent) event;
-                final WrapAdvice wrapAdvice = opStack.popByExpectInvokeId(tEvent.getInvokeId());
+                final Advice wrapAdvice = opStack.popByExpectInvokeId(tEvent.getInvokeId());
                 if (null != wrapAdvice) {
-                    Advice advice = wrapAdvice.advice.applyThrows(tEvent.getThrowable());
+                    Advice advice = wrapAdvice.applyThrows(tEvent.getThrowable());
                     try {
                         adviceListener.afterThrowing(advice);
                     } finally {
@@ -166,12 +156,12 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
             case CALL_BEFORE: {
                 final CallBeforeEvent cbEvent = (CallBeforeEvent) event;
-                final WrapAdvice wrapAdvice = opStack.peekByExpectInvokeId(cbEvent.getInvokeId());
-                if (null == wrapAdvice) {
+                final Advice advice = opStack.peekByExpectInvokeId(cbEvent.getInvokeId());
+                if (null == advice) {
                     return;
                 }
                 final CallTarget target;
-                wrapAdvice.attach(target = new CallTarget(
+                advice.setCallTarget(target = new CallTarget(
                         cbEvent.getLineNumber(),
                         cbEvent.isInterface(),
                         toJavaClassName(cbEvent.getOwner()),
@@ -179,7 +169,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                         cbEvent.getDesc()
                 ));
                 adviceListener.beforeCall(
-                        wrapAdvice.advice,
+                        advice,
                         target.callLineNum,
                         target.isInterface,
                         target.callJavaClassName,
@@ -191,18 +181,18 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
             case CALL_RETURN: {
                 final CallReturnEvent crEvent = (CallReturnEvent) event;
-                final WrapAdvice wrapAdvice = opStack.peekByExpectInvokeId(crEvent.getInvokeId());
-                if (null == wrapAdvice) {
+                final Advice advice = opStack.peekByExpectInvokeId(crEvent.getInvokeId());
+                if (null == advice) {
                     return;
                 }
-                final CallTarget target = wrapAdvice.attachment();
+                final CallTarget target = (CallTarget) advice.getCallTarget();
                 if (null == target) {
                     // 这里做一个容灾保护，防止在callBefore()中发生什么异常导致beforeCall()之前失败
                     return;
                 }
                 try {
                     adviceListener.afterCallReturning(
-                            wrapAdvice.advice,
+                            advice,
                             target.callLineNum,
                             target.isInterface,
                             target.callJavaClassName,
@@ -211,7 +201,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                     );
                 } finally {
                     adviceListener.afterCall(
-                            wrapAdvice.advice,
+                            advice,
                             target.callLineNum,
                             target.callJavaClassName,
                             target.callJavaMethodName,
@@ -224,18 +214,18 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
             case CALL_THROWS: {
                 final CallThrowsEvent ctEvent = (CallThrowsEvent) event;
-                final WrapAdvice wrapAdvice = opStack.peekByExpectInvokeId(ctEvent.getInvokeId());
-                if (null == wrapAdvice) {
+                final Advice advice = opStack.peekByExpectInvokeId(ctEvent.getInvokeId());
+                if (null == advice) {
                     return;
                 }
-                final CallTarget target = wrapAdvice.attachment();
+                final CallTarget target = (CallTarget) advice.getCallTarget();
                 if (null == target) {
                     // 这里做一个容灾保护，防止在callBefore()中发生什么异常导致beforeCall()之前失败
                     return;
                 }
                 try {
                     adviceListener.afterCallThrowing(
-                            wrapAdvice.advice,
+                            advice,
                             target.callLineNum,
                             target.isInterface,
                             target.callJavaClassName,
@@ -245,7 +235,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                     );
                 } finally {
                     adviceListener.afterCall(
-                            wrapAdvice.advice,
+                            advice,
                             target.callLineNum,
                             target.callJavaClassName,
                             target.callJavaMethodName,
@@ -258,11 +248,11 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
             case LINE: {
                 final LineEvent lEvent = (LineEvent) event;
-                final WrapAdvice wrapAdvice = opStack.peekByExpectInvokeId(lEvent.getInvokeId());
-                if (null == wrapAdvice) {
+                final Advice advice = opStack.peekByExpectInvokeId(lEvent.getInvokeId());
+                if (null == advice) {
                     return;
                 }
-                adviceListener.beforeLine(wrapAdvice.advice, lEvent.getLineNumber());
+                adviceListener.beforeLine(advice, lEvent.getLineNumber());
                 break;
             }
 
@@ -301,21 +291,21 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
      */
     private class OpStack {
 
-        private final SimulatorStack<WrapAdvice> adviceStack = new ThreadUnsafeSimulatorStack<WrapAdvice>();
+        private final SimulatorStack<Advice> adviceStack = new ThreadUnsafeSimulatorStack<Advice>();
 
         boolean isEmpty() {
             return adviceStack.isEmpty();
         }
 
-        WrapAdvice peek() {
+        Advice peek() {
             return adviceStack.peek();
         }
 
         void pushForBegin(final Advice advice) {
-            adviceStack.push(new WrapAdvice(advice));
+            adviceStack.push(advice);
         }
 
-        WrapAdvice pop() {
+        Advice pop() {
             return !adviceStack.isEmpty()
                     ? adviceStack.pop()
                     : null;
@@ -330,16 +320,16 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
          *                       必须要求和BEFORE的invokeId配对
          * @return 如果invokeId配对成功，则返回对应的Advice，否则返回null
          */
-        WrapAdvice popByExpectInvokeId(final int expectInvokeId) {
+        Advice popByExpectInvokeId(final int expectInvokeId) {
             return !adviceStack.isEmpty()
-                    && adviceStack.peek().advice.getInvokeId() == expectInvokeId
+                    && adviceStack.peek().getInvokeId() == expectInvokeId
                     ? adviceStack.pop()
                     : null;
         }
 
-        WrapAdvice peekByExpectInvokeId(final int expectInvokeId) {
+        Advice peekByExpectInvokeId(final int expectInvokeId) {
             return !adviceStack.isEmpty()
-                    && adviceStack.peek().advice.getInvokeId() == expectInvokeId
+                    && adviceStack.peek().getInvokeId() == expectInvokeId
                     ? adviceStack.peek()
                     : null;
         }
@@ -364,66 +354,6 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
     }
 
     /**
-     * 行为缓存KEY对象
-     */
-    private static class BehaviorCacheKey {
-        private final Class<?> clazz;
-        private final String javaMethodName;
-        private final String javaMethodDesc;
-
-        private BehaviorCacheKey(final Class<?> clazz,
-                                 final String javaMethodName,
-                                 final String javaMethodDesc) {
-            this.clazz = clazz;
-            this.javaMethodName = javaMethodName;
-            this.javaMethodDesc = javaMethodDesc;
-        }
-
-        @Override
-        public int hashCode() {
-            return clazz.hashCode()
-                    + javaMethodName.hashCode()
-                    + javaMethodDesc.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (null == o
-                    || !(o instanceof BehaviorCacheKey)) {
-                return false;
-            }
-            final BehaviorCacheKey key = (BehaviorCacheKey) o;
-            return clazz.equals(key.clazz)
-                    && javaMethodName.equals(key.javaMethodName)
-                    && javaMethodDesc.equals(key.javaMethodDesc);
-        }
-
-    }
-
-    // 行为缓存，为了增加性能，不要每次都从class通过反射获取行为
-    private final CacheGet<BehaviorCacheKey, Behavior> toBehaviorCacheGet
-            = new CacheGet<BehaviorCacheKey, Behavior>() {
-        @Override
-        protected Behavior load(BehaviorCacheKey key) {
-            if ("<init>".equals(key.javaMethodName)) {
-                for (final java.lang.reflect.Constructor constructor : key.clazz.getDeclaredConstructors()) {
-                    if (key.javaMethodDesc.equals(new BehaviorDescriptor(constructor).getDescriptor())) {
-                        return new Constructor(constructor);
-                    }
-                }
-            } else {
-                for (final java.lang.reflect.Method method : key.clazz.getDeclaredMethods()) {
-                    if (key.javaMethodName.equals(method.getName())
-                            && key.javaMethodDesc.equals(new BehaviorDescriptor(method).getDescriptor())) {
-                        return new Method(method);
-                    }
-                }
-            }
-            return null;
-        }
-    };
-
-    /**
      * CALL目标对象
      */
     private static class CallTarget {
@@ -444,40 +374,6 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
     }
 
     /**
-     * 通知内部封装，主要是要封装掉attachment
-     */
-    private static class WrapAdvice implements Attachment {
-
-        Advice advice;
-        Object attachment;
-
-        WrapAdvice(Advice advice) {
-            this.advice = advice;
-        }
-
-        @Override
-        public void attach(Object attachment) {
-            this.attachment = attachment;
-        }
-
-        @Override
-        public <T> T attachment() {
-            return (T) attachment;
-        }
-
-        /**
-         * 销毁 advice
-         */
-        public void destroy() {
-            attachment = null;
-            if (advice != null) {
-                advice.destroy();
-            }
-            advice = null;
-        }
-    }
-
-    /**
      * 根据提供的行为名称、行为描述从指定的Class中获取对应的行为
      *
      * @param clazz          指定的Class
@@ -489,11 +385,11 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
     private Behavior toBehavior(final Class<?> clazz,
                                 final String javaMethodName,
                                 final String javaMethodDesc) throws NoSuchMethodException {
-        final Behavior behavior = toBehaviorCacheGet.getFromCache(new BehaviorCacheKey(clazz, javaMethodName, javaMethodDesc));
-        if (null == behavior) {
-            throw new NoSuchMethodException(String.format("%s.%s(%s)", clazz.getName(), javaMethodName, javaMethodDesc));
+        if ("<init>".equals(javaMethodName)) {
+            return new Constructor(clazz, javaMethodDesc);
+        } else {
+            return new Method(clazz, javaMethodName, javaMethodDesc);
         }
-        return behavior;
     }
 
 }

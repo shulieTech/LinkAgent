@@ -45,7 +45,7 @@ public class LogbackUtils {
                 logger.info("SIMULATOR: initializing logback success. input={};", is);
             }
         } catch (Throwable cause) {
-            logger.warn("SIMULATOR: initialize logback failed. input={};", is, cause);
+            logger.error("SIMULATOR: initialize logback failed. input={};", is, cause);
         } finally {
             IOUtils.closeQuietly(is);
         }
@@ -72,7 +72,7 @@ public class LogbackUtils {
                 logger.info("SIMULATOR: initializing logback success. file={};", configureFile);
             }
         } catch (Throwable cause) {
-            logger.warn("SIMULATOR: initialize logback failed. file={};", configureFile, cause);
+            logger.error("SIMULATOR: initialize logback failed. file={};", configureFile, cause);
         } finally {
             IOUtils.closeQuietly(is);
         }

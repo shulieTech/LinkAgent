@@ -25,8 +25,6 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
 
-import java.lang.reflect.Method;
-
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
  * @package: com.pamirs.attach.plugin.feign
@@ -37,7 +35,7 @@ import java.lang.reflect.Method;
 public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         this.enhanceTemplate.enhance(this, "feign.ReflectiveFeign$FeignInvocationHandler", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -53,6 +51,7 @@ public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 enqueueMethod.addInterceptor(Listeners.of(FeignDataPassInterceptor.class));
             }
         });
+        return true;
     }
 
 }

@@ -23,6 +23,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import okhttp3.Headers;
@@ -37,6 +38,7 @@ import java.util.Map;
  * @mail xiaobin@shulie.io
  * @Date 2020/6/29 8:40 下午
  */
+@ListenerBehavior(isFilterBusinessData = true)
 public class RequestBuilderBuildMethodV3Interceptor extends TraceInterceptorAdaptor {
     @Override
     public String getPluginName() {

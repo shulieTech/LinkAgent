@@ -16,8 +16,6 @@ package com.shulie.instrument.simulator.core.classloader;
 
 import com.shulie.instrument.simulator.core.util.CompoundEnumeration;
 import com.shulie.instrument.simulator.core.util.EmptyEnumeration;
-import com.shulie.instrument.simulator.jdk.api.boot.BootLoader;
-import com.shulie.instrument.simulator.jdk.impl.boot.BootLoaderFactory;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -33,11 +31,17 @@ import java.util.*;
  */
 public class RoutingURLClassLoader extends URLClassLoader {
 
-    private static final Logger logger = LoggerFactory.getLogger(RoutingURLClassLoader.class);
-    protected final ClassLoadingLock classLoadingLock = new ClassLoadingLock();
-    protected final BootLoader bootLoader = BootLoaderFactory.newBootLoader();
+    protected final Logger logger = LoggerFactory.getLogger(RoutingURLClassLoader.class);
+    protected final boolean isDebugEnabled = logger.isDebugEnabled();
     protected final ClassLoader parent;
     protected Routing[] routingArray;
+
+    static {
+        try {
+            ClassLoader.registerAsParallelCapable();
+        } catch (Throwable e) {
+        }
+    }
 
     public RoutingURLClassLoader(final URL[] urls,
                                  final Routing... routingArray) {
@@ -65,7 +69,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
         if (null != url) {
             return url;
         }
-        return getResourceInternal(name);
+        return internalGetResource(name);
     }
 
     /**
@@ -74,16 +78,11 @@ public class RoutingURLClassLoader extends URLClassLoader {
      * @param name 资源名称
      * @return 返回资源URL
      */
-    protected URL getResourceInternal(String name) {
+    protected URL internalGetResource(String name) {
         // 1. find routing resource
         URL url = getRoutingResource(name);
 
-        // 2. find jdk resource
-        if (url == null) {
-            url = getJdkResource(name);
-        }
-
-        // 3. get local resource
+        // 2. get local resource
         if (url == null) {
             url = getLocalResource(name);
         }
@@ -98,7 +97,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
 
         String className = StringUtils.replace(resourceName, "/", ".");
         if (className.endsWith(".class")) {
-            className = StringUtils.substring(className, 0, StringUtils.lastIndexOf(className, ".class"));
+            className = StringUtils.substring(className, 0, className.length() - 6);
         }
         // 优先查询类加载路由表,如果命中路由规则,则优先从路由表中的ClassLoader完成类加载
         if (ArrayUtils.isNotEmpty(routingArray)) {
@@ -124,16 +123,6 @@ public class RoutingURLClassLoader extends URLClassLoader {
     }
 
     /**
-     * Find jdk dir resource
-     *
-     * @param resourceName 资源名称
-     * @return 返回jdk资源的url
-     */
-    protected URL getJdkResource(String resourceName) {
-        return bootLoader.findResource(resourceName);
-    }
-
-    /**
      * Find local resource
      *
      * @param resourceName 资源名称
@@ -150,7 +139,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
         if (null != urls) {
             return urls;
         }
-        return getResourcesInternal(name);
+        return internalGetResources(name);
     }
 
     /**
@@ -160,14 +149,12 @@ public class RoutingURLClassLoader extends URLClassLoader {
      * @return 返回资源列表
      * @throws IOException 资源加载不到会抛出IOException
      */
-    protected Enumeration<URL> getResourcesInternal(String name) throws IOException {
+    protected Enumeration<URL> internalGetResources(String name) throws IOException {
         List<Enumeration<URL>> enumerationList = new ArrayList<Enumeration<URL>>();
         // 1. find routing resources
         enumerationList.add(getRoutingResources(name));
-        // 2. find jdk resources
-        enumerationList.add(getJdkResources(name));
 
-        // 3. find local resources
+        // 2. find local resources
         enumerationList.add(getLocalResources(name));
 
 
@@ -179,10 +166,6 @@ public class RoutingURLClassLoader extends URLClassLoader {
         return super.getResources(resourceName);
     }
 
-    protected Enumeration<URL> getJdkResources(String resourceName) throws IOException {
-        return bootLoader.findResources(resourceName);
-    }
-
     protected Enumeration<URL> getRoutingResources(String resourceName) throws IOException {
         if (resourceName == null) {
             return new EmptyEnumeration<URL>();
@@ -191,7 +174,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
         List<Enumeration<URL>> list = new ArrayList<Enumeration<URL>>();
         String className = StringUtils.replace(resourceName, "/", ".");
         if (className.endsWith(".class")) {
-            className = StringUtils.substring(className, 0, StringUtils.lastIndexOf(className, ".class"));
+            className = StringUtils.substring(className, 0, className.length() - 6);
         }
         // 优先查询类加载路由表,如果命中路由规则,则优先从路由表中的ClassLoader完成类加载
         if (ArrayUtils.isNotEmpty(routingArray)) {
@@ -243,48 +226,17 @@ public class RoutingURLClassLoader extends URLClassLoader {
     }
 
     /**
-     * Load JDK class
-     *
-     * @param name class name
-     * @return 返回尝试使用jdk类加载器加载的类
-     */
-    protected Class<?> resolveJDKClass(String name) {
-        try {
-            return bootLoader.findBootstrapClassOrNull(this, name);
-        } catch (Throwable e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("can't resolve class {} from jdk with classloader {}.", name, this, e);
-            }
-            // ignore
-        }
-        return null;
-    }
-
-    /**
      * Load classpath class
      *
      * @param name className
      * @return resolved
      */
-    protected Class<?> resolveLocalClass(final String name) throws ClassNotFoundException {
-        return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
-            @Override
-            public Class<?> loadClass(String javaClassName) {
-                try {
-                    Class clazz = findLoadedClass(name);
-                    if (clazz != null) {
-                        return clazz;
-                    }
-                    return findClass(name);
-                } catch (Throwable e) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("can't resolve class {} from local with classloader {}.", name, this, e);
-                    }
-                    // ignore
-                }
-                return null;
-            }
-        });
+    protected Class<?> resolveLocalClass(final String name, final boolean resolve) throws ClassNotFoundException {
+        try {
+            return super.loadClass(name, resolve);
+        } catch (Throwable e) {
+            return null;
+        }
     }
 
     /**
@@ -301,7 +253,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
                 return classLoader.loadClass(name);
             }
         } catch (Throwable e) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("can't resolve class {} from super with classloader {}.", name, this, e);
             }
             // ignore
@@ -311,11 +263,6 @@ public class RoutingURLClassLoader extends URLClassLoader {
 
     @Override
     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
-//        return classLoadingLock.loadingInLock(name, new ClassLoadingLock.ClassLoading() {
-//            @Override
-//            public Class<?> loadClass(String javaClassName) throws ClassNotFoundException {
-//            }
-//        });
         Class<?> clazz = null;
 
         // 1. find routing
@@ -323,21 +270,12 @@ public class RoutingURLClassLoader extends URLClassLoader {
             clazz = resolveRouting(name, resolve);
         }
 
-        // 2. findLoadedClass
+        // 2. module classpath class
         if (clazz == null) {
-            clazz = findLoadedClass(name);
-        }
-        // 3. JDK related class
-        if (clazz == null) {
-            clazz = resolveJDKClass(name);
+            clazz = resolveLocalClass(name, resolve);
         }
 
-        // 4. module classpath class
-        if (clazz == null) {
-            clazz = resolveLocalClass(name);
-        }
-
-        // 5. super classpath class
+        // 3. super classpath class
         if (clazz == null) {
             clazz = resolveSystemClass(name, resolve);
         }
@@ -358,7 +296,8 @@ public class RoutingURLClassLoader extends URLClassLoader {
      * 类加载路由匹配器
      */
     public static class Routing {
-
+        protected final Logger logger = LoggerFactory.getLogger(RoutingURLClassLoader.class);
+        protected final boolean isDebugEnabled = logger.isDebugEnabled();
         protected Collection<String/*REGEX*/> regexExpresses = new ArrayList<String>();
         protected ClassLoader classLoader;
 
@@ -390,7 +329,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
          * @param wildcard 通配符匹配模版
          * @return true:目标字符串符合匹配模版;false:目标字符串不符合匹配模版
          */
-        private static boolean matching(final String string, final String wildcard) {
+        private boolean matching(final String string, final String wildcard) {
             if ("*".equals(wildcard)) {
                 return true;
             }
@@ -411,7 +350,7 @@ public class RoutingURLClassLoader extends URLClassLoader {
         /**
          * Internal matching recursive function.
          */
-        private static boolean matching(String string, String wildcard, int stringStartNdx, int patternStartNdx) {
+        private boolean matching(String string, String wildcard, int stringStartNdx, int patternStartNdx) {
             int pNdx = patternStartNdx;
             int sNdx = stringStartNdx;
             int pLen = wildcard.length();

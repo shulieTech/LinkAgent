@@ -60,22 +60,9 @@ public class ReturnEvent extends InvokeEvent {
                 final Object returnObj) {
         super(processId, invokeId, eventType);
         this.returnObj = returnObj;
-
-        // 对入参进行校验
-        if (eventType != EventType.IMMEDIATELY_RETURN
-                && eventType != EventType.RETURN) {
-            throw new IllegalArgumentException(String.format("type must be %s or %s", "RETURN", "IMMEDIATELY_RETURN"));
-        }
-
     }
 
     public Object getReturnObj() {
         return returnObj;
-    }
-
-    @Override
-    public void destroy() {
-        super.destroy();
-        returnObj = null;
     }
 }

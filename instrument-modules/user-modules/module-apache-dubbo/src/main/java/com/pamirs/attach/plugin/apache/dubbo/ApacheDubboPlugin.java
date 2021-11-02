@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.dubbo;
 
-import com.pamirs.attach.plugin.apache.dubbo.interceptor.ConsumerContextFilterInterceptor;
 import com.pamirs.attach.plugin.apache.dubbo.interceptor.DubboConsumerInterceptor;
 import com.pamirs.attach.plugin.apache.dubbo.interceptor.DubboProviderInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -37,7 +36,7 @@ import org.kohsuke.MetaInfServices;
 public class ApacheDubboPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         this.enhanceTemplate.enhance(this, "org.apache.dubbo.rpc.protocol.AbstractInvoker", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -71,6 +70,6 @@ public class ApacheDubboPlugin extends ModuleLifecycleAdapter implements Extensi
                 }
             }
         });
-
+        return true;
     }
 }

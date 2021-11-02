@@ -46,13 +46,14 @@ import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
  * 默认模块事件观察者实现
  */
 public class DefaultModuleEventWatcher implements ModuleEventWatcher {
-    private final Logger LOGGER = LoggerFactory.getLogger(DefaultModuleEventWatcher.class);
+    private final Logger logger = LoggerFactory.getLogger(DefaultModuleEventWatcher.class);
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
     private Instrumentation inst;
     private CoreLoadedClassDataSource classDataSource;
     private CoreModule coreModule;
     private final boolean isEnableUnsafe;
-    private final String namespace;
 
     // 观察ID序列生成器
     private final Sequencer watchIdSequencer = new Sequencer();
@@ -63,13 +64,11 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                               final CoreLoadedClassDataSource classDataSource,
                               final CoreModule coreModule,
                               final boolean isEnableUnsafe,
-                              final String namespace,
                               final EventListenerHandler eventListenerHandler) {
         this.inst = inst;
         this.classDataSource = classDataSource;
         this.coreModule = coreModule;
         this.isEnableUnsafe = isEnableUnsafe;
-        this.namespace = namespace;
         this.eventListenerHandler = eventListenerHandler;
     }
 
@@ -80,7 +79,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             try {
                 progress.begin(total);
             } catch (Throwable cause) {
-                LOGGER.warn("SIMULATOR: begin progress failed.", cause);
+                logger.warn("SIMULATOR: begin progress failed.", cause);
             }
         }
     }
@@ -91,7 +90,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             try {
                 progress.finish(cCnt, mCnt);
             } catch (Throwable cause) {
-                LOGGER.warn("SIMULATOR: finish progress failed.", cause);
+                logger.warn("SIMULATOR: finish progress failed.", cause);
             }
         }
     }
@@ -118,13 +117,13 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
         // 如果找不到需要被重新增强的类则直接返回
         if (CollectionUtils.isEmpty(waitingReTransformClasses)) {
-            LOGGER.debug("SIMULATOR: reTransformClasses={};module={};watch={} not found any class;",
+            logger.debug("SIMULATOR: reTransformClasses={};module={};watch={} not found any class;",
                     waitingReTransformClasses, coreModule.getModuleId(), watchId);
             return;
         }
 
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("SIMULATOR: reTransformClasses={};module={};watch={};",
+        if (isDebugEnabled) {
+            logger.debug("SIMULATOR: reTransformClasses={};module={};watch={};",
                     waitingReTransformClasses, coreModule.getModuleId(), watchId);
         }
 
@@ -138,7 +137,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                     } catch (Throwable cause) {
                         // 在进行进度汇报的过程中抛出异常,直接进行忽略,因为不影响形变的主体流程
                         // 仅仅只是一个汇报作用而已
-                        LOGGER.warn("SIMULATOR: watch={} in module={} on {} report progressOnSuccess occur exception at index={};total={};",
+                        logger.warn("SIMULATOR: watch={} in module={} on {} report progressOnSuccess occur exception at index={};total={};",
                                 watchId, coreModule.getModuleId(), waitingReTransformClass,
                                 index - 1, total,
                                 cause
@@ -146,29 +145,29 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                     }
                 }
                 if (!inst.isModifiableClass(waitingReTransformClass)) {
-                    LOGGER.info("SIMULATOR: watch={} in module={} single reTransform {} class not supported, at index={};total={};",
+                    logger.info("SIMULATOR: watch={} in module={} single reTransform {} class not supported, at index={};total={};",
                             watchId, coreModule.getModuleId(), waitingReTransformClass,
                             index - 1, total
                     );
                     continue;
                 }
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("SIMULATOR: pre{} watch={} in module={} single reTransform {}, at index={};total={};",
+                if (isInfoEnabled) {
+                    logger.info("SIMULATOR: pre{} watch={} in module={} single reTransform {}, at index={};total={};",
                             delete ? " delete reTransformClasses" : "",
                             watchId, coreModule.getModuleId(), waitingReTransformClass,
                             index - 1, total
                     );
                 }
                 inst.retransformClasses(waitingReTransformClass);
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("SIMULATOR: {}watch={} in module={} single reTransform {} success, at index={};total={};",
+                if (isInfoEnabled) {
+                    logger.info("SIMULATOR: {}watch={} in module={} single reTransform {} success, at index={};total={};",
                             delete ? "successful delete reTransformClasses " : "",
                             watchId, coreModule.getModuleId(), waitingReTransformClass,
                             index - 1, total
                     );
                 }
             } catch (UnsupportedOperationException e) {
-                LOGGER.warn("SIMULATOR: watch={} in module={} single reTransform {} failed, at index={};total={}.",
+                logger.warn("SIMULATOR: watch={} in module={} single reTransform {} failed, at index={};total={}.",
                         watchId, coreModule.getModuleId(), waitingReTransformClass,
                         index - 1, total,
                         e
@@ -177,7 +176,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                     try {
                         progress.progressOnFailed(waitingReTransformClass, index, e);
                     } catch (Throwable cause) {
-                        LOGGER.warn("SIMULATOR: watch={} in module={} on {} report progressOnFailed occur exception, at index={};total={};",
+                        logger.warn("SIMULATOR: watch={} in module={} on {} report progressOnFailed occur exception, at index={};total={};",
                                 watchId, coreModule.getModuleId(), waitingReTransformClass,
                                 index - 1, total,
                                 cause
@@ -185,7 +184,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                     }
                 }
             } catch (Throwable causeOfReTransform) {
-                LOGGER.warn("SIMULATOR: watch={} in module={} single reTransform {} failed, at index={};total={}. ignore this class.",
+                logger.warn("SIMULATOR: watch={} in module={} single reTransform {} failed, at index={};total={}. ignore this class.",
                         watchId, coreModule.getModuleId(), waitingReTransformClass,
                         index - 1, total,
                         causeOfReTransform
@@ -194,7 +193,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                     try {
                         progress.progressOnFailed(waitingReTransformClass, index, causeOfReTransform);
                     } catch (Throwable cause) {
-                        LOGGER.warn("SIMULATOR: watch={} in module={} on {} report progressOnFailed occur exception, at index={};total={};",
+                        logger.warn("SIMULATOR: watch={} in module={} on {} report progressOnFailed occur exception, at index={};total={};",
                                 watchId, coreModule.getModuleId(), waitingReTransformClass,
                                 index - 1, total,
                                 cause
@@ -240,8 +239,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
         // 查找需要渲染的类集合
         final List<Class<?>> waitingReTransformClasses = classDataSource.findForReTransform(matcher);
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
+        if (isInfoEnabled) {
+            logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
                     watchId,
                     coreModule.getModuleId(),
                     waitingReTransformClasses.size()
@@ -260,7 +259,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
             effectMethodCount += proxy.getAffectStatistic().getEffectMethodCount();
         } catch (Throwable e) {
-            LOGGER.error("dump class error. matcher={}, waitingReTransformClasses={}", matcher, waitingReTransformClasses, e);
+            logger.error("dump class error. matcher={}, waitingReTransformClasses={}", matcher, waitingReTransformClasses, e);
         } finally {
             finishProgress(progress, effectClassCount, effectMethodCount);
         }
@@ -279,7 +278,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         final int watchId = watchIdSequencer.next();
         // 给对应的模块追加ClassFileTransformer
         final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(this,
-                watchId, coreModule, matcher, isEnableUnsafe, namespace);
+                watchId, coreModule, matcher, isEnableUnsafe);
 
         SimulatorClassFileTransformer proxy = CostDumpTransformer.wrap(BytecodeDumpTransformer.wrap(transformer, coreModule.getSimulatorConfig()), coreModule.getSimulatorConfig());
         // 注册到CoreModule中
@@ -290,8 +289,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
         // 查找需要渲染的类集合
         final List<Class<?>> waitingReTransformClasses = classDataSource.findForReTransform(matcher);
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
+        if (isInfoEnabled) {
+            logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
                     watchId,
                     coreModule.getModuleId(),
                     waitingReTransformClasses.size()
@@ -323,7 +322,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             }
 
         } catch (Throwable e) {
-            LOGGER.error("watch class error. waitingReTransformClasses={}, matchers={}", waitingReTransformClasses, matcher, e);
+            logger.error("watch class error. waitingReTransformClasses={}, matchers={}", waitingReTransformClasses, matcher, e);
         } finally {
             finishProgress(progress, effectClassCount, effectMethodCount);
         }
@@ -373,8 +372,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         final List<Class<?>> waitingReTransformClasses = classDataSource.findForReTransform(
                 new GroupMatcher.Or(waitingRemoveMatcherSet.toArray(new Matcher[0]))
         );
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: watch={} in module={} found {} classes for delete.",
+        if (isInfoEnabled) {
+            logger.info("SIMULATOR: watch={} in module={} found {} classes for delete.",
                     watcherId,
                     coreModule.getModuleId(),
                     waitingReTransformClasses.size()
@@ -386,7 +385,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             // 应用JVM
             reTransformClasses(watcherId, waitingReTransformClasses, progress, true);
         } catch (Throwable e) {
-            LOGGER.error("delete transformer error. watcherId={}, waitingReTransformClasses={}", watcherId, waitingReTransformClasses, e);
+            logger.error("delete transformer error. watcherId={}, waitingReTransformClasses={}", watcherId, waitingReTransformClasses, e);
         } finally {
             finishProgress(progress, cCnt, mCnt);
         }

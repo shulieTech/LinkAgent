@@ -16,7 +16,7 @@ package com.shulie.instrument.simulator.api.event;
 
 /**
  * 方法调用追踪事件:THROWS
- *
+ * <p>
  * 注意: Event 的内容会在方法调用周期结束后进行清理，内部的数据将会全部清空
  * 这样做是为了内存回收的速度加快，所以如果需要在方法调用生命周期外引用 Event
  * 需要提前将内部的数据引用
@@ -45,11 +45,5 @@ public class CallThrowsEvent extends CallEvent {
 
     public Throwable getThrowException() {
         return throwException;
-    }
-
-    @Override
-    public void destroy() {
-        super.destroy();
-        throwException = null;
     }
 }

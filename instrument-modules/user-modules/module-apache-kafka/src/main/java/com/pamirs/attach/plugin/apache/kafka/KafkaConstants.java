@@ -24,10 +24,10 @@ import com.pamirs.pradar.MiddlewareType;
  */
 public class KafkaConstants {
     public final static String UNKNOWN = "unknow";
-    public final static String PLUGIN_NAME = "apache-kafka";
+    public final static String PLUGIN_NAME = "kafka";
     public final static int PLUGIN_TYPE = MiddlewareType.TYPE_MQ;
 
-    public final static String MODULE_NAME = "apache-kafka";
+    public final static String MODULE_NAME = "kafka";
 
     public final static String DYNAMIC_FIELD_REMOTE_ADDRESS = "remoteAddress";
     public final static String DYNAMIC_FIELD_GROUP = "group";

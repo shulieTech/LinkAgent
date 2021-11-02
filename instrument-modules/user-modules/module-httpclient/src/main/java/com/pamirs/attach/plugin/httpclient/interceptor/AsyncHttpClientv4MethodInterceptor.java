@@ -14,10 +14,7 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import java.util.Map;
-
 import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -27,22 +24,20 @@ import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.StatusLine;
+import org.apache.http.*;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
+
+import java.net.SocketTimeoutException;
+import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -65,7 +60,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         if (httpHost == null) {
             return;
         }
-
+        InnerWhiteListCheckUtil.check();
         String host = httpHost.getHostName();
         int port = httpHost.getPort();
         String path = httpHost.getHostName();
@@ -75,7 +70,6 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
             path = ((HttpUriRequest) request).getURI().getPath();
             method = ((HttpUriRequest) request).getMethod();
         }
-
         //判断是否在白名单中
         String url = getService(httpHost.getSchemeName(), host, port, path);
         MatchConfig config = ClusterTestUtils.httpClusterTest(url);
@@ -88,7 +82,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 //现在先暂时注释掉因为只有jdk8以上才能用
@@ -142,7 +136,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
             @Override
             public void completed(Object result) {
                 Pradar.setInvokeContext(context);
-                ((FutureCallback)future).completed(result);
+                ((FutureCallback) future).completed(result);
                 try {
                     if (result instanceof HttpResponse) {
                         afterTrace(request, (HttpResponse) result);
@@ -158,7 +152,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
             @Override
             public void failed(Exception ex) {
                 Pradar.setInvokeContext(context);
-                ((FutureCallback)future).failed(ex);
+                ((FutureCallback) future).failed(ex);
                 try {
                     exceptionTrace(request, ex);
                 } catch (Throwable e) {
@@ -170,7 +164,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
             @Override
             public void cancelled() {
                 Pradar.setInvokeContext(context);
-                ((FutureCallback)future).cancelled();
+                ((FutureCallback) future).cancelled();
                 try {
                     exceptionTrace(request, null);
                 } catch (Throwable e) {
@@ -189,6 +183,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
             Pradar.responseSize(0);
         }
         Pradar.request(request.getParams());
+        InnerWhiteListCheckUtil.check();
         int code = response == null ? 200 : response.getStatusLine().getStatusCode();
         Pradar.endClientInvoke(code + "", HttpClientConstants.PLUGIN_TYPE);
 
@@ -198,7 +193,12 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
     public void exceptionTrace(HttpRequest request, Throwable throwable) {
         Pradar.request(request.getParams());
         Pradar.response(throwable);
-        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        InnerWhiteListCheckUtil.check();
+        if (throwable != null && (throwable instanceof SocketTimeoutException)) {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_TIMEOUT, HttpClientConstants.PLUGIN_TYPE);
+        } else {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        }
     }
 
 }

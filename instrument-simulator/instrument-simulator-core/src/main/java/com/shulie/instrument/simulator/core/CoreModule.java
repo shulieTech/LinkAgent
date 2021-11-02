@@ -14,8 +14,10 @@
  */
 package com.shulie.instrument.simulator.core;
 
-import com.shulie.instrument.simulator.api.*;
 import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
+import com.shulie.instrument.simulator.api.ExtensionModule;
+import com.shulie.instrument.simulator.api.ModuleException;
+import com.shulie.instrument.simulator.api.ModuleSpec;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.resource.*;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
@@ -38,6 +40,8 @@ import static com.shulie.instrument.simulator.api.ModuleException.ErrorCode.MODU
 public class CoreModule {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
     /**
      * 模块描述
@@ -353,7 +357,7 @@ public class CoreModule {
         synchronized (releaseResources) {
             releaseResources.add(resource);
         }
-        if (logger.isDebugEnabled()) {
+        if (isDebugEnabled) {
             logger.debug("SIMULATOR: append resource={} in module[id={};]", resource.get(), moduleSpec);
         }
         return resource.get();
@@ -373,7 +377,7 @@ public class CoreModule {
                 // 删除掉无效的资源
                 if (null == resourceRef) {
                     resourceRefIt.remove();
-                    if (logger.isInfoEnabled()) {
+                    if (isInfoEnabled) {
                         logger.info("SIMULATOR: remove null resource in module={}", moduleSpec);
                     }
                     continue;
@@ -383,7 +387,7 @@ public class CoreModule {
                 final Object resource = resourceRef.get();
                 if (null == resource) {
                     resourceRefIt.remove();
-                    if (logger.isInfoEnabled()) {
+                    if (isInfoEnabled) {
                         logger.info("SIMULATOR: remove empty resource in module={}", moduleSpec);
                     }
                     continue;
@@ -391,7 +395,7 @@ public class CoreModule {
 
                 if (target.equals(resource)) {
                     resourceRefIt.remove();
-                    if (logger.isDebugEnabled()) {
+                    if (isDebugEnabled) {
                         logger.debug("SIMULATOR: release resource={} in module={}", resourceRef.get(), moduleSpec);
                     }
                     try {
@@ -414,7 +418,7 @@ public class CoreModule {
                 final ReleaseResource<?> resourceRef = resourceRefIt.next();
                 resourceRefIt.remove();
                 if (null != resourceRef) {
-                    if (logger.isDebugEnabled()) {
+                    if (isDebugEnabled) {
                         logger.debug("SIMULATOR: release resource={} in module={}", resourceRef.get(), moduleSpec);
                     }
                     try {

@@ -25,7 +25,7 @@ public class DBCollectionDropInterceptor extends AbstractDBCollectionInterceptor
 
     @Override
     protected boolean check(Advice advice) {
-        return advice.getBehavior().getName().equals("drop");
+        return advice.getBehaviorName().equals("drop");
     }
 
     @Override

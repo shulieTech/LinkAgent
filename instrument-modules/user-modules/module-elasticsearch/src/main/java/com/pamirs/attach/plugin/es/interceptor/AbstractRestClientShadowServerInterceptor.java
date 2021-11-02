@@ -71,7 +71,7 @@ public abstract class AbstractRestClientShadowServerInterceptor extends CutoffIn
 
     protected CutOffResult doShadowServerInterceptor(Advice advice) {
         Object target = advice.getTarget();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object[] args = advice.getParameterArray();
         if (!doCheck(target, methodName, args)) {
             return CutOffResult.PASSED;

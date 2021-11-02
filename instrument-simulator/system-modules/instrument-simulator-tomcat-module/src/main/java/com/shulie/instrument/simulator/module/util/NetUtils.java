@@ -120,7 +120,7 @@ public class NetUtils {
     }
 
     /**
-     * Only use this method when tomcat monitor version <= 1.0.1
+     * Only use this method when tomcat monitor version <= 1.0.2
      * This will send http request to pandora qos port 12201,
      * and display the response.
      * Note that pandora qos response is not fully HTTP compatible under version 2.1.0,

@@ -17,6 +17,9 @@ package com.pamirs.attach.plugin.apache.hbase.interceptor;
 import com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver.HbaseMediatorConnection;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.InvokeSwitcher;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.template.HbaseTemplate;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
@@ -37,6 +40,27 @@ import java.util.concurrent.ExecutorService;
  */
 public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
 
+    void attachment(Advice advice) {
+        try {
+            Object[] args = advice.getParameterArray();
+            Configuration configuration = (Configuration) args[0];
+            String quorum = configuration.get(HConstants.ZOOKEEPER_QUORUM);
+            String port = configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT);
+            String znode = configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
+            ResourceManager.set(
+                    new Attachment(
+                            null, "apache-hbase", new String[]{"hbase"}
+                            , new HbaseTemplate()
+                            .setZookeeper_quorum(quorum)
+                            .setZookeeper_client_port(port)
+                            .setZookeeper_znode_parent(znode)
+                    )
+            );
+        } catch (Throwable t) {
+
+        }
+    }
+
     @Override
     public CutOffResult cutoff0(Advice advice) {
         Object[] args = advice.getParameterArray();
@@ -47,8 +71,8 @@ public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
         if (!(args[0] instanceof Configuration)) {
             return CutOffResult.passed();
         }
-
         ClusterTestUtils.validateClusterTest();
+        attachment(advice);
         Configuration configuration = (Configuration) args[0];
         HbaseMediatorConnection mediatorConnection = (HbaseMediatorConnection) MediatorConnection.mediatorMap.get(converConfiguration(configuration));
         if (mediatorConnection != null) {
@@ -74,7 +98,7 @@ public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
         return CutOffResult.cutoff(mediatorConnection);
     }
 
-    public static String converConfiguration(Configuration configuration){
+    public static String converConfiguration(Configuration configuration) {
         String quorum = configuration.get(HConstants.ZOOKEEPER_QUORUM);
         String port = configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT);
         String znode = configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
@@ -83,7 +107,7 @@ public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
         return getKey(quorum, port, znode, token, username);
     }
 
-    private static String getKey(String quorum, String port, String znode, String token, String username){
+    private static String getKey(String quorum, String port, String znode, String token, String username) {
         String key = quorum.concat("|").concat(port).concat("|").concat(znode).concat("|");
         if (token != null) {
             key = key.concat(token).concat("|");

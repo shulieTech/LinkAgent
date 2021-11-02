@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
@@ -23,7 +24,9 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import okhttp3.*;
@@ -33,6 +36,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 /**
  * @Description
@@ -40,6 +44,7 @@ import java.io.IOException;
  * @mail xiaobin@shulie.io
  * @Date 2020/6/30 10:20 上午
  */
+@ListenerBehavior(isFilterBusinessData = true)
 public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
     @Override
     public String getPluginName() {
@@ -53,9 +58,12 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
         Object target = advice.getTarget();
         final Call call = (Call) target;
-        HttpUrl httpUrl = call.request().url();
+        final HttpUrl httpUrl = call.request().url();
         String url = OKHttpConstants.getService(httpUrl.scheme(), httpUrl.host(), httpUrl.port(), httpUrl.encodedPath());
 
         final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
@@ -63,37 +71,52 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
         config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, check);
         config.addArgs("url", url);
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
-            @Override
-            public Object forward(Object param) throws ProcessControlException {
-                HttpUrl httpUrl = HttpUrl.parse(config.getForwarding());
-                Reflect.on(call.request()).set("url", httpUrl);
-                return null;
-            }
-
-            @Override
-            public Object call(Object param) {
-                Headers header = new Headers.Builder().build();
-                Buffer buffer = new Buffer();
-
-                try {
-                    if (param instanceof String) {
-                        buffer.write(String.valueOf(param).getBytes("UTF-8"));
-                    } else {
-                        buffer.write(JSONObject.toJSONBytes(param));
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
+                new ExecutionForwardCall() {
+                    @Override
+                    public Object forward(Object param) throws ProcessControlException {
+                        String configUrl = config.getForwarding();
+                        if (httpUrl.queryParameterNames().size() > 0) {
+                            StringBuilder builder = new StringBuilder(128).append(configUrl).append("?");
+                            boolean first = true;
+                            for (String queryParameterName : httpUrl.queryParameterNames()) {
+                                if (!first) {
+                                    builder.append("&");
+                                }
+                                builder.append(queryParameterName).append("=").append(
+                                        httpUrl.queryParameter(queryParameterName));
+                                first = false;
+                            }
+                            configUrl = builder.toString();
+                        }
+                        HttpUrl forwardHttpUrl = HttpUrl.parse(configUrl);
+                        Reflect.on(call.request()).set("url", forwardHttpUrl);
+                        return null;
                     }
 
-                } catch (IOException e) {
-                }
+                    @Override
+                    public Object call(Object param) {
+                        Headers header = new Headers.Builder().build();
+                        Buffer buffer = new Buffer();
 
-                return new Response.Builder().code(200)
-                        .body(new RealResponseBody(header,buffer))
-                        .request(call.request())
-                        .protocol(Protocol.HTTP_1_0)
-                        .message("OK")
-                        .build();
-            }
-        });
+                        try {
+                            if (param instanceof String) {
+                                buffer.write(String.valueOf(param).getBytes("UTF-8"));
+                            } else {
+                                buffer.write(JSONObject.toJSONBytes(param));
+                            }
+
+                        } catch (IOException e) {
+                        }
+
+                        return new Response.Builder().code(200)
+                                .body(new RealResponseBody(header, buffer))
+                                .request(call.request())
+                                .protocol(Protocol.HTTP_1_0)
+                                .message("OK")
+                                .build();
+                    }
+                });
     }
 
     @Override
@@ -102,12 +125,13 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
         Call call = (Call) target;
 
         SpanRecord record = new SpanRecord();
-        record.setRemoteIp(call.request().url().host());
-        record.setService(call.request().url().encodedPath());
+        HttpUrl url = call.request().url();
+        record.setRemoteIp(url.host());
+        record.setService(url.encodedPath());
         record.setMethod(StringUtils.upperCase(call.request().method()));
-        record.setRemoteIp(call.request().url().host());
-        record.setPort(call.request().url().port());
-        record.setRequest(call.request().url().encodedQuery());
+        record.setRemoteIp(url.host());
+        record.setPort(url.port());
+        record.setRequest(url.encodedQuery());
 
         String header = call.request().header("content-length");
         if (StringUtils.isNotBlank(header) && NumberUtils.isDigits(header)) {
@@ -122,9 +146,14 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
         record.setResponse(advice.getThrowable());
         record.setResponseSize(0);
+        InnerWhiteListCheckUtil.check();
         return record;
     }
 
@@ -134,6 +163,7 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
         Response response = (Response) advice.getReturnObj();
         record.setResultCode(String.valueOf(response.code()));
         final long length = response.body().contentLength();
+        InnerWhiteListCheckUtil.check();
         record.setResponseSize(length < 0 ? 0 : length);
         return record;
     }

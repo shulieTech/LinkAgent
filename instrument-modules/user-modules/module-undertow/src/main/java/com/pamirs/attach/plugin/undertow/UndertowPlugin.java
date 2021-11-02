@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 public class UndertowPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         enhanceTemplate.enhance(this, "io.undertow.server.Connectors", new EnhanceCallback() {
             @Override
@@ -52,5 +52,6 @@ public class UndertowPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 startAsyncMethod.addInterceptor(Listeners.of(HttpServletRequestImplStartAsyncInterceptor.class));
             }
         });
+        return true;
     }
 }

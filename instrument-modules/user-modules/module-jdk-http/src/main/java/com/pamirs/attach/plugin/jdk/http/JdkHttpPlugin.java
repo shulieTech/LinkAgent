@@ -35,7 +35,7 @@ import org.kohsuke.MetaInfServices;
 public class JdkHttpPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "sun.net.www.protocol.http.HttpURLConnection", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -74,5 +74,6 @@ public class JdkHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+        return true;
     }
 }

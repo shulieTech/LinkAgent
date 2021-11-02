@@ -17,6 +17,7 @@ package com.pamirs.pradar.interceptor;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
 import com.shulie.instrument.simulator.api.scope.InterceptorScopeInvocation;
 import org.slf4j.Logger;
@@ -29,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Created by xiaobin on 2017/1/19.
  */
-public class ScopedCutoffInterceptor extends CutoffInterceptor {
+public class ScopedCutoffInterceptor extends CutoffInterceptor implements ScopedInterceptor{
     private final Logger logger = LoggerFactory.getLogger(ScopedCutoffInterceptor.class.getName());
 
     private final CutoffInterceptor interceptor;
@@ -54,7 +55,7 @@ public class ScopedCutoffInterceptor extends CutoffInterceptor {
         if (scope != null) {
             return scope;
         }
-        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
+        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehaviorName());
     }
 
     @Override
@@ -79,5 +80,9 @@ public class ScopedCutoffInterceptor extends CutoffInterceptor {
         return result;
     }
 
+    @Override
+    public AdviceListener getUnderWrap() {
+        return interceptor;
+    }
 }
 

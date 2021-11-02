@@ -154,6 +154,8 @@ public interface IPradarInternalService {
      */
     void startTrace(String traceId, String invokeId, String serviceName, String methodName);
 
+    void startTrace(String traceId, String invokeId, String serviceName, String methodName,String middlewareName);
+
     /**
      * 标记压测流量
      *

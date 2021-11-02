@@ -55,8 +55,8 @@ public final class RedisUtils {
      */
     public final static Map<String, List<Integer>> METHOD_MORE_KEYS = new HashMap<String, List<Integer>>();
 
-    public static final ConcurrentHashMap<String, String> HOST_SERVER_TYPE_MAP
-        = new ConcurrentHashMap<String, String>();
+    public static final ConcurrentHashMap<String, String> HOST_SERVER_TYPE_MAP = new ConcurrentHashMap<String, String>();
+
 
     public static final Set<String> EVAL_METHOD_NAME = new HashSet<String>();
 
@@ -97,6 +97,7 @@ public final class RedisUtils {
         METHOD_NAMES.put("hmget", READ);
         METHOD_NAMES.put("hincrBy", READ);
         METHOD_NAMES.put("del", WRITE);
+        METHOD_NAMES.put("unlink", WRITE);
         //METHOD_NAMES.put("randomKey", READ);
         METHOD_NAMES.put("renamenx", WRITE);
         METHOD_NAMES.put("expire", WRITE);
@@ -249,6 +250,7 @@ public final class RedisUtils {
         METHOD_NAMES.put("georadiusByMember", READ);
         METHOD_NAMES.put("geoadd", READ);
 
+
         METHOD_NAMES.put("xinfoStream", READ);
         METHOD_NAMES.put("xinfoGroup", READ);
         METHOD_NAMES.put("xrange", READ);
@@ -371,6 +373,7 @@ public final class RedisUtils {
         return host + ":" + port;
     }
 
+
     public static String methodStr(String methodName, String argsExt) {
         if (argsExt == null || argsExt.trim().length() == 0) {
             return methodName;
@@ -389,46 +392,46 @@ public final class RedisUtils {
             if (maxRedisExpireTime != null && maxRedisExpireTime > -1f) {
                 if ((methodName.equals("setex") && args[1] instanceof Integer) || (methodName.equals("expire")
                     && args[1] instanceof Integer)) {
-                    args[1] = Math.min((Integer)args[1], Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
+                    args[1] = Math.min((Integer) args[1], Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
                 } else if ((methodName.equals("pexpire") && args[1] instanceof Long) || (methodName.equals("psetex")
                     && args[1] instanceof Long)) {
-                    args[1] = Math.min((Long)args[1], Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
+                    args[1] = Math.min((Long) args[1], Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
                 } else if (methodName.equals("set") && args.length == 3 && args[2].getClass().getName().equals(
-                    "redis.clients.jedis.params.SetParams")) {
+                        "redis.clients.jedis.params.SetParams")) {
                     Map<String, Object> params;
                     try {
-                        params = (Map<String, Object>)ReflectionUtils.getFieldValue(args[2], "params");
+                        params = (Map<String, Object>) ReflectionUtils.getFieldValue(args[2], "params");
                     } catch (Exception e) {
                         LOGGER.error("get redis set params error", e);
                         return;
                     }
                     if (params.containsKey("ex")) {
-                        params.put("ex", Math.min((Integer)params.get("ex"),
-                            Float.valueOf(maxRedisExpireTime * 60 * 60).intValue()));
+                        params.put("ex", Math.min((Integer) params.get("ex"),
+                                Float.valueOf(maxRedisExpireTime * 60 * 60).intValue()));
                     }
                     if (params.containsKey("px")) {
-                        params.put("px", Math.min((Long)args[1],
-                            Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue()));
+                        params.put("px", Math.min((Long) args[1],
+                                Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue()));
                     }
                 } else if (methodName.equals("set") && args.length == 5 && args[4] instanceof Long) {
                     String expx = args[3].toString();
-                    Long time = (Long)args[4];
+                    Long time = (Long) args[4];
                     if (expx.equals("ex")) {
                         args[4] = Math.min(time,
-                            Float.valueOf(maxRedisExpireTime * 60 * 60).longValue());
+                                Float.valueOf(maxRedisExpireTime * 60 * 60).longValue());
                     } else if (expx.equals("px")) {
                         args[4] = Math.min(time,
-                            Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
+                                Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
                     }
                 } else if (methodName.equals("set") && args.length == 5 && args[4] instanceof Integer) {
                     String expx = args[3].toString();
-                    Integer time = (Integer)args[4];
+                    Integer time = (Integer) args[4];
                     if (expx.equals("ex")) {
                         args[4] = Math.min(time,
-                            Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
+                                Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
                     } else if (expx.equals("px")) {
                         args[4] = Math.min(time,
-                            Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).intValue());
+                                Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).intValue());
                     }
                 }
             }

@@ -39,9 +39,9 @@ import java.util.List;
 import java.util.Map;
 
 public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceConstants {
-    private final static Logger LOGGER = LoggerFactory.getLogger(PullConsumeMessageHookImpl.class.getName());
     public static final String RETRYSTR = "%RETRY%";
     public static final String DLQSTR = "%DLQ%";
+    private final static Logger LOGGER = LoggerFactory.getLogger(PullConsumeMessageHookImpl.class.getName());
 
     @Override
     public String hookName() {
@@ -61,17 +61,33 @@ public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
             mqTraceContext.setTopic(context.getMq().getTopic());
             mqTraceContext.setGroup(context.getConsumerGroup());
 
+            boolean silence = PradarService.isSilence();
+
             List<MQTraceBean> beans = new ArrayList<MQTraceBean>();
             for (MessageExt msg : context.getMsgList()) {
                 if (msg == null) {
                     continue;
                 }
                 MQTraceBean traceBean = new MQTraceBean();
+
+                boolean isClusterTest = msg.getTopic() != null &&
+                        (Pradar.isClusterTestPrefix(msg.getTopic())
+                                || Pradar.isClusterTestPrefix(msg.getTopic(), RETRYSTR)
+                                || Pradar.isClusterTestPrefix(msg.getTopic(), DLQSTR));
+                // 消息的properties是否包含Pradar.PRADAR_CLUSTER_TEST_KEY
+                isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
+                if (isClusterTest) {
+                    traceBean.setClusterTest(Boolean.TRUE.toString());
+                }
+                if (silence && isClusterTest) {
+                    throw new PressureMeasureError(this.getClass().getName() + "silence module ! can not handle cluster test data");
+                }
+
                 Map<String, String> rpcContext = new HashMap<String, String>();
                 for (String key : Pradar.getInvokeContextTransformKeys()) {
                     String value = msg.getProperty(key);
-                    if(value != null) {
-                        rpcContext.put(key,value);
+                    if (value != null) {
+                        rpcContext.put(key, value);
                     }
                 }
                 traceBean.setContext(rpcContext);
@@ -102,15 +118,7 @@ public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 traceBean.setOffset(msg.getQueueOffset());
                 traceBean.setRetryTimes(msg.getReconsumeTimes());
                 traceBean.setProps(context.getProps());
-                boolean isClusterTest = msg.getTopic() != null &&
-                        (Pradar.isClusterTestPrefix(msg.getTopic())
-                                || Pradar.isClusterTestPrefix(msg.getTopic(), RETRYSTR)
-                                || Pradar.isClusterTestPrefix(msg.getTopic(), DLQSTR));
-                // 消息的properties是否包含Pradar.PRADAR_CLUSTER_TEST_KEY
-                isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
-                if (isClusterTest) {
-                    traceBean.setClusterTest(Boolean.TRUE.toString());
-                }
+
                 beans.add(traceBean);
             }
             mqTraceContext.setTraceBeans(beans);

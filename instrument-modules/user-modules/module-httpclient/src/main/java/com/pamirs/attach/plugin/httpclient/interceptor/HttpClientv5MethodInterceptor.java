@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.httpclient.interceptor;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -65,7 +66,7 @@ import org.slf4j.LoggerFactory;
  * Created by baozi on 2021/8/12.
  */
 public class HttpClientv5MethodInterceptor extends TraceInterceptorAdaptor {
-    private final static Logger logger = LoggerFactory.getLogger(HttpClientv5MethodInterceptor.class);
+    private final Logger logger = LoggerFactory.getLogger(HttpClientv5MethodInterceptor.class);
 
     @Override
     public String getPluginName() {
@@ -114,7 +115,7 @@ public class HttpClientv5MethodInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(),advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 try {
@@ -356,7 +357,11 @@ public class HttpClientv5MethodInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         HttpRequest request = (HttpRequest)args[1];
         SpanRecord record = new SpanRecord();
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
         try {
             record.setRequest(getParameters(request));
         } catch (Throwable e) {

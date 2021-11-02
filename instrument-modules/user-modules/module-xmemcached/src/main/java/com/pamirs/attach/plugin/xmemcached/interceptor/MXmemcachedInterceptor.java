@@ -36,7 +36,7 @@ public class MXmemcachedInterceptor extends ParametersWrapperInterceptorAdaptor 
             return args;
         }
 
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         if ("getProtocol".equals(methodName)) {
             return args;
         }

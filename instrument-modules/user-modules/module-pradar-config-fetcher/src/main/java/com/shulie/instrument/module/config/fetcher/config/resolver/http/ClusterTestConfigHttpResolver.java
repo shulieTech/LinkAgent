@@ -16,6 +16,8 @@ package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
 
 import com.alibaba.fastjson.JSON;
+import com.pamirs.pradar.AppNameUtils;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
@@ -28,6 +30,9 @@ import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,9 +51,11 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
 
     private static final String APP_PRESSURE_SWITCH_STATUS = "/api/application/center/app/switch/agent";
     private static final String APP_WHITE_LIST_SWITCH_STATUS = "/api/global/switch/whitelist";
+    private static final String APP_CONFIG_CALLBACK = "/api/agent/push/application/config";
 
     private static final String CLOSE = "CLOSED";
-    private static final String SWITCHSTATUS = "switchStatus";
+    private static final String SWITCH_STATUS = "switchStatus";
+    private static final String SILENCE_SWITCH_STATUS = "silenceSwitchOn";
 
     private AtomicBoolean pradarSwitchProcessing = new AtomicBoolean(false);
 
@@ -61,6 +68,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
          * 初始化全局开关配置
          * premain初始化时 close Listener、open Listener都是0
          * 如果全局开关拉取不到则默认开关为打开，会向全局发开关开启事件
+         * 静默开关默认为关闭
          */
         getApplicationSwitcher(troControlWebUrl, clusterTestConfig);
         // 白名单开关配置
@@ -75,6 +83,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
         if (fields == null || fields.length == 0) {
             return null;
         }
+
         for (FIELDS field : fields) {
             switch (field) {
                 case GLOBAL_SWITCHON:
@@ -116,14 +125,12 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             }
             Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
             Map<String, Object> map = (Map<String, Object>) resultMap.get("data");
-            if (map != null && map.get(SWITCHSTATUS) != null) {
-                String status = (String) map.get(SWITCHSTATUS);
+            if (map != null && map.get(SWITCH_STATUS) != null) {
+                String status = (String) map.get(SWITCH_STATUS);
                 clusterTestConfig.setWhiteListSwitchOn(!CLOSE.equals(status));
-                ClusterTestConfig.getWhiteListSwitcher = Boolean.TRUE;
             }
         } catch (Throwable e) {
             LOGGER.warn("SIMULATOR: [FetchConfig] Admin console Init Failure!", e);
-//            clusterTestConfig.setWhiteListSwitchOn(Boolean.TRUE);
             clusterTestConfig.setWhiteListSwitchOn(PradarSwitcher.whiteListSwitchOn());
 
         }
@@ -147,20 +154,41 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             if (!httpResult.isSuccess()) {
                 LOGGER.warn(String.format("SIMULATOR: [FetchConfig] Admin console http response error. status: %s, result: %s! tro url is %s",
                         httpResult.getStatus(), httpResult.getResult(), url));
-                clusterTestConfig.setGlobalSwitchOn(PradarSwitcher.clusterTestSwitchOn());
                 return;
             }
             Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
             Map<String, Object> map = (Map<String, Object>) resultMap.get("data");
-            if (map != null && map.get(SWITCHSTATUS) != null) {
-                String status = (String) map.get(SWITCHSTATUS);
+            if (map != null && map.get(SWITCH_STATUS) != null) {
+                String status = (String) map.get(SWITCH_STATUS);
                 clusterTestConfig.setGlobalSwitchOn(!CLOSE.equals(status));
-                ClusterTestConfig.getApplicationSwitcher = Boolean.TRUE;
             }
+            if (map != null && map.get(SILENCE_SWITCH_STATUS) != null) {
+                //全局静默开关
+                String status = (String) map.get(SILENCE_SWITCH_STATUS);
+                clusterTestConfig.setSilenceSwitchOn(!CLOSE.equals(status));
+            }
+
         } catch (Throwable e) {
             LOGGER.warn("SIMULATOR: [FetchConfig] Admin console Init Failure!", e);
-//            clusterTestConfig.setGlobalSwitchOn(Boolean.FALSE);
             clusterTestConfig.setGlobalSwitchOn(PradarSwitcher.clusterTestSwitchOn());
+            clusterTestConfig.setSilenceSwitchOn(PradarSwitcher.silenceSwitchOn());
+        } finally {
+            /**
+             * 静默状态配置变更callback,不关心成功or失败
+             *  后面配置多了再抽出来做个统一的配置上报
+             */
+            String callbackUrl = troWebUrl + APP_CONFIG_CALLBACK;
+            Map<String, Object> param = new HashMap<String, Object>();
+            List<Map<String, Object>> configList = new ArrayList<Map<String, Object>>();
+            Map<String, Object> configMap = new HashMap<String, Object>();
+            configMap.put("key", "silenceSwitchOn");
+            configMap.put("value", String.valueOf(clusterTestConfig.isSilenceSwitchOn()));
+            configMap.put("bizType", 0);
+            configList.add(configMap);
+            param.put("applicationName", AppNameUtils.appName());
+            param.put("agentId", Pradar.getAgentId());
+            param.put("globalConf", configList);
+            HttpUtils.doPost(callbackUrl, JSON.toJSONString(param));
         }
     }
 

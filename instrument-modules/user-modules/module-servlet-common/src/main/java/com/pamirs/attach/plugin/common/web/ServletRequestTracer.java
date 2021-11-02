@@ -71,7 +71,7 @@ public class ServletRequestTracer extends RequestTracer<HttpServletRequest, Http
     @Override
     public String getParams(HttpServletRequest request) {
         Map parameterMap = request.getParameterMap();
-        StringBuilder stringBuilder = new StringBuilder("{");
+        StringBuilder stringBuilder = new StringBuilder(64).append("{");
         if (null != parameterMap) {
             int index = 0;
             for (Object key : parameterMap.keySet()) {

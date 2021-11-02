@@ -21,6 +21,8 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ArrayUtils;
@@ -71,8 +73,11 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         if (message == null) {
             return null;
         }
-
+        Channel channel = (Channel)args[0];
+        Connection connection = channel.getConnection();
         SpanRecord record = new SpanRecord();
+        record.setRemoteIp(connection.getAddress().getHostAddress());
+        record.setPort(connection.getPort() + "");
         record.setService(message.getMessageProperties().getConsumerQueue());
         record.setMethod(message.getMessageProperties().getReceivedExchange());
         byte[] body = message.getBody();

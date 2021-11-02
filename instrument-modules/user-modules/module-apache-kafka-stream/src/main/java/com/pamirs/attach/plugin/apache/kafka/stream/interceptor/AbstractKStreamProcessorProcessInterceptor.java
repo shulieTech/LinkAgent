@@ -19,11 +19,13 @@ import com.pamirs.attach.plugin.apache.kafka.stream.constants.KafkaStreamsCaches
 import com.pamirs.attach.plugin.apache.kafka.stream.obj.KafkaStreamConfig;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.BytesUtils;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.common.header.Header;
@@ -49,6 +51,7 @@ import java.util.Properties;
  * @author angju
  * @date 2021/5/8 15:36
  */
+@ListenerBehavior(isNoSilence = true)
 public abstract class AbstractKStreamProcessorProcessInterceptor extends TraceInterceptorAdaptor {
     private Field contextField;
     private Field kstreamMapField;
@@ -66,7 +69,7 @@ public abstract class AbstractKStreamProcessorProcessInterceptor extends TraceIn
 
     @Override
     public String getPluginName() {
-        return "apache-kafka-stream";
+        return "kafka-stream";
     }
 
     @Override
@@ -176,6 +179,9 @@ public abstract class AbstractKStreamProcessorProcessInterceptor extends TraceIn
             spanRecord.setCallbackMsg(System.currentTimeMillis() - record + "");
         } catch (Throwable t) {
             //ignore
+        }
+        if (PradarService.isSilence() && spanRecord.getClusterTest()) {
+            throw new PressureMeasureError(this.getClass().getName() + ":silence module ! can not handle cluster test data");
         }
         return spanRecord;
     }

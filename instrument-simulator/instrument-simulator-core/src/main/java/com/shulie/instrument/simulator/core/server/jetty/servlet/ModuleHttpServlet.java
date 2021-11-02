@@ -16,7 +16,6 @@ package com.shulie.instrument.simulator.core.server.jetty.servlet;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.resource.ReleaseResource;
@@ -124,7 +123,7 @@ public class ModuleHttpServlet extends HttpServlet {
     }
 
     private void uninstall() throws Throwable {
-        deploymentManager.uninstall(config.getNamespace());
+        deploymentManager.uninstall();
     }
 
     private void doShutdown(final HttpServletRequest req, final HttpServletResponse resp) throws IOException {
@@ -133,20 +132,19 @@ public class ModuleHttpServlet extends HttpServlet {
             @Override
             public void run() {
                 // can't get simulatorConfig after uninstall because of set simulatorConfig is null when uninstalling
-                String namespace = config.getNamespace();
                 try {
-                    logger.info("instrument-simulator[{}] prepare to shutdown.", namespace);
+                    logger.info("simulator prepare to shutdown.");
                     /**
                      * 先悠着点，防止请求没返回之前就被卸载了，导致响应无法收到
                      */
                     Thread.sleep(100L);
                     uninstall();
-                    logger.info("instrument-simulator[{}] shutdown finished.", namespace);
+                    logger.info("simulator shutdown finished.");
                 } catch (Throwable cause) {
-                    logger.warn("SIMULATOR: shutdown instrument-simulator[{}] failed.", namespace, cause);
+                    logger.warn("SIMULATOR: shutdown simulator failed.", cause);
                 }
             }
-        }, String.format("shutdown-instrument-simulator-%s-hook", config.getNamespace()));
+        }, String.format("shutdown-instrument-simulator-hook"));
         shutdownInstrumentSimulatorHook.setDaemon(true);
         shutdownInstrumentSimulatorHook.start();
         doResponse(CommandResponse.success(true), req, resp);

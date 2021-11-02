@@ -25,6 +25,7 @@ import java.util.Map;
  * @since 2021/3/11 6:58 下午
  */
 public class DefaultPradarService implements IPradarService {
+
     @Override
     public boolean isClusterTest() {
         return Pradar.isClusterTest();
@@ -41,6 +42,11 @@ public class DefaultPradarService implements IPradarService {
     }
 
     @Override
+    public boolean isSaveBusinessTrace() {
+        return PradarSwitcher.isSwitchSaveBusinessTrace();
+    }
+
+    @Override
     public boolean hasMark(String key) {
         return Pradar.hasUserData(key);
     }
@@ -51,7 +57,33 @@ public class DefaultPradarService implements IPradarService {
     }
 
     @Override
+    public String getTraceId() {
+        return Pradar.getTraceId();
+    }
+
+    @Override
+    public boolean isSilence() {
+        return PradarSwitcher.silenceSwitchOn();
+    }
+
+    @Override
+    public String printInvokeContext() {
+        return Pradar.printContextStack();
+    }
+
+    @Override
+    public boolean setClusterTest() {
+        if (Pradar.getInvokeContext() == null){
+            return false;
+        }
+        Pradar.setClusterTest(true);
+        return true;
+    }
+
+    @Override
     public boolean isClusterTestEnabled() {
         return PradarSwitcher.isClusterTestEnabled();
     }
+
+
 }

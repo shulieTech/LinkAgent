@@ -22,6 +22,7 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -36,6 +37,7 @@ import java.util.*;
  * @Description:
  */
 @Destroyable(JedisDestroyed.class)
+@ListenerBehavior(isFilterClusterTest = true)
 public class RedisDataCheckInterceptor extends AroundInterceptor {
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -51,7 +53,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
             return;
         }
 
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
 
         if (RedisUtils.IGNORE_NAME.contains(methodName)) {
             return;
@@ -64,12 +66,12 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
             keys = processEvalMethodName(args, whiteList);
         } else if (RedisUtils.METHOD_MORE_KEYS.containsKey(methodName)) {
             keys = processMoreKeys(methodName, whiteList, args);
-        } else if ("mset".equals(advice.getBehavior().getName())||"msetnx".equals(advice.getBehavior().getName())) {
+        } else if ("mset".equals(advice.getBehaviorName())||"msetnx".equals(advice.getBehaviorName())) {
             keys = processMset(args, whiteList);
         } else {
             keys = process(args, whiteList);
         }
-        validateKeys(keys);
+        validateKeys(keys,methodName);
     }
 
     private List<String> processMset(Object[] args, Collection<String> whiteList){
@@ -89,15 +91,15 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
         return keyList;
     }
 
-    private void validateKeys(List<String> keys) {
+    private void validateKeys(List<String> keys,String methodName) {
         for (int i = 0, size = keys.size(); i < size; i++) {
             String key = keys.get(i);
             boolean isCluster = Pradar.isClusterTest();
             boolean withPt = Pradar.isClusterTestPrefix(key);
             if (isCluster && !withPt) {
-                throw new PressureMeasureError("jedis:压测流量进入业务库...,key = " + key);
+                throw new PressureMeasureError("jedis:压测流量进入业务库...,key = " + key + ", methodName=" + methodName);
             } else if (!isCluster && withPt) {
-                throw new PressureMeasureError("jedis:业务流量进入压测库,key = " + key);
+                throw new PressureMeasureError("jedis:业务流量进入压测库,key = " + key + ", methodName=" + methodName);
             }
         }
     }

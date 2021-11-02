@@ -73,7 +73,7 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
         this.coreModule = coreModule;
         this.listeners = listeners;
         this.eventListeners = new ConcurrentHashMap<Integer, EventListenerWrapper>();
-        this.listenerCostEnabled = Boolean.valueOf(System.getProperty("simulator.listener.cost.enabled", "false"));
+        this.listenerCostEnabled = Boolean.parseBoolean(System.getProperty("simulator.listener.cost.enabled", "false"));
     }
 
     @Override
@@ -85,11 +85,12 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
             return;
         }
 
-        EventListenerWrapper listener = getEventListenerWrapper();
+        ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+        EventListenerWrapper listener = getEventListenerWrapper(bizClassLoader);
         if (listener == null) {
             logger.error("SIMULATOR: event listener onEvent failed, cause by event listener init failed.");
         } else {
-            listener.setBizClassLoader(BizClassLoaderHolder.getBizClassLoader());
+            listener.setBizClassLoader(bizClassLoader);
             if (!listenerCostEnabled) {
                 listener.onEvent(event);
             } else {
@@ -139,11 +140,11 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
      *
      * @return
      */
-    private int getBizClassLoaderId() {
+    private int getBizClassLoaderId(ClassLoader bizClassLoader) {
         if (!coreModule.isMiddlewareModule()) {
             return 0;
         }
-        return ObjectIdUtils.identity(BizClassLoaderHolder.getBizClassLoader());
+        return ObjectIdUtils.identity(bizClassLoader);
     }
 
     /**
@@ -153,8 +154,8 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
      *
      * @return 返回事件监听器
      */
-    private EventListenerWrapper getEventListenerWrapper() {
-        int id = getBizClassLoaderId();
+    public EventListenerWrapper getEventListenerWrapper(ClassLoader bizClassLoader) {
+        int id = getBizClassLoaderId(bizClassLoader);
         EventListenerWrapper eventListenerWrapper = this.eventListeners.get(id);
         if (eventListenerWrapper != null) {
             return eventListenerWrapper;
@@ -164,7 +165,7 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
             if (eventListenerWrapper != null) {
                 return eventListenerWrapper;
             }
-            ClassLoader classLoader = coreModule.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
+            ClassLoader classLoader = coreModule.getClassLoader(bizClassLoader);
             try {
                 Object listener = null;
                 if (listeners.getArgs() == null || listeners.getArgs().length == 0) {
@@ -197,14 +198,14 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
                         if (listeners.getScopeName() != null && listeners.getEventListenerCallback() != null) {
                             eventListener = listeners.getEventListenerCallback().onCall(eventListener, listeners.getScopeName(), listeners.getExecutionPolicy());
                         }
-                        eventListener.setBizClassLoader(BizClassLoaderHolder.getBizClassLoader());
+                        eventListener.setBizClassLoader(bizClassLoader);
                     } else if (listener instanceof AdviceListener) {
                         AdviceListener adviceListener = (AdviceListener) listener;
                         adviceListener = new ExtensionAdviceWrapContainer(adviceListener);
                         if (listeners.getScopeName() != null && listeners.getAdviceListenerCallback() != null) {
                             adviceListener = listeners.getAdviceListenerCallback().onCall(adviceListener, listeners.getScopeName(), listeners.getExecutionPolicy());
                         }
-                        adviceListener.setBizClassLoader(BizClassLoaderHolder.getBizClassLoader());
+                        adviceListener.setBizClassLoader(bizClassLoader);
                         eventListener = new AdviceAdapterListener(adviceListener);
                     }
                     eventListenerWrapper.setEventListener(eventListener);
@@ -219,6 +220,7 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
                 if (eventListenerWrapper != null) {
                     EventListenerWrapper old = this.eventListeners.putIfAbsent(id, eventListenerWrapper);
                     if (old != null) {
+                        logger.error("SIMULATOR: EventListenerWrapper is exists:{} , {} ", bizClassLoader, old);
                         eventListenerWrapper = old;
                     }
                 }

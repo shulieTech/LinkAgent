@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.shulie.instrument.module</groupId>
+    <artifactId>module-dynamic-resource</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <module-name>module-dynamic-resource</module-name>
+    </properties>
+    <name>${project.artifactId} ${project.version}</name>
+    <parent>
+        <groupId>com.shulie.instrument.module</groupId>
+        <artifactId>user-modules</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <dependencies>
+
+    </dependencies>
+</project>

@@ -25,7 +25,7 @@ public class DBCollectionInitializeOrderedBulkOperationInterceptor extends Abstr
 
     @Override
     protected boolean check(Advice advice) {
-        return advice.getBehavior().getName().equals("initializeOrderedBulkOperation");
+        return advice.getBehaviorName().equals("initializeOrderedBulkOperation");
     }
 
     @Override

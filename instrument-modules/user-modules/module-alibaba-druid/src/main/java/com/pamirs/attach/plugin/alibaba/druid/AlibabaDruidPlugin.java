@@ -36,7 +36,7 @@ import org.kohsuke.MetaInfServices;
 public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "com.alibaba.druid.pool.DruidDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass instrumentClass) {
@@ -45,6 +45,6 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
 
             }
         });
-
+        return true;
     }
 }

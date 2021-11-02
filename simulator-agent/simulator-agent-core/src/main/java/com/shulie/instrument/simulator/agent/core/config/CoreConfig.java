@@ -14,17 +14,30 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
-import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
-import com.shulie.instrument.simulator.agent.core.util.PidUtils;
-import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
+import com.alibaba.fastjson.JSONObject;
+
+import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
+import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
+import com.shulie.instrument.simulator.agent.core.util.PidUtils;
+import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.math.NumberUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * agent 配置
@@ -33,22 +46,27 @@ import java.util.Properties;
  * @since 2020/11/17 8:09 下午
  */
 public class CoreConfig {
+    private final Logger logger = LoggerFactory.getLogger(CoreConfig.class);
+
     private final static String CONFIG_PATH_NAME = "config";
     private final static String AGENT_PATH_NAME = "agent";
     private final static String PROVIDER_PATH_NAME = "provider";
-    private final static String DEFAULT_NAMESPACE = "pamirs";
-    private final static String DEFAULT_TOKEN = "pamirs@123";
     private final static String LOG_PATH_NAME = "simulator.log.path";
     private final static String LOG_LEVEL_NAME = "simulator.log.level";
     private final static String MULTI_APP_SWITCH = "simulator.multiapp.switch.on";
     private final static String DEFAULT_LOG_LEVEL = "info";
 
     private static final String RESULT_FILE_PATH = System.getProperties().getProperty("user.home")
-            + File.separator + "%s" + File.separator + "%s" + File.separator + ".simulator.token";
+        + File.separator + "%s" + File.separator + ".simulator.token";
     /**
      * 存放所有的 agent 配置
      */
     private final Map<String, String> configs = new HashMap<String, String>();
+
+    /**
+     * agent 配置文件读取的配置
+     */
+    private final Map<String, String> agentFileConfigs = new HashMap<String, String>();
 
     /**
      * agent home 路径
@@ -90,7 +108,11 @@ public class CoreConfig {
      */
     private String attachName;
 
+    private ScheduledExecutorService service;
+
     public CoreConfig(String agentHome) {
+        //暂时无动态参数，不开启
+//        initFetchConfigTask();
         this.agentHome = agentHome;
         this.configFilePath = agentHome + File.separator + CONFIG_PATH_NAME;
         this.providerFilePath = agentHome + File.separator + PROVIDER_PATH_NAME;
@@ -108,12 +130,19 @@ public class CoreConfig {
                 configIn = new FileInputStream(configFile);
             }
 
-            properties.load(configIn);
             Enumeration enumeration = properties.propertyNames();
             while (enumeration.hasMoreElements()) {
-                String name = (String) enumeration.nextElement();
+                String name = (String)enumeration.nextElement();
                 configs.put(name, properties.getProperty(name));
             }
+            properties.clear();
+            properties.load(configIn);
+            enumeration = properties.propertyNames();
+            while (enumeration.hasMoreElements()) {
+                String name = (String)enumeration.nextElement();
+                agentFileConfigs.put(name, properties.getProperty(name));
+            }
+            configs.putAll(agentFileConfigs);
         } catch (Throwable e) {
             throw new RuntimeException("Agent: read agent.properties file err:" + configFile.getAbsolutePath(), e);
         } finally {
@@ -126,9 +155,54 @@ public class CoreConfig {
         }
     }
 
+    private void initFetchConfigTask() {
+        this.service = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "Pradar-agent-Fetch-Config-Service");
+                t.setDaemon(true);
+                t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e) {
+                        logger.error("Thread {} caught a Unknown exception with UncaughtExceptionHandler", t.getName(),
+                            e);
+                    }
+                });
+                return t;
+            }
+        });
+
+        service.scheduleAtFixedRate(getRunnableTask(), 60 * 3, 60 * 3, TimeUnit.SECONDS);
+    }
+
+    private Runnable getRunnableTask() {
+        return new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Map<String, Object> dynamicConfigs = ConfigUtils.getDynamicAgentConfigFromUrl(getTroWebUrl(),
+                        getAppName(), "", getUserAppKey());
+                    if (dynamicConfigs == null || dynamicConfigs.get("success") == null || !Boolean.valueOf(
+                        dynamicConfigs.get("success").toString())) {
+                        logger.error("getDynamicAgentConfigFromUrl failed");
+                        return;
+                    }
+                    JSONObject jsonObject = (JSONObject)dynamicConfigs.get("data");
+                    //                    for (Map.Entry<String, String> entry : jsonObject){
+                    //                        if (!agentFileConfigs.containsKey(entry.getKey())){
+                    //                            configs.put(entry.getKey(), entry.getValue());
+                    //                        }
+                    //                    }
+                } catch (Throwable e) {
+                    logger.error("CoreConfig getRunnableTask error {}", e);
+                }
+            }
+        };
+    }
+
     public boolean isMultiAppSwitch() {
         String value = configs.get(MULTI_APP_SWITCH);
-        return Boolean.valueOf(value);
+        return Boolean.parseBoolean(value);
     }
 
     /**
@@ -162,7 +236,8 @@ public class CoreConfig {
              */
             if (StringUtils.isNotBlank(appName) && StringUtils.indexOf(cpath, "/" + appName + "/") == -1) {
                 cpath += appName;
-                return isMultiAppSwitch() ? cpath + '/' + AddressUtils.getLocalAddress() + '/' + PidUtils.getPid() : cpath;
+                return isMultiAppSwitch() ? cpath + '/' + AddressUtils.getLocalAddress() + '/' + PidUtils.getPid()
+                    : cpath;
             }
             return isMultiAppSwitch() ? path + '/' + AddressUtils.getLocalAddress() + '/' + PidUtils.getPid() : path;
         }
@@ -184,7 +259,7 @@ public class CoreConfig {
         if (!configs.containsKey(propertyName)) {
             return defaultValue;
         }
-        return Boolean.valueOf(configs.get(propertyName));
+        return Boolean.parseBoolean(configs.get(propertyName));
     }
 
     /**
@@ -200,7 +275,7 @@ public class CoreConfig {
         }
         String value = StringUtils.trim(configs.get(propertyName));
         if (NumberUtils.isDigits(value)) {
-            return Integer.valueOf(value);
+            return Integer.parseInt(value);
         }
         return defaultValue;
     }
@@ -218,7 +293,7 @@ public class CoreConfig {
         }
         String value = StringUtils.trim(configs.get(propertyName));
         if (NumberUtils.isDigits(value)) {
-            return Integer.valueOf(value);
+            return Integer.parseInt(value);
         }
         return defaultValue;
     }
@@ -283,24 +358,6 @@ public class CoreConfig {
     }
 
     /**
-     * 获取 namespace
-     *
-     * @return namespace
-     */
-    public String getNamespace() {
-        return getProperty("namespace", DEFAULT_NAMESPACE);
-    }
-
-    /**
-     * 获取 token
-     *
-     * @return token
-     */
-    public String getToken() {
-        return getProperty("token", DEFAULT_TOKEN);
-    }
-
-    /**
      * 获取 zk 地址
      *
      * @return
@@ -326,7 +383,7 @@ public class CoreConfig {
     public int getZkConnectionTimeout() {
         String connectionTimeout = getProperty("simulator.zk.connection.timeout.ms", "30000");
         if (NumberUtils.isDigits(connectionTimeout)) {
-            return Integer.valueOf(connectionTimeout);
+            return Integer.parseInt(connectionTimeout);
         }
         return 60000;
     }
@@ -339,7 +396,7 @@ public class CoreConfig {
     public int getZkSessionTimeout() {
         String sessionTimeout = getProperty("simulator.zk.session.timeout.ms", "60000");
         if (NumberUtils.isDigits(sessionTimeout)) {
-            return Integer.valueOf(sessionTimeout);
+            return Integer.parseInt(sessionTimeout);
         }
         return 60000;
     }
@@ -357,13 +414,13 @@ public class CoreConfig {
         if (StringUtils.isBlank(value)) {
             value = getPropertyInAll("app.name");
         }
-        return value;
+        return value != null ? value : "default";
     }
 
     private String getPropertyInAll(String key) {
-        String value = getProperty(key, null);
+        String value = System.getProperty(key);
         if (StringUtils.isBlank(value)) {
-            value = System.getProperty(key);
+            value = getProperty(key, null);
         }
         if (StringUtils.isBlank(value)) {
             value = System.getenv(key);
@@ -391,12 +448,12 @@ public class CoreConfig {
     }
 
     private String internalGetAgentId() {
-        String value = getProperty("simulator.agentId", null);
-        if (StringUtils.isBlank(value)) {
-            value = System.getProperty("simulator.agentId");
-        }
+        String value = System.getProperty("simulator.agentId");
         if (StringUtils.isBlank(value)) {
             value = System.getProperty("pradar.agentId");
+        }
+        if (StringUtils.isBlank(value)) {
+            value = getProperty("simulator.agentId", null);
         }
         if (StringUtils.isBlank(value)) {
             value = System.getenv("simulator.agentId");
@@ -405,9 +462,9 @@ public class CoreConfig {
     }
 
     public String getUserAppKey() {
-        String value = getProperty("user.app.key", null);
+        String value = System.getProperty("user.app.key");
         if (StringUtils.isBlank(value)) {
-            value = System.getProperty("user.app.key");
+            value = getProperty("user.app.key", null);
         }
         if (StringUtils.isBlank(value)) {
             value = System.getenv("user.app.key");
@@ -416,9 +473,9 @@ public class CoreConfig {
     }
 
     public String getTroWebUrl() {
-        String value = getProperty("tro.web.url", null);
+        String value = System.getProperty("tro.web.url");
         if (StringUtils.isBlank(value)) {
-            value = System.getProperty("tro.web.url");
+            value = getProperty("tro.web.url", null);
         }
         if (StringUtils.isBlank(value)) {
             value = System.getenv("tro.web.url");
@@ -427,9 +484,9 @@ public class CoreConfig {
     }
 
     public String getUserId() {
-        String value = getProperty("pradar.user.id", null);
+        String value = System.getProperty("pradar.user.id");
         if (StringUtils.isBlank(value)) {
-            value = System.getProperty("pradar.user.id");
+            value = getProperty("pradar.user.id", null);
         }
         if (StringUtils.isBlank(value)) {
             value = System.getenv("pradar.user.id");
@@ -437,14 +494,13 @@ public class CoreConfig {
         return value;
     }
 
-
     /**
      * 获取 agent结果文件路径
      *
      * @return
      */
     public String getAgentResultFilePath() {
-        return String.format(RESULT_FILE_PATH, getNamespace(), this.getAppName());
+        return String.format(RESULT_FILE_PATH, getAppName());
     }
 
     /**
@@ -485,5 +541,7 @@ public class CoreConfig {
         return this.attachName;
     }
 
-
+    public Map<String, String> getAgentFileConfigs() {
+        return agentFileConfigs;
+    }
 }

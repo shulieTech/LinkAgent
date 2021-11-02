@@ -14,12 +14,12 @@
  */
 package com.shulie.instrument.module.register.zk.impl;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import com.pamirs.pradar.exception.PradarException;
 import com.shulie.instrument.module.register.zk.ZkClient;
 import org.apache.commons.lang.StringUtils;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,9 @@ public class NetflixCuratorZkClientFactory {
             throw new PradarException("zookeeper servers is empty.");
         }
         String path = ZooKeeper.class.getProtectionDomain().getCodeSource().getLocation().toString();
-        logger.info("Load ZooKeeper from {}", path);
+        if (logger.isInfoEnabled()) {
+            logger.info("Load ZooKeeper from {}", path);
+        }
 
         CuratorFramework client = CuratorFrameworkFactory.builder()
                 .connectString(spec.getZkServers())
@@ -78,7 +80,9 @@ public class NetflixCuratorZkClientFactory {
                 })
                 .build();
         client.start();
-        logger.info("ZkClient started: {}", spec.getZkServers());
+        if (logger.isInfoEnabled()) {
+            logger.info("ZkClient started: {}", spec.getZkServers());
+        }
 
         NetflixCuratorZkClient theClient = new NetflixCuratorZkClient(client, spec.getZkServers());
         return theClient;

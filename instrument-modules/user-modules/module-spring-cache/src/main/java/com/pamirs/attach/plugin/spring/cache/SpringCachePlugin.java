@@ -36,7 +36,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = SpringCacheConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "spring 自带的本地缓存")
 public class SpringCachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         /**
          * 只增强具体的Cache实现
          */
@@ -44,7 +44,7 @@ public class SpringCachePlugin extends ModuleLifecycleAdapter implements Extensi
         addCacheClusterTestKeyWrapper("org.springframework.cache.ehcache.EhCacheCache");
         addCacheClusterTestKeyWrapper("org.springframework.cache.guava.GuavaCache");
         addCacheClusterTestKeyWrapper("org.springframework.cache.jcache.JCacheCache");
-
+        return true;
     }
 
     private void addCacheClusterTestKeyWrapper(String className) {

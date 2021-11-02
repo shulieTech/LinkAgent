@@ -151,6 +151,9 @@ public final class ModuleSpecUtils {
 
                 String middlewareModuleStr = properties.getProperty("middleware-module");
 
+                String asyncStr = properties.getProperty("async");
+                boolean async = StringUtils.isNotBlank(asyncStr) ? Boolean.valueOf(asyncStr) : true;
+
                 ModuleSpec moduleSpec = new ModuleSpec();
                 moduleSpec.setMustUse(mustUse)
                         .setModuleId(moduleId)
@@ -162,7 +165,8 @@ public final class ModuleSpecUtils {
                         .setExportResources(StringUtils.trim(properties.getProperty("export-resource")))
                         .setImportResources(StringUtils.trim(properties.getProperty("import-resource")))
                         .setSinceVersion(sinceVersion)
-                        .setUntilVersion(untilVersion);
+                        .setUntilVersion(untilVersion)
+                        .setAsync(async);
 
                 if (StringUtils.isNotBlank(middlewareModuleStr)) {
                     moduleSpec.setMiddlewareModule(Boolean.valueOf(middlewareModuleStr));

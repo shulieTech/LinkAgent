@@ -121,7 +121,7 @@ public class ExtFilterMatcher implements Matcher {
             // 根据 #203 ClassStructureImplByJDK会存在类加载异步的问题
             // 所以这里对JDK实现的ClassStructure抛出NoClassDefFoundError的时候做一个兼容
             // 转换为ASM实现然后进行match
-            if (classStructure instanceof ClassStructureImplByJDK
+            if (classStructure instanceof JdkClassStructure
                     && classStructure.getClassLoader() != null) {
                 final String javaClassResourceName = toInternalClassName(classStructure.getJavaClassName()).concat(".class");
                 InputStream is = null;

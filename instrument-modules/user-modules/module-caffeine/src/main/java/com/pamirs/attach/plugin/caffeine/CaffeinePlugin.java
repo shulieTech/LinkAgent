@@ -40,7 +40,7 @@ import org.kohsuke.MetaInfServices;
 public class CaffeinePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {
@@ -113,6 +113,7 @@ public class CaffeinePlugin extends ModuleLifecycleAdapter implements ExtensionM
             },
             "com.github.benmanes.caffeine.cache.BoundedLocalCache");
 
+        return true;
     }
 
     private void addConcurrentMapMethodInterceptor(InstrumentClass target) {

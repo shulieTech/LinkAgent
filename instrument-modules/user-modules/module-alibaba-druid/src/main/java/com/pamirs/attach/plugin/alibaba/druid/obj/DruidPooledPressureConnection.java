@@ -53,20 +53,14 @@ public class DruidPooledPressureConnection extends DruidPooledConnection {
     private SqlMetaData sqlMetaData;
     private DruidPooledConnection target;
 
-    public DruidPooledPressureConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username, String dbType) {
+    public DruidPooledPressureConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username, String dbType,SqlMetaData sqlMetaData) {
         super(connection.getConnectionHolder());
         this.target = connection;
         this.dbConnectionKey = dbConnectionKey;
         this.url = url;
         this.username = username;
         this.dbType = dbType;
-        DbType type = DbType.nameOf(dbType);
-        if (type != null) {
-            try {
-                this.sqlMetaData = type.sqlMetaData(url);
-            } catch (Throwable e) {
-            }
-        }
+        this.sqlMetaData = sqlMetaData;
     }
 
     @Override

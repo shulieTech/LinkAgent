@@ -39,9 +39,6 @@ import java.util.*;
 public class CoreConfigure {
     private final Logger LOGGER = LoggerFactory.getLogger(CoreConfigure.class);
 
-    private static final String KEY_NAMESPACE = "namespace";
-    private static final String DEFAULT_VAL_NAMESPACE = "default";
-
     private static final String KEY_SIMULATOR_HOME = "simulator_home";
     private static final String KEY_LAUNCH_MODE = "mode";
     private static final String KEY_MODULE_REPOSITORY_MODE = "module_repository_mode";
@@ -98,7 +95,7 @@ public class CoreConfigure {
 
 
     // 受保护key数组，在保护key范围之内，以用户传递的配置为准，系统配置不允许覆盖
-    private static final String[] PROTECT_KEY_ARRAY = {KEY_NAMESPACE, KEY_SIMULATOR_HOME, KEY_LAUNCH_MODE, KEY_SERVER_IP, KEY_SERVER_PORT, KEY_SERVER_CHARSET};
+    private static final String[] PROTECT_KEY_ARRAY = {KEY_SIMULATOR_HOME, KEY_LAUNCH_MODE, KEY_SERVER_IP, KEY_SERVER_PORT, KEY_SERVER_CHARSET};
 
     // 用户配置和系统默认配置都可以，需要进行合并的key，例如user_module
     private static final String[] MULTI_KEY_ARRAY = {KEY_USER_MODULE_LIB_PATH};
@@ -106,6 +103,10 @@ public class CoreConfigure {
     private final FeatureCodec codec;
 
     private final Map<String, String> featureMap = new LinkedHashMap<String, String>();
+
+
+    private final Map<String, String> simulatorFileConfigs = new LinkedHashMap<String, String>();
+    private final Map<String, String> agentFileConfigs = new LinkedHashMap<String, String>();
 
     private Map<String, List<File>> bizClassLoaderInjectFiles;
     private Map<String, List<String>> bizClassLoaderInjectURLs;
@@ -135,6 +136,7 @@ public class CoreConfigure {
     private CoreConfigure(final Class agentLauncherClass,
                           final String featureString,
                           final String propertiesFilePath,
+                          final String agentConfigFilePath,
                           final Instrumentation instrumentation) {
         this.agentLauncherClass = agentLauncherClass;
         this.codec = new FeatureCodec(';', '=');
@@ -147,7 +149,10 @@ public class CoreConfigure {
             throw new RuntimeException("SIMULATOR: appName can't not be empty.");
         }
         final Map<String, String> propertiesMap = getPropertiesMap(propertiesFilePath, appName);
+        final Map<String, String> agentConfigPropertiesMap = getPropertiesMap(agentConfigFilePath + "/agent.properties", appName);
         this.featureMap.putAll(merge(featureMap, propertiesMap));
+        this.simulatorFileConfigs.putAll(propertiesMap);
+        this.agentFileConfigs.putAll(agentConfigPropertiesMap);
         this.simulatorVersion = getVersion0();
         this.instrumentation = instrumentation;
         this.md5 = readMd5(getSimulatorHome() + File.separator + "simulator.md5");
@@ -270,7 +275,8 @@ public class CoreConfigure {
         final InputStream is = getClass().getClassLoader().getResourceAsStream("com/shulie/instrument/simulator/version");
         try {
             return IOUtils.toString(is);
-        } catch (IOException e) {
+        } catch (Throwable e) {
+            LOGGER.error("read version Fail!", e);
             // impossible
             return "1.0.0.1";
         } finally {
@@ -386,20 +392,8 @@ public class CoreConfigure {
 
     }
 
-    public static CoreConfigure toConfigure(final Class agentLauncherClass, final String featureString, final String propertiesFilePath, final Instrumentation inst) {
-        return new CoreConfigure(agentLauncherClass, featureString, propertiesFilePath, inst);
-    }
-
-    /**
-     * 获取容器的命名空间
-     *
-     * @return 容器的命名空间
-     */
-    public String getNamespace() {
-        final String namespace = featureMap.get(KEY_NAMESPACE);
-        return StringUtils.isNotBlank(namespace)
-                ? namespace
-                : DEFAULT_VAL_NAMESPACE;
+    public static CoreConfigure toConfigure(final Class agentLauncherClass, final String featureString, final String propertiesFilePath, final String agentConfigFilePath, final Instrumentation inst) {
+        return new CoreConfigure(agentLauncherClass, featureString, propertiesFilePath, agentConfigFilePath, inst);
     }
 
     /**
@@ -734,7 +728,8 @@ public class CoreConfigure {
      * @return 返回应用名称
      */
     public String getAppName() {
-        return getProperty(KEY_APP_NAME, getProperty(KEY1_APP_NAME, getProperty(KEY2_APP_NAME)));
+        String appName = getProperty(KEY_APP_NAME, getProperty(KEY1_APP_NAME, getProperty(KEY2_APP_NAME)));
+        return appName != null ? appName : "default";
     }
 
     /**
@@ -1003,4 +998,14 @@ public class CoreConfigure {
     public Class getAgentLauncherClass() {
         return agentLauncherClass;
     }
+
+
+    public Map<String, String> getSimulatorFileConfigs() {
+        return simulatorFileConfigs;
+    }
+
+    public Map<String, String> getAgentFileConfigs() {
+        return agentFileConfigs;
+    }
+
 }

@@ -14,12 +14,7 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -31,6 +26,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -43,6 +39,11 @@ import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.params.DefaultHttpParams;
 import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.lang.StringUtils;
+
+import java.net.SocketTimeoutException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -82,16 +83,12 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());
             config.addArgs("url", url);
             config.addArgs("isInterface", Boolean.FALSE);
-            config.getStrategy().processNonBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
                 @Override
                 public Object call(Object param) throws ProcessControlException {
-                    try {
-                        byte[] bytes = JSONObject.toJSONBytes(param);
-                        Reflect.on(method).set("responseBody", bytes);
-                        ProcessController.returnImmediately(200);
-                    } catch (ProcessControlException e) {
-                        throw e;
-                    }
+                    byte[] bytes = JSONObject.toJSONBytes(param);
+                    Reflect.on(method).set("responseBody", bytes);
+                    ProcessController.returnImmediately(int.class, 200);
                     return true;
                 }
 
@@ -189,7 +186,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         if (method == null) {
             return null;
         }
-
+        InnerWhiteListCheckUtil.check();
         try {
             SpanRecord record = new SpanRecord();
             int port = method.getURI().getPort();
@@ -202,7 +199,10 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                 } catch (NumberFormatException e) {
                 }
             }
-            if ("get".equalsIgnoreCase(record.getMethod()) || "head".equalsIgnoreCase(record.getMethod())) {
+            if ("get".equals(record.getMethod())
+                    || "GET".equals(record.getMethod())
+                    || "head".equals(record.getMethod())
+                    || "HEAD".equals(record.getMethod())) {
                 record.setRequest(toMap(method.getQueryString()));
             } else {
                 Map parameters = new HashMap();
@@ -233,6 +233,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             String msg = method.getURI().toString() + "->" + code;
             record.setResultCode(code + "");
             record.setResponse(msg);
+            InnerWhiteListCheckUtil.check();
             /**
              * http3的getResponseBody的方法会打印一下warn日志，考虑size没啥用，暂时去除
              * org.apache.commons.httpclient.HttpMethodBase| Going to buffer response body of large or unknown size. Using getResponseBodyAsStream instead is recommended.
@@ -256,9 +257,14 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         }
         try {
             SpanRecord record = new SpanRecord();
-            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+            if (advice.getThrowable() instanceof SocketTimeoutException) {
+                record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+            } else {
+                record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+            }
             record.setRequest(method.getParams());
             record.setResponse(advice.getThrowable());
+            InnerWhiteListCheckUtil.check();
 //            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
             return record;
         } catch (Throwable e) {

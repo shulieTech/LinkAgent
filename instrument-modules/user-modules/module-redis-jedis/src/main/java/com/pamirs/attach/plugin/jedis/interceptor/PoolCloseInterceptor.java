@@ -35,6 +35,5 @@ public class PoolCloseInterceptor extends AroundInterceptor {
         JedisClusterFactory.getFactory().shutdown(target);
         JedisFactory.getFactory().shutdown(target);
         JedisSentinelFactory.getFactory().shutdown(target);
-        RedisConstants.jedisInstance.remove(target);
     }
 }

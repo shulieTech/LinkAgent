@@ -218,7 +218,9 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
                             it.remove();
                             try {
                                 value.close();
-                                logger.info("module-atomikos-datasource: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-atomikos-datasource: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-atomikos-datasource: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }
@@ -235,7 +237,9 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
                             nonIt.remove();
                             try {
                                 value.close();
-                                logger.info("module-atomikos-datasource: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-atomikos-datasource: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-atomikos-datasource: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }

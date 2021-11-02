@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.core.manager.impl;
 
-import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import org.apache.commons.io.IOUtils;
@@ -25,10 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 import java.net.InetSocketAddress;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 默认配置信息实现
@@ -41,11 +37,6 @@ class DefaultSimulatorConfig implements SimulatorConfig {
     public DefaultSimulatorConfig(CoreConfigure config) {
         this.config = config;
         this.version = getVersion0();
-    }
-
-    @Override
-    public String getNamespace() {
-        return config.getNamespace();
     }
 
     @Override
@@ -356,4 +347,16 @@ class DefaultSimulatorConfig implements SimulatorConfig {
     public String getLogLevel() {
         return config.getLogLevel();
     }
+
+    @Override
+    public Map<String, String> getSimulatorFileConfigs() {
+        return Collections.unmodifiableMap(config.getSimulatorFileConfigs());
+    }
+
+    @Override
+    public Map<String, String> getAgentFileConfigs() {
+        return Collections.unmodifiableMap(config.getAgentFileConfigs());
+    }
+
+
 }

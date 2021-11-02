@@ -25,24 +25,20 @@ public class MessageUtils {
 
     /**
      * 初始化Messager类
-     *
-     * @param namespace 命名空间
      */
-    public synchronized static void init(final String namespace, EventListenerHandler eventListenerHandler) {
+    public synchronized static void init(EventListenerHandler eventListenerHandler) {
 
-        if (!Messager.isInit(namespace)) {
-            Messager.init(namespace, eventListenerHandler);
+        if (!Messager.isInit()) {
+            Messager.init(eventListenerHandler);
         }
 
     }
 
     /**
      * 清理Messager中的命名空间
-     *
-     * @param namespace 命名空间
      */
-    public synchronized static void clean(final String namespace) {
-        Messager.clean(namespace);
+    public synchronized static void clean() {
+        Messager.clean();
     }
 
 }

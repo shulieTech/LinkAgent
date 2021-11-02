@@ -27,6 +27,7 @@ import com.shulie.instrument.simulator.core.util.matcher.MatchingResult;
 import com.shulie.instrument.simulator.core.util.matcher.UnsupportedMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructure;
 import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructureFactory;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,8 @@ import java.util.Set;
  */
 public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTransformer {
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
     private final static int CLASS_VERSION_15 = 49;
     private final static byte CLASS_VERSION_15_6 = 0;
     private final static byte CLASS_VERSION_15_7 = 49;
@@ -51,7 +54,6 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     private final Matcher matcher;
     private final boolean isEnableUnsafe;
 
-    private final String namespace;
     private final AffectStatistic affectStatistic = new AffectStatistic();
     private final Map<Integer, EventListener> eventListeners = new HashMap<Integer, EventListener>();
     private final List<BuildingForListeners> listeners;
@@ -61,14 +63,12 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                                          final int watchId,
                                          final CoreModule coreModule,
                                          final Matcher matcher,
-                                         final boolean isEnableUnsafe,
-                                         final String namespace) {
+                                         final boolean isEnableUnsafe) {
         this.watcher = watcher;
         this.watchId = watchId;
         this.moduleId = coreModule.getModuleId();
         this.matcher = matcher;
         this.isEnableUnsafe = isEnableUnsafe;
-        this.namespace = namespace;
         List<BuildingForListeners> listeners = matcher.getAllListeners();
         for (BuildingForListeners listener : listeners) {
             eventListeners.put(listener.getListenerId(), new LazyEventListenerProxy(coreModule, listener.getListeners()));
@@ -139,7 +139,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
         // 如果未开启unsafe开关，是不允许增强来自BootStrapClassLoader的类
         if (!isEnableUnsafe
                 && null == loader) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: transform ignore {}, class from bootstrap but unsafe.enable=false.", internalClassName);
             }
             return null;
@@ -151,7 +151,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
         }
 
         if (!matcher.preMatching(internalClassName.replace('/', '.'))) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: transform ignore {}, classname is not matched!", internalClassName, loader);
             }
             return null;
@@ -162,7 +162,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
 
         // 如果一个行为都没匹配上也不用继续了
         if (!matchingResult.isMatched() || behaviorSignCodes.isEmpty()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: transform ignore {}, no behaviors matched in loader={}", internalClassName, loader);
             }
             return null;
@@ -180,11 +180,10 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             byte[] toByteCodeArray = new EventEnhancer().toByteCodeArray(
                     loader,
                     srcByteCodeArray,
-                    behaviorSignCodes,
-                    namespace
+                    behaviorSignCodes
             );
             if (srcByteCodeArray == toByteCodeArray) {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: transform ignore {}, nothing changed in loader={}", internalClassName, loader);
                 }
                 return null;
@@ -193,10 +192,9 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             // statistic affect
             affectStatistic.statisticAffect(loader, internalClassName, behaviorSignCodes);
 
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: transform {} finished, by module={} in loader={}", internalClassName, moduleId, loader);
             }
-
             return toByteCodeArray;
         } catch (Throwable cause) {
             logger.warn("SIMULATOR: transform {} failed, by module={} in loader={}", internalClassName, moduleId, loader, cause);

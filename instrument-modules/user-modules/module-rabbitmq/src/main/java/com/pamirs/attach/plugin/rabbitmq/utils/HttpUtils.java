@@ -14,11 +14,12 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.utils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.common.ChunkedInputStream;
+import com.pamirs.pradar.common.ContentLengthInputStream;
+import org.apache.commons.lang.StringUtils;
+
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -28,11 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import com.pamirs.pradar.Throwables;
-import com.pamirs.pradar.common.ChunkedInputStream;
-import com.pamirs.pradar.common.ContentLengthInputStream;
-import org.apache.commons.lang.StringUtils;
 
 public abstract class HttpUtils {
 
@@ -45,10 +41,10 @@ public abstract class HttpUtils {
         try {
             SocketAddress address = new InetSocketAddress(adminAccessInfo.getHost(), adminAccessInfo.getPort());
             String request = "GET " + url + " HTTP/1.1\r\n"
-                + "Host: " + adminAccessInfo.getHost() + ":" + adminAccessInfo.getPort() + "\r\n"
-                + "Connection: Keep-Alive\r\n"
-                + "Authorization: " + adminAccessInfo.credentialsEncode() + "\r\n"
-                + "\r\n";
+                    + "Host: " + adminAccessInfo.getHost() + ":" + adminAccessInfo.getPort() + "\r\n"
+                    + "Connection: Keep-Alive\r\n"
+                    + "Authorization: " + adminAccessInfo.credentialsEncode() + "\r\n"
+                    + "\r\n";
             socket = new Socket();
             // 设置建立连接超时时间 5s
             socket.connect(address, 5000);
@@ -140,7 +136,8 @@ public abstract class HttpUtils {
             String encodings = transferEncodings.get(0);
             String[] elements = StringUtils.split(encodings, ';');
             int len = elements.length;
-            if (len > 0 && "chunked".equalsIgnoreCase(elements[len - 1])) {
+            if (len > 0 && ("chunked".equals(elements[len - 1])
+                    || "CHUNKED".equals(elements[len - 1]))) {
                 return new ChunkedInputStream(input);
             }
             return input;
@@ -164,7 +161,7 @@ public abstract class HttpUtils {
     }
 
     public static Map<String, List<String>> readHeaders(InputStream input)
-        throws IOException {
+            throws IOException {
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
@@ -196,8 +193,8 @@ public abstract class HttpUtils {
 
     public static void main(String[] args) {
         System.out.println(
-            doGet(new AdminAccessInfo("192.168.1.95", 15672, "canace", "123456", "/"),
-                "/api/exchanges/%2F/direct-exchange/bindings/source").result);
+                doGet(new AdminAccessInfo("127.0.0.1", 15672, "canace", "123456", "/"),
+                        "/api/exchanges/%2F/direct-exchange/bindings/source").result);
     }
 
     public static class HttpResult {

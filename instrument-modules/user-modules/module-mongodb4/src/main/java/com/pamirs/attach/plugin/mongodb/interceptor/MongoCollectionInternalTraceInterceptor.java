@@ -84,7 +84,7 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         record.setService(mongoCollection.getNamespace().getFullName());
         record.setRequest(advice.getParameterArray());
-        record.setMethod(advice.getBehavior().getName());
+        record.setMethod(advice.getBehaviorName());
         record.setRemoteIp(StringUtils.join(serverAddresses, ","));
         return record;
     }

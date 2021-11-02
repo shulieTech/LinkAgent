@@ -33,7 +33,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = EhcacheConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "ehcache 本地缓存")
 public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         enhanceTemplate.enhance(this, new EnhanceCallback() {
             @Override
@@ -128,5 +128,7 @@ public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 getKeyMethod.addInterceptor(Listeners.of(ElementGetObjectKeyInterceptor.class));
             }
         });
+
+        return true;
     }
 }

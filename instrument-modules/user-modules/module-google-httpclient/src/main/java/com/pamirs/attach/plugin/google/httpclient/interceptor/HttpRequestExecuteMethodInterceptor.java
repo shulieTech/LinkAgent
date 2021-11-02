@@ -14,6 +14,8 @@
  */
 package com.pamirs.attach.plugin.google.httpclient.interceptor;
 
+import java.util.Collections;
+
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpRequest;
@@ -27,11 +29,13 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 
+import java.net.SocketTimeoutException;
 import java.util.Collections;
 
 /**
@@ -63,7 +67,7 @@ public class HttpRequestExecuteMethodInterceptor extends TraceInterceptorAdaptor
         config.addArgs("request", request);
         config.addArgs("method", url);
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
             @Override
             public Object forward(Object param) throws ProcessControlException {
                 GenericUrl url1 = new GenericUrl(config.getForwarding());
@@ -93,6 +97,7 @@ public class HttpRequestExecuteMethodInterceptor extends TraceInterceptorAdaptor
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        InnerWhiteListCheckUtil.check();
         Object target = advice.getTarget();
         final HttpRequest request = (HttpRequest) target;
         SpanRecord record = new SpanRecord();
@@ -120,6 +125,7 @@ public class HttpRequestExecuteMethodInterceptor extends TraceInterceptorAdaptor
         record.setResponse(response.getStatusCode() + "->" + response.getStatusMessage());
         record.setResponseSize(response.getHeaders().getContentLength());
         record.setResultCode(String.valueOf(response.getStatusCode()));
+        InnerWhiteListCheckUtil.check();
         return record;
     }
 
@@ -128,7 +134,12 @@ public class HttpRequestExecuteMethodInterceptor extends TraceInterceptorAdaptor
         Throwable throwable = advice.getThrowable();
         SpanRecord record = new SpanRecord();
         record.setResponse(throwable);
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
+        InnerWhiteListCheckUtil.check();
         return record;
 
     }

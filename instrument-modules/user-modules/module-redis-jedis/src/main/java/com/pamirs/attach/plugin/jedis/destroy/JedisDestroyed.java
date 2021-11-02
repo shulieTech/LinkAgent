@@ -30,7 +30,6 @@ public class JedisDestroyed implements Destroyed {
         JedisFactory.release();
         JedisClusterFactory.release();
         JedisSentinelFactory.release();
-        RedisConstants.jedisInstance.clear();
         RedisConstants.registerShadowNodes.clear();
     }
 }

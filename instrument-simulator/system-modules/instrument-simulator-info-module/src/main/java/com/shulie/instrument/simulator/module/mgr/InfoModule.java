@@ -51,7 +51,6 @@ public class InfoModule implements ExtensionModule {
 
         try {
             final StringBuilder versionSB = new StringBuilder()
-                    .append("                    NAMESPACE : ").append(simulatorConfig.getNamespace()).append("\n")
                     .append("                      AGENTID : ").append(simulatorConfig.getAgentId()).append("\n")
                     .append("                      APPNAME : ").append(simulatorConfig.getAppName()).append("\n")
                     .append("                         MODE : ").append(simulatorConfig.getMode()).append("\n")

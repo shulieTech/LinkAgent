@@ -62,6 +62,9 @@ public class JdbcPradarImpl implements JdbcPradar {
             if (!Pradar.isResponseOn()) {
                 result = null;
             }
+            if (!Pradar.isClusterTest()) {
+                Pradar.getInvokeContext().setIndex(sqlMetaData.getUrl());
+            }
             Pradar.response(result);
             if (sqlMetaData != null) {
                 Pradar.callBack(sqlMetaData.getSql());

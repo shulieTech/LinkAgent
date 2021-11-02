@@ -15,22 +15,31 @@
 package com.shulie.instrument.module.register.register.impl;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
@@ -39,6 +48,7 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ScanJarPomUtils;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.HttpUtils.HttpResult;
+import com.pamirs.pradar.common.IOUtils;
 import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.event.ErrorEvent;
@@ -46,14 +56,18 @@ import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
+import com.shulie.instrument.module.register.NodeRegisterModule;
 import com.shulie.instrument.module.register.register.Register;
 import com.shulie.instrument.module.register.register.RegisterOptions;
+import com.shulie.instrument.module.register.utils.ConfigUtils;
 import com.shulie.instrument.module.register.zk.ZkClient;
 import com.shulie.instrument.module.register.zk.ZkHeartbeatNode;
 import com.shulie.instrument.module.register.zk.ZkNodeStat;
 import com.shulie.instrument.module.register.zk.impl.NetflixCuratorZkClientFactory;
 import com.shulie.instrument.module.register.zk.impl.ZkClientSpec;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
+import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
+import com.shulie.instrument.simulator.api.obj.ModuleLoadStatusEnum;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -66,6 +80,7 @@ import org.slf4j.LoggerFactory;
  * @Date 2020/8/20 9:55 上午
  */
 public class ZookeeperRegister implements Register {
+
     private final static Logger LOGGER = LoggerFactory.getLogger(ZookeeperRegister.class.getName());
     private String basePath;
     private String appName;
@@ -110,11 +125,10 @@ public class ZookeeperRegister implements Register {
         map.put("agentVersion", simulatorConfig.getAgentVersion());
         map.put("simulatorVersion", simulatorConfig.getSimulatorVersion());
         map.put("md5", md5);
-        map.put("agentStatus", "INSTALLED");
         //服务的 url
         String serviceUrl = "http://" + simulatorConfig.getServerAddress().getAddress().getHostAddress() + ":"
-            + simulatorConfig.getServerAddress().getPort() + "/simulator/" + this.simulatorConfig.getNamespace()
-            + "/module/http";
+            + simulatorConfig.getServerAddress().getPort()
+            + "/simulator";
         map.put("service", serviceUrl);
         map.put("port", String.valueOf(simulatorConfig.getServerAddress().getPort()));
         map.put("status", String.valueOf(PradarSwitcher.isClusterTestEnabled()));
@@ -128,12 +142,98 @@ public class ZookeeperRegister implements Register {
         map.put("agentLanguage", "JAVA");
         map.put("userId", Pradar.PRADAR_USER_ID);
         map.put("jars", toJarFileString(jars));
+        map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
+        map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
+
+        boolean moduleLoadResult = getModuleLoadResult();
+        if (!moduleLoadResult) {
+            map.put("agentStatus", "INSTALL_FAILED");
+            map.put("errorMsg", "模块加载异常，请查看模块加载详情");
+        } else {
+            map.put("agentStatus", "INSTALLED");
+        }
+        map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
+        map.put("moduleLoadDetail",
+            JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+        //参数比较
+        map.put("simulatorFileConfigsCheck", JSON.toJSONString(checkConfigs()));
         String str = JSON.toJSONString(map);
         try {
             return str.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             return str.getBytes();
         }
+    }
+
+    /**
+     * 动态参数不需要校验参数是否生效，
+     */
+    private static final List<String> excludeCheckConfig = new ArrayList<String>(6);
+
+    static {
+        excludeCheckConfig.add("pradar.trace.log.version");
+        excludeCheckConfig.add("pradar.monitor.log.version");
+        excludeCheckConfig.add("pradar.error.log.version");
+        excludeCheckConfig.add("is.kafka.message.headers");
+        excludeCheckConfig.add("trace.samplingInterval");
+        excludeCheckConfig.add("trace.mustsamplingInterval");
+        excludeCheckConfig.add("pradar.sampling.interval");
+    }
+
+    /**
+     * 校验配置文件参数
+     *
+     * @return
+     */
+    private Map<String, String> checkConfigs() {
+        Map<String, String> result = new HashMap<String, String>(32, 1);
+        Map<String, String> allConfigs = new HashMap<String, String>(
+            simulatorConfig.getSimulatorFileConfigs().size() + simulatorConfig.getAgentFileConfigs().size(), 1);
+        allConfigs.putAll(simulatorConfig.getSimulatorFileConfigs());
+        allConfigs.putAll(simulatorConfig.getAgentFileConfigs());
+        Map<String, Object> simulatorConfigFromUrl =
+            ConfigUtils.getFixedSimulatorConfigFromUrl(PropertyUtil.getTroControlWebUrl(), simulatorConfig.getAppName(),
+                simulatorConfig.getAgentVersion());
+        if (simulatorConfigFromUrl == null || simulatorConfigFromUrl.get("success") == null || !Boolean.parseBoolean(
+            simulatorConfigFromUrl.get("success").toString())) {
+            result.put("status", "false");
+            result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
+            return result;
+        }
+        boolean status = true;
+        JSONObject jsonObject = (JSONObject)simulatorConfigFromUrl.get("data");
+        StringBuilder unEqualConfigs = new StringBuilder();
+        for (Map.Entry<String, String> entry : allConfigs.entrySet()) {
+            if (excludeCheckConfig.contains(entry.getKey())) {
+                continue;
+            }
+            String value = (String)jsonObject.get(entry.getKey());
+            if (entry.getValue().equals(value)) {
+                result.put(entry.getKey(), "true");
+            } else {
+                status = false;
+                result.put(entry.getKey(), "false");
+                unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
+                        entry.getValue())
+                    .append(",").append("远程参数值:").append(value).append(",");
+            }
+        }
+        result.put("status", String.valueOf(result));
+        if (!status) {
+            result.put("errorMsg", unEqualConfigs.toString());
+        }
+        return result;
+
+    }
+
+    private boolean getModuleLoadResult() {
+        for (Map.Entry<String, ModuleLoadInfo> entry : NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos()
+            .entrySet()) {
+            if (entry.getValue().getStatus() == ModuleLoadStatusEnum.LOAD_FAILED) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -177,8 +277,12 @@ public class ZookeeperRegister implements Register {
     }
 
     private Set<String> loadAllJars() {
+
         String classPath = runtimeMXBean.getClassPath();
         String[] files = StringUtils.split(classPath, File.pathSeparator);
+        if (files == null || files.length == 0) {
+            return Collections.EMPTY_SET;
+        }
         Set<String> list = new HashSet<String>();
         String javaHome = System.getProperty("java.home");
         String simulatorHome = simulatorConfig.getSimulatorHome();
@@ -212,9 +316,95 @@ public class ZookeeperRegister implements Register {
                 || StringUtils.startsWith(file, "module-")) {
                 continue;
             }
+
+            /**
+             * 如果有依赖包则不添加自身作为依赖。
+             */
+            if (processSpringBootProject(list, file)) {continue;}
+
             list.add(file);
         }
         return list;
+    }
+
+    private boolean processSpringBootProject(Set<String> list, String file) {
+        boolean hasDependencies = false;
+        if (file.endsWith(".jar") || file.endsWith(".war")) {
+            JarFile jarFile = null;
+            try {
+                jarFile = new JarFile(file);
+                final Enumeration<JarEntry> entries = jarFile.entries();
+                final String tempPath = System.getProperty("java.io.tmpdir");
+                final String randomPath = UUID.randomUUID().toString().replaceAll("-", "");
+                final String filePath = (tempPath.endsWith(File.separator) ? tempPath : tempPath + File.separator)
+                    + randomPath;
+                final File fileDir = new File(filePath);
+                if (!fileDir.exists()) {
+                    final boolean mkdirs = fileDir.mkdirs();
+                    if (!mkdirs) {
+                        LOGGER.error("中间件信息上报：创建临时目录失败。");
+                        return false;
+                    }
+                    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            for (File listFile : fileDir.listFiles()) {
+                                listFile.delete();
+                            }
+                            fileDir.delete();
+                        }
+                    }));
+                }
+                while (entries.hasMoreElements()) {
+                    final JarEntry jarEntry = entries.nextElement();
+                    String jarPath = "";
+                    if (jarEntry.getName().endsWith(".jar")) {
+                        InputStream inputStream = null;
+                        FileOutputStream fileOutputStream = null;
+                        try {
+                            inputStream = jarFile.getInputStream(jarEntry);
+                            final String[] split = jarEntry.getName().split(File.separator);
+                            jarPath = (filePath.endsWith(File.separator) ? filePath : filePath + File.separator)
+                                + split[
+                                split.length - 1];
+                            fileOutputStream = new FileOutputStream(jarPath);
+                            IOUtils.copy(inputStream, fileOutputStream);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                            if (inputStream != null) {
+                                try {
+                                    inputStream.close();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            if (fileOutputStream != null) {
+                                try {
+                                    fileOutputStream.close();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                        list.add(jarPath);
+                        hasDependencies = true;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            } finally {
+                if (jarFile != null) {
+                    try {
+                        jarFile.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        return hasDependencies;
     }
 
     @Override
@@ -327,10 +517,6 @@ public class ZookeeperRegister implements Register {
                     LOGGER.error("[pradar-register] zk ensureDirectoryExists err: {}!", heartbeatPath);
                 }
 
-                Set<String> jarFiles = loadAllJars();
-                if (!collectionEquals(jarFiles, jars)) {
-                    jars = jarFiles;
-                }
                 try {
                     heartbeatNode.setData(getHeartbeatDatas());
                 } catch (Throwable e) {
@@ -352,7 +538,7 @@ public class ZookeeperRegister implements Register {
         String body = "";
         try {
             String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
-
+            LOGGER.info(String.format("中间件管理：jars：%s", jars));
             final Set<String> jarInfoSet = ScanJarPomUtils.scanByJarPaths(jars);
             final ArrayList<MiddlewareRequest> middlewareList = new ArrayList<MiddlewareRequest>();
             for (String jarInfoStr : jarInfoSet) {

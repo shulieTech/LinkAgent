@@ -26,6 +26,7 @@ import io.grpc.internal.ServerStreamListener;
 import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Resource;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -134,7 +135,12 @@ public class ServerTransportListenerImplStartCallInterceptor extends TraceInterc
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
+        record.setResponse(advice.getThrowable());
         return record;
     }
 }

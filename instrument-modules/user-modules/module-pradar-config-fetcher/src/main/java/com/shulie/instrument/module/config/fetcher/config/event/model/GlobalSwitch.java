@@ -66,7 +66,9 @@ public class GlobalSwitch implements IChange<Boolean, ClusterTestConfig> {
             config.setGlobalSwitchOn(false);
         }
 
-        LOGGER.info("publish global switch config successful. config={}", newValue);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish global switch config successful. config={}", newValue);
+        }
         return Boolean.TRUE;
     }
 }

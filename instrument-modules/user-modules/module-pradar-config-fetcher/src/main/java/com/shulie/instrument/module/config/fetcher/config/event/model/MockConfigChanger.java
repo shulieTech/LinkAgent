@@ -94,7 +94,9 @@ public class MockConfigChanger implements IChange<Set<MockConfig>, ApplicationCo
             EventRouter.router().publish(modifyEvent);
         }
         GlobalConfig.getInstance().setMockConfigs(newValue);
-        LOGGER.info("publish mock config successful. config={}", newValue);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish mock config successful. config={}", newValue);
+        }
         return Boolean.TRUE;
     }
 

@@ -43,7 +43,7 @@ public class ProxoolPlugin extends ModuleLifecycleAdapter implements ExtensionMo
     private static Logger logger = LoggerFactory.getLogger(ProxoolPlugin.class);
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "org.logicalcobwebs.proxool.ProxoolDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -83,5 +83,6 @@ public class ProxoolPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+        return true;
     }
 }

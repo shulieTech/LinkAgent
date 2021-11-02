@@ -14,13 +14,10 @@
  */
 package com.pamirs.attach.plugin.jedis;
 
-import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
 import com.pamirs.pradar.MiddlewareType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public interface RedisConstants {
 
@@ -30,7 +27,6 @@ public interface RedisConstants {
 
     String MIDDLEWARE_NAME = "redis";
 
-    Map<Object, JedisConstructorConfig> jedisInstance = new ConcurrentHashMap<Object, JedisConstructorConfig>();
 
     List<String> registerShadowNodes = new ArrayList<String>();
 }

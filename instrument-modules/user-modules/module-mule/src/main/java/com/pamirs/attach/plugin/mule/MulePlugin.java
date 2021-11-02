@@ -31,7 +31,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = "mule", version = "1.0.0", author = "xiaobin@shulie.io",description = "mule 支持")
 public class MulePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "org.mule.module.http.internal.listener.grizzly.GrizzlyRequestDispatcherFilter", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -39,5 +39,6 @@ public class MulePlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 method.addInterceptor(Listeners.of(MuleHttpRequestDispatcherFilterInterceptor.class));
             }
         });
+        return true;
     }
 }

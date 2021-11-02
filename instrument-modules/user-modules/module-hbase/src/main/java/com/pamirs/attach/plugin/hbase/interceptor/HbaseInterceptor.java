@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.hbase.HbaseConstants;
 import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.attach.plugin.hbase.util.HBaseTableNameUtils;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -61,7 +62,7 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         return spanRecord;
     }
@@ -72,7 +73,7 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         spanRecord.setResponse(advice.getReturnObj());
         return spanRecord;
@@ -84,9 +85,10 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         spanRecord.setResponse(advice.getThrowable());
+        spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         return spanRecord;
     }
 

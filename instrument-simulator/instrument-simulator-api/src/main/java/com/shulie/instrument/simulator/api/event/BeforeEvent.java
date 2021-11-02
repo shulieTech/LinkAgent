@@ -125,15 +125,4 @@ public class BeforeEvent extends InvokeEvent {
     public Object[] getArgumentArray() {
         return argumentArray;
     }
-
-    @Override
-    public void destroy() {
-        super.destroy();
-        javaClassLoader = null;
-        clazz = null;
-        javaMethodName = null;
-        javaMethodDesc = null;
-        target = null;
-        argumentArray = null;
-    }
 }

@@ -88,7 +88,7 @@ public class HessianServiceExporterHandleRequestInterceptor extends TraceInterce
         }
 
         WrapperRequest request = (WrapperRequest) args[0];
-        if (!request.getMethod().equalsIgnoreCase("POST")) {
+        if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
 
@@ -221,7 +221,7 @@ public class HessianServiceExporterHandleRequestInterceptor extends TraceInterce
         }
 
         WrapperRequest request = (WrapperRequest) args[0];
-        if (!request.getMethod().equalsIgnoreCase("POST")) {
+        if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
 
@@ -252,7 +252,7 @@ public class HessianServiceExporterHandleRequestInterceptor extends TraceInterce
         }
 
         WrapperRequest request = (WrapperRequest) args[0];
-        if (!request.getMethod().equalsIgnoreCase("POST")) {
+        if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
 

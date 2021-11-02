@@ -233,7 +233,7 @@ abstract class ReverseTraceInterceptor extends BaseInterceptor {
             }
         }
         if (isTrace0(advice)) {
-            String traceId = TraceIdGenerator.generate(record.getRemoteIp());
+            String traceId = TraceIdGenerator.generate(record.getRemoteIp(), Pradar.isClusterTest());
             Pradar.clearInvokeContext();
             Pradar.startTrace(traceId, record.getService(), record.getMethod());
         } else {

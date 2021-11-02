@@ -14,8 +14,6 @@
  */
 package com.shulie.instrument.simulator.api.resource;
 
-import com.shulie.instrument.simulator.api.LoadMode;
-
 import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.net.InetSocketAddress;
@@ -30,13 +28,6 @@ import java.util.Set;
  * @since 2020/10/23 10:45 下午
  */
 public interface SimulatorConfig {
-
-    /**
-     * 获取仿真器的命名空间
-     *
-     * @return 仿真器的命名空间
-     */
-    String getNamespace();
 
     /**
      * 获取仿真器的加载模式
@@ -330,4 +321,16 @@ public interface SimulatorConfig {
      * @return 日志级别
      */
     String getLogLevel();
+
+
+    /**
+     * simulator.properties 配置信息
+     */
+    Map<String, String> getSimulatorFileConfigs();
+
+    /**
+     * agent.properties 配置信息
+     */
+    Map<String, String> getAgentFileConfigs();
+
 }

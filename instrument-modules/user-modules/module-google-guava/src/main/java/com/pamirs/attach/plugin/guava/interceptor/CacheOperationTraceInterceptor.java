@@ -33,13 +33,13 @@ public class CacheOperationTraceInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public int getPluginType() {
-        return MiddlewareType.TYPE_CACHE;
+        return MiddlewareType.TYPE_LOCAL;
     }
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord record = new SpanRecord();
         record.setService(target.getClass().getName());
@@ -51,7 +51,7 @@ public class CacheOperationTraceInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         Object result = advice.getReturnObj();
         SpanRecord record = new SpanRecord();
@@ -66,7 +66,7 @@ public class CacheOperationTraceInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord record = new SpanRecord();
         record.setService(target.getClass().getName());

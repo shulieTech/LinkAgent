@@ -56,6 +56,8 @@ public interface Behavior {
 
     /**
      * 获取行为的名称
+     * <p>
+     * 尽量用 advice.getBehaviorName ,保证性能
      *
      * @return
      */

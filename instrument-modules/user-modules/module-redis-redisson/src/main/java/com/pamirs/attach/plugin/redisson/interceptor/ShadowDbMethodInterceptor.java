@@ -17,7 +17,6 @@ package com.pamirs.attach.plugin.redisson.interceptor;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.attach.plugin.redisson.factory.RedissonFactory;
-import com.pamirs.attach.plugin.redisson.utils.CutOffSwitcher;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -38,7 +37,7 @@ public class ShadowDbMethodInterceptor extends CutoffInterceptorAdaptor {
     @Override
     public CutOffResult cutoff0(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         /*  ClusterTestUtils.validateClusterTest();*/
 
@@ -49,16 +48,9 @@ public class ShadowDbMethodInterceptor extends CutoffInterceptorAdaptor {
         if (!RedisClientMediator.isShadowDb()) {
             return CutOffResult.passed();
         }
-
-        if (CutOffSwitcher.status()) {
-            return CutOffResult.passed();
-        }
-
         try {
-            CutOffSwitcher.turnOn();
-
             Object client = RedissonFactory.getFactory().getClient(target);
-            return CutOffResult.cutoff(Reflect.on(client).call(methodName, args));
+            return CutOffResult.cutoff(Reflect.on(client).call(methodName, args).get());
         } catch (Throwable e) {
             if (Pradar.isClusterTest()) {
                 ErrorReporter.buildError()
@@ -67,8 +59,6 @@ public class ShadowDbMethodInterceptor extends CutoffInterceptorAdaptor {
                         .setDetail(Throwables.getStackTraceAsString(e))
                         .report();
             }
-        } finally {
-            CutOffSwitcher.turnOff();
         }
         return null;
     }

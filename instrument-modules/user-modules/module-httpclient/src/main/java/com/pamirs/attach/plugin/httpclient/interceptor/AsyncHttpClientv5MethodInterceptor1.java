@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
@@ -113,7 +114,7 @@ AsyncHttpClientv5MethodInterceptor1 extends AroundInterceptor {
             }
         }
         try {
-            config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(),advice.getClassLoader(), config, new ExecutionCall() {
                 @Override
                 public Object call(Object param) {
                     //java.util.concurrent.CompletableFuture<SimpleHttpResponse> future
@@ -202,6 +203,10 @@ AsyncHttpClientv5MethodInterceptor1 extends AroundInterceptor {
     public void exceptionTrace(HttpRequest request, Throwable throwable) {
         Pradar.request(request.getMethod());
         Pradar.response(throwable);
-        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        if (throwable != null && (throwable instanceof SocketTimeoutException)) {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_TIMEOUT, HttpClientConstants.PLUGIN_TYPE);
+        } else {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        }
     }
 }

@@ -99,7 +99,7 @@ public class CacheGetAllWithLoaderInterceptor extends AroundInterceptor {
         }
 
         if (replace) {
-            ProcessController.returnImmediately(resultMap);
+            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), resultMap);
         }
 
     }

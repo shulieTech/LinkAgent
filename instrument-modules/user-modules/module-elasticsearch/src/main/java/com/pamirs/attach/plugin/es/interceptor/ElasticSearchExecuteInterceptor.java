@@ -46,7 +46,7 @@ public class ElasticSearchExecuteInterceptor extends ParametersWrapperIntercepto
              * 当索引在白名单中并且是只读接口,则走业务索引
              */
             if (GlobalConfig.getInstance().getSearchWhiteList().contains(index)) {
-                if ("prepareGet".equals(advice.getBehavior().getName())) {
+                if ("prepareGet".equals(advice.getBehaviorName())) {
                     return args;
                 } else {
                     throw new PressureMeasureError("Cluster Test request can't write business index !");

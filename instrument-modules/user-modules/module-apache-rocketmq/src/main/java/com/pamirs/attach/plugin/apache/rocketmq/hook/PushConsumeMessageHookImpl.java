@@ -64,6 +64,8 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
             mqTraceContext.setMqType(MQType.ROCKETMQ);
             mqTraceContext.setGroup(context.getConsumerGroup());
 
+            boolean silence = PradarService.isSilence();
+
             List<MQTraceBean> beans = new ArrayList<MQTraceBean>();
             for (MessageExt msg : context.getMsgList()) {
                 if (msg == null) {
@@ -115,6 +117,9 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
                 if (isClusterTest) {
                     traceBean.setClusterTest(Boolean.TRUE.toString());
+                }
+                if (silence && isClusterTest) {
+                    throw new PressureMeasureError(this.getClass().getName() + ":silence module ! can not handle cluster test data");
                 }
 
                 beans.add(traceBean);

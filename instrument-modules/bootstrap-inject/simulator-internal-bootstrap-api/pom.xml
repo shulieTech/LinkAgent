@@ -13,4 +13,11 @@
     <packaging>jar</packaging>
 
 
+    <!--
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>internal-bootstrap-api</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>-->
+
 </project>

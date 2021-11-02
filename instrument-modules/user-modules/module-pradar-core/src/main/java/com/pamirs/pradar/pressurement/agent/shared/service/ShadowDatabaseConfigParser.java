@@ -16,6 +16,7 @@ package com.pamirs.pradar.pressurement.agent.shared.service;
 
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.*;
@@ -56,7 +57,7 @@ public class ShadowDatabaseConfigParser {
     }
 
     private String toString(Object object) {
-        if (object == null) {
+        if (object == null || "null".equals(object)) {
             return null;
         }
         return StringUtils.trim(object.toString());
@@ -78,8 +79,18 @@ public class ShadowDatabaseConfigParser {
             if (shadowDbConfig == null) {
                 return null;
             }
+            /**
+             * 禁用影子库+影子表模式
+             */
         } else if (dsType == 1) {
             if (shadowTableConfig == null) {
+                return null;
+            }
+        } else if (dsType == 2) {
+            /**
+             * 影子库中使用影子表
+             */
+            if (shadowDbConfig == null) {
                 return null;
             }
         } else {
@@ -188,6 +199,11 @@ public class ShadowDatabaseConfigParser {
         }
 
         shadowDatabaseConfig.setProperties(properties);
+        String bizschema = shadowDatabaseConfig.getSchema();
+        String shadowSchema = shadowDatabaseConfig.getShadowSchema();
+        if (StringUtil.isEmpty(bizschema) && !StringUtil.isEmpty(shadowSchema)) {
+            shadowDatabaseConfig.setSchema(shadowSchema);
+        }
         return shadowDatabaseConfig;
     }
 }

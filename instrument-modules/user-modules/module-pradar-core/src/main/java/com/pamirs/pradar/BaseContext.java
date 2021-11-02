@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar;
 
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -65,6 +66,32 @@ abstract class BaseContext {
      * 下一次白名单呢校验是否直接通行
      */
     boolean passCheck;
+
+    public Object getExt() {
+        return ext;
+    }
+
+    public void setExt(Object ext) {
+        this.ext = ext;
+    }
+
+    /**
+     * 附加属性
+     */
+    Object ext;
+
+    public Object getIndex() {
+        return index;
+    }
+
+    public void setIndex(Object index) {
+        this.index = index;
+    }
+
+    /**
+     * 属性索引
+     */
+    Object index;
 
     long logTime = 0L;
 
@@ -238,7 +265,9 @@ abstract class BaseContext {
     }
 
     public void setRequest(Object request) {
-        this.request = request;
+        if (GlobalConfig.getInstance().allowTraceRequestResponse()){
+            this.request = request;
+        }
     }
 
     public Object getResponse() {
@@ -269,7 +298,8 @@ abstract class BaseContext {
     public abstract String getNodeId();
 
     public boolean isPassCheck() {
-        return passCheck;
+        //fixme,yuhan之前加的跳过白面单校验的逻辑，这块代码逻辑要整个干掉，先临时这么搞
+        return false;
     }
 
     public void setPassCheck(boolean passCheck) {

@@ -91,8 +91,8 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
      * @throws Throwable
      */
     @Override
-    public void onActive() throws Throwable {
-
+    public boolean onActive() throws Throwable {
+        return false;
     }
 
     /**

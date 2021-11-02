@@ -46,7 +46,7 @@ public class Reflect {
             Member member = (Member) accessible;
 
             if (Modifier.isPublic(member.getModifiers()) &&
-                    Modifier.isPublic(member.getDeclaringClass().getModifiers())) {
+                Modifier.isPublic(member.getDeclaringClass().getModifiers())) {
 
                 return accessible;
             }
@@ -88,8 +88,33 @@ public class Reflect {
         }
     }
 
+    public Reflect set(Field field, Object value) throws ReflectException {
+        try {
+            field.set(object, unwrap(value));
+            return this;
+        } catch (Throwable e) {
+            throw new ReflectException(e);
+        }
+    }
+
+    public <T> T getSilence(String name) {
+        try {
+            return get(name);
+        } catch (ReflectException e) {
+            return null;
+        }
+    }
+
     public <T> T get(String name) throws ReflectException {
         return field(name).get();
+    }
+
+    public <T> T getSilence(Field field) {
+        try {
+            return get(field);
+        } catch (ReflectException e) {
+            return null;
+        }
     }
 
     public <T> T get(Field field) throws ReflectException {
@@ -170,7 +195,7 @@ public class Reflect {
         }
     }
 
-    private Field field0(String name) throws ReflectException {
+    public Field field0(String name) throws ReflectException {
         Class<?> type = type();
 
         try {
@@ -242,7 +267,7 @@ public class Reflect {
         }
     }
 
-    private Method exactMethod(String name, Class<?>[] types) throws NoSuchMethodException {
+    public Method exactMethod(String name, Class<?>[] types) throws NoSuchMethodException {
         Class<?> type = type();
 
         try {
@@ -498,3 +523,4 @@ public class Reflect {
     private static class NULL {
     }
 }
+

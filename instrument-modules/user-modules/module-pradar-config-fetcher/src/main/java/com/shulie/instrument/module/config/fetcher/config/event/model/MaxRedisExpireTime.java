@@ -47,7 +47,9 @@ public class MaxRedisExpireTime implements IChange<Float, ApplicationConfig> {
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig, Float newValue) {
         GlobalConfig.getInstance().setMaxRedisExpireTime(newValue);
-        LOGGER.info("publish max redis expire time config successful. config={}", newValue);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish max redis expire time config successful. config={}", newValue);
+        }
         return Boolean.TRUE;
     }
 }

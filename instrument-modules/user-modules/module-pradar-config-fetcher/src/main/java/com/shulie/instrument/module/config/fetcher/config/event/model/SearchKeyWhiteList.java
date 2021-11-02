@@ -58,7 +58,9 @@ public class SearchKeyWhiteList implements IChange<Set<String>, ApplicationConfi
         applicationConfig.setSearchWhiteList(newValue);
         GlobalConfig.getInstance().setSearchWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.SEARCH_KEY_WHITE_LIST);
-        LOGGER.info("publish search key whitelist config successful. config={}", newValue);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish search key whitelist config successful. config={}", newValue);
+        }
         return Boolean.TRUE;
     }
 }

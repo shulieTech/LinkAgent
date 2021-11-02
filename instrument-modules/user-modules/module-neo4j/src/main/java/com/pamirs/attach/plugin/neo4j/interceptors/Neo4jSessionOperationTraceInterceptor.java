@@ -52,7 +52,7 @@ public class Neo4jSessionOperationTraceInterceptor extends TraceInterceptorAdapt
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord record = new SpanRecord();
         record.setService(target.getClass().getName());
@@ -64,7 +64,7 @@ public class Neo4jSessionOperationTraceInterceptor extends TraceInterceptorAdapt
     @Override
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         Object result = advice.getReturnObj();
         SpanRecord record = new SpanRecord();
@@ -79,7 +79,7 @@ public class Neo4jSessionOperationTraceInterceptor extends TraceInterceptorAdapt
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord record = new SpanRecord();
         record.setService(target.getClass().getName());

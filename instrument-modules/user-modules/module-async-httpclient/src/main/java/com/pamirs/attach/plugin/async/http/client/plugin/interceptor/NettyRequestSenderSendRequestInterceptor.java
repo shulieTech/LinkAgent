@@ -14,32 +14,25 @@
  */
 package com.pamirs.attach.plugin.async.http.client.plugin.interceptor;
 
+
 import com.pamirs.attach.plugin.async.http.client.plugin.AsyncHttpClientConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.interceptor.BeforeTraceInterceptorAdapter;
-import com.pamirs.pradar.interceptor.ContextInject;
-import com.pamirs.pradar.interceptor.ContextTransfer;
-import com.pamirs.pradar.interceptor.SpanRecord;
+import com.pamirs.pradar.interceptor.*;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.apache.commons.lang.StringUtils;
-import org.asynchttpclient.*;
-import org.asynchttpclient.netty.request.NettyRequest;
-
-import javax.net.ssl.SSLSession;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
+import org.asynchttpclient.Param;
+import org.asynchttpclient.Request;
 
 /**
  * @author angju
  * @date 2021/4/6 20:39
  */
-public class NettyRequestSenderSendRequestInterceptor extends BeforeTraceInterceptorAdapter {
+public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAdaptor {
     @Override
     public String getPluginName() {
         return AsyncHttpClientConstants.PLUGIN_NAME;
@@ -55,7 +48,6 @@ public class NettyRequestSenderSendRequestInterceptor extends BeforeTraceInterce
         if (!Pradar.isClusterTest()) {
             return;
         }
-        ClusterTestUtils.validateClusterTest();
         Request request = (Request) advice.getParameterArray()[0];
         //白名单判断
         ClusterTestUtils.validateHttpClusterTest(request.getUrl());
@@ -81,8 +73,10 @@ public class NettyRequestSenderSendRequestInterceptor extends BeforeTraceInterce
         //添加压测数据到header
         SpanRecord record = new SpanRecord();
         record.setRemoteIp(request.getUri().getHost());
-        String url = request.getUrl();
-        record.setService(url);
+       /* String url = request.getUrl();
+        record.setService(url);*/
+        String uri = request.getUri().getPath();
+        record.setService(uri);
         record.setMethod(StringUtils.upperCase(request.getMethod()));
         record.setPort(request.getUri().getPort());
         if (CollectionUtils.isNotEmpty(request.getQueryParams())) {
@@ -94,7 +88,7 @@ public class NettyRequestSenderSendRequestInterceptor extends BeforeTraceInterce
             record.setRequestSize(params.length());
         }
         record.setRequestSize(0);
-        record.setContextInject(new ContextInject() {
+   /*     record.setContextInject(new ContextInject() {
             @Override
             public void injectContext(final Map<String, String> context) {
                 final AsyncHandler asyncHandler = (AsyncHandler) advice.getParameterArray()[1];
@@ -276,7 +270,17 @@ public class NettyRequestSenderSendRequestInterceptor extends BeforeTraceInterce
                     }
                 });
             }
-        });
+        });*/
+        return record;
+    }
+
+    @Override
+    public SpanRecord afterTrace(Advice advice) {
+        SpanRecord record = new SpanRecord();
+        record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
+        record.setResponse(advice.getReturnObj());
+        InnerWhiteListCheckUtil.check();
+        record.setResponseSize(0);
         return record;
     }
 
@@ -285,6 +289,7 @@ public class NettyRequestSenderSendRequestInterceptor extends BeforeTraceInterce
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         record.setResponse(advice.getThrowable());
+        InnerWhiteListCheckUtil.check();
         record.setResponseSize(0);
         return record;
     }

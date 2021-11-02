@@ -14,6 +14,16 @@
  */
 package com.shulie.instrument.module.log.data.pusher.server.impl;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import com.pamirs.pradar.exception.PradarException;
 import com.shulie.instrument.module.log.data.pusher.server.ConnectInfo;
 import com.shulie.instrument.module.log.data.pusher.server.ServerAddrProvider;
@@ -28,12 +38,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
-
 /**
  * @Description log server的服务端地址提供者,暂时未采用一致性哈希算法,主要是考虑到一致性哈希算法并不能最大化使客户端连接
  * 平均负载在每一个服务端端口上
@@ -70,7 +74,7 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
          * 计算当前客户端的hash值
          */
         this.clientHash = hash(UUID.randomUUID().toString());
-        this.availableNodes = new ArrayList<Node>();
+        this.availableNodes = new CopyOnWriteArrayList<Node>();
         try {
             this.zkClient = NetflixCuratorZkClientFactory.getInstance().create(serverProviderOptions.getSpec());
         } catch (PradarException e) {
@@ -104,7 +108,9 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
                 try {
                     if (!zkServerPath.isRunning()) {
                         zkServerPath.startAndRefresh();
-                        LOGGER.info("successfully watch log server path status from zookeeper, path={}", serverProviderOptions.getServerZkPath());
+                        if (LOGGER.isInfoEnabled()) {
+                            LOGGER.info("successfully watch log server path status from zookeeper, path={}", serverProviderOptions.getServerZkPath());
+                        }
                     }
                     fetchLogServer();
                 } catch (Throwable e) {
@@ -206,17 +212,19 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
          * 排除最近20s有异常的连接， 如果最近20s都有异常，则直接使用所有的连接池
          */
         List<Node> nowAvailableNode = new ArrayList<Node>();
+        LOGGER.warn("push log server availableNodes:" + availableNodes.size() + ":" + Arrays.toString(availableNodes.toArray()));
         for (Node availableNode : availableNodes) {
             //最近 20s 有异常的排除在外
-            if (availableNode.getLastErrorTimeSec() > 20) {
+            if (availableNode.getLastErrorTime() == -1 || (System.currentTimeMillis() - availableNode.getLastErrorTime()) > 20*1000L) {
                 nowAvailableNode.add(availableNode);
             }
         }
+        LOGGER.warn("push log server nowAvailableNode:"+ nowAvailableNode.size() + ":" + Arrays.toString(nowAvailableNode.toArray()));
         if (nowAvailableNode.isEmpty()) {
-            nowAvailableNode = availableNodes;
+            nowAvailableNode = new ArrayList<Node>(availableNodes);
         }
         node = nowAvailableNode.get(Math.abs(clientHash % nowAvailableNode.size()));
-
+        LOGGER.warn("push log server node:" + node);
         ConnectInfo connectInfo = new ConnectInfo();
         connectInfo.setServerAddr(node.getHost());
         connectInfo.setPort(node.getPort());

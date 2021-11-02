@@ -97,6 +97,9 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         if (!GlobalConfig.getInstance().isShadowDbRedisServer()) {
             return client;
         }
+        if (!doBefore()) {
+            return client;
+        }
         RedisClientMediator<T> mediator = getMediator(client);
         if (mediator == null) {
             // 抛出相关异常信息

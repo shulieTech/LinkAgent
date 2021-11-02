@@ -20,6 +20,7 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.*;
@@ -28,11 +29,16 @@ import java.util.*;
  * @author wangjian
  * @since 2021/2/22 16:54
  */
+@ListenerBehavior(isFilterClusterTest = true)
 public class CacheOperationInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override
     protected Object[] getParameter0(Advice advice) throws Throwable {
         Object[] parameterArray = advice.getParameterArray();
+        if (!Pradar.isClusterTest()) {
+            // 非压测流量
+            return parameterArray;
+        }
         /**
          * 压测状态为关闭,如果当前为压测流量则直接报错
          */
@@ -40,10 +46,6 @@ public class CacheOperationInterceptor extends ParametersWrapperInterceptorAdapt
             if (Pradar.isClusterTest()) {
                 throw new PressureMeasureError(PradarSwitcher.PRADAR_SWITCHER_OFF + ":" + AppNameUtils.appName());
             }
-            return parameterArray;
-        }
-        if (!Pradar.isClusterTest()) {
-            // 非压测流量
             return parameterArray;
         }
         if (parameterArray.length == 0) {

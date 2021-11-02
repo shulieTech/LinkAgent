@@ -17,6 +17,7 @@ package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.scope.ScopeFactory;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
 import com.shulie.instrument.simulator.api.scope.InterceptorScopeInvocation;
 import org.slf4j.Logger;
@@ -25,7 +26,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by xiaobin on 2017/1/19.
  */
-public class ScopedTraceInterceptor extends AroundInterceptor {
+public class ScopedTraceInterceptor extends AroundInterceptor implements ScopedInterceptor {
     private final Logger logger = LoggerFactory.getLogger(ScopedTraceInterceptor.class.getName());
 
     private final TraceInterceptor interceptor;
@@ -50,7 +51,7 @@ public class ScopedTraceInterceptor extends AroundInterceptor {
         if (scope != null) {
             return scope;
         }
-        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehavior().getName());
+        return ScopeFactory.getScope(interceptor.getClass().getName() + "#" + advice.getTargetClass().getName() + "_" + advice.getBehaviorName());
     }
 
     @Override
@@ -103,6 +104,11 @@ public class ScopedTraceInterceptor extends AroundInterceptor {
                 transaction.leave(policy);
             }
         }
+    }
+
+    @Override
+    public AdviceListener getUnderWrap() {
+        return interceptor;
     }
 }
 

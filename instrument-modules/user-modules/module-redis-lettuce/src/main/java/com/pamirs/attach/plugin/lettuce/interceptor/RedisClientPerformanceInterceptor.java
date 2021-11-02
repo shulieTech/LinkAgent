@@ -14,15 +14,21 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
-import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.shadowserver.LettuceFactory;
+import com.pamirs.attach.plugin.lettuce.utils.LettuceUtils;
+import com.pamirs.attach.plugin.lettuce.utils.Version;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.lettuce.core.RedisURI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
 
 /**
  * @Author qianfan
@@ -31,18 +37,40 @@ import org.slf4j.LoggerFactory;
  */
 @Destroyable(LettuceDestroy.class)
 public class RedisClientPerformanceInterceptor extends ResultInterceptorAdaptor {
-
+    @Resource
+    protected DynamicFieldManager manager;
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisClientPerformanceInterceptor.class.getName());
 
     @Override
     protected Object getResult0(Advice advice) {
+
+        if (!Pradar.isClusterTest() || Version.workWithSpringLettuce) {
+            return advice.getReturnObj();
+        }
+
         Object[] args = advice.getParameterArray();
         String methodName = advice.getBehavior().getName();
         Object target = advice.getTarget();
         Object result = advice.getReturnObj();
-        if (!LettuceConstants.masterSlave.get()) {
-            return result;
+
+        /**
+         * 过滤masterSlave
+         */
+
+
+        if (args.length >= 2 && args[1] instanceof RedisURI) {
+            if (LettuceUtils.ignore((RedisURI) args[1])) {
+                return result;
+            }
         }
+
+
+
+
+
+       /* if (!LettuceConstants.masterSlave.get()) {
+            return result;
+        }*/
         try {
             // TODO 这里无论如何都必须初始化成功。
             // 1、判断影子库还是影子表模式
@@ -51,6 +79,9 @@ public class RedisClientPerformanceInterceptor extends ResultInterceptorAdaptor 
         } catch (PressureMeasureError e) {
             throw e;
         } catch (Throwable e) {
+            if (Pradar.isClusterTest()) {
+                throw new PressureMeasureError(e);
+            }
             LOGGER.error(e.getMessage(), e);
         }
         return result;

@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
+import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -66,26 +67,8 @@ public class ConsumerMetaData {
                     throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
                 }
             }
-            Object metadata = Reflect.on(consumer).get("metadata");
-
-            Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
-            Iterable<Node> nodes;
-            if (cluster != null) {
-                nodes = Reflect.on(cluster).get("nodes");
-            } else {
-                Object cache = ReflectUtil.reflectSlience(metadata, "cache");
-                if (cache != null) {
-                    nodes = Reflect.on(cache).get("nodes");
-                } else {
-                    throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
-                }
-            }
-            StringBuilder sb = new StringBuilder();
-            for (Node node : nodes) {
-                sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
-                        .toString()).append(",");
-            }
-            return new ConsumerMetaData(topics, groupId, sb.substring(0, sb.length() - 1));
+            String bootstrapServers = KafkaUtils.getBootstrapServers(consumer);
+            return new ConsumerMetaData(topics, groupId, bootstrapServers);
         } catch (ReflectException e) {
             throw new PressureMeasureError(e);
         }

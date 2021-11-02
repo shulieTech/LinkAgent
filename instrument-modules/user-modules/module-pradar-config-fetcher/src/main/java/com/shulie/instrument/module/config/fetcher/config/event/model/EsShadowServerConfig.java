@@ -65,7 +65,9 @@ public class EsShadowServerConfig implements IChange<Map<String, ShadowEsServerC
             publishRegisterEvents(adds);
             publishDisableEvents(removes);
         }
-        LOGGER.info("publish elasticsearch server config successful. config={}", newConfig);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish elasticsearch server config successful. config={}", newConfig);
+        }
         return result;
     }
 

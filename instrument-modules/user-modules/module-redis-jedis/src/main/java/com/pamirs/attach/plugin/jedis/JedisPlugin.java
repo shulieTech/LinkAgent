@@ -26,6 +26,8 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
+import redis.clients.jedis.Jedis;
+
 
 /**
  * @author vincent
@@ -35,23 +37,20 @@ import org.kohsuke.MetaInfServices;
 public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() {
+    public boolean onActive() {
 
         EnhanceCallback jedisEnhanceCallback = new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethods(RedisUtils.get().keySet());
-                method.addInterceptor(Listeners.dynamicScope(JedisInterceptor.class, ExecutionPolicy.BOUNDARY,
-                    Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.dynamicScope(JedisInterceptor.class, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method.addInterceptor(Listeners.of(JedisSentinelShadowServerInterceptor.class, "JEDIS_SENTINEL", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                /**
+                 * jedis单机模式客户端路由器
+                 */
+                method.addInterceptor(Listeners.of(JedisSingleClientCutOffInterceptor.class, "JEDIS_SINGLE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 method.addInterceptor(Listeners.of(MJedisInterceptor.class));
 
-                //jedis单机模式影子库
-                method.addInterceptor(Listeners.of(MethodInvokeInterceptor.class, "Jedis_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod slaveOfMethod = target.getDeclaredMethod("slaveof", "java.lang.String", "int");
-                slaveOfMethod.addInterceptor(
-                    Listeners.of(JedisSlaveofInterceptor.class, "Jedis_Slave_Of_Scope", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
             }
         };
         this.enhanceTemplate.enhance(this, "redis.clients.jedis.BinaryJedis", jedisEnhanceCallback);
@@ -61,20 +60,16 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethods("expire", "pexpire", "setex", "psetex")
-                    .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
-                target.getDeclaredMethod("set", "java.lang.String", "java.lang.String",
-                        "redis.clients.jedis.params.SetParams")
-                    .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
-                target.getDeclaredMethod("set", "java.lang.String", "java.lang.String", "java.lang.String",
-                        "java.lang.String", "long")
-                    .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
-                target.getDeclaredMethod("set", "java.lang.String", "java.lang.String", "java.lang.String",
-                        "java.lang.String", "int")
-                    .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
+                        .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
+                target.getDeclaredMethod("set", "java.lang.String", "java.lang.String", "redis.clients.jedis.params.SetParams")
+                        .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
+                target.getDeclaredMethod("set", "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String", "long")
+                        .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
+                target.getDeclaredMethod("set", "java.lang.String", "java.lang.String", "java.lang.String", "java.lang.String", "int")
+                        .addInterceptor(Listeners.of(PluginMaxRedisExpireTimeInterceptor.class));
             }
         };
-        this.enhanceTemplate.enhance(this, "redis.clients.jedis.BinaryJedisCluster",
-            pluginMaxRedisExpireTimeEnhanceCallback);
+        this.enhanceTemplate.enhance(this, "redis.clients.jedis.BinaryJedisCluster", pluginMaxRedisExpireTimeEnhanceCallback);
         this.enhanceTemplate.enhance(this, "redis.clients.jedis.JedisCluster", pluginMaxRedisExpireTimeEnhanceCallback);
         this.enhanceTemplate.enhance(this, "redis.clients.jedis.PipelineBase", pluginMaxRedisExpireTimeEnhanceCallback);
         this.enhanceTemplate.enhance(this, "redis.clients.jedis.Jedis", pluginMaxRedisExpireTimeEnhanceCallback);
@@ -93,20 +88,7 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         enhanceTemplate.enhance(this, "redis.clients.jedis.PipelineBase", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                String[] methodName = {"append", "brpop", "blpop", "decr", "decrBy", "del", "echo", "exists", "expire",
-                    "expireAt", "get", "getbit", "bitpos", "bitpos", "getrange", "getSet", "getrange", "hdel",
-                    "hexists", "hget", "hgetAll", "hincrBy", "hkeys", "hlen", "hmget", "hmset", "hset", "hsetnx",
-                    "hvals", "incr", "incrBy", "lindex", "linsert", "llen", "lpop", "lpush", "lpushx", "lrange", "lrem",
-                    "lset", "ltrim", "move", "persist", "rpop", "rpush", "rpushx", "sadd", "scard", "set", "setbit",
-                    "setex", "setnx", "setrange", "sismember", "smembers", "sort", "sort", "spop", "spop",
-                    "srandmember", "srandmember", "srem", "strlen", "substr", "ttl", "type", "zadd", "zadd", "zcard",
-                    "zcount", "zincrby", "zrange", "zrangeByScore", "zrangeByScoreWithScores", "zrevrangeByScore",
-                    "zrevrangeByScoreWithScores", "zrangeWithScores", "zrank", "zrem", "zremrangeByRank",
-                    "zremrangeByScore", "zrevrange", "zrevrangeWithScores", "zrevrank", "zscore", "zlexcount",
-                    "zrangeByLex", "zrevrangeByLex", "bitcount", "dump", "migrate", "objectRefcount", "objctRefcount",
-                    "objectEncoding", "objectIdletime", "pexpire", "pexpireAt", "pttl", "restore", "incrByFloat",
-                    "psetex", "set", "hincrByFloat", "eval", "evalsha", "pfadd", "pfcount", "geoadd", "geodist",
-                    "geohash", "geopos", "georadius", "georadiusByMember", "bitfield", "xread"};
+                String[] methodName = {"append", "brpop", "blpop", "decr", "decrBy", "del", "echo", "exists", "expire", "expireAt", "get", "getbit", "bitpos", "bitpos", "getrange", "getSet", "getrange", "hdel", "hexists", "hget", "hgetAll", "hincrBy", "hkeys", "hlen", "hmget", "hmset", "hset", "hsetnx", "hvals", "incr", "incrBy", "lindex", "linsert", "llen", "lpop", "lpush", "lpushx", "lrange", "lrem", "lset", "ltrim", "move", "persist", "rpop", "rpush", "rpushx", "sadd", "scard", "set", "setbit", "setex", "setnx", "setrange", "sismember", "smembers", "sort", "sort", "spop", "spop", "srandmember", "srandmember", "srem", "strlen", "substr", "ttl", "type", "zadd", "zadd", "zcard", "zcount", "zincrby", "zrange", "zrangeByScore", "zrangeByScoreWithScores", "zrevrangeByScore", "zrevrangeByScoreWithScores", "zrangeWithScores", "zrank", "zrem", "zremrangeByRank", "zremrangeByScore", "zrevrange", "zrevrangeWithScores", "zrevrank", "zscore", "zlexcount", "zrangeByLex", "zrevrangeByLex", "bitcount", "dump", "migrate", "objectRefcount", "objctRefcount", "objectEncoding", "objectIdletime", "pexpire", "pexpireAt", "pttl", "restore", "incrByFloat", "psetex", "set", "hincrByFloat", "eval", "evalsha", "pfadd", "pfcount", "geoadd", "geodist", "geohash", "geopos", "georadius", "georadiusByMember", "bitfield", "xread"};
                 InstrumentMethod declaredMethod = target.getDeclaredMethods(methodName);
                 declaredMethod.addInterceptor(Listeners.of(JedisPipelineBaseInterceptor.class));
             }
@@ -121,52 +103,6 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
-        //影子Server
-        enhanceTemplate.enhance(this, "redis.clients.jedis.JedisPool", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                //InstrumentMethod method = target.getDeclaredMethods("getResource");
-                //method.addInterceptor(Listeners.of(JedisPoolGetResourceInterceptor.class,
-                // "Jedis_Get_Resource_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-                //method.addInterceptor(
-                //    Listeners.of(JedisClientAttachRedisURIsInterceptor.class, "Jedis_Get_Resource_Scope",
-                //        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-                //method.addInterceptor(Listeners.of(JedisClientPerformanceInterceptor.class, "Jedis_Get_Resource_Scope",
-                //    ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-                InstrumentMethod constructor1 = target.getConstructor("java.lang.String");
-                constructor1.addInterceptor(
-                    Listeners.of(JedisConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod constructor2 = target.getConstructor("java.lang.String",
-                    "javax.net.ssl.SSLSocketFactory", "javax.net.ssl.SSLParameters", "javax.net.ssl.HostnameVerifier");
-                constructor2.addInterceptor(
-                    Listeners.of(JedisConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod constructor3 = target.getConstructor(
-                    "org.apache.commons.pool2.impl.GenericObjectPoolConfig", "java.net.URI", "int", "int");
-                constructor3.addInterceptor(
-                    Listeners.of(JedisConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod constructor4 = target.getConstructor(
-                    "org.apache.commons.pool2.impl.GenericObjectPoolConfig", "java.net.URI", "int", "int",
-                    "javax.net.ssl.SSLSocketFactory", "javax.net.ssl.SSLParameters", "javax.net.ssl.HostnameVerifier");
-                constructor4.addInterceptor(
-                    Listeners.of(JedisConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod constructor5 = target.getConstructor(
-                    "org.apache.commons.pool2.impl.GenericObjectPoolConfig",
-                    "java.lang.String", "int", "int", "int", "java.lang.String", "int", "java.lang.String", "boolean",
-                    "javax.net.ssl.SSLSocketFactory",
-                    "javax.net.ssl.SSLParameters", "javax.net.ssl.HostnameVerifier");
-                constructor5.addInterceptor(
-                    Listeners.of(JedisConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-            }
-        });
 
         enhanceTemplate.enhance(this, "redis.clients.jedis.util.Pool", new EnhanceCallback() {
             @Override
@@ -176,26 +112,6 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
-        //影子sentinel Server
-        enhanceTemplate.enhance(this, "redis.clients.jedis.JedisSentinelPool", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethods("getResource");
-                method.addInterceptor(
-                    Listeners.of(JedisSentinelPoolGetResourceInterceptor.class, "Jedis_Get_Resource_Scope",
-                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod constructor1 = target.getConstructor("java.lang.String",
-                    "java.util.Set", "org.apache.commons.pool2.impl.GenericObjectPoolConfig", "int", "int",
-                    "java.lang.String", "int", "java.lang.String");
-                constructor1.addInterceptor(
-                    Listeners.of(JedisSentinelConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
-                InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
-                shutdownMethod.addInterceptor(Listeners.of(PoolCloseInterceptor.class));
-            }
-        });
 
         //redis.clients.jedis.JedisSlotBasedConnectionHandler.getConnectionFromSlot
         //影子cluster Server
@@ -203,17 +119,14 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method1 = target.getDeclaredMethod("getConnectionFromSlot", "int");
-                method1.addInterceptor(
-                    Listeners.of(JedisClusterConnectionInterceptor.class, "Jedis_Get_Connection_Scope",
-                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method1.addInterceptor(Listeners.of(JedisClusterConnectionInterceptor.class, "Jedis_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 InstrumentMethod method2 = target.getDeclaredMethod("getConnection");
-                method2.addInterceptor(
-                    Listeners.of(JedisClusterConnectionInterceptor.class, "Jedis_Get_Connection_Scope",
-                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                method2.addInterceptor(Listeners.of(JedisClusterConnectionInterceptor.class, "Jedis_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             }
         });
+
 
         //redis.clients.jedis.JedisClusterConnectionHandler
         //影子cluster Server
@@ -227,29 +140,10 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 //java.lang.String, java.lang.String, boolean, javax.net.ssl.SSLSocketFactory,
                 //javax.net.ssl.SSLParameters, javax.net.ssl.HostnameVerifier,
                 //redis.clients.jedis.JedisClusterHostAndPortMap)
-                InstrumentMethod constructor = target.getConstructor("java.util.Set",
-                    "org.apache.commons.pool2.impl.GenericObjectPoolConfig", "int", "int",
-                    "java.lang.String", "java.lang.String", "boolean", "javax.net.ssl.SSLSocketFactory",
-                    "javax.net.ssl.SSLParameters", "javax.net.ssl.HostnameVerifier",
-                    "redis.clients.jedis.JedisClusterHostAndPortMap"
-                );
-
-                constructor.addInterceptor(
-                    Listeners.of(JedisClusterConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
-                // jedis 2.9.0
-                InstrumentMethod constructor2 = target.getConstructor("java.util.Set",
-                    "org.apache.commons.pool2.impl.GenericObjectPoolConfig", "int", "int", "java.lang.String");
-
-                constructor2.addInterceptor(
-                    Listeners.of(JedisClusterConstructorInterceptor.class, "JEDIS_SCOPE", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
-
                 InstrumentMethod closeMethod = target.getDeclaredMethod("close");
                 closeMethod.addInterceptor(Listeners.of(PoolCloseInterceptor.class));
             }
         });
-
+        return true;
     }
 }

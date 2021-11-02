@@ -62,12 +62,12 @@ import org.kohsuke.MetaInfServices;
 public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         /**
          * 因为这个插件与mongodb322插件冲突，所以当mongodb322插件启用时此插件禁用
          */
         if (simulatorConfig.getBooleanProperty("mongodb322.enabled", false)) {
-            return;
+            return false;
         }
 
 //        enhanceTemplate.enhance(this, "com.mongodb.MongoClient", new EnhanceCallback() {
@@ -288,6 +288,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+        return true;
     }
 
     @Override

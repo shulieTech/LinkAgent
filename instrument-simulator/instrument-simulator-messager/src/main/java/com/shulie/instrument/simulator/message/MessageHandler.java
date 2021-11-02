@@ -26,87 +26,108 @@ public interface MessageHandler {
      * 处理调用方法:执行之前
      * <p>CALL-BEFORE</p>
      *
-     * @param listenerId  事件监听器ID
-     * @param clazz       所在的目标类
-     * @param isInterface 是否是接口
-     * @param lineNumber  发生调用方法的代码行号
-     * @param owner       调用方法的声明类
-     * @param name        调用方法的方法名
-     * @param desc        调用方法的方法描述
+     * @param listenerId        事件监听器ID
+     * @param clazz             所在的目标类
+     * @param isInterface       是否是接口
+     * @param lineNumber        发生调用方法的代码行号
+     * @param owner             调用方法的声明类
+     * @param name              调用方法的方法名
+     * @param desc              调用方法的方法描述
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @throws Throwable 处理${调用方法:执行之前}失败
      */
-    void handleOnCallBefore(int listenerId, Class clazz, boolean isInterface, int lineNumber, String owner, String name, String desc) throws Throwable;
+    void handleOnCallBefore(int listenerId, Class clazz, boolean isInterface, int lineNumber, String owner, String name, String desc, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * 处理调用方法:正常返回
      * <p>CALL-RETURN</p>
      *
-     * @param listenerId  事件监听器ID
-     * @param clazz       所在的目标类
-     * @param isInterface 是否是接口
+     * @param listenerId        事件监听器ID
+     * @param clazz             所在的目标类
+     * @param isInterface       是否是接口
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @throws Throwable 处理{调用方法:正常返回}失败
      */
-    void handleOnCallReturn(int listenerId, Class clazz, boolean isInterface) throws Throwable;
+    void handleOnCallReturn(int listenerId, Class clazz, boolean isInterface, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * 处理调用方法:异常返回
      * <p>CALL-THROWS</p>
      *
-     * @param listenerId  事件监听器ID
-     * @param clazz       所在的目标类
-     * @param isInterface 是否是接口
-     * @param e           异常返回的异常
+     * @param listenerId        事件监听器ID
+     * @param clazz             所在的目标类
+     * @param isInterface       是否是接口
+     * @param e                 异常返回的异常
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @throws Throwable 处理{调用方法:异常返回}失败
      */
-    void handleOnCallThrows(int listenerId, Class clazz, boolean isInterface, Throwable e) throws Throwable;
+    void handleOnCallThrows(int listenerId, Class clazz, boolean isInterface, Throwable e, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * 处理执行代码执行
      * <p>LINE</p>
      *
-     * @param listenerId 事件监听器ID
-     * @param clazz      所在的目标类
-     * @param lineNumber 代码执行行号
+     * @param listenerId        事件监听器ID
+     * @param clazz             所在的目标类
+     * @param lineNumber        代码执行行号
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @throws Throwable 处理代码执行行失败
      */
-    void handleOnLine(int listenerId, Class clazz, int lineNumber) throws Throwable;
+    void handleOnLine(int listenerId, Class clazz, int lineNumber, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * 处理方法调用:调用之前
      * <p>BEFORE</p>
      *
-     * @param listenerId     事件监听器ID
-     * @param argumentArray  参数数组
-     * @param clazz          类名
-     * @param javaMethodName 方法名
-     * @param javaMethodDesc 方法签名
-     * @param target         目标对象实例
+     * @param listenerId        事件监听器ID
+     * @param argumentArray     参数数组
+     * @param clazz             类名
+     * @param javaMethodName    方法名
+     * @param javaMethodDesc    方法签名
+     * @param target            目标对象实例
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @return Messager流程控制结果
      * @throws Throwable 处理{方法调用:调用之前}失败
      */
-    Result handleOnBefore(int listenerId, Object[] argumentArray, Class clazz, String javaMethodName, String javaMethodDesc, Object target) throws Throwable;
+    Result handleOnBefore(int listenerId, Object[] argumentArray, Class clazz, String javaMethodName, String javaMethodDesc, Object target, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * 处理方法调用:异常返回
      *
-     * @param listenerId 事件监听器ID
-     * @param clazz      所在的目标类
-     * @param throwable  异常返回的异常实例
+     * @param listenerId        事件监听器ID
+     * @param clazz             所在的目标类
+     * @param throwable         异常返回的异常实例
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @return Messager流程控制结果
      * @throws Throwable 处理{方法调用:异常返回}失败
      */
-    Result handleOnThrows(int listenerId, Class clazz, Throwable throwable) throws Throwable;
+    Result handleOnThrows(int listenerId, Class clazz, Throwable throwable, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * 处理方法调用:正常返回
      *
-     * @param listenerId 事件监听器ID
-     * @param clazz      所在的目标类
-     * @param object     正常返回的对象实例
+     * @param listenerId        事件监听器ID
+     * @param clazz             所在的目标类
+     * @param object            正常返回的对象实例
+     * @param listenerClassName 事件处理类名
+     * @param listenerTag       监听器标记
+     * @param executionTag      执行标记
      * @return Messager流程控制结果
      * @throws Throwable 处理{方法调用:正常返回}失败
      */
-    Result handleOnReturn(int listenerId, Class clazz, Object object) throws Throwable;
+    Result handleOnReturn(int listenerId, Class clazz, Object object, String listenerClassName, int listenerTag, int executionTag) throws Throwable;
 
     /**
      * destroy all resources

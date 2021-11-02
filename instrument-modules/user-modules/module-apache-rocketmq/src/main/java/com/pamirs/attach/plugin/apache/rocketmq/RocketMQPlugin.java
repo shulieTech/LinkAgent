@@ -31,11 +31,11 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io")
 public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
-        addHookRegisterInterceptor();
+    public boolean onActive() throws Throwable {
+        return addHookRegisterInterceptor();
     }
 
-    private void addHookRegisterInterceptor() {
+    private boolean addHookRegisterInterceptor() {
 
         this.enhanceTemplate.enhance(this,
                 "org.apache.rocketmq.client.consumer.DefaultMQPushConsumer", new EnhanceCallback() {
@@ -114,5 +114,6 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 enhanceMethod.addInterceptor(Listeners.of(TransactionCheckInterceptor.class));
             }
         });
+        return true;
     }
 }

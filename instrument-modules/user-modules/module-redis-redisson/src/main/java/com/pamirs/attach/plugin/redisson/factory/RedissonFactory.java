@@ -14,6 +14,14 @@
  */
 package com.pamirs.attach.plugin.redisson.factory;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
@@ -30,13 +38,14 @@ import org.apache.commons.lang.StringUtils;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
-import org.redisson.config.*;
+import org.redisson.config.ClusterServersConfig;
+import org.redisson.config.Config;
+import org.redisson.config.MasterSlaveServersConfig;
+import org.redisson.config.ReplicatedServersConfig;
+import org.redisson.config.SentinelServersConfig;
+import org.redisson.config.SingleServerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.*;
 
 /**
  * @Auther: vernon
@@ -201,7 +210,8 @@ public class RedissonFactory extends AbstractRedisServerFactory {
      */
     public Config generate(Config oldConfig, ShadowRedisConfig shadowRedisConfig) {
 
-        String master = RedissonUtils.addPre(shadowRedisConfig.getMaster());
+        String master = shadowRedisConfig.getMaster();
+        master = master == null ? null : master.contains(":") ? RedissonUtils.addPre(shadowRedisConfig.getMaster()) : master;
         String nodeStr = shadowRedisConfig.getNodes();
         Integer database = shadowRedisConfig.getDatabase();
         List<String> nodes = nodeStr.contains(",")
@@ -260,7 +270,7 @@ public class RedissonFactory extends AbstractRedisServerFactory {
             //过滤检查
             setCheckSentinelsList(newConfig.useSentinelServers());
             if (master != null && !"null".equals(master)) {
-                newConfig.useSentinelServers().addSentinelAddress(master);
+                newConfig.useSentinelServers().setMasterName(master);
             }
             if (passwd != null) {
                 newConfig.useSentinelServers().setPassword(passwd);
@@ -283,6 +293,9 @@ public class RedissonFactory extends AbstractRedisServerFactory {
             newConfig.useMasterSlaveServers().addSlaveAddress(nodesArrays);
             if (database != null) {
                 newConfig.useMasterSlaveServers().setDatabase(database);
+            }
+            if (passwd != null) {
+                newConfig.useMasterSlaveServers().setPassword(passwd);
             }
         }
         return newConfig;

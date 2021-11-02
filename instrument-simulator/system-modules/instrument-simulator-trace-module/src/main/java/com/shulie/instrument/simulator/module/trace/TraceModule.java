@@ -62,19 +62,37 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
     private LoadedClassDataSource loadedClassDataSource;
 
     private Set<Class<?>> getProxyInterfaceImplClasses(final Class<?> clazz) {
+        return getProxyInterfaceImplClasses(clazz, null);
+    }
+
+    private Set<Class<?>> getProxyInterfaceImplClasses(final Class<?> clazz, final Class<?> interfaceClass) {
         if (!Proxy.isProxyClass(clazz)) {
             return new HashSet<Class<?>>(Arrays.asList(clazz));
         }
-        return loadedClassDataSource.find(new Filter() {
+        return loadedClassDataSource.find(new ExtFilter() {
             @Override
             public boolean doClassNameFilter(String javaClassName) {
                 return true;
             }
 
             @Override
+            public boolean isIncludeBootstrap() {
+                return true;
+            }
+
+            @Override
+            public boolean isIncludeSubClasses() {
+                return false;
+            }
+
+            @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
                 String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                return ArrayUtils.contains(interfaces, clazz.getName());
+                /* return ArrayUtils.contains(interfaces, clazz.getName());*/
+                if (interfaceClass == null) {
+                    return false;
+                }
+                return ArrayUtils.contains(interfaces, interfaceClass.getName());
             }
 
             @Override
@@ -145,7 +163,7 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
                     Set<Class<?>> implClasses = findImplClasses(clazz);
                     if (!implClasses.isEmpty()) {
                         for (Class implClass : implClasses) {
-                            instrumentClasses.addAll(getProxyInterfaceImplClasses(implClass));
+                            instrumentClasses.addAll(getProxyInterfaceImplClasses(implClass, clazz));
                         }
                     } else {
                         foundInterface = true;

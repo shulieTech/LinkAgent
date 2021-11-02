@@ -24,6 +24,7 @@ import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -36,8 +37,9 @@ import org.slf4j.LoggerFactory;
 /**
  * @author vincent
  */
+@ListenerBehavior(isFilterBusinessData = true)
 public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
-    private static final Logger logger = LoggerFactory.getLogger(DubboConsumerInterceptor.class);
+    private final Logger logger = LoggerFactory.getLogger(DubboConsumerInterceptor.class);
 
     public void initConsumer(Invoker<?> invoker, Invocation invocation) {
         RpcContext.getContext()
@@ -59,7 +61,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
     }
 
     private boolean isLocalHost(String address) {
-        return "127.0.0.1".equals(address) || "localhost".equalsIgnoreCase(address);
+        return "127.0.0.1".equals(address) || "localhost".equals(address) || "LOCALHOST".equals(address);
     }
 
     private boolean isMonitorService(Invoker invoker) {
@@ -68,9 +70,18 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         }
         return false;
     }
+    //申通事件中心过滤掉
+    private boolean isShentongEvent(String name){
+        if (name.equals("com.sto.event.ocean.client.remote.EventAccept")
+            || name.equals("com.sto.event.ocean.client.remote.EventCoreRpc")
+            || name.equals("com.sto.event.ocean.client.remote.EventPreRpc")){
+            return true;
+        }
+        return false;
+    }
 
     @Override
-    public void beforeFirst(Advice advice) throws ProcessControlException {
+    public void beforeLast(Advice advice) throws ProcessControlException {
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
         String interfaceName = getInterfaceName(invocation);
         String methodName = invocation.getMethodName();
@@ -81,14 +92,19 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("isInterface", Boolean.TRUE);
         config.addArgs("class", interfaceName);
         config.addArgs("method", methodName);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+        if(isShentongEvent(interfaceName)){
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, "true");
+        }
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 try {
                     //for 2.8.4
                     return Reflect.on("org.apache.dubbo.rpc.RpcResult").create(param).get();
                 } catch (Exception e) {
-                    logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
+                    if (logger.isInfoEnabled()) {
+                        logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
+                    }
                     //
                 }
                 try {
@@ -155,8 +171,11 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
-        logger.info("debug: start DubboConsumerInterceptor beforeTrace {}",advice.getTarget());
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
+        final String name = getInterfaceName(invocation);
+        if (isShentongEvent(name)){
+            return null;
+        }
         Invoker<?> invoker = (Invoker<?>) advice.getTarget();
         if (isMonitorService(invoker)) {
             return null;
@@ -173,20 +192,23 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         record.setRemoteIp(remoteHost);
         record.setPort(context.getRemotePort());
         String version = getVersion(invocation);
-        final String name = getInterfaceName(invocation);
         record.setService(buildServiceName(name, version));
         record.setMethod(context.getMethodName()
                 + DubboUtils.getParameterTypesString(context.getParameterTypes()));
         record.setRequestSize(DubboUtils.getRequestSize());
         record.setRequest(invocation.getArguments());
         record.setPassedCheck(Boolean.parseBoolean(invocation.getAttachment(PradarService.PRADAR_WHITE_LIST_CHECK)));
-        logger.info("debug: beforeTrace {}", record.getService() + "." + record.getMethod());
         return record;
     }
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
         Result result = (Result) advice.getReturnObj();
+        final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
+        final String name = getInterfaceName(invocation);
+        if (isShentongEvent(name)){
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResponse(DubboUtils.getResponse(result));
         record.setResponseSize(result == null ? 0 : DubboUtils.getResponseSize(result));
@@ -194,12 +216,16 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
             record.setResultCode(DubboUtils.getResultCode(result.getException()));
             record.setResponse(result.getException());
         }
-        logger.info("debug: afterTrace {}", record.getResponse(), RpcContext.getContext().getMethodName());
         return record;
     }
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
+        final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
+        final String name = getInterfaceName(invocation);
+        if (isShentongEvent(name)){
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResponseSize(0);
         record.setResponse(advice.getThrowable());

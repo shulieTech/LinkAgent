@@ -67,7 +67,7 @@ public class ProfilerModule extends ParamSupported implements ExtensionModule {
         // stop - stop profiling
         sb.append(action).append(',');
 
-        String event = args.get("event");
+        String event = getParameter(args, "event", "cpu");
         if (event != null) {
             sb.append("event=").append(event).append(',');
         }
@@ -77,12 +77,12 @@ public class ProfilerModule extends ParamSupported implements ExtensionModule {
             sb.append("file=").append(file).append(',');
         }
 
-        Long interval = getLongParameter(args, "interval");
+        Long interval = getLongParameter(args, "interval", 10000000);
         if (interval != null) {
             sb.append("interval=").append(interval).append(',');
         }
 
-        Long framebuf = getLongParameter(args, "interval");
+        Long framebuf = getLongParameter(args, "framebuf", 1000000);
         if (framebuf != null) {
             sb.append("framebuf=").append(framebuf).append(',');
         }
@@ -230,7 +230,7 @@ public class ProfilerModule extends ParamSupported implements ExtensionModule {
             } else if (ProfilerAction.start.equals(profilerAction)) {
                 //jfr录制，必须在start的时候就指定文件路径
                 final String file = getFile(args);
-                final String format = getParameter(args, "format");
+                final String format = getParameter(args, "format", "svg");
                 String executeArgs = executeArgs(ProfilerAction.start, args);
                 String result = execute(asyncProfiler, executeArgs);
                 ProfilerModel profilerModel = createProfilerModel(result, action, actionArg);

@@ -14,16 +14,15 @@
  */
 package com.shulie.instrument.simulator.agent.core.uploader;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.alibaba.fastjson.JSON;
-
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -77,13 +76,13 @@ public class HttpApplicationUploader implements ApplicationUploader {
         final StringBuilder url = new StringBuilder(webUrl).append(APP_INSERT_URL);
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), userAppKey, JSON.toJSONString(map));
-            if (!httpResult.isSuccess()) {
-                LOGGER.warn("上报应用失败 url={}, result={}", url, httpResult.getResult());
+            if (httpResult == null || !httpResult.isSuccess()) {
+                LOGGER.error("上报应用失败 url={}, result={}", url, httpResult.getResult());
             }else{
                 LOGGER.info("上报应用成功 url={}, result={}", url, httpResult.getResult());
             }
         } catch (Throwable e) {
-            LOGGER.warn("自动增加应用失败 url={}", url, e);
+            LOGGER.error("自动增加应用失败 url={}", url, e);
         }
     }
 }

@@ -19,16 +19,12 @@ import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
 import com.shulie.instrument.module.config.fetcher.config.event.model.*;
 import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ZookeeperOptions;
-import com.shulie.instrument.module.config.fetcher.interval.ISamplingRateConfigFetcher;
-import com.shulie.instrument.module.config.fetcher.interval.SamplingRateConfigFetcher;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
-import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +51,6 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
     private ScheduledFuture future;
 
-    private ISamplingRateConfigFetcher samplingRateConfigFetcher;
     private ConfigManager configManager;
 
     private ZookeeperOptions buildZookeeperOptions() {
@@ -68,9 +63,8 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     }
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         isActive = true;
-        final String configFetchType = simulatorConfig.getProperty("pradar.config.fetch.type", "http");
         this.future = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
@@ -78,35 +72,25 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
                     return;
                 }
                 try {
-                    if (StringUtils.equalsIgnoreCase(configFetchType, "zookeeper")) {
-                        configManager = ConfigManager.getInstance(switcherManager, buildZookeeperOptions());
-                        configManager.initAll();
-                    } else {
-                        int interval = simulatorConfig.getIntProperty("pradar.config.fetch.interval", 60);
-                        String unit = simulatorConfig.getProperty("pradar.config.fetch.unit", "SECONDS");
-                        TimeUnit timeUnit = TimeUnit.valueOf(unit);
-                        configManager = ConfigManager.getInstance(switcherManager, interval, timeUnit);
-                        configManager.initAll();
-                    }
-                    // 采样率配置拉取
-                    samplingRateConfigFetcher = SimulatorGuard.getInstance().doGuard(ISamplingRateConfigFetcher.class, new SamplingRateConfigFetcher(buildZookeeperOptions(), simulatorConfig));
-                    samplingRateConfigFetcher.start();
+                    int interval = simulatorConfig.getIntProperty("pradar.config.fetch.interval", 60);
+                    String unit = simulatorConfig.getProperty("pradar.config.fetch.unit", "SECONDS");
+                    TimeUnit timeUnit = TimeUnit.valueOf(unit);
+                    configManager = ConfigManager.getInstance(switcherManager, interval, timeUnit);
+                    configManager.initAll();
                 } catch (Throwable e) {
                     logger.warn("SIMULATOR: Config Fetch module start failed. log data can't push to the server.", e);
                     future = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 }
             }
-        }, 0, TimeUnit.SECONDS);
+        }, 10, TimeUnit.SECONDS);
 
         PradarInternalService.registerConfigFetcher(new DefaultConfigFetcher());
+        return true;
     }
 
     @Override
     public void onFrozen() throws Throwable {
         isActive = false;
-        if (samplingRateConfigFetcher != null) {
-            samplingRateConfigFetcher.stop();
-        }
         if (configManager != null) {
             configManager.destroy();
         }

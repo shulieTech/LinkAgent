@@ -15,10 +15,14 @@
 package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.json.ResultSerializer;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,9 +38,11 @@ abstract class BaseInterceptor extends AdviceListener {
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(BaseInterceptor.class);
 
+    protected static final Logger TIME_CONSUMING_LOGGER = LoggerFactory.getLogger("TIME-CONSUMING-LOGGER");
+
     protected InterceptorScope interceptorScope;
     protected boolean costEnabled;
-    protected long minInterceptorCost;
+    protected double minInterceptorCost;
 
     public BaseInterceptor() {
         this.costEnabled = Pradar.isInterceptorCostEnabled();
@@ -56,6 +62,7 @@ abstract class BaseInterceptor extends AdviceListener {
         Throwable e = null;
         try {
             doBefore(advice);
+            checkClusterTestValid(advice);
         } catch (ProcessControlException t) {
             throw t;
         } catch (Throwable t) {
@@ -66,9 +73,32 @@ abstract class BaseInterceptor extends AdviceListener {
                 long end = System.nanoTime();
                 double cost = (end - start) / 1000000.0;
                 if (cost > minInterceptorCost) {
-                    LOGGER.info("interceptor execute before cost interceptor={}, cost={}ms", getClass().getName(), cost);
+                    String name = (this instanceof ScopedInterceptor) ?
+                            ((ScopedInterceptor) this).getUnderWrap().getClass().getName() : getClass().getName();
+                    TIME_CONSUMING_LOGGER.info("interceptor execute before cost interceptor={}, cost={}ms", name, cost);
                 }
             }
+        }
+    }
+
+    public boolean isClusterTestRequest(Advice advice) {
+        return Pradar.isClusterTest();
+    }
+
+    private void checkClusterTestValid(Advice advice) {
+        if (!PradarSwitcher.isClusterTestReady() && isClusterTestRequest(advice)) {
+            throw new PressureMeasureError("Takin is not ready now. waiting to pull config...");
+        }
+    }
+
+    private static String serializeObject(Object target) {
+        if (target == null) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            return ResultSerializer.serializeObject(target, 2);
+        } catch (Throwable e) {
+            return StringUtils.EMPTY;
         }
     }
 
@@ -78,7 +108,6 @@ abstract class BaseInterceptor extends AdviceListener {
         if (costEnabled) {
             start = System.nanoTime();
         }
-        boolean isDebug = Pradar.isDebug();
         Throwable throwable = null;
         try {
             doAfter(advice);
@@ -96,7 +125,9 @@ abstract class BaseInterceptor extends AdviceListener {
                 long end = System.nanoTime();
                 double cost = (end - start) / 1000000.0;
                 if (cost > minInterceptorCost) {
-                    LOGGER.info("interceptor execute after cost interceptor={}, cost={}ms", getClass().getName(), cost);
+                    String name = (this instanceof ScopedInterceptor) ?
+                            ((ScopedInterceptor) this).getUnderWrap().getClass().getName() : getClass().getName();
+                    TIME_CONSUMING_LOGGER.info("interceptor execute after cost interceptor={}, cost={}ms", name, cost);
                 }
             }
         }
@@ -122,7 +153,9 @@ abstract class BaseInterceptor extends AdviceListener {
                 long end = System.nanoTime();
                 double cost = (end - start) / 1000000.0;
                 if (cost > minInterceptorCost) {
-                    LOGGER.info("interceptor execute exception cost interceptor={}, cost={}ms", getClass().getName(), cost);
+                    String name = (this instanceof ScopedInterceptor) ?
+                            ((ScopedInterceptor) this).getUnderWrap().getClass().getName() : getClass().getName();
+                    TIME_CONSUMING_LOGGER.info("interceptor execute exception cost interceptor={}, cost={}ms", name, cost);
                 }
             }
         }

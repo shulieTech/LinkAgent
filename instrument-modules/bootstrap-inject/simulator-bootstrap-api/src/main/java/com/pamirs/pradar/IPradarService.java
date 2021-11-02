@@ -71,4 +71,36 @@ public interface IPradarService {
      */
     Map<String, String> getInvokeContext();
 
+    String getTraceId();
+
+    /**
+     * 是否是静默状态
+     *
+     * 静默状态下探针不会处理任何流量，保证对业务系统的影响最小
+     *
+     * @return
+     */
+    boolean isSilence();
+
+    /**
+     * 是否需要过滤业务trace
+     * @return
+     */
+    boolean isSaveBusinessTrace();
+
+    /**
+     * 打印并获取当前上下文信息
+     *
+     * @return
+     */
+    String printInvokeContext();
+
+
+    /**
+     * 设置流量为压测流量
+     */
+    boolean setClusterTest();
+
+
+
 }

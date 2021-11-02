@@ -44,6 +44,7 @@ class EventBuilderFactory {
                                         final String javaMethodDesc,
                                         final Object target,
                                         final Object[] argumentArray) {
+        //todo 减少new对象的次数
         BeforeEvent event = new BeforeEvent(processId, invokeId, javaClassLoader, clazz, javaMethodName, javaMethodDesc, target, argumentArray);
         return event;
     }
@@ -59,6 +60,7 @@ class EventBuilderFactory {
     public ReturnEvent buildReturnEvent(final int processId,
                                         final int invokeId,
                                         final Object returnObj) {
+        //todo 减少new对象的次数
         ReturnEvent event = new ReturnEvent(processId, invokeId, returnObj);
         return event;
     }
@@ -74,6 +76,7 @@ class EventBuilderFactory {
     public ImmediatelyReturnEvent buildImmediatelyReturnEvent(final int processId,
                                                               final int invokeId,
                                                               final Object returnObj) {
+        //todo 减少new对象的次数
         ImmediatelyReturnEvent event = new ImmediatelyReturnEvent(processId, invokeId, returnObj);
         return event;
     }
@@ -119,6 +122,7 @@ class EventBuilderFactory {
     public LineEvent buildLineEvent(final int processId,
                                     final int invokeId,
                                     final int lineNumber) {
+        //todo 减少new对象的次数
         LineEvent event = new LineEvent(processId, invokeId, lineNumber);
         return event;
     }
@@ -142,6 +146,7 @@ class EventBuilderFactory {
                                                 final String owner,
                                                 final String name,
                                                 final String desc) {
+        //todo 减少new对象的次数
         CallBeforeEvent event = new CallBeforeEvent(processId, invokeId, lineNumber, isInterface, owner, name, desc);
         return event;
     }
@@ -157,6 +162,7 @@ class EventBuilderFactory {
     public CallReturnEvent buildCallReturnEvent(final int processId,
                                                 final int invokeId,
                                                 final boolean isInterface) {
+        //todo 减少new对象的次数
         CallReturnEvent event = new CallReturnEvent(processId, invokeId, isInterface);
         return event;
     }
@@ -176,17 +182,5 @@ class EventBuilderFactory {
                                                 final Throwable throwException) {
         CallThrowsEvent event = new CallThrowsEvent(processId, invokeId, isInterface, throwException);
         return event;
-    }
-
-    /**
-     * 销毁 event，让内存能更快的释放
-     *
-     * @param event
-     */
-    public void destroy(Event event) {
-        if (event == null) {
-            return;
-        }
-        event.destroy();
     }
 }

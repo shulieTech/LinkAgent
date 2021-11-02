@@ -16,10 +16,10 @@ package com.pamirs.attach.plugin.c3p0.utils;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.pamirs.pradar.*;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -121,7 +121,9 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                }
                 old.close();
             }
             return;
@@ -133,7 +135,9 @@ public class DataSourceWrapUtil {
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                    }
                     old.close();
                 }
             } catch (Throwable e) {
@@ -159,10 +163,14 @@ public class DataSourceWrapUtil {
                 dataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[c3p0] destroyed shadow table datasource successful. url:{} ,username:{}", target.getJdbcUrl(), target.getUser());
+                    }
                     old.close();
                 }
-                logger.info("[c3p0] create shadow datasource successful. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUser(), ptDataSource.getJdbcUrl(), ptDataSource.getUser());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[c3p0] create shadow datasource successful. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUser(), ptDataSource.getJdbcUrl(), ptDataSource.getUser());
+                }
             } catch (Throwable t) {
                 logger.error("[c3p0] init datasource err!", t);
                 ErrorReporter.buildError()
@@ -202,7 +210,7 @@ public class DataSourceWrapUtil {
             return null;
         }
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
-        if(StringUtils.isBlank(driverClassName)) {
+        if (StringUtils.isBlank(driverClassName)) {
             driverClassName = sourceDatasource.getDriverClass();
         }
 

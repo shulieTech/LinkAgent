@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
 import java.lang.reflect.Field;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
@@ -126,7 +127,7 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
             }
         }
         try {
-            config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(),advice.getClassLoader(), config, new ExecutionCall() {
                 @Override
                 public Object call(Object param) {
                     //现在先暂时注释掉因为只有jdk8以上才能用
@@ -215,7 +216,11 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
     public void exceptionTrace(HttpRequest request, Throwable throwable) {
         Pradar.request(request.getMethod());
         Pradar.response(throwable);
-        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        if (throwable != null && (throwable instanceof SocketTimeoutException)) {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_TIMEOUT, HttpClientConstants.PLUGIN_TYPE);
+        } else {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        }
     }
 
 }

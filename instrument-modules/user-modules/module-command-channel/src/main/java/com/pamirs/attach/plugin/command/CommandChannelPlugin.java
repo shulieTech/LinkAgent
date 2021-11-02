@@ -48,7 +48,7 @@ public class CommandChannelPlugin extends ModuleLifecycleAdapter implements Exte
     private SimulatorConfig simulatorConfig;
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         // 启动时，注册zk
         // zk配置命令参数
         ZkClientConfig config = new ZkClientConfig();
@@ -70,6 +70,7 @@ public class CommandChannelPlugin extends ModuleLifecycleAdapter implements Exte
                 .build(config);
         // 注册监听AgendId 客户端唯一标识
         channel.register(Pradar.getAgentId());
+        return true;
     }
 
     @Override

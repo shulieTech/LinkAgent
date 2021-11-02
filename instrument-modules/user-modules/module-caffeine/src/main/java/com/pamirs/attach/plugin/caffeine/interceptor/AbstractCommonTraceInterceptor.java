@@ -41,7 +41,7 @@ public abstract class AbstractCommonTraceInterceptor extends TraceInterceptorAda
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
-        record.setMethod(advice.getBehavior().getName());
+        record.setMethod(advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
         record.setClusterTest(Pradar.isClusterTest());
         record.setService(advice.getTarget().getClass().getName());
@@ -51,7 +51,7 @@ public abstract class AbstractCommonTraceInterceptor extends TraceInterceptorAda
     @Override
     public SpanRecord afterTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
-        record.setMethod(advice.getBehavior().getName());
+        record.setMethod(advice.getBehaviorName());
         record.setResponse(advice.getReturnObj());
         record.setClusterTest(Pradar.isClusterTest());
         record.setService(advice.getTarget().getClass().getName());

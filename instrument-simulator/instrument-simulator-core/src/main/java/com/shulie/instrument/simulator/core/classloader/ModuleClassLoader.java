@@ -20,8 +20,6 @@ import com.shulie.instrument.simulator.core.util.ReflectUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
@@ -40,11 +38,17 @@ import static com.shulie.instrument.simulator.api.util.StringUtil.getJavaClassNa
  */
 @Stealth
 public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
-
-    private final Logger logger = LoggerFactory.getLogger(getClass());
     private final File moduleJarFile;
     private final File tempModuleJarFile;
     private final long checksumCRC32;
+    private final String bizClassLoader;
+
+    static {
+        try {
+            ClassLoader.registerAsParallelCapable();
+        } catch (Throwable e) {
+        }
+    }
 
     private static File copyToTempFile(final File moduleJarFile) throws IOException {
         File tempFile = File.createTempFile("instrument_simulator_module_jar_" + System.nanoTime(), ".jar");
@@ -53,14 +57,15 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
         return tempFile;
     }
 
-    public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, final String moduleId) throws IOException {
-        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), moduleId);
+    public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, final String moduleId, final String bizClassLoader) throws IOException {
+        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), moduleId, bizClassLoader);
     }
 
     private ModuleClassLoader(final ClassLoaderService classLoaderService,
                               final File moduleJarFile,
                               final File tempModuleJarFile,
-                              final String moduleId) throws IOException {
+                              final String moduleId,
+                              final String bizClassLoader) throws IOException {
         /**
          * 定义优化从框架加载的包列表
          * 每次使用拷贝临时文件的方式来加载模块，防止原有模式文件的变更导致运行期出现错误
@@ -75,7 +80,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
                         "com.shulie.instrument.simulator.spi.*",
                         "org.apache.commons.lang.*",
                         "org.slf4j.*",
-                        "ch.qos.logback.*",
+                        "com.shulie.instrument.simulator.dependencies.ch.qos.logback.*",
                         "org.objectweb.asm.*",
                         "javax.annotation.Resource*"
                 )
@@ -83,10 +88,11 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
         this.checksumCRC32 = FileUtils.checksumCRC32(moduleJarFile);
         this.moduleJarFile = moduleJarFile;
         this.tempModuleJarFile = tempModuleJarFile;
+        this.bizClassLoader = bizClassLoader;
 
         try {
             cleanProtectionDomainWhichCameFromModuleJarClassLoader();
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: clean ProtectionDomain in {}'s acc success.", this);
             }
         } catch (Throwable e) {
@@ -151,7 +157,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
 
             // 如果是JDK7+的版本, URLClassLoader实现了Closeable接口，直接调用即可
             if (this instanceof Closeable) {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: JDK is 1.7+, use URLClassLoader[file={}].close()", moduleJarFile);
                 }
                 try {
@@ -173,7 +179,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
             // 对于JDK6的版本，URLClassLoader要关闭起来就显得有点麻烦，这里弄了一大段代码来稍微处理下
             // 而且还不能保证一定释放干净了，至少释放JAR文件句柄是没有什么问题了
             try {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: JDK is less then 1.7+, use File.release()");
                 }
                 final Object ucp = ReflectUtils.getDeclaredJavaFieldValueUnCaught(URLClassLoader.class, "ucp", this);
@@ -208,7 +214,6 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
 
             // 在这里删除掉临时文件
             FileUtils.deleteQuietly(tempModuleJarFile);
-            classLoadingLock.release();
         }
     }
 
@@ -232,7 +237,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
 
     @Override
     public String toString() {
-        return String.format("ModuleClassLoader[crc32=%s;file=%s;]", checksumCRC32, moduleJarFile);
+        return String.format("ModuleClassLoader[crc32=%s;file=%s;bizClassLoader=%s]", checksumCRC32, moduleJarFile, bizClassLoader);
     }
 
     public long getChecksumCRC32() {

@@ -30,6 +30,8 @@ import static com.shulie.instrument.simulator.api.util.StringUtil.isEmpty;
 public class ASMBytecodeDumpService implements BytecodeDumpService {
 
     private final Logger logger = LoggerFactory.getLogger(ASMBytecodeDumpService.class.getName());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
     public static final String BYTECODE_DUMP_BYTECODE = "simulator.dump.bytecode";
     public static final boolean BYTECODE_DUMP_BYTECODE_DEFAULT_VALUE = false;
@@ -143,20 +145,20 @@ public class ASMBytecodeDumpService implements BytecodeDumpService {
 
         if (dumpVerify) {
             if (classLoader == null) {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: classLoader is null, jvmClassName:{}", jvmClassName);
                 }
                 classLoader = ClassLoader.getSystemClassLoader();
             }
             final String dumpVerify = this.disassembler.dumpVerify(bytes, classLoader);
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: {} class:{} verify:{}", dumpMessage, jvmClassName, dumpVerify);
             }
         }
 
         if (dumpASM) {
             final String dumpASM = this.disassembler.dumpASM(bytes);
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: {} class:{} asm:{}", dumpMessage, jvmClassName, dumpASM);
             }
         }

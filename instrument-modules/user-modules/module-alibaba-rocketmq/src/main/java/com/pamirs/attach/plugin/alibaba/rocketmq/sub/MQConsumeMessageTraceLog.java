@@ -84,10 +84,13 @@ public class MQConsumeMessageTraceLog {
     private static void recordSingleMsgBeforeConsume(MQTraceContext ctx, MQTraceBean traceBean, String firstTrace) {
         String service = PradarLogUtils.getService(traceBean);
         String method = ctx.getGroup();
-
         Pradar.startServerInvoke(service, method, traceBean.getContext());
         Pradar.middlewareName(RocketmqConstants.PLUGIN_NAME);
 
+        String group = ctx.getGroup();
+        if (!Pradar.getInvokeContext().isClusterTest() && group.startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
+            Pradar.getInvokeContext().setClusterTest(true);
+        }
         if (firstTrace != null) {
             // 追加 msgId 和第一条消息的 TraceId
             Pradar.callBack(traceBean.getMsgId() + "/" + firstTrace);

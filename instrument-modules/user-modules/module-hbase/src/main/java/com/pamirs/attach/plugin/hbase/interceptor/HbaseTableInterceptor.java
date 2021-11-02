@@ -14,6 +14,9 @@
  */
 package com.pamirs.attach.plugin.hbase.interceptor;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+
 import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
 import com.pamirs.attach.plugin.hbase.util.HBaseTableNameUtils;
 import com.pamirs.pradar.Pradar;
@@ -25,9 +28,6 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 
 /**
  * @Auther: vernon
@@ -44,31 +44,31 @@ public class HbaseTableInterceptor extends ParametersWrapperInterceptorAdaptor {
     @Override
     public Object[] getParameter0(Advice advice) {
         Object[] args = advice.getParameterArray();
+        if(!Pradar.isClusterTest()){
+            return args;
+        }
         ClusterTestUtils.validateClusterTest();
         if (GlobalConfig.getInstance().isShadowHbaseServer()) {
             return args;
         }
-        if (Pradar.isClusterTest()) {
-            if (args.length == 1) {
-                Object obj = args[0];
-                if (obj instanceof String) {
-                    String tableName = (String) obj;
-                    args[0] = HBaseTableNameUtils.replaceShadowTableName(tableName);
-                } else if (obj instanceof byte[]) {
-                    String tableName = new String((byte[]) obj);
-                    args[0] = toBytes(HBaseTableNameUtils.replaceShadowTableName(tableName));
-                } else if (obj instanceof char[]) {
-                    String tableName = new String((char[]) obj);
-                    args[0] = HBaseTableNameUtils.replaceShadowTableName(tableName).toCharArray();
-                } else {
-                    logger.warn("HbaseTableInterceptor arg type is {}", obj.getClass().getName());
-                    throw new PressureMeasureError("HbaseTableInterceptor arg type is " + obj.getClass().getName());
-                }
+        if (args.length == 1) {
+            Object obj = args[0];
+            if (obj instanceof String) {
+                String tableName = (String)obj;
+                args[0] = HBaseTableNameUtils.replaceShadowTableName(tableName);
+            } else if (obj instanceof byte[]) {
+                String tableName = new String((byte[])obj);
+                args[0] = toBytes(HBaseTableNameUtils.replaceShadowTableName(tableName));
+            } else if (obj instanceof char[]) {
+                String tableName = new String((char[])obj);
+                args[0] = HBaseTableNameUtils.replaceShadowTableName(tableName).toCharArray();
             } else {
-                logger.warn("HbaseTableInterceptor arg length is {}", args.length);
-                throw new PressureMeasureError("HbaseTableInterceptor arg length is " + args.length);
+                logger.warn("HbaseTableInterceptor arg type is {}", obj.getClass().getName());
+                throw new PressureMeasureError("HbaseTableInterceptor arg type is " + obj.getClass().getName());
             }
-
+        } else {
+            logger.warn("HbaseTableInterceptor arg length is {}", args.length);
+            throw new PressureMeasureError("HbaseTableInterceptor arg length is " + args.length);
         }
         return args;
     }

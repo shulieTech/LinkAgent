@@ -74,7 +74,7 @@ public class SqlParser {
                         @Override
                         public TableParserResult load(String name) throws Exception {
                             try {
-                                String[] args = StringUtils.split(name, "$$$$");
+                                String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
                                 String sql = args[0];
                                 String dbType = args[1];
                                 return parseTables(sql, dbType);
@@ -91,7 +91,7 @@ public class SqlParser {
                     new CacheLoader<String, String>() {
                         @Override
                         public String load(String name) throws Exception {
-                            String[] args = StringUtils.split(name, "$$$$");
+                            String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
                             String sql = args[0];
                             String key = args[1];
                             String dbType = args[2];
@@ -106,7 +106,7 @@ public class SqlParser {
                     new CacheLoader<String, String>() {
                         @Override
                         public String load(String name) throws Exception {
-                            String[] args = StringUtils.split(name, "$$$$");
+                            String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
                             String sql = args[0];
                             String key = args[1];
                             String dbType = args[2];
@@ -133,7 +133,7 @@ public class SqlParser {
         try {
             return cacheSqlTablesBuilder.get(sql + "$$$$" + innerDbtype);
         } catch (Throwable e) {
-            LOGGER.error("parse sql tables error. sql={}, dbType={}", sql, dbType, e);
+            LOGGER.error("parse sql tables error. sql={}, dbType={} ", sql, dbType, e);
             return TableParserResult.EMPTY;
         }
     }
@@ -299,6 +299,19 @@ public class SqlParser {
         return Collections.EMPTY_MAP;
     }
 
+    private static String toShadowTable(String table, ShadowDatabaseConfig config) {
+        if (!config.isShadowDatabaseWithTable()) {
+            return table;
+        }
+        if (!Pradar.isShadowDatabaseWithShadowTable()) {
+            return table;
+        }
+        if (PradarInternalService.isClusterTestPrefix(table)) {
+            return table;
+        }
+        return PradarInternalService.addClusterTestPrefix(table);
+    }
+
     private static String toShadowTable(String table) {
         if (!Pradar.isShadowDatabaseWithShadowTable()) {
             return table;
@@ -386,7 +399,7 @@ public class SqlParser {
                     }
 
                     String shadowSchema = toShadowSchema(schema, config);
-                    String shadowTable = toShadowTable(table);
+                    String shadowTable = toShadowTable(table, config);
                     if (StringUtils.isBlank(shadowSchema)) {
                         map.put(fullTable, shadowTable);
                     } else {
@@ -405,6 +418,22 @@ public class SqlParser {
         }
 
         return val.toString();
+    }
+
+    public static void main(String[] args) throws SQLException {
+//        String sql = "insert into \"C##PYT_TEST\".M_USER(id,name,age) values(?,?,?)";
+//        System.out.println(parseAndReplaceSchema(sql, "aaa", "oracle"));
+        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>());
+        ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
+        shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
+        shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");
+        shadowDatabaseConfig.getBusinessShadowTables().put("user2", "pt_user2");
+        GlobalConfig.getInstance().getShadowDatasourceConfigs().put("jdbc:mysql://127.0.0.1:3306/testdb|root", shadowDatabaseConfig);
+        System.out.println(parseAndReplaceTableNames(" select `testdb`.`user`.`id`, `testdb`.`user`.`name`, `testdb`.`user`.`password`, `testdb`.`user`.`createTime`, `testdb`.`user`.`updateTime` from `testdb`.`user` limit ? ",
+                "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql"));
+
+        System.out.println(parseAndReplaceTableNames("SELECT r.*, c.org_name, c.org_code, (SELECT org_name FROM t_city WHERE org_code = c.parent_code) provinceName FROM t_route_rule r LEFT JOIN t_city c ON c.sys_tenant_id = 'CLOVER_T3' AND r.city_uuid = c.uuid WHERE r.sys_tenant_id = 'CLOVER_T3' AND r.status != -1 AND r.uuid = ? AND r.status = ? AND r.rule_name LIKE CONCAT('%', ?, '%') AND r.rule_type = ? AND r.type_time = ? AND r.business_type = ? AND r.car_level = ? AND c.org_code = ? AND r.city_uuid = ? AND r.area_type = ? AND r.city_uuid IN (?) AND content->'$.examineYear' = ? AND r.type_trip = ? AND r.extend_biz_type = ? ORDER BY r.status DESC, r.effective_time DESC, r.version_number DESC, r.update_time DESC",
+                "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql"));
     }
 
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName) throws SQLException {

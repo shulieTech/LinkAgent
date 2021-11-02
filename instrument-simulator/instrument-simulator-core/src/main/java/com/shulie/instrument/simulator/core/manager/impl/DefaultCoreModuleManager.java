@@ -19,6 +19,8 @@ import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
+import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
+import com.shulie.instrument.simulator.api.obj.ModuleLoadStatusEnum;
 import com.shulie.instrument.simulator.api.resource.*;
 import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
@@ -33,6 +35,7 @@ import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
 import com.shulie.instrument.simulator.core.manager.ModuleLoader;
 import com.shulie.instrument.simulator.core.manager.*;
+import com.shulie.instrument.simulator.core.util.DefaultModuleLoadInfoManagerUtils;
 import com.shulie.instrument.simulator.core.util.ModuleSpecUtils;
 import com.shulie.instrument.simulator.core.util.VersionUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -63,6 +66,8 @@ import static org.apache.commons.lang.reflect.FieldUtils.writeField;
 public class DefaultCoreModuleManager implements CoreModuleManager {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
     private CoreConfigure config;
     private Instrumentation inst;
@@ -157,7 +162,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
     @Override
     public void onStartup() {
-        this.providerManager.onStart(config.getNamespace(), simulatorConfig);
+        this.providerManager.onStart(simulatorConfig);
         /**
          * 针对需要开放给业务类加载器的类文件转换器，这个类文件转换器中负责对业务类加载器进行 jar 包的注入
          */
@@ -179,7 +184,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
     @Override
     public void onShutdown() {
-        this.providerManager.onShutdown(config.getNamespace(), simulatorConfig);
+        this.providerManager.onShutdown(simulatorConfig);
         this.inst.removeTransformer(this.defaultClassFileTransformer);
         this.switcherManager.close();
         this.config = null;
@@ -263,12 +268,23 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
                 case MODULE_ACTIVE: {
                     try {
-                        moduleLifecycle.onActive();
+
+                        boolean result = moduleLifecycle.onActive();
+                        if (result) {
+                            DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
+                                    getModuleLoadInfos().get(moduleId).setStatus(ModuleLoadStatusEnum.LOAD_SUCCESS);
+                        } else {
+                            DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
+                                    getModuleLoadInfos().get(moduleId).setStatus(ModuleLoadStatusEnum.LOAD_DISABLE);
+                        }
                         //发布事件
                         if (coreModule.getModuleSpec().isSwitchAuto()) {
                             switcherManager.switchOn(coreModule.getModuleId());
                         }
                     } catch (Throwable throwable) {
+                        logger.error("fail to active module :{}", moduleId, throwable);
+                        DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
+                                getModuleLoadInfos().get(moduleId).setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
                     }
                     break;
@@ -291,11 +307,16 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             switch (eventType) {
                 case MODULE_ACTIVE: {
                     try {
+                        DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
+                                getModuleLoadInfos().get(moduleId).setStatus(ModuleLoadStatusEnum.LOAD_SUCCESS);
                         //发布事件
                         if (coreModule.getModuleSpec().isSwitchAuto()) {
                             switcherManager.switchOn(coreModule.getModuleId());
                         }
+
                     } catch (Throwable throwable) {
+                        DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
+                                getModuleLoadInfos().get(moduleId).setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
                     }
                     break;
@@ -345,13 +366,13 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                    final ClassLoaderFactory classLoaderFactory) throws ModuleException {
 
         if (loadedModuleMap.containsKey(moduleSpec.getModuleId())) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: module already loaded. module={};", moduleSpec);
             }
             return;
         }
 
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: loading module, module={};class={};module-jar={};",
                     moduleSpec,
                     module.getClass().getName(),
@@ -391,12 +412,12 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 new ReleaseResource<ModuleEventWatcher>(
                         SimulatorGuard.getInstance().doGuard(
                                 ModuleEventWatcher.class,
-                                new DefaultModuleEventWatcher(inst, classDataSource, coreModule, config.isEnableUnsafe(), config.getNamespace(), eventListenerHandler)
+                                new DefaultModuleEventWatcher(inst, classDataSource, coreModule, config.isEnableUnsafe(), eventListenerHandler)
                         )
                 ) {
                     @Override
                     public void release() {
-                        if (logger.isInfoEnabled()) {
+                        if (isInfoEnabled) {
                             logger.info("SIMULATOR: release all SimulatorClassFileTransformer for module={}", coreModule.getModuleId());
                         }
                         final ModuleEventWatcher moduleEventWatcher = get();
@@ -446,8 +467,17 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             for (final Field resourceField : getFieldsListWithAnnotation(target.getClass(), Resource.class)) {
                 final Class<?> fieldType = resourceField.getType();
 
+                //ModuleLoadInfoManager对象注入
+                if (ModuleLoadInfoManager.class.isAssignableFrom(fieldType)) {
+                    writeField(
+                            resourceField,
+                            target,
+                            DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager(),
+                            true
+                    );
+                }
                 // LoadedClassDataSource对象注入
-                if (LoadedClassDataSource.class.isAssignableFrom(fieldType)) {
+                else if (LoadedClassDataSource.class.isAssignableFrom(fieldType)) {
                     writeField(
                             resourceField,
                             target,
@@ -636,7 +666,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     }
 
     private void markActiveOnLoadIfNecessary(final CoreModule coreModule) throws ModuleException {
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: active module when OnLoad, module={}", coreModule.getModuleId());
         }
         if (coreModule.isActiveOnLoad()) {
@@ -675,13 +705,13 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     @Override
     public CoreModule unload(CoreModule coreModule, boolean isIgnoreModuleException, boolean frozen) throws ModuleException {
         if (!coreModule.isLoaded()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: module already unLoaded. module={};", coreModule.getModuleId());
             }
             return coreModule;
         }
 
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: unloading module, module={};class={};",
                     coreModule.getModuleId(),
                     coreModule.getModule().getClass().getName()
@@ -732,7 +762,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
     @Override
     public void unloadAll() {
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: force unloading all loaded modules:{}", loadedModuleMap.keySet());
         }
         //先卸载所有有开关依赖的模块
@@ -817,12 +847,12 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         // 如果模块已经被激活，则直接幂等返回
         if (coreModule.isActivated()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: module already activated. module={};", coreModule.getModuleId());
             }
             return;
         }
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: active module, module={};class={};module-jar={};",
                     coreModule.getModuleId(),
                     coreModule.getModule().getClass().getName(),
@@ -859,13 +889,13 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         // 如果模块已经被冻结(尚未被激活)，则直接幂等返回
         if (!coreModule.isActivated()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: module already frozen. module={};", coreModule.getModuleId());
             }
             return;
         }
 
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: frozen module, module={};class={};module-jar={};",
                     coreModule.getModuleId(),
                     coreModule.getModule().getClass().getName(),
@@ -1008,7 +1038,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             // 如果之前已经加载过了相同ID的模块，则放弃当前模块的加载
             if (loadedModuleMap.containsKey(moduleSpec.getModuleId())) {
                 final CoreModule existedCoreModule = get(moduleSpec.getModuleId());
-                if (logger.isInfoEnabled()) {
+                if (isInfoEnabled) {
                     logger.info("SIMULATOR: module already loaded, ignore load this module. expected:module={};class={};loader={}|existed:class={};loader={};",
                             moduleSpec.getModuleId(),
                             moduleClass, classLoaderFactory,
@@ -1029,7 +1059,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             );
 
             // 之前没有加载过，这里进行加载
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: found new module, prepare to load. module={};class={};loader={};",
                         moduleSpec.getModuleId(),
                         moduleClass,
@@ -1104,7 +1134,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      * @param action
      */
     private void loadModule(final ModuleSpec moduleSpec, String action) {
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: prepare to load module {} ,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
         }
         if (!moduleSpec.getFile().exists() || !moduleSpec.getFile().canRead()) {
@@ -1139,9 +1169,10 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule());
             classLoaderService.load(moduleSpec, moduleClassLoader);
         } catch (Throwable e) {
+            logger.info("load module [{}] fail, set module invalid", moduleSpec.getModuleId(), e);
             moduleSpec.setValid(false);
         }
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: {} modules[{}]: load module success. module-lib={}", action, moduleSpec.getModuleId(), moduleSpec.getFile());
         }
         if (CollectionUtils.isNotEmpty(moduleSpec.getDependencies())) {
@@ -1150,7 +1181,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
              */
             if (switcherManager.isAllSwitchOn(moduleSpec.getDependencies())) {
                 loadModule(moduleSpec);
-                if (logger.isInfoEnabled()) {
+                if (isInfoEnabled) {
                     logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
                 }
             } else {
@@ -1162,7 +1193,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                          */
                         if (switcherManager.isAllSwitchOn(moduleSpec.getDependencies())) {
                             loadModule(moduleSpec);
-                            if (logger.isInfoEnabled()) {
+                            if (isInfoEnabled) {
                                 logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
                             }
                         } else {
@@ -1178,7 +1209,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         } else {
             loadModule(moduleSpec);
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
             }
         }
@@ -1199,7 +1230,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
     @Override
     public synchronized CoreModuleManager reset() throws ModuleException {
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules:{}", loadedModuleMap.keySet());
         }
 
@@ -1211,16 +1242,32 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         // 2. 先加载所有的系统模块
         List<File> systemModuleLibJars = getAllModuleLibJar(systemModuleLibs);
         List<ModuleSpec> systemModuleSpecs = ModuleSpecUtils.loadModuleSpecs(systemModuleLibJars, true);
-        loadModules(systemModuleSpecs, "load");
 
         // 3. 加载所有用户自定义模块, 采用异步加载方式加载用户自定义模块
         List<File> userModuleLibJars = getAllModuleLibJar(userModuleLibs);
         List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false);
+        initAllModuleInfos(systemModuleSpecs);
+        initAllModuleInfos(userModuleSpecs);
+
+        //加载
+        loadModules(systemModuleSpecs, "load");
         loadModules(userModuleSpecs, "load");
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules finished :{}", loadedModuleMap.keySet());
         }
         return this;
+    }
+
+    /**
+     * 初始化所有要加载的模块
+     */
+    private void initAllModuleInfos(List<ModuleSpec> moduleSpecList) {
+        for (ModuleSpec moduleSpec : moduleSpecList) {
+            ModuleLoadInfo moduleLoadInfo = new ModuleLoadInfo();
+            moduleLoadInfo.setModuleId(moduleSpec.getModuleId());
+            moduleLoadInfo.setStatus(ModuleLoadStatusEnum.UNLOAD);
+            DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().addModuleLoadInfo(moduleLoadInfo);
+        }
     }
 
     /**
@@ -1240,7 +1287,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
 
         if (!hasRef) {
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: ModuleClassLoaderFactory={} will be close: all module unloaded.", classLoaderFactory);
             }
             classLoaderFactory.release();
@@ -1263,7 +1310,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      * 找出有变动的模块文件，有且仅有改变这些文件所对应的模块
      */
     private void softFlush() {
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: soft-flushing modules:{}", loadedModuleMap.keySet());
         }
 
@@ -1285,13 +1332,13 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 checksumCRC32s.add(checksumCRC32);
                 // 如果CRC32已经在已加载的模块集合中存在，则说明这个文件没有变动，忽略
                 if (isChecksumCRC32Existed(checksumCRC32)) {
-                    if (logger.isInfoEnabled()) {
+                    if (isInfoEnabled) {
                         logger.info("SIMULATOR: soft-flushing module: module-jar is not changed, ignored. module-jar={};CRC32={};", jarFile, checksumCRC32);
                     }
                     continue;
                 }
 
-                if (logger.isInfoEnabled()) {
+                if (isInfoEnabled) {
                     logger.info("SIMULATOR: soft-flushing module: module-jar is changed, will be flush. module-jar={};CRC32={};", jarFile, checksumCRC32);
                 }
                 appendJarFiles.add(jarFile);
@@ -1303,7 +1350,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
                 // 如果是系统模块目录则跳过
                 if (isOptimisticDirectoryContainsFile(systemModuleLibDir, coreModule.getJarFile())) {
-                    if (logger.isDebugEnabled()) {
+                    if (isDebugEnabled) {
                         logger.debug("SIMULATOR: soft-flushing module: module-jar is in system-lib, will be ignored. module-jar={};system-lib={};",
                                 coreModule.getJarFile(),
                                 systemModuleLibDir
@@ -1314,7 +1361,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
                 // 如果CRC32已经在这次待加载的集合中，则说明这个文件没有变动，忽略
                 if (checksumCRC32s.contains(classLoaderFactory.getChecksumCRC32())) {
-                    if (logger.isInfoEnabled()) {
+                    if (isInfoEnabled) {
                         logger.info("SIMULATOR: soft-flushing module: module-jar already loaded, ignored. module-jar={};CRC32={};",
                                 coreModule.getJarFile(),
                                 classLoaderFactory.getChecksumCRC32()
@@ -1322,7 +1369,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                     }
                     continue;
                 }
-                if (logger.isInfoEnabled()) {
+                if (isInfoEnabled) {
                     logger.info("SIMULATOR: soft-flushing module: module-jar is changed, module will be reload/remove. module={};module-jar={};",
                             coreModule.getModuleId(),
                             coreModule.getJarFile()
@@ -1352,7 +1399,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      * @throws ModuleException 模块操作失败
      */
     private void forceFlush() throws ModuleException {
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: force-flushing modules:{}", loadedModuleMap.keySet());
         }
 
@@ -1369,12 +1416,12 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
 
         // 记录下即将被卸载的模块ID集合
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             final Set<String> moduleIds = new LinkedHashSet<String>();
             for (final CoreModule coreModule : waitingUnloadCoreModules) {
                 moduleIds.add(coreModule.getModuleId());
             }
-            if (logger.isInfoEnabled()) {
+            if (isInfoEnabled) {
                 logger.info("SIMULATOR: force-flush modules: will be unloading modules : {}", moduleIds);
             }
         }

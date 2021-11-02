@@ -22,6 +22,8 @@ public final class ShadowJobConstants {
 
     public final static String DYNAMIC_FIELD_JOB_RUNNER_MAP = "JOB_RUNNER_MAP";
     public final static String DYNAMIC_FIELD_SPRING_CRON_TASKS = "cronTasks";
+    public final static String DYNAMIC_FIELD_SPRING_FIX_RATE_TASKS = "fixedRateTasks";
+    public final static String DYNAMIC_FIELD_SPRING_FIX_DELAY_TASKS = "fixedDelayTasks";
 
     /**
      * spring 的org.springframework.aop.framework.ReflectiveMethodInvocation 拦截器列表名称

@@ -14,8 +14,18 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
+import java.io.File;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
+
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.Result;
@@ -28,11 +38,6 @@ import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.lang.reflect.Type;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -59,12 +64,12 @@ public class ExternalAPIImpl implements ExternalAPI {
             StringBuilder builder = new StringBuilder(agentDownloadUrl);
             if (StringUtils.indexOf(agentDownloadUrl, '?') != -1) {
                 builder.append("&appName=").append(agentConfig.getAppName()).append("&agentId=").append(
-                        agentConfig.getAgentId());
+                    agentConfig.getAgentId());
             } else {
                 builder.append("?appName=").append(agentConfig.getAppName()).append("&agentId=").append(
-                        agentConfig.getAgentId());
+                    agentConfig.getAgentId());
             }
-            return DownloadUtils.download(builder.toString(), targetPath);
+            return DownloadUtils.download(builder.toString(), targetPath, agentConfig.getUserAppKey());
         }
         return null;
     }
@@ -119,8 +124,7 @@ public class ExternalAPIImpl implements ExternalAPI {
          * 这个地方如果服务端没有最新需要执行的命令，则建议返回空,也可以返回最后一次的命令
          */
         try {
-            Type type = new TypeReference<Result<CommandPacket>>() {
-            }.getType();
+            Type type = new TypeReference<Result<CommandPacket>>() {}.getType();
             Result<CommandPacket> response = JSON.parseObject(resp, type);
             if (!response.isSuccess()) {
                 logger.error("fetch agent command got a fault response. resp={}", resp);

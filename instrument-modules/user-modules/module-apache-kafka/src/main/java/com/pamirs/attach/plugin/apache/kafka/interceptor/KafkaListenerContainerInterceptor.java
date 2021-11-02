@@ -14,9 +14,10 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
+import com.pamirs.attach.plugin.apache.kafka.util.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -36,7 +37,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.support.AbstractRefreshableApplicationContext;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
+import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -57,10 +62,14 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
     @Resource
     private ModuleController moduleController;
 
+
     @Override
     public void doBefore(Advice advice) {
         if (PradarSpringUtil.getBeanFactory() == null) {
-            return;
+            if (!tryRefreshBeanFactory(advice.getTarget())) {
+                logger.warn("can't init shadow consumer because spring beanFactory is null, plz init spring context!");
+                return;
+            }
         }
         Object thisObj = advice.getTarget();
         /**
@@ -73,11 +82,16 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         try {
             externalContainer = Reflect.on(thisObj).get("this$0");
         } catch (ReflectException e) {
-            logger.warn("SIMULATOR: kafka consumer register error. can't found field this$0. {}", thisObj.getClass().getName());
+            logger.warn("SIMULATOR: kafka consumer register error. can't found field this$0. {}",
+                    thisObj.getClass().getName());
             return;
         }
         if (externalContainer == null) {
             logger.warn("SIMULATOR: kafka consumer register error. field this$0 is null. {}", thisObj.getClass().getName());
+            return;
+        }
+        if (externalContainer instanceof KafkaMessageListenerContainer &&
+                Pradar.isClusterTestPrefix(((KafkaMessageListenerContainer) externalContainer).getBeanName())) {
             return;
         }
 
@@ -96,8 +110,9 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         if (container == null) {
             container = externalContainer;
-            logger.warn("SIMULATOR: kafka consumer register error. field {} is null. {}", KafkaConstants.REFLECT_FIELD_CONTAINER, externalContainer.getClass().getName());
-//            return;
+            logger.warn("SIMULATOR: kafka consumer register error. field {} is null. {}",
+                    KafkaConstants.REFLECT_FIELD_CONTAINER, externalContainer.getClass().getName());
+            //            return;
         }
 
         Object containerProperties = null;
@@ -107,13 +122,15 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         }
         if (containerProperties == null) {
             try {
-                containerProperties = Reflect.on(container).call(KafkaConstants.REFLECT_METHOD_GET_CONTAINER_PROPERTIES).get();
+                containerProperties = Reflect.on(container).call(KafkaConstants.REFLECT_METHOD_GET_CONTAINER_PROPERTIES)
+                        .get();
             } catch (ReflectException e) {
             }
         }
 
         if (containerProperties == null) {
-            logger.warn("SIMULATOR: kafka consumer register error. got a null containerProperties from {}.", container.getClass().getName());
+            logger.warn("SIMULATOR: kafka consumer register error. got a null containerProperties from {}.",
+                    container.getClass().getName());
             return;
         }
 
@@ -127,6 +144,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
          */
         List<String> topicList = getShadowTopics(containerProperties, groupId);
         if (CollectionUtils.isEmpty(topicList)) {
+            logger.warn("SIMULATOR: shadow kafka consumer config not found  for groupId : {} containerProperties : {}",
+                    groupId, containerProperties);
             return;
         }
         Object messageListener = null;
@@ -136,16 +155,20 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         }
 
         if (null == messageListener) {
-            logger.warn("SIMULATOR: kafka consumer register error. got a null messageListener from {}.", containerProperties);
+            logger.warn("SIMULATOR: kafka consumer register error. got a null messageListener from {}.",
+                    containerProperties);
             return;
         }
 
         Object ptObject = null;
         try {
-            ptObject = Reflect.on(containerProperties.getClass()).create(new Object[]{topicList.toArray(new String[0])}).get();
+            ptObject = Reflect.on(containerProperties.getClass()).create(new Object[]{topicList.toArray(new String[0])})
+                    .get();
         } catch (ReflectException e) {
         }
         if (null == ptObject) {
+            logger.warn("SIMULATOR: kafka consumer register error. got a null messageListener from {}.",
+                    containerProperties);
             return;
         }
 
@@ -177,7 +200,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             return;
         }
 
-        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ConcurrentMessageListenerContainer.class)
+        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(
+                ConcurrentMessageListenerContainer.class)
                 .setInitMethodName("doStart")
                 .addConstructorArgValue(consumerFactory)
                 .addConstructorArgValue(ptObject)
@@ -185,6 +209,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         // 注册bean
         defaultListableBeanFactory.registerBeanDefinition(beanName, beanDefinitionBuilder.getBeanDefinition());
+        saveTopicGroupInfo(topicList, groupId, beanName, System.identityHashCode(thisObj));
 
         /**
          * 添加释放资源,会在模块卸载的时候调用
@@ -203,6 +228,56 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             }
         });
         PradarSpringUtil.getBeanFactory().getBean(beanName);
+        ConfigCache.setInited(advice.getTarget());
+        if (logger.isInfoEnabled()) {
+            logger.info("SIMULATOR: kafka consumer register successful!. groupId : {}, topic : {}",
+                    Pradar.addClusterTestPrefix(groupId), topicList);
+        }
+    }
+
+    private void saveTopicGroupInfo(List<String> topics, String group, String beanName, int hashcode) {
+        if (topics.size() == 1) {
+            ShadowConsumerHolder.topicGroupBeanNameMap.put(topics.get(0) + "#" + group, beanName);
+            ShadowConsumerHolder.topicGroupCodeMap.put(topics.get(0) + "#" + group, hashcode);
+            return;
+        }
+        StringBuilder s = new StringBuilder();
+        for (String topic : topics) {
+            s.append(topic).append("#");
+        }
+        ShadowConsumerHolder.topicGroupCodeMap.put(s.append(group).toString(), hashcode);
+        ShadowConsumerHolder.topicGroupBeanNameMap.put(s.append(group).toString(), beanName);
+    }
+
+    private boolean tryRefreshBeanFactory(Object target) {
+        try {
+            KafkaMessageListenerContainer kafkaMessageListenerContainer = Reflect.on(target).get("this$0");
+            ApplicationEventPublisher applicationEventPublisher
+                    = kafkaMessageListenerContainer.getApplicationEventPublisher();
+            if (applicationEventPublisher instanceof AnnotationConfigApplicationContext) {
+                PradarSpringUtil.refreshBeanFactory(
+                        (DefaultListableBeanFactory) ((AnnotationConfigApplicationContext) applicationEventPublisher).getAutowireCapableBeanFactory());
+                return true;
+            } else if (applicationEventPublisher instanceof AbstractRefreshableApplicationContext) {
+                PradarSpringUtil.refreshBeanFactory(
+                        (DefaultListableBeanFactory) ((AbstractRefreshableApplicationContext) applicationEventPublisher).getAutowireCapableBeanFactory());
+                return true;
+            } else {
+                try {
+                    PradarSpringUtil.refreshBeanFactory(
+                            (DefaultListableBeanFactory) Reflect.on(applicationEventPublisher)
+                                    .call("getAutowireCapableBeanFactory").get());
+                    return true;
+                } catch (ReflectException e) {
+                    logger.warn(
+                            "tryRefreshBeanFactory fail spring-kafka version is not support, applicationEventPublisher is a "
+                                    + applicationEventPublisher.getClass().getName());
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("kafka tryRefreshBeanFactory fail", e);
+        }
+        return false;
     }
 
     private String toShadowTopicString(List<String> list) {
@@ -247,7 +322,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         if (groupId != null && !Pradar.isClusterTestPrefix(groupId)) {
             try {
-                Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_GROUP_ID, Pradar.addClusterTestPrefix(groupId));
+                Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_GROUP_ID,
+                        Pradar.addClusterTestPrefix(groupId));
             } catch (ReflectException e) {
             }
         }
@@ -307,7 +383,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
                  * topic 都需要在白名单中配置好才可以启动
                  */
                 if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
-                    if (PradarSwitcher.whiteListSwitchOn() && GlobalConfig.getInstance().getMqWhiteList().contains(topic) || GlobalConfig.getInstance().getMqWhiteList().contains(topic + '#' + groupId)) {
+                    if (PradarSwitcher.whiteListSwitchOn() && GlobalConfig.getInstance().getMqWhiteList().contains(topic)
+                            || GlobalConfig.getInstance().getMqWhiteList().contains(topic + '#' + groupId)) {
                         topicList.add(Pradar.addClusterTestPrefix(topic));
                     }
                 }

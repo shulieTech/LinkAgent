@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.apache.rocketmq.common;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,10 +26,10 @@ import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.*;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
+import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -39,6 +40,7 @@ import org.apache.rocketmq.client.consumer.listener.MessageListener;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.impl.consumer.RebalanceImpl;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.slf4j.Logger;
@@ -120,7 +122,7 @@ public class ConsumerRegistry {
      * @return
      */
     public static boolean hasRegistered(DefaultMQPushConsumer defaultMQPushConsumer) {
-        if (!PradarSwitcher.clusterTestSwitchOn()) {
+        if (!PradarSwitcher.clusterTestSwitchOn() || PradarSwitcher.silenceSwitchOn()) {
             return true;
         }
         if (caches.containsKey(defaultMQPushConsumer)) {
@@ -340,6 +342,7 @@ public class ConsumerRegistry {
     }
 
     private static void addListener(final DefaultMQPushConsumer businessConsumer) {
+        final RebalanceImpl rebalance = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl();
         final PradarEventListener listener = new PradarEventListener() {
             @Override
             public EventResult onEvent(IEvent event) {
@@ -356,20 +359,19 @@ public class ConsumerRegistry {
                             "Apache-RocketMQ PT Consumer start failed: " + e.getMessage());
                     }
                     return EventResult.success("apache-rocketmq-plugin-open");
-                } else if (event instanceof ClusterTestSwitchOffEvent) {
-                    try {
-                        //从配置中取出消费者关闭
-                        DefaultMQPushConsumer consumer = caches.remove(businessConsumer);
-                        if (consumer != null) {
-                            consumer.shutdown();
-                            shadowConsumers.remove(consumer);
+                } else if (event instanceof ClusterTestSwitchOffEvent || event instanceof SilenceSwitchOnEvent) {
+                    return shutdownShadowConsumer(businessConsumer);
+                } else if (event instanceof ShadowConsumerDisableEvent) {
+                    String group = businessConsumer.getConsumerGroup();
+                    Set<String> topics = rebalance.getSubscriptionInner().keySet();
+                    for (String topic : topics) {
+                        List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent) event).getTarget();
+                        for (ShadowConsumerDisableInfo disableInfo : disableInfos) {
+                            if (topic.equals(disableInfo.getTopic()) && group.equals(disableInfo.getConsumerGroup())) {
+                                return shutdownShadowConsumer(businessConsumer);
+                            }
                         }
-                    } catch (Throwable e) {
-                        logger.error("", e);
-                        return EventResult.error("apache-rocketmq-plugin-close",
-                            "Apache-RocketMQ PT Consumer close failed: " + e.getMessage());
                     }
-                    return EventResult.success("apache-rocketmq-plugin-close");
                 }
                 return EventResult.IGNORE;
             }
@@ -383,5 +385,20 @@ public class ConsumerRegistry {
         if (old == null) {
             EventRouter.router().addListener(listener);
         }
+    }
+
+    private static EventResult shutdownShadowConsumer(DefaultMQPushConsumer businessConsumer) {
+        try {
+            //从配置中取出消费者关闭
+            DefaultMQPushConsumer consumer = caches.remove(businessConsumer);
+            if (consumer != null) {
+                consumer.shutdown();
+                shadowConsumers.remove(consumer);
+            }
+        } catch (Throwable e) {
+            logger.error("", e);
+            return EventResult.error("apache-rocketmq-plugin-close", "Apache-RocketMQ PT Consumer close failed: " + e.getMessage());
+        }
+        return EventResult.success("apache-rocketmq-plugin-close");
     }
 }

@@ -25,6 +25,21 @@ public class SimulatorClassUtils {
     private static final String SIMULATOR_FAMILY_CLASS_PREFIX = SIMULATOR_FAMILY_CLASS_RES_PREFIX.replace('/', '.');
 
     /**
+     * 是否是 Simulator 的类加载器
+     *
+     * @param loader
+     * @return
+     */
+    public static boolean isSimulatorClassLoader(final ClassLoader loader) {
+        if (null != loader
+                && isSimulatorClassPrefix(loader.getClass().getName())) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * 是否是Simulator家族所管理的类
      * <p>
      * Simulator家族所管理的类包括：

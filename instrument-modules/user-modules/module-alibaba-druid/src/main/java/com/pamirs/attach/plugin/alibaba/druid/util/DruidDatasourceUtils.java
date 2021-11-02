@@ -209,7 +209,7 @@ public class DruidDatasourceUtils {
             String validConnectionCheckerClass = ptDataSourceConf.getProperty("validConnectionCheckerClass");
             if (StringUtils.isNotBlank(validConnectionCheckerClass)) {
                 target.setValidConnectionCheckerClassName(validConnectionCheckerClass);
-            } else {
+            } else if (StringUtils.isNotBlank(sourceDatasource.getValidConnectionCheckerClassName())){
                 target.setValidConnectionCheckerClassName(sourceDatasource.getValidConnectionCheckerClassName());
             }
 

@@ -75,7 +75,7 @@ public class BurlapServletServiceInterceptor extends TraceInterceptorAdaptor {
         }
 
         WrapperRequest request = (WrapperRequest) args[0];
-        if (!request.getMethod().equalsIgnoreCase("POST")) {
+        if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
 

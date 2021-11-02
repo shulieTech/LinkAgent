@@ -71,10 +71,10 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     };
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         boolean isPushPerfEnabled = simulatorConfig.getBooleanProperty("pradar.perf.push.enabled", true);
         if (!isPushPerfEnabled) {
-            return;
+            return false;
         }
 
         threadParams = new HashMap<String, String>();
@@ -97,6 +97,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 }
             }
         }, 5, 5, TimeUnit.SECONDS);
+        return true;
     }
 
     private void collect() {

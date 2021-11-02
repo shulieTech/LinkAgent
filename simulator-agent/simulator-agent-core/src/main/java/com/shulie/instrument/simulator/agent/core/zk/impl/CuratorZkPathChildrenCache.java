@@ -248,7 +248,7 @@ public class CuratorZkPathChildrenCache implements ZkPathChildrenCache {
                     }
                 }
             } catch (Throwable e) {
-                logger.warn("fail to reset in watch event, path={}", path, e);
+                logger.error("fail to reset in watch event, path={}", path, e);
             }
         }
     };
@@ -262,7 +262,7 @@ public class CuratorZkPathChildrenCache implements ZkPathChildrenCache {
                             .inBackground(backgroundCallback).forPath(path);
                 }
             } catch (Throwable e) {
-                logger.warn("fail to reset in watch event, path={}", path, e);
+                logger.error("fail to reset in watch event, path={}", path, e);
             }
         }
     };

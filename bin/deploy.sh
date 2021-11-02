@@ -22,8 +22,6 @@ cp -r $SIMULATOR_TARGET ${HOME}/deploy/
 
 cd $INSTRUMENT_SIMULATOR_TARGET/
 
-cp ${HOME}/deploy/license.lic simulator/
-
 zip -r simulator.zip simulator
 tar -zcvf simulator.tar.gz simulator
 

@@ -40,7 +40,7 @@ public class HikariCPPlugin extends ModuleLifecycleAdapter implements ExtensionM
     private static Logger logger = LoggerFactory.getLogger(HikariCPPlugin.class.getName());
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         //com.zaxxer.hikari.HikariDataSource.getConnection
         enhanceTemplate.enhance(this, "com.zaxxer.hikari.HikariDataSource",
                 new EnhanceCallback() {
@@ -62,5 +62,6 @@ public class HikariCPPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         method.addInterceptor(Listeners.of(DataSourceConstructorInterceptor.class));
                     }
                 });
+        return true;
     }
 }

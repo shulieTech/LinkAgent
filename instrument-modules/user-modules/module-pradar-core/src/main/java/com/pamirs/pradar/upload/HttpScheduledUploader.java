@@ -93,7 +93,9 @@ public abstract class HttpScheduledUploader<T> extends HttpUploader<T> {
                 if (!httpResult.isSuccess()) {
                     LOGGER.error("Agent Health Check failed，access Config Center failed! HttpStatus Code: " + httpResult.getStatus() + ",message ：" + httpResult.getResult());
                 } else {
-                    LOGGER.info("Agent Health Check successful！");
+                    if (LOGGER.isInfoEnabled()) {
+                        LOGGER.info("Agent Health Check successful！");
+                    }
                 }
                 uploadCount++;
             }

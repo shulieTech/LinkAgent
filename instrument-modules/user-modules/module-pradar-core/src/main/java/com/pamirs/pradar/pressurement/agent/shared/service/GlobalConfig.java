@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.adapter.JobAdapter;
 import com.pamirs.pradar.internal.config.*;
 
@@ -71,6 +72,11 @@ public final class GlobalConfig {
      * 所有的入口规则
      */
     private Set<String> traceRules = new HashSet<String>();
+
+    /**
+     * 探针动态参数
+     */
+    private SimulatorDynamicConfig simulatorDynamicConfig = new SimulatorDynamicConfig(new HashMap<String, String>(1, 1));
     /**
      * 影子库表的配置
      * key: 不带参数的url#username
@@ -101,7 +107,7 @@ public final class GlobalConfig {
 
     private Map<String, Set<String>> shadowTable = new HashMap<String, Set<String>>();
 
-    private Set<String> apis = new HashSet<String>();
+    private volatile Set<String> apis = new HashSet<String>();
 
 
     /**
@@ -399,5 +405,20 @@ public final class GlobalConfig {
 
     public void setMaxRedisExpireTime(Float maxRedisExpireTime) {
         GlobalConfig.maxRedisExpireTime = maxRedisExpireTime;
+    }
+
+
+    public SimulatorDynamicConfig getSimulatorDynamicConfig() {
+        return simulatorDynamicConfig;
+    }
+
+    public void setSimulatorDynamicConfig(SimulatorDynamicConfig simulatorDynamicConfig) {
+        this.simulatorDynamicConfig = simulatorDynamicConfig;
+    }
+
+    public boolean allowTraceRequestResponse(){
+        return  (Pradar.isClusterTest() &&
+                GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
+                || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig().isBusRequestResponseDataAllowTrace());
     }
 }

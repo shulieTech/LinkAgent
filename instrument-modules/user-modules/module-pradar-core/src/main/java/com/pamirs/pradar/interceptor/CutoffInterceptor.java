@@ -32,7 +32,7 @@ abstract class CutoffInterceptor extends BaseInterceptor {
     public final void before(Advice advice) throws Throwable {
         CutOffResult cutOffResult = cutoff(advice);
         if (cutOffResult.isCutoff()) {
-            ProcessController.returnImmediately(cutOffResult.getResult());
+            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), cutOffResult.getResult());
         }
     }
 

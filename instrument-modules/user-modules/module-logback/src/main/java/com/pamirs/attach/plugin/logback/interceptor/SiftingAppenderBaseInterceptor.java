@@ -14,14 +14,11 @@
  */
 package com.pamirs.attach.plugin.logback.interceptor;
 
-import javax.annotation.Resource;
-
-import com.pamirs.attach.plugin.logback.Constants;
 import com.pamirs.attach.plugin.logback.utils.ClusterTestMarker;
+import com.pamirs.attach.plugin.logback.utils.LogEventTestFlagUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -30,9 +27,6 @@ import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 public class SiftingAppenderBaseInterceptor extends AroundInterceptor {
 
     private final boolean isBusinessLogOpen;
-
-    @Resource
-    protected DynamicFieldManager manager;
 
     public SiftingAppenderBaseInterceptor(boolean isBusinessLogOpen) {this.isBusinessLogOpen = isBusinessLogOpen;}
 
@@ -45,15 +39,8 @@ public class SiftingAppenderBaseInterceptor extends AroundInterceptor {
         if (args == null || args.length != 1) {
             return;
         }
-        if (isClusterTest(args[0])) {
+        if (LogEventTestFlagUtils.isClusterTest(args[0])) {
             ClusterTestMarker.mark(true);
         }
-    }
-
-    private boolean isClusterTest(Object event) {
-        if (Pradar.isClusterTest()) {
-            return true;
-        }
-        return manager.getDynamicField(event, Constants.ASYNC_CLUSTER_TEST_MARK_FIELD, false);
     }
 }

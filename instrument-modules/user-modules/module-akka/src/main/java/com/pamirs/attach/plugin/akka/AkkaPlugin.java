@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 public class AkkaPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         this.enhanceTemplate.enhanceWithSuperClass(this, "akka.dispatch.Mailbox", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -56,6 +56,7 @@ public class AkkaPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 dequeueMethod.addInterceptor(Listeners.of(MailboxDequeueInterceptor.class));
             }
         });
+        return true;
     }
 
 }

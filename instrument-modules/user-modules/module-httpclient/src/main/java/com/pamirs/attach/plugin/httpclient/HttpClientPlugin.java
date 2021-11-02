@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 public class HttpClientPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         //httpclient v3
         enhanceTemplate.enhance(this, "org.apache.commons.httpclient.HttpClient", new EnhanceCallback() {
@@ -186,6 +186,7 @@ public class HttpClientPlugin extends ModuleLifecycleAdapter implements Extensio
             }
         });
 
+        return true;
     }
 
 }

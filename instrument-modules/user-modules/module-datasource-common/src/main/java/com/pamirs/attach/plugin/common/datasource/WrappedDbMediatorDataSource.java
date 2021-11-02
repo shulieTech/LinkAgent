@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.common.datasource;
 
-import com.shulie.druid.util.JdbcUtils;
 import com.pamirs.attach.plugin.common.datasource.biz.BizConnection;
 import com.pamirs.attach.plugin.common.datasource.normal.NormalConnection;
 import com.pamirs.attach.plugin.common.datasource.pressure.PressureConnection;
@@ -24,8 +23,9 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
-import com.pamirs.pradar.pressurement.datasource.SqlParser;
+import com.pamirs.pradar.pressurement.datasource.util.DbType;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.druid.util.JdbcUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +95,6 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
         if (!init.compareAndSet(false, true)) {
             return;
         }
-        SqlParser.lowerCase = lowerCase;
         Connection jdbcConnection = null;
         try {
             /**
@@ -132,10 +131,23 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
             }
 
             String driverClassName = getDriverClassName(dataSourceBusiness);
-            if(driverClassName == null) {
+            if (driverClassName == null) {
                 driverClassName = JdbcUtils.getDriverClassName(url);
             }
-            this.dbType = JdbcUtils.getDbType(url,  driverClassName);
+            //cobar用的mysql协议
+            if (url.startsWith("jdbc:cobar_cluster")) {
+                this.dbType = "mysql";
+            } else {
+                this.dbType = JdbcUtils.getDbType(url, driverClassName);
+            }
+            DbType type = DbType.nameOf(dbType);
+            if (type != null) {
+                try {
+                    sqlMetaData = type.sqlMetaData(url);
+                } catch (Throwable e) {
+                    LOGGER.warn("sqlmetaData  fail", e);
+                }
+            }
 
         } catch (SQLException e) {
             init.set(false);

@@ -14,18 +14,36 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.util.List;
+import java.util.Set;
+
+import javax.annotation.Resource;
+
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.template.AbstractTemplate;
+import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
+import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissionSentinelTemplate;
+import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissionSingleTemplate;
+import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissonMasterSlaveTemplate;
+import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissonReplicatedTemplate;
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
+import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.commons.lang.StringUtils;
-import org.redisson.config.*;
-
-import javax.annotation.Resource;
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Set;
+import org.redisson.config.ClusterServersConfig;
+import org.redisson.config.Config;
+import org.redisson.config.MasterSlaveServersConfig;
+import org.redisson.config.ReplicatedServersConfig;
+import org.redisson.config.SentinelServersConfig;
+import org.redisson.config.SingleServerConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @Description
@@ -34,7 +52,8 @@ import java.util.Set;
  * @Date 2020/9/8 2:07 下午
  */
 public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInterceptorAdaptor {
-
+    private final static Logger LOGGER = LoggerFactory.getLogger(
+            BaseRedissonTimeSeriesMethodInterceptor.class.getName());
     private Method singleServerConfigGetAddressMethod;
     private Method masterSlaveServersConfigGetAddressMethod;
 
@@ -48,7 +67,8 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
         } catch (Throwable e) {
         }
         try {
-            masterSlaveServersConfigGetAddressMethod = MasterSlaveServersConfig.class.getDeclaredMethod("getMasterAddress");
+            masterSlaveServersConfigGetAddressMethod = MasterSlaveServersConfig.class.getDeclaredMethod(
+                    "getMasterAddress");
             masterSlaveServersConfigGetAddressMethod.setAccessible(true);
         } catch (Throwable e) {
         }
@@ -70,7 +90,8 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                     }
                     return null;
                 } catch (Throwable ex) {
-                    LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.", SingleServerConfig.class.getName(), getClass().getName());
+                    LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.",
+                            SingleServerConfig.class.getName(), getClass().getName());
                 }
             }
         } else {
@@ -81,7 +102,8 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                 }
                 return null;
             } catch (Throwable ex) {
-                LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.", SingleServerConfig.class.getName(), getClass().getName());
+                LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.",
+                        SingleServerConfig.class.getName(), getClass().getName());
             }
         }
         return null;
@@ -103,7 +125,8 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                     }
                     return null;
                 } catch (Throwable ex) {
-                    LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.", MasterSlaveServersConfig.class.getName(), getClass().getName());
+                    LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.",
+                            MasterSlaveServersConfig.class.getName(), getClass().getName());
                 }
             }
         } else {
@@ -114,10 +137,61 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                 }
                 return null;
             } catch (Throwable ex) {
-                LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.", SingleServerConfig.class.getName(), getClass().getName());
+                LOGGER.warn("SIMULATOR: can't found getAddress method from {}, check {} compatibility.",
+                        SingleServerConfig.class.getName(), getClass().getName());
             }
         }
         return null;
+    }
+
+    protected void attachment(Object target, String methodName, Object[] args) {
+        Config config = null;
+        config = manager.getDynamicField(target, RedissonConstants.DYNAMIC_FIELD_CONFIG);
+        if (config == null) {
+            return;
+        }
+
+        try {
+            Object sentinelServersConfig = Reflect.on(config)
+                    .get(RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
+            attachment(sentinelServersConfig);
+
+        } catch (Throwable t) {
+
+        }
+
+        try {
+            Object masterSlaveServersConfig = Reflect.on(config).get(
+                    RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
+            attachment(masterSlaveServersConfig);
+
+        } catch (Throwable t) {
+
+        }
+
+
+        try {
+            Object singleServerConfig = Reflect.on(config).get(
+                    RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
+            attachment(singleServerConfig);
+        } catch (Throwable t) {
+        }
+        try {
+            Object clusterServersConfig = Reflect.on(config).get
+                    (RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
+            attachment(clusterServersConfig);
+
+        } catch (Throwable t) {
+
+        }
+        try {
+            Object replicatedServersConfig = Reflect.on(config).get(
+                    RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
+            attachment(replicatedServersConfig);
+
+        } catch (Throwable t) {
+
+        }
     }
 
     @Override
@@ -140,7 +214,6 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
         if (config == null) {
             return 0;
         }
-
         SentinelServersConfig sentinelServersConfig = getSentinelServersConfig(config);
         if (sentinelServersConfig != null) {
             int database = sentinelServersConfig.getDatabase();
@@ -170,6 +243,170 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
         return 0;
     }
 
+
+    /**
+     * 入参是org.redisson.config.BaseConfig
+     * 但是有的版本是私有类
+     *
+     * @param config
+     */
+    private void attachment(Object config) {
+        try {
+            if (Pradar.isClusterTest() || config == null) {
+                return;
+            }
+            ClusterServersConfig config1 = null;
+            Reflect reflect = Reflect.on(config);
+
+            String password = null;
+            try {
+                password = reflect.get("password");
+            } catch (Throwable t) {
+
+            }
+            Integer database = null;
+            try {
+                database = Integer.parseInt(String.valueOf(reflect.get("database")));
+            } catch (Throwable t) {
+
+            }
+            AbstractTemplate template;
+            if (config instanceof ClusterServersConfig) {
+                List nodeAddresses = reflect.get("nodeAddresses");
+                StringBuilder nodeBuilder = new StringBuilder();
+                for (Object object : nodeAddresses) {
+                    if (URI.class.isAssignableFrom(object.getClass())) {
+                        URI uri = (URI) object;
+                        nodeBuilder
+                                .append(uri.getHost().concat(":").concat(String.valueOf(uri.getPort())))
+                                .append(",");
+                    } else if (String.class.isAssignableFrom(object.getClass())) {
+                        nodeBuilder
+                                .append(removePre(object.toString()))
+                                .append(",");
+                    }
+
+                }
+                String nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
+                template = new RedisTemplate.RedissionClusterTemplate().setNodes(nodes).setPassword(password);
+            } else if (config instanceof MasterSlaveServersConfig) {
+                Set nodeAddresses = reflect.get("slaveAddresses");
+                StringBuilder nodeBuilder = new StringBuilder();
+
+                for (Object object : nodeAddresses) {
+                    if (URI.class.isAssignableFrom(object.getClass())) {
+                        URI uri = (URI) object;
+                        nodeBuilder
+                                .append(uri.getHost().concat(":").concat(String.valueOf(uri.getPort())))
+                                .append(",");
+                    } else if (String.class.isAssignableFrom(object.getClass())) {
+                        nodeBuilder
+                                .append(removePre(object.toString()))
+                                .append(",");
+                    }
+
+                }
+                String nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
+
+                Object masterNodeObj = reflect.get("masterAddress");
+                String masterAddr = "";
+                if (masterNodeObj instanceof URI) {
+                    masterAddr = ((URI) masterNodeObj).getHost()
+                            .concat(":")
+                            .concat(String.valueOf(((URI) masterNodeObj).getPort()));
+                    ;
+                } else {
+                    masterAddr = removePre(String.valueOf(masterNodeObj));
+                }
+                template = new RedissonMasterSlaveTemplate().setMaster(
+                        masterAddr).setNodes(nodes)
+                        .setPassword(password)
+                        .setDatabase(database);
+            } else if (config instanceof SingleServerConfig) {
+
+                String nodes = "";
+                Object address = Reflect.on(config).get("address");
+                if (String.class.isAssignableFrom(address.getClass())) {
+                    nodes = removePre((String) address);
+                } else if (URI.class.isAssignableFrom(address.getClass())) {
+                    URI uri = (URI) address;
+                    nodes = uri.getHost().concat(":").concat(String.valueOf(uri.getPort()));
+
+                }
+                template = new RedissionSingleTemplate().setNodes(nodes).setPassword(password)
+                        .setDatabase(database);
+            } else if (config instanceof SentinelServersConfig) {
+
+
+                List sentinelAddresses = reflect.get("sentinelAddresses");
+                StringBuilder nodeBuilder = new StringBuilder();
+                for (Object object : sentinelAddresses) {
+                    if (URI.class.isAssignableFrom(object.getClass())) {
+                        URI uri = (URI) object;
+                        nodeBuilder
+                                .append(uri.getHost().concat(":").concat(String.valueOf(uri.getPort())))
+                                .append(",");
+                    } else if (String.class.isAssignableFrom(object.getClass())) {
+                        nodeBuilder
+                                .append(removePre(object.toString()))
+                                .append(",");
+                    }
+
+                }
+                String nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
+
+                template = new RedissionSentinelTemplate().setNodes(nodes)
+                        .setMaster(removePre(((SentinelServersConfig) config).getMasterName())).setNodes(nodes)
+                        .setDatabase((database));
+            } else if (config instanceof ReplicatedServersConfig) {
+
+                List nodeAddresses = reflect.get("nodeAddresses");
+                StringBuilder nodeBuilder = new StringBuilder();
+                for (Object object : nodeAddresses) {
+                    if (URI.class.isAssignableFrom(object.getClass())) {
+                        URI uri = (URI) object;
+                        nodeBuilder
+                                .append(uri.getHost().concat(":").concat(String.valueOf(uri.getPort())))
+                                .append(",");
+                    } else if (String.class.isAssignableFrom(object.getClass())) {
+                        nodeBuilder
+                                .append(removePre(object.toString()))
+                                .append(",");
+                    }
+
+                }
+                String nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
+
+
+                template = new RedissonReplicatedTemplate().setDatabase(database)
+                        .setNodes(nodes)
+                        .setPassword(password);
+            } else {
+                LOGGER.error("Redisson not instanceof any know config:{}", config);
+                return;
+            }
+            final Attachment attachment = new Attachment(null, RedissonConstants.PLUGIN_NAME,
+                    new String[]{RedissonConstants.MIDDLEWARE_NAME}
+                    , template
+            );
+            // ResourceManager.set(attachment);
+            Pradar.getInvokeContext().setExt(attachment);
+        } catch (Throwable t) {
+            LOGGER.error("Redisson attachment error", t);
+        }
+    }
+
+    public static String removePre(String obj) {
+        if (obj == null) {
+            return null;
+        }
+        if (obj.startsWith("redis://")) {
+            return obj.replaceAll("redis://", "");
+        }
+        return obj;
+
+    }
+
     private SentinelServersConfig getSentinelServersConfig(Config config) {
         SentinelServersConfig sentinelServersConfig = null;
         try {
@@ -182,11 +419,13 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
     private MasterSlaveServersConfig getMasterSlaveServersConfig(Config config) {
         MasterSlaveServersConfig masterSlaveServersConfig = null;
         try {
-            masterSlaveServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
+            masterSlaveServersConfig = Reflect.on(config).get(
+                    RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
         } catch (ReflectException e) {
         }
         return masterSlaveServersConfig;
     }
+
 
     private SingleServerConfig getSingleServerConfig(Config config) {
         SingleServerConfig singleServerConfig = null;
@@ -221,20 +460,25 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
             return null;
         }
 
-
         SentinelServersConfig sentinelServersConfig = getSentinelServersConfig(config);
         if (sentinelServersConfig != null) {
-            List<String> list = sentinelServersConfig.getSentinelAddresses();
+            List list = sentinelServersConfig.getSentinelAddresses();
             if (list != null && !list.isEmpty()) {
                 StringBuilder builder = new StringBuilder();
-                for (String str : list) {
-                    if (StringUtils.isBlank(str)) {
-                        continue;
+                for (Object obj : list) {
+                    if (obj instanceof String) {
+                        String str = (String) obj;
+                        if (StringUtils.isBlank(str)) {
+                            continue;
+                        }
+                        if (StringUtils.indexOf(str, ":") != -1) {
+                            String[] arr = StringUtils.split(str, ':');
+                            builder.append(arr[1]).append(',');
+                        }
+                    } else if (obj instanceof URI) {
+                        builder.append(((URI) obj).getHost()).append(",");
                     }
-                    if (StringUtils.indexOf(str, ":") != -1) {
-                        String[] arr = StringUtils.split(str, ':');
-                        builder.append(arr[1]).append(',');
-                    }
+
                 }
                 if (builder.length() > 0) {
                     builder.deleteCharAt(builder.length() - 1);
@@ -249,25 +493,38 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
 
         MasterSlaveServersConfig masterSlaveServersConfig = getMasterSlaveServersConfig(config);
         if (masterSlaveServersConfig != null) {
-            String masterAddress = masterSlaveServersConfig.getMasterAddress();
-            StringBuilder builder = new StringBuilder();
-            if (StringUtils.isNotBlank(masterAddress)) {
-                if (StringUtils.indexOf(masterAddress, ":") != -1) {
-                    String[] arr = StringUtils.split(masterAddress, ':');
-                    builder.append(arr[0]).append(',');
-                }
-            }
+            Object masterAddress = masterSlaveServersConfig.getMasterAddress();
 
-            Set<String> set = masterSlaveServersConfig.getSlaveAddresses();
-            if (set != null && !set.isEmpty()) {
-                for (String str : set) {
-                    if (StringUtils.isBlank(str)) {
-                        continue;
-                    }
-                    if (StringUtils.indexOf(str, ":") != -1) {
-                        String[] arr = StringUtils.split(str, ':');
+            StringBuilder builder = new StringBuilder();
+            if (String.class.isAssignableFrom(masterAddress.getClass())) {
+                if (StringUtils.isNotBlank((String) masterAddress)) {
+                    if (StringUtils.indexOf((String) masterAddress, ":") != -1) {
+                        String[] arr = StringUtils.split((String) masterAddress, ':');
                         builder.append(arr[0]).append(',');
                     }
+                }
+            } else if (URI.class.isAssignableFrom(masterAddress.getClass())) {
+                builder.append(((URI) masterAddress).getHost()).append(',');
+            }
+
+
+            Set set = masterSlaveServersConfig.getSlaveAddresses();
+            if (set != null && !set.isEmpty()) {
+                for (Object obj : set) {
+                    if (obj instanceof String) {
+                        String str = (String) obj;
+                        if (StringUtils.isBlank(str)) {
+                            continue;
+                        }
+                        if (StringUtils.indexOf(str, ":") != -1) {
+                            String[] arr = StringUtils.split(str, ':');
+                            builder.append(arr[0]).append(',');
+                        }
+                    } else if (URI.class.isAssignableFrom(obj.getClass())) {
+                        builder.append(((URI) obj).getHost()).append(",");
+
+                    }
+
                 }
             }
             if (builder.length() > 0) {

@@ -34,7 +34,7 @@ public class PluginMaxRedisExpireTimeInterceptor extends ParametersWrapperInterc
         if (!Pradar.isClusterTest()) {
             return args;
         }
-        RedisUtils.setMaxRedisExpireTime(advice.getBehavior().getName(),args);
+        RedisUtils.setMaxRedisExpireTime(advice.getBehaviorName(),args);
         return args;
     }
 }

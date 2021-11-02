@@ -42,7 +42,7 @@
         <dependency>
             <groupId>io.github.openfeign</groupId>
             <artifactId>feign-core</artifactId>
-            <version>10.4.0</version>
+            <version>10.2.3</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

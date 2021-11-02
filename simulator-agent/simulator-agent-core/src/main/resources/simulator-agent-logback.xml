@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration scan="true" scanPeriod="10000">
 
-    <appender name="SIMULATOR-FILE-APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${user.home}/logs/simulator/simulator-agent.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${user.home}/logs/simulator/simulator-agent.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
+    <appender name="SIMULATOR-AGENT-FILE-APPENDER" class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.classic.filter.LevelFilter">
+            <!--过滤 INFO-->
+            <!--            <level>INFO</level>-->
+            <level>ERROR</level>
+            <onMatch>DENY</onMatch>
+            <onMismatch>ACCEPT</onMismatch>
+        </filter>
+        <file>${SIMULATOR_LOG_PATH}/simulator-agent.log</file>
+        <rollingPolicy class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator-agent.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
             <maxFileSize>100MB</maxFileSize>  <!-- 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB -->
-            <maxHistory>7</maxHistory>  <!-- 保存7天 -->
+            <maxHistory>3</maxHistory>  <!-- 保存7天 -->
             <totalSizeCap>300MB</totalSizeCap>  <!-- 总日志大小 -->
         </rollingPolicy>
         <encoder>
@@ -15,8 +22,31 @@
         </encoder>
     </appender>
 
+<!--    <appender name="SIMULATOR-AGENT-FILE-APPENDER-ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+    <appender name="SIMULATOR-AGENT-FILE-APPENDER-ERROR" class="com.shulie.instrument.simulator.agent.core.logback.CustomerRollingFileAppender">
+        <filter class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.classic.filter.ThresholdFilter">
+            <!--过滤 INFO-->
+            <!--            <level>INFO</level>-->
+            <level>ERROR</level>
+        </filter>
+        <file>${SIMULATOR_LOG_PATH}/simulator-agent-error.log</file>
+<!--        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
+        <rollingPolicy class="com.shulie.instrument.simulator.agent.core.logback.CustomerSizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator-agent-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>  <!-- 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB -->
+            <maxHistory>3</maxHistory>  <!-- 保存7天 -->
+            <totalSizeCap>300MB</totalSizeCap>  <!-- 总日志大小 -->
+        </rollingPolicy>
+        <encoder>
+<!--            <pattern>%msg%n</pattern>-->
+            <pattern>%m%replace(%ex{full}){"[\r\n]+", "nextline"}"%nopex%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
     <root level="${SIMULATOR_LOG_LEVEL}">
-        <appender-ref ref="SIMULATOR-FILE-APPENDER"/>
+        <appender-ref ref="SIMULATOR-AGENT-FILE-APPENDER"/>
+        <appender-ref ref="SIMULATOR-AGENT-FILE-APPENDER-ERROR"/>
     </root>
 
 </configuration>

@@ -44,7 +44,7 @@ public class PulsarTraceProducerInterceptor extends AroundInterceptor {
     @Override
     public void doBefore(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         try {
             if (!(target instanceof org.apache.pulsar.client.impl.ProducerImpl) && methodName.equals("sendAsync")) {

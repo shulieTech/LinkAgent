@@ -21,6 +21,7 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.dubbo.rpc.*;
 
@@ -51,13 +52,26 @@ public class DubboProviderInterceptor extends TraceInterceptorAdaptor {
     }
 
     private boolean isLocalHost(String address) {
-        return "127.0.0.1".equals(address) || "localhost".equalsIgnoreCase(address);
+        return "127.0.0.1".equals(address) || "localhost".equals(address) || "LOCALHOST".equals(address) ;
     }
 
+    //申通事件中心过滤掉
+    private boolean isShentongEvent(String name){
+        if (name.equals("com.sto.event.ocean.client.remote.EventAccept")
+            || name.equals("com.sto.event.ocean.client.remote.EventCoreRpc")
+            || name.equals("com.sto.event.ocean.client.remote.EventPreRpc")){
+            return true;
+        }
+        return false;
+    }
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
         RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
+        final String interfaceName = getInterfaceName(invocation);
+        if (isShentongEvent(interfaceName)){
+            return null;
+        }
         String version = getVersion(invocation);
         version = (version != null) ? (":" + version.trim()) : "";
 
@@ -79,7 +93,6 @@ public class DubboProviderInterceptor extends TraceInterceptorAdaptor {
         }
 
         record.setRemoteIp(remoteHost);
-        final String interfaceName = getInterfaceName(invocation);
         record.setService(interfaceName + version);
         record.setMethod(context.getMethodName() + getParameterTypesString(context.getParameterTypes()));
         record.setRequest(invocation.getArguments());
@@ -88,7 +101,10 @@ public class DubboProviderInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) {
-        ClusterTestUtils.validateClusterTest();
+        /**
+         * 服务端不能随便校验，会重试
+         */
+        /*  ClusterTestUtils.validateClusterTest();*/
     }
 
     private String getVersion(Invocation invocation) {
@@ -118,7 +134,10 @@ public class DubboProviderInterceptor extends TraceInterceptorAdaptor {
         record.setResponseSize(getResponseSize(result));
         record.setRequest(invocation.getArguments());
         record.setResponse(getResponse(result));
-
+        final String interfaceName = getInterfaceName(invocation);
+        if (isShentongEvent(interfaceName)){
+            return null;
+        }
         if (result == null) {
             record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         } else if (result.hasException()) {
@@ -134,6 +153,10 @@ public class DubboProviderInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord exceptionTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
         RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
+        final String interfaceName = getInterfaceName(invocation);
+        if (isShentongEvent(interfaceName)){
+            return null;
+        }
         record.setRequest(invocation.getArguments());
         record.setResponse(advice.getThrowable());
         record.setResultCode(getResultCode(advice.getThrowable()));

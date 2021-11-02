@@ -46,18 +46,22 @@ public class BizConnection extends DruidPooledConnection implements Connection {
     private SqlMetaData sqlMetaData;
     private DruidPooledConnection target;
 
-    public BizConnection(DruidPooledConnection connection, String url, String username, String dbType) {
+    public BizConnection(DruidPooledConnection connection, String url, String username, String dbType, SqlMetaData sqlMetaData) {
         super(connection.getConnectionHolder());
         this.target = connection;
         this.url = url;
         this.username = username;
         this.dbType = dbType;
-        DbType type = DbType.nameOf(dbType);
-        if (type != null) {
-            try {
-                this.sqlMetaData = type.sqlMetaData(url);
-            } catch (Throwable e) {
+        if (sqlMetaData == null) {
+            DbType type = DbType.nameOf(dbType);
+            if (type != null) {
+                try {
+                    this.sqlMetaData = type.sqlMetaData(url);
+                } catch (Throwable e) {
+                }
             }
+        } else {
+            this.sqlMetaData = sqlMetaData;
         }
     }
 
@@ -177,13 +181,13 @@ public class BizConnection extends DruidPooledConnection implements Connection {
     }
 
     @Override
-    public void setConnectedTimeNano() {
-        target.setConnectedTimeNano();
+    public void setConnectedTimeNano(long connectedTimeNano) {
+        target.setConnectedTimeNano(connectedTimeNano);
     }
 
     @Override
-    public void setConnectedTimeNano(long connectedTimeNano) {
-        target.setConnectedTimeNano(connectedTimeNano);
+    public void setConnectedTimeNano() {
+        target.setConnectedTimeNano();
     }
 
     @Override

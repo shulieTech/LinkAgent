@@ -15,13 +15,12 @@
 package com.pamirs.attach.plugin.common.web;
 
 import com.pamirs.pradar.*;
-import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.domain.DoorPlank;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.impl.ArbiterEntrance;
-import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
+import io.undertow.util.HeaderValues;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public abstract class RequestTracer<REQ, RESP> {
-
-    private final static Logger LOGGER = LoggerFactory.getLogger(RequestTracer.class);
 
     /**
      * 获取 IP的头信息
@@ -43,7 +40,7 @@ public abstract class RequestTracer<REQ, RESP> {
             "X-Real-IP",          // enginx 设置 remoteIP，如果没有拿到 NS-Client-IP，那么这就是真实的用户 ip
             "NS-Client-IP",       // NAT 方式设置的ip
     };
-
+    private final static Logger LOGGER = LoggerFactory.getLogger(RequestTracer.class);
     private static final String FAST_DEBUG_TRACE_ID_UPLOAD = "/api/fast/debug/trace/id/push";
 
     /**
@@ -53,7 +50,7 @@ public abstract class RequestTracer<REQ, RESP> {
      * @return true|false
      */
     private final boolean checkIP(String ip) {
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+        if (ip == null || ip.length() == 0 || "unknown".equals(ip) || "UNKNOWN".equals(ip)) {
             return false;
         } else {
             return true;
@@ -196,7 +193,6 @@ public abstract class RequestTracer<REQ, RESP> {
         return traceId;
     }
 
-
     /**
      * 获取debugId
      */
@@ -208,12 +204,10 @@ public abstract class RequestTracer<REQ, RESP> {
     /**
      * 是否需要过滤该请求
      *
-     * @param request
      * @return
      */
-    private boolean isNeedFilter(REQ request) {
-        String checkTest = getRequestURI(request);
-        return StaticFileFilter.needFilter(checkTest);
+    private boolean isNeedFilter(String requestURI, REQ request) {
+        return StaticFileFilter.needFilter(requestURI);
     }
 
     /**
@@ -281,9 +275,11 @@ public abstract class RequestTracer<REQ, RESP> {
     /**
      * 开始调用链，注意，开始之后，不管后续处理是否正常，都需要调用。
      */
-    public final void startTrace(REQ request, RESP response, String pluginName) {
-        if (isNeedFilter(request)) {
-            return;
+    public final boolean startTrace(REQ request, RESP response, String pluginName) {
+        String url = getRequestURI(request);
+
+        if (isNeedFilter(url, request)) {
+            return false;
         }
 
         String ip = null;
@@ -291,23 +287,20 @@ public abstract class RequestTracer<REQ, RESP> {
             ip = getRemoteAddress(request);
         }
         String traceId = getTraceId(request);
-        boolean isTraceIdBlank = false;
-        if (StringUtils.isBlank(traceId)) {
-            traceId = TraceIdGenerator.generate(ip);
-            isTraceIdBlank = true;
-        }
-
-        String url = getRequestURI(request);
 
         boolean isClusterTestRequest = isClusterTestRequest(request);
         boolean isDebug = isDebugRequest(request);
 
-
         ClusterTestUtils.validateClusterTest(isClusterTestRequest);
+
+        boolean isTraceIdBlank = false;
+        if (StringUtils.isBlank(traceId)) {
+            traceId = TraceIdGenerator.generate(ip, isClusterTestRequest);
+            isTraceIdBlank = true;
+        }
 
         if (isDebug && isTraceIdBlank) {
             setResponseHeader(response, "traceId", traceId);
-            pushTraceId(traceId, request);
         }
 
         if (isClusterTestRequest) {
@@ -330,7 +323,8 @@ public abstract class RequestTracer<REQ, RESP> {
                 context.put(PradarService.PRADAR_CLUSTER_TEST_KEY, String.valueOf(isClusterTestRequest));
             }
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("accept web server rpcServerRecv context:{}, currentContext:{} currentMiddleware:{}", context, Pradar.getInvokeContextMap(), Pradar.getMiddlewareName());
+                LOGGER.debug("accept web server rpcServerRecv context:{}, currentContext:{} currentMiddleware:{}",
+                        context, Pradar.getInvokeContextMap(), Pradar.getMiddlewareName());
             }
             Pradar.startServerInvoke(url, StringUtils.upperCase(getMethod(request)), context);
             setAttribute(request, "isTrace", false);
@@ -358,22 +352,7 @@ public abstract class RequestTracer<REQ, RESP> {
             invokeContext.setPort(port);
         }
         invokeContext.setMiddlewareName(pluginName);
-    }
-
-    /**
-     * 推送TraceId到控制台
-     *
-     * @param traceId traceId
-     * @param request 请求对象
-     */
-    protected void pushTraceId(String traceId, REQ request) {
-        String fastDebugId = getFastDebugId(request);
-        if (traceId == null || fastDebugId == null) {
-            return;
-        }
-        String body = traceId.concat(",").concat(fastDebugId);
-        HttpUtils.HttpResult httpResult = HttpUtils.doPost(PropertyUtil.getTroControlWebUrl() + FAST_DEBUG_TRACE_ID_UPLOAD, body);
-        LOGGER.info("fast debug push trace id:{}, response status:{}", traceId, httpResult.getStatus());
+        return true;
     }
 
     /**
@@ -394,7 +373,10 @@ public abstract class RequestTracer<REQ, RESP> {
      * @param resultCode 结果编码
      */
     public final void endTrace(REQ request, RESP response, Throwable throwable, String resultCode) {
-        if (isNeedFilter(request)) {
+        setResponseHeader(response, "pradar-noBusinessTrace", "true");
+        String url = getRequestURI(request);
+
+        if (isNeedFilter(url, request)) {
             return;
         }
 
@@ -404,8 +386,14 @@ public abstract class RequestTracer<REQ, RESP> {
 
         Object value = getAttribute(request, "isTrace");
         boolean isTrace = true;
-        if (value != null && (value instanceof Boolean)) {
-            isTrace = (Boolean) value;
+        if (value != null) {
+            if ((value instanceof Boolean)) {
+                isTrace = (Boolean) value;
+            } else if (value instanceof String) {
+                isTrace = Boolean.parseBoolean((String) value);
+            } else if (value.getClass().getName().equals("io.undertow.util.HeaderValues")) {
+                isTrace = Boolean.valueOf(((HeaderValues) value).getFirst());
+            }
         }
 
         /**

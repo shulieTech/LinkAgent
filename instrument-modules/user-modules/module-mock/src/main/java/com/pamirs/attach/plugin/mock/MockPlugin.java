@@ -50,7 +50,7 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     private Map<String, EventWatcher> watchers;
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         try {
             this.watchers = new HashMap<String, EventWatcher>();
             EventRouter.router().addListener(new PradarEventListener() {
@@ -72,7 +72,9 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                         for (MockConfig mockConfig : mockConfigs) {
                             EventWatcher watcher = watchers.remove(mockConfig.getKey());
                             if (watcher != null) {
-                                LOGGER.info("Remove mock config interceptor {}", mockConfig.getKey());
+                                if (LOGGER.isInfoEnabled()) {
+                                    LOGGER.info("Remove mock config interceptor {}", mockConfig.getKey());
+                                }
                                 watcher.onUnWatched();
                             }
                         }
@@ -81,7 +83,9 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                         for (MockConfig mockConfig : mockConfigs) {
                             EventWatcher watcher = watchers.remove(mockConfig.getKey());
                             if (watcher != null) {
-                                LOGGER.info("Modify mock config pre remove interceptor  {}", mockConfig.getKey());
+                                if (LOGGER.isInfoEnabled()) {
+                                    LOGGER.info("Modify mock config pre remove interceptor  {}", mockConfig.getKey());
+                                }
                                 watcher.onUnWatched();
                             }
                         }
@@ -121,7 +125,9 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                     .setDetail("挡板增强失败:" + e.getMessage())
                     .closePradar(ConfigNames.LINK_GUARD_CONFIG)
                     .report();
+            throw e;
         }
+        return true;
     }
 
     private Map<String, Set<MockConfig>> groupByClass(Set<MockConfig> mockConfigs) {
@@ -144,7 +150,9 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         }
         Map<String, EventWatcher> watchers = new HashMap<String, EventWatcher>();
         for (Map.Entry<String, Set<MockConfig>> entry : configs.entrySet()) {
-            LOGGER.info("pre enhance class:{} ,configs:{}", entry.getKey(), entry.getValue());
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("pre enhance class:{} ,configs:{}", entry.getKey(), entry.getValue());
+            }
             for (MockConfig mockConfig : entry.getValue()) {
                 IClassMatchBuilder buildingForClass = new EventWatchBuilder(moduleEventWatcher).onClass(entry.getKey());
                 IBehaviorMatchBuilder buildingForBehavior = buildingForClass.onAnyBehavior(mockConfig.getMethodName());

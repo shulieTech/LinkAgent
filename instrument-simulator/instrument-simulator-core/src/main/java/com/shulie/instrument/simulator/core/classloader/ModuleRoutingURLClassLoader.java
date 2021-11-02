@@ -17,8 +17,6 @@ package com.shulie.instrument.simulator.core.classloader;
 import com.shulie.instrument.simulator.core.util.CompoundEnumeration;
 import com.shulie.instrument.simulator.core.util.EmptyEnumeration;
 import org.apache.commons.lang.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.JarURLConnection;
@@ -36,11 +34,16 @@ import java.util.jar.JarFile;
  */
 public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader {
     protected static final String CLASS_RESOURCE_SUFFIX = ".class";
-
-    private static final Logger logger = LoggerFactory.getLogger(ModuleRoutingURLClassLoader.class);
     protected Routing[] routingArray;
     protected final ClassLoaderService classLoaderService;
     protected final String moduleId;
+
+    static {
+        try {
+            ClassLoader.registerAsParallelCapable();
+        } catch (Throwable e) {
+        }
+    }
 
     public ModuleRoutingURLClassLoader(final String moduleId,
                                        final ClassLoaderService classLoaderService,
@@ -117,15 +120,17 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     protected URL getBusinessResource(String name) {
-        if (BizClassLoaderHolder.getBizClassLoader() != null) {
-            return BizClassLoaderHolder.getBizClassLoader().getResource(name);
+        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+        if (bizClassLoader != null) {
+            return bizClassLoader.getResource(name);
         }
         return null;
     }
 
     protected Enumeration<URL> getBusinessResources(String name) throws IOException {
-        if (BizClassLoaderHolder.getBizClassLoader() == null) {
-            return BizClassLoaderHolder.getBizClassLoader().getResources(name);
+        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+        if (bizClassLoader == null) {
+            return bizClassLoader.getResources(name);
         }
         return EmptyEnumeration.emptyEnumeration();
     }
@@ -137,30 +142,25 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
      * @return 返回资源URL
      */
     @Override
-    protected URL getResourceInternal(String name) {
+    protected URL internalGetResource(String name) {
         // 1. find routing resource
         URL url = getRoutingResource(name);
 
-        // 2. find jdk resource
-        if (url == null) {
-            url = getJdkResource(name);
-        }
-
-        // 3. find export resource
+        // 2. find export resource
         if (url == null) {
             url = getExportResource(name);
         }
 
-        // 4. get local resource
+        // 3. get local resource
         if (url == null) {
             url = getLocalResource(name);
         }
-        // 5. get .class resource
+        // 4. get .class resource
         if (url == null) {
             url = getClassResource(name);
         }
 
-        // 6. find business classloader resource
+        // 5. find business classloader resource
         if (url == null) {
             url = getBusinessResource(name);
         }
@@ -202,20 +202,18 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
      * @throws IOException 资源加载不到会抛出IOException
      */
     @Override
-    protected Enumeration<URL> getResourcesInternal(String name) throws IOException {
+    protected Enumeration<URL> internalGetResources(String name) throws IOException {
         List<Enumeration<URL>> enumerationList = new ArrayList<Enumeration<URL>>();
         // 1. find routing resources
         enumerationList.add(getRoutingResources(name));
-        // 2. find jdk resources
-        enumerationList.add(getJdkResources(name));
 
-        // 3. find exported resources
+        // 2. find exported resources
         enumerationList.add(getExportResources(name));
 
-        // 4. find local resources
+        // 3. find local resources
         enumerationList.add(getLocalResources(name));
 
-        // 5. find business classloader resources
+        // 4. find business classloader resources
         enumerationList.add(getBusinessResources(name));
 
 
@@ -282,7 +280,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                     return classLoader.loadClass(name);
                 } catch (ClassNotFoundException e) {
                     // just log when debug level
-                    if (logger.isDebugEnabled()) {
+                    if (isDebugEnabled) {
                         // log debug message
                         logger.debug(
                                 "SIMULATOR: Fail to load export class " + name, e);
@@ -293,7 +291,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         return null;
     }
 
-    protected Class<?> loadClassInternal(String name, boolean resolve)
+    protected Class<?> internalLoadClass(String name, boolean resolve)
             throws ClassNotFoundException {
         Class<?> clazz = null;
 
@@ -302,32 +300,22 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
             clazz = resolveRouting(name, resolve);
         }
 
-        // 2. findLoadedClass
-        if (clazz == null) {
-            clazz = findLoadedClass(name);
-        }
-
-        // 3. JDK related class
-        if (clazz == null) {
-            clazz = resolveJDKClass(name);
-        }
-
-        // 4. Import class export by other plugins
+        // 2. Import class export by other plugins
         if (clazz == null) {
             clazz = resolveExportClass(name);
         }
 
-        // 5. module classpath class
+        // 3. module classpath class
         if (clazz == null) {
-            clazz = resolveLocalClass(name);
+            clazz = resolveLocalClass(name, resolve);
         }
 
-        // 6. load class from business classloader
+        // 4. load class from business classloader
         if (clazz == null) {
             clazz = resolveBusinessClassLoader(name);
         }
 
-        // 7. load class from super
+        // 5. load class from super
         if (clazz == null) {
             clazz = resolveSystemClass(name, resolve);
         }
@@ -350,10 +338,11 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
      */
     protected Class resolveBusinessClassLoader(String name) {
         try {
-            if (BizClassLoaderHolder.getBizClassLoader() == null) {
+            final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+            if (bizClassLoader == null) {
                 return null;
             }
-            return BizClassLoaderHolder.getBizClassLoader().loadClass(name);
+            return bizClassLoader.loadClass(name);
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
@@ -363,7 +352,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     @Override
     protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
         definePackageIfNecessary(name);
-        return loadClassInternal(name, resolve);
+        return internalLoadClass(name, resolve);
     }
 
     /**

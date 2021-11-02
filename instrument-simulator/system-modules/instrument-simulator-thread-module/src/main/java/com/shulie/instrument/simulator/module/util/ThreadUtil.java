@@ -17,7 +17,6 @@ package com.shulie.instrument.simulator.module.util;
 import com.shulie.instrument.simulator.module.model.thread.StackElement;
 import com.shulie.instrument.simulator.module.model.thread.ThreadStack;
 import com.shulie.instrument.simulator.module.model.thread.ThreadStat;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.lang.management.*;
@@ -127,49 +126,52 @@ abstract public class ThreadUtil {
             resultThreads = threads.values();
         }
 
-        Map<Long, Long> times1 = new HashMap<Long, Long>();
-        for (Thread thread : resultThreads) {
-            long cpu = threadMXBean.getThreadCpuTime(thread.getId());
-            times1.put(thread.getId(), cpu);
-        }
-
-        try {
-            Thread.sleep(sampleInterval);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        Map<Long, Long> times2 = new HashMap<Long, Long>(threads.size());
-        for (Thread thread : resultThreads) {
-            long cpu = threadMXBean.getThreadCpuTime(thread.getId());
-            times2.put(thread.getId(), cpu);
-        }
-
-        long total = 0;
-        Map<Long, Long> deltas = new HashMap<Long, Long>(threads.size());
-        for (Long id : times2.keySet()) {
-            long time1 = times1.get(id);
-            long time2 = times2.get(id);
-
-            long delta = 0;
-            if (time1 != time2) {
-                if (time1 == -1) {
-                    time1 = time2;
-                } else if (time2 == -1) {
-                    time2 = time1;
-                }
-                delta = time2 - time1;
-            }
-
-            deltas.put(id, delta);
-            total += delta;
-        }
-
         // Compute cpu
         final HashMap<Thread, Long> cpus = new HashMap<Thread, Long>(threads.size());
-        for (Thread thread : resultThreads) {
-            long cpu = total == 0 ? 0 : Math.round((deltas.get(thread.getId()) * 100) / total);
-            cpus.put(thread, cpu);
+        // Compute time cost
+        final Map<Long, Long> times = new HashMap<Long, Long>(threads.size());
+        if (sampleInterval != null && sampleInterval > 0) {
+            Map<Long, Long> times1 = new HashMap<Long, Long>();
+            for (Thread thread : resultThreads) {
+                long cpu = threadMXBean.getThreadCpuTime(thread.getId());
+                times1.put(thread.getId(), cpu);
+            }
+
+            try {
+                Thread.sleep(sampleInterval);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            Map<Long, Long> times2 = new HashMap<Long, Long>(threads.size());
+            for (Thread thread : resultThreads) {
+                long cpu = threadMXBean.getThreadCpuTime(thread.getId());
+                times2.put(thread.getId(), cpu);
+            }
+
+            long total = 0;
+            for (Long id : times2.keySet()) {
+                long time1 = times1.get(id);
+                long time2 = times2.get(id);
+
+                long delta = 0;
+                if (time1 != time2) {
+                    if (time1 == -1) {
+                        time1 = time2;
+                    } else if (time2 == -1) {
+                        time2 = time1;
+                    }
+                    delta = time2 - time1;
+                }
+
+                times.put(id, delta);
+                total += delta;
+            }
+
+            for (Thread thread : resultThreads) {
+                long cpu = total == 0 ? 0 : Math.round((times.get(thread.getId()) * 100) / total);
+                cpus.put(thread, cpu);
+            }
         }
 
         Map<Long, ThreadStat> threadStatMap = new HashMap<Long, ThreadStat>();
@@ -187,8 +189,8 @@ abstract public class ThreadUtil {
             } else {
                 threadStat.setCpuUsage(0L);
             }
-            if (deltas.containsKey(t.getId())) {
-                threadStat.setCpuTime(deltas.get(t.getId()));
+            if (times.containsKey(t.getId())) {
+                threadStat.setCpuTime(times.get(t.getId()));
             } else {
                 threadStat.setCpuTime(0L);
             }

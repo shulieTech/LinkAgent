@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * Hbase影子库协调者
+ *
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
  * @package: com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver
  * @Date 2021/4/19 4:45 下午
@@ -82,9 +83,11 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         for (Map.Entry<String, ShadowHbaseConfig> entry : hbaseConfigMap.entrySet()) {
             String[] split = entry.getKey().split("\\|");
             if (split.length == 3) {
-                logger.info("business config quorums:{}, port:{}, znode:{} ---------- " +
-                                "perfomanceTest config quorums:{}, port:{}, znode:{}",
-                        quorum, port, znode, split[0], split[1], split[2]);
+                if (logger.isInfoEnabled()) {
+                    logger.info("business config quorums:{}, port:{}, znode:{} ---------- " +
+                                    "perfomanceTest config quorums:{}, port:{}, znode:{}",
+                            quorum, port, znode, split[0], split[1], split[2]);
+                }
                 if (!split[1].equals(port) || !split[2].equals(znode)) {
                     continue;
                 }

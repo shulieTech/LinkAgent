@@ -49,8 +49,8 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
     private PradarEventListener disableEventListener;
 
     @Override
-    public void onActive() throws Throwable {
-        this.enhanceTemplate.enhance(this, "org.apache.dubbo.rpc.proxy.AbstractProxyInvoker", new EnhanceCallback() {
+    public boolean onActive() throws Throwable {
+        this.enhanceTemplate.enhance(this, "org.apache.hadoop.hbase.client.ConnectionFactory", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 final InstrumentMethod connectionMethod = target.getDeclaredMethod("createConnection",
@@ -62,6 +62,7 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
         });
 
         initEventListener();
+        return true;
     }
 
     void initEventListener() {

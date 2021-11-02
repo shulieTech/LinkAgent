@@ -33,7 +33,7 @@ public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethod
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord record = new SpanRecord();
         record.setRemoteIp(getHost(target, methodName, args));
@@ -52,6 +52,7 @@ public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethod
         record.setMiddlewareName(RedissonConstants.MIDDLEWARE_NAME);
         record.setResponse(result);
         record.setCallbackMsg(getPluginName());
+        attachment(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray());
         return record;
     }
 
@@ -62,6 +63,7 @@ public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethod
         record.setResponse(advice.getThrowable());
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         record.setCallbackMsg(getPluginName());
+        attachment(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray());
         return record;
     }
 }

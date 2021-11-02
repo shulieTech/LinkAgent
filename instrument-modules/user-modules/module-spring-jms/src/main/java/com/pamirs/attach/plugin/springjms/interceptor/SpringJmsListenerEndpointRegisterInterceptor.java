@@ -33,7 +33,7 @@ public class SpringJmsListenerEndpointRegisterInterceptor extends ParametersWrap
     @Override
     public Object[] getParameter0(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         if (!PradarSwitcher.isClusterTestEnabled()) {
             return args;

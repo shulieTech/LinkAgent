@@ -33,7 +33,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = OscacheConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "oscache 本地缓存")
 public class OscachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         enhanceTemplate.enhance(this, "com.opensymphony.oscache.base.Cache", new EnhanceCallback() {
             @Override
@@ -55,6 +55,7 @@ public class OscachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+        return true;
 
     }
 }

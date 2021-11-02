@@ -19,11 +19,13 @@ import com.shulie.instrument.simulator.api.event.BeforeEvent;
 import com.shulie.instrument.simulator.api.event.Event;
 import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.event.InvokeEvent;
+import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.core.classloader.BizClassLoaderHolder;
 import com.shulie.instrument.simulator.core.util.ReflectUtils;
-import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructureImplByAsm;
+import com.shulie.instrument.simulator.core.util.matcher.structure.AsmClassStructure;
+import com.shulie.instrument.simulator.message.ExecutionTagSupplier;
 import com.shulie.instrument.simulator.message.MessageHandler;
 import com.shulie.instrument.simulator.message.Messager;
 import com.shulie.instrument.simulator.message.Result;
@@ -34,19 +36,21 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.shulie.instrument.simulator.api.ProcessControlException.*;
-import static com.shulie.instrument.simulator.message.Result.newNone;
 import static com.shulie.instrument.simulator.message.Result.newThrows;
 
 /**
  * 事件处理
  */
 public class EventListenerHandler implements MessageHandler {
-
+    protected static final Logger TIME_CONSUMING_LOGGER = LoggerFactory.getLogger("TIME-CONSUMING-LOGGER");
+    private static boolean costEnabled = Boolean.parseBoolean(System.getProperty("simulator.messager.cost.enabled", "false"));
     private final Logger logger = LoggerFactory.getLogger(getClass());
-
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
     // 调用序列生成器
     private final AtomicInteger invokeIdSequencer = new AtomicInteger(1000);
 
@@ -54,20 +58,36 @@ public class EventListenerHandler implements MessageHandler {
     private final Map<Integer/*LISTENER_ID*/, InvokeProcessor> mappingOfEventProcessor
             = new ConcurrentHashMap<Integer, InvokeProcessor>();
 
-    // owner namespace
-    private String namespace;
+    /**
+     * 事件工厂，一个流程有一个单独的事件工厂
+     */
+    private final EventBuilderFactory eventFactory
+            = new EventBuilderFactory();
 
-    private volatile ExceptionHandler exceptionHandler;
+    private ExceptionHandler exceptionHandler;
 
     private ExceptionHandler getExceptionHandler() {
-        if (exceptionHandler == null) {
-            exceptionHandler = Messager.getExceptionHandler(namespace);
+        if (exceptionHandler != null) {
+            return exceptionHandler;
         }
+        exceptionHandler = Messager.getExceptionHandler();
         return exceptionHandler;
     }
 
-    public EventListenerHandler(String namespace) {
-        this.namespace = namespace;
+    ;
+
+    public EventListenerHandler() {
+        this.exceptionHandler = Messager.getExceptionHandler();
+        ExecutorServiceFactory.getFactory().scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                boolean res = Boolean.parseBoolean(System.getProperty("simulator.messager.cost.enabled", "false"));
+                if (res != costEnabled) {
+                    costEnabled = res;
+                    logger.info("change messager costEnabled to {}", res);
+                }
+            }
+        }, 10, 10, TimeUnit.SECONDS);
     }
 
     /**
@@ -81,7 +101,7 @@ public class EventListenerHandler implements MessageHandler {
                        final EventListener listener,
                        final int[] eventEventTypes) {
         mappingOfEventProcessor.put(listenerId, new InvokeProcessor(listenerId, listener, eventEventTypes));
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: activated listener[id={};target={};] event={}",
                     listenerId,
                     listener,
@@ -98,13 +118,13 @@ public class EventListenerHandler implements MessageHandler {
     public void frozen(int listenerId) {
         final InvokeProcessor processor = mappingOfEventProcessor.remove(listenerId);
         if (null == processor) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: ignore frozen listener={}, because not found.", listenerId);
             }
             return;
         }
 
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: frozen listener[id={};target={};]",
                     listenerId,
                     processor.listener
@@ -127,23 +147,23 @@ public class EventListenerHandler implements MessageHandler {
      * @return 处理返回结果
      * @throws Throwable 当出现未知异常时,且事件处理器为中断流程事件时抛出
      */
-    private Result handleEvent(final int listenerId,
-                               final int processId,
-                               final int invokeId,
-                               final Class clazz,
-                               final Event event,
-                               final InvokeProcessor processor) throws Throwable {
+    private final Result handleEvent(final int listenerId,
+                                     final int processId,
+                                     final int invokeId,
+                                     final Class clazz,
+                                     final Event event,
+                                     final InvokeProcessor processor) throws Throwable {
         final EventListener listener = processor.listener;
 
         /**
          * 如果当前事件不在事件监听器处理列表中，则直接返回，不处理事件
          */
         if (!ArrayUtils.contains(processor.eventEventTypes, event.getType())) {
-            return newNone();
+            return Result.RESULT_NONE;
         }
 
         try {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}",
                         event.getType(),
                         processId,
@@ -161,12 +181,12 @@ public class EventListenerHandler implements MessageHandler {
              */
             if (!processor.isRunning()) {
                 logger.warn("SIMULATOR: EventProcessor is closed. {}", clazz.getName());
-                return Result.newNone();
+                return Result.RESULT_NONE;
             }
             final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
 
             final int state = pce.getState();
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, process-changed: {}. isIgnoreProcessEvent={};",
                         event.getType(),
                         processId,
@@ -193,7 +213,7 @@ public class EventListenerHandler implements MessageHandler {
                      * 如果已经禁止后续返回任何事件了，则不进行后续的操作
                      */
                     if (pce.isIgnoreProcessEvent()) {
-                        if (logger.isDebugEnabled()) {
+                        if (isDebugEnabled) {
                             logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, ignore immediately-return-event, isIgnored.",
                                     event.getType(),
                                     processId,
@@ -234,7 +254,7 @@ public class EventListenerHandler implements MessageHandler {
                      * 如果已经禁止后续返回任何事件了，则不进行后续的操作
                      */
                     if (pce.isIgnoreProcessEvent()) {
-                        if (logger.isDebugEnabled()) {
+                        if (isDebugEnabled) {
                             logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, ignore immediately-throws-event, isIgnored.",
                                     event.getType(),
                                     processId,
@@ -277,7 +297,7 @@ public class EventListenerHandler implements MessageHandler {
                  */
                 case NONE_IMMEDIATELY:
                 default: {
-                    return newNone();
+                    return Result.RESULT_NONE;
                 }
             }
 
@@ -316,7 +336,7 @@ public class EventListenerHandler implements MessageHandler {
         /**
          * 默认返回不进行任何流程变更
          */
-        return newNone();
+        return Result.RESULT_NONE;
     }
 
     /**
@@ -327,7 +347,7 @@ public class EventListenerHandler implements MessageHandler {
      * @param invokeProcess 调用流程
      * @param event         当前的事件，这个事件是触发流程控制事件的源事件
      */
-    private void compensateProcessControlEvent(ProcessControlException pce, InvokeProcessor processor, InvokeProcessor.InvokeProcess invokeProcess, Event event) {
+    private final void compensateProcessControlEvent(ProcessControlException pce, InvokeProcessor processor, InvokeProcessor.InvokeProcess invokeProcess, Event event) {
 
         /**
          * 判断是否需要补偿
@@ -344,15 +364,13 @@ public class EventListenerHandler implements MessageHandler {
             /**
              * 构建补偿立即返回事件
              */
-            compensateEvent = invokeProcess
-                    .getEventFactory()
+            compensateEvent = eventFactory
                     .buildImmediatelyReturnEvent(iEvent.getProcessId(), iEvent.getInvokeId(), pce.getResult());
         } else if (pce.getState() == ProcessControlException.THROWS_IMMEDIATELY) {
             /**
              * 构建补偿立即抛出事件
              */
-            compensateEvent = invokeProcess
-                    .getEventFactory()
+            compensateEvent = eventFactory
                     .buildImmediatelyThrowsEvent(iEvent.getProcessId(), iEvent.getInvokeId(), (Throwable) pce.getResult());
         } else {
             /**
@@ -362,7 +380,7 @@ public class EventListenerHandler implements MessageHandler {
         }
 
         try {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: compensate-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} when ori-event:{}",
                         compensateEvent.getType(),
                         iEvent.getProcessId(),
@@ -385,8 +403,6 @@ public class EventListenerHandler implements MessageHandler {
                     event.getType(),
                     cause
             );
-        } finally {
-            invokeProcess.getEventFactory().destroy(compensateEvent);
         }
     }
 
@@ -397,118 +413,134 @@ public class EventListenerHandler implements MessageHandler {
      * @param invokeId     调用 ID
      * @param isEmptyStack 堆栈是否为空
      */
-    private boolean checkProcessStack(final int processId,
-                                      final int invokeId,
-                                      final boolean isEmptyStack) {
+    private final boolean checkProcessStack(final int processId,
+                                            final int invokeId,
+                                            final boolean isEmptyStack) {
         return (processId == invokeId && !isEmptyStack)
                 || (processId != invokeId && isEmptyStack);
     }
 
     @Override
-    public Result handleOnBefore(int listenerId, Object[] argumentArray, Class clazz, String javaMethodName, String javaMethodDesc, Object target) throws Throwable {
-
-        /**
-         * 在守护区内产生的事件不需要响应
-         */
-        if (SimulatorGuard.getInstance().isInGuard()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("SIMULATOR: listener={} is in protecting, ignore processing before-event", listenerId);
-            }
-            return newNone();
-        }
-
-        /**
-         * 获取事件处理器
-         */
-        final InvokeProcessor processor = mappingOfEventProcessor.get(listenerId);
-
-        /**
-         * 如果尚未注册,则直接返回,不做任何处理
-         */
-        if (null == processor) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("SIMULATOR: listener={} is not activated, ignore processing before-event.", listenerId);
-            }
-            return newNone();
-        }
-
-        if (!processor.isRunning()) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
-            }
-            return newNone();
-        }
-
-        /**
-         * 获取调用流程
-         */
-        final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
-
+    public Result handleOnBefore(int listenerId, Object[] argumentArray, Class clazz, String javaMethodName, String javaMethodDesc, Object target, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        long startTimeRecord = costEnabled ? System.nanoTime() : 0;
         try {
+            if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+                return Result.RESULT_NONE;
+            }
             /**
-             * 如果当前处理ID被忽略，则立即返回
+             * 在守护区内产生的事件不需要响应
              */
-            if (invokeProcess.isIgnoreProcess()) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("SIMULATOR: listener={} is marked ignore process!", listenerId);
+            if (SimulatorGuard.getInstance().isInGuard()) {
+                if (isDebugEnabled) {
+                    logger.debug("SIMULATOR: listener={} is in protecting, ignore processing before-event", listenerId);
                 }
-                return newNone();
+                return Result.RESULT_NONE;
             }
 
             /**
-             * BEFORE 事件时产生新的 invokeId
+             * 获取事件处理器
              */
-            int invokeId = invokeIdSequencer.getAndIncrement();
-            invokeProcess.pushInvokeId(invokeId);
+            final InvokeProcessor processor = mappingOfEventProcessor.get(listenerId);
 
             /**
-             * 调用过程ID
+             * 如果尚未注册,则直接返回,不做任何处理
              */
-            final int processId = invokeProcess.getProcessId();
+            if (null == processor) {
+                if (isDebugEnabled) {
+                    logger.debug("SIMULATOR: listener={} is not activated, ignore processing before-event.", listenerId);
+                }
+                return Result.RESULT_NONE;
+            }
 
-            ClassLoader javaClassLoader = clazz.getClassLoader();
+            if (!processor.isRunning()) {
+                if (isDebugEnabled) {
+                    logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
+                }
+                return Result.RESULT_NONE;
+            }
+
             /**
-             * 放置业务类加载器
+             * 获取调用流程
              */
-            BizClassLoaderHolder.setBizClassLoader(javaClassLoader);
-            final BeforeEvent event = invokeProcess.getEventFactory().buildBeforeEvent(
-                    processId,
-                    invokeId,
-                    javaClassLoader,
-                    clazz,
-                    javaMethodName,
-                    javaMethodDesc,
-                    target,
-                    argumentArray
-            );
+            final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
+
             try {
-                return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
+                /**
+                 * 如果当前处理ID被忽略，则立即返回
+                 */
+                if (invokeProcess.isIgnoreProcess()) {
+                    if (isDebugEnabled) {
+                        logger.debug("SIMULATOR: listener={} is marked ignore process!", listenerId);
+                    }
+                    return Result.RESULT_NONE;
+                }
+
+                /**
+                 * BEFORE 事件时产生新的 invokeId
+                 */
+                int invokeId = invokeIdSequencer.getAndIncrement();
+                invokeProcess.pushInvokeId(invokeId);
+
+                /**
+                 * 调用过程ID
+                 */
+                final int processId = invokeProcess.getProcessId();
+
+                ClassLoader javaClassLoader = clazz.getClassLoader();
+                /**
+                 * 放置业务类加载器
+                 */
+                BizClassLoaderHolder.setBizClassLoader(javaClassLoader);
+                final BeforeEvent event = eventFactory.buildBeforeEvent(
+                        processId,
+                        invokeId,
+                        javaClassLoader,
+                        clazz,
+                        javaMethodName,
+                        javaMethodDesc,
+                        target,
+                        argumentArray
+                );
+                try {
+                    return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
+                } finally {
+                    BizClassLoaderHolder.clearBizClassLoader();
+                }
             } finally {
-                invokeProcess.getEventFactory().destroy(event);
-                BizClassLoaderHolder.clearBizClassLoader();
+                processor.cleanIfEmpty();
             }
         } finally {
-            processor.cleanIfEmpty();
+            endTimeRecord(startTimeRecord, listenerClassName, "handleOnBefore");
         }
     }
 
     @Override
-    public Result handleOnThrows(int listenerId, Class clazz, Throwable throwable) throws Throwable {
+    public Result handleOnThrows(int listenerId, Class clazz, Throwable throwable, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        long startTimeRecord = costEnabled ? System.nanoTime() : 0;
         try {
+            if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+                return Result.RESULT_NONE;
+            }
             BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
             return handleOnEnd(listenerId, clazz, throwable, false);
         } finally {
             BizClassLoaderHolder.clearBizClassLoader();
+            endTimeRecord(startTimeRecord, listenerClassName, "handleOnThrows");
         }
     }
 
     @Override
-    public Result handleOnReturn(int listenerId, Class clazz, Object object) throws Throwable {
+    public Result handleOnReturn(int listenerId, Class clazz, Object object, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        long startTimeRecord = costEnabled ? System.nanoTime() : 0;
         try {
+            if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+                return Result.RESULT_NONE;
+            }
             BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
             return handleOnEnd(listenerId, clazz, object, true);
         } finally {
             BizClassLoaderHolder.clearBizClassLoader();
+            endTimeRecord(startTimeRecord, listenerClassName, "handleOnReturn");
         }
     }
 
@@ -518,24 +550,24 @@ public class EventListenerHandler implements MessageHandler {
             entry.getValue().clean();
         }
         this.mappingOfEventProcessor.clear();
-        ClassStructureImplByAsm.clear();
+        AsmClassStructure.clear();
         exceptionHandler = null;
     }
 
 
-    private Result handleOnEnd(final int listenerId,
-                               final Class clazz,
-                               final Object object,
-                               final boolean isReturn) throws Throwable {
+    private final Result handleOnEnd(final int listenerId,
+                                     final Class clazz,
+                                     final Object object,
+                                     final boolean isReturn) throws Throwable {
 
         /**
          * 在守护区内产生的事件不需要响应
          */
         if (SimulatorGuard.getInstance().isInGuard()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is in protecting, ignore processing {}-event", listenerId, isReturn ? "return" : "throws");
             }
-            return newNone();
+            return Result.RESULT_NONE;
         }
 
         final InvokeProcessor processor = mappingOfEventProcessor.get(listenerId);
@@ -544,17 +576,17 @@ public class EventListenerHandler implements MessageHandler {
          * 如果尚未注册,则直接返回,不做任何处理
          */
         if (null == processor) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is not activated, ignore processing return-event|throws-event.", listenerId);
             }
-            return newNone();
+            return Result.RESULT_NONE;
         }
 
         if (!processor.isRunning()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
             }
-            return newNone();
+            return Result.RESULT_NONE;
         }
 
         final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
@@ -565,7 +597,7 @@ public class EventListenerHandler implements MessageHandler {
             // 2. super.<init>
             // 处理方式是直接返回,不做任何事件的处理和代码流程的改变,放弃对super.<init>的观察
             if (invokeProcess.isEmptyStack()) {
-                return newNone();
+                return Result.RESULT_NONE;
             }
 
             // 如果异常来自于ImmediatelyException，则忽略处理直接返回抛异常
@@ -581,7 +613,7 @@ public class EventListenerHandler implements MessageHandler {
             // 忽略事件处理
             // 放在stack.pop()后边是为了对齐执行栈
             if (invokeProcess.isIgnoreProcess()) {
-                return newNone();
+                return Result.RESULT_NONE;
             }
 
             // 如果ProcessId==InvokeId说明已经到栈顶，此时需要核对堆栈是否为空
@@ -595,14 +627,10 @@ public class EventListenerHandler implements MessageHandler {
             }
 
             final Event event = isReturn
-                    ? invokeProcess.getEventFactory().buildReturnEvent(processId, invokeId, object)
-                    : invokeProcess.getEventFactory().buildThrowsEvent(processId, invokeId, (Throwable) object);
+                    ? eventFactory.buildReturnEvent(processId, invokeId, object)
+                    : eventFactory.buildThrowsEvent(processId, invokeId, (Throwable) object);
 
-            try {
-                return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
-            } finally {
-                invokeProcess.getEventFactory().destroy(event);
-            }
+            return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
         } finally {
             processor.cleanIfEmpty();
         }
@@ -611,11 +639,14 @@ public class EventListenerHandler implements MessageHandler {
 
 
     @Override
-    public void handleOnCallBefore(final int listenerId, final Class clazz, final boolean isInterface, final int lineNumber, final String owner, final String name, final String desc) throws Throwable {
+    public void handleOnCallBefore(final int listenerId, final Class clazz, final boolean isInterface, final int lineNumber, final String owner, final String name, final String desc, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+            return;
+        }
 
         // 在守护区内产生的事件不需要响应
         if (SimulatorGuard.getInstance().isInGuard()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is in protecting, ignore processing call-before-event", listenerId);
             }
             return;
@@ -623,14 +654,14 @@ public class EventListenerHandler implements MessageHandler {
 
         final InvokeProcessor wrap = mappingOfEventProcessor.get(listenerId);
         if (null == wrap) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is not activated, ignore processing call-before-event.", listenerId);
             }
             return;
         }
 
         if (!wrap.isRunning()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
             }
             return;
@@ -656,14 +687,12 @@ public class EventListenerHandler implements MessageHandler {
                 return;
             }
 
-            final Event event = invokeProcess
-                    .getEventFactory()
+            final Event event = eventFactory
                     .buildCallBeforeEvent(processId, invokeId, lineNumber, isInterface, owner, name, desc);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
             } finally {
-                invokeProcess.getEventFactory().destroy(event);
                 BizClassLoaderHolder.clearBizClassLoader();
             }
         } finally {
@@ -672,11 +701,13 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public void handleOnCallReturn(final int listenerId, final Class clazz, final boolean isInterface) throws Throwable {
-
+    public void handleOnCallReturn(final int listenerId, final Class clazz, final boolean isInterface, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+            return;
+        }
         // 在守护区内产生的事件不需要响应
         if (SimulatorGuard.getInstance().isInGuard()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is in protecting, ignore processing call-return-event", listenerId);
             }
             return;
@@ -684,14 +715,14 @@ public class EventListenerHandler implements MessageHandler {
 
         final InvokeProcessor wrap = mappingOfEventProcessor.get(listenerId);
         if (null == wrap) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is not activated, ignore processing call-return-event.", listenerId);
             }
             return;
         }
 
         if (!wrap.isRunning()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
             }
             return;
@@ -711,14 +742,12 @@ public class EventListenerHandler implements MessageHandler {
                 return;
             }
 
-            final Event event = invokeProcess
-                    .getEventFactory()
+            final Event event = eventFactory
                     .buildCallReturnEvent(processId, invokeId, isInterface);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
             } finally {
-                invokeProcess.getEventFactory().destroy(event);
                 BizClassLoaderHolder.clearBizClassLoader();
             }
         } finally {
@@ -727,11 +756,13 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public void handleOnCallThrows(final int listenerId, final Class clazz, final boolean isInterface, Throwable e) throws Throwable {
-
+    public void handleOnCallThrows(final int listenerId, final Class clazz, final boolean isInterface, Throwable e, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+            return;
+        }
         // 在守护区内产生的事件不需要响应
         if (SimulatorGuard.getInstance().isInGuard()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is in protecting, ignore processing call-throws-event", listenerId);
             }
             return;
@@ -739,14 +770,14 @@ public class EventListenerHandler implements MessageHandler {
 
         final InvokeProcessor wrap = mappingOfEventProcessor.get(listenerId);
         if (null == wrap) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is not activated, ignore processing call-throws-event.", listenerId);
             }
             return;
         }
 
         if (!wrap.isRunning()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
             }
             return;
@@ -766,14 +797,12 @@ public class EventListenerHandler implements MessageHandler {
                 return;
             }
 
-            final Event event = invokeProcess
-                    .getEventFactory()
+            final Event event = eventFactory
                     .buildCallThrowsEvent(processId, invokeId, isInterface, e);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
             } finally {
-                invokeProcess.getEventFactory().destroy(event);
                 BizClassLoaderHolder.clearBizClassLoader();
             }
         } finally {
@@ -782,11 +811,13 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public void handleOnLine(int listenerId, Class clazz, int lineNumber) throws Throwable {
-
+    public void handleOnLine(int listenerId, Class clazz, int lineNumber, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+        if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
+            return;
+        }
         // 在守护区内产生的事件不需要响应
         if (SimulatorGuard.getInstance().isInGuard()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is in protecting, ignore processing call-line-event", listenerId);
             }
             return;
@@ -794,14 +825,14 @@ public class EventListenerHandler implements MessageHandler {
 
         final InvokeProcessor wrap = mappingOfEventProcessor.get(listenerId);
         if (null == wrap) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} is not activated, ignore processing line-event.", listenerId);
             }
             return;
         }
 
         if (!wrap.isRunning()) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
             }
             return;
@@ -824,16 +855,22 @@ public class EventListenerHandler implements MessageHandler {
                 return;
             }
 
-            final Event event = invokeProcess.getEventFactory().buildLineEvent(processId, invokeId, lineNumber);
+            final Event event = eventFactory.buildLineEvent(processId, invokeId, lineNumber);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
             } finally {
-                invokeProcess.getEventFactory().destroy(event);
                 BizClassLoaderHolder.clearBizClassLoader();
             }
         } finally {
             wrap.cleanIfEmpty();
         }
+    }
+
+    private final void endTimeRecord(long startTime, String listenerClass, String listenerType) {
+        if (!costEnabled) {
+            return;
+        }
+        TIME_CONSUMING_LOGGER.info("[simulator cost]class {},listenerType {},cost {}ns", listenerClass, listenerType, System.nanoTime() - startTime);
     }
 }

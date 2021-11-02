@@ -63,7 +63,7 @@ public class RealCallEnqueueV3Interceptor extends TraceInterceptorAdaptor {
         config.addArgs("url", url);
         config.addArgs("isInterface", Boolean.FALSE);
 
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
             @Override
             public Object forward(Object param) throws ProcessControlException {
                 HttpUrl httpUrl = HttpUrl.parse(config.getForwarding());

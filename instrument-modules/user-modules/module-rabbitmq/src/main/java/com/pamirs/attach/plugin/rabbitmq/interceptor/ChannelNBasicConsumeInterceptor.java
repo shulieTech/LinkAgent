@@ -16,7 +16,12 @@ package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
 import java.util.Map;
 
+import javax.annotation.Resource;
+
+import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
+import com.pamirs.attach.plugin.rabbitmq.common.ConsumeResult;
+import com.pamirs.attach.plugin.rabbitmq.common.ExceptionSilenceConsumer;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -29,6 +34,7 @@ import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.impl.ChannelN;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -42,6 +48,9 @@ import org.slf4j.LoggerFactory;
 @Destroyable(RabbitmqDestroy.class)
 public class ChannelNBasicConsumeInterceptor extends AroundInterceptor {
     private static Logger logger = LoggerFactory.getLogger(ChannelNBasicConsumeInterceptor.class.getName());
+
+    @Resource
+    private DynamicFieldManager dynamicFieldManager;
 
     @Override
     public void doAfter(Advice advice) {
@@ -90,7 +99,9 @@ public class ChannelNBasicConsumeInterceptor extends AroundInterceptor {
             if (logger.isDebugEnabled()) {
                 logger.debug("RabbitMQ basicConsume(ptQueue:{},autoAck:{},consumerTag:{},noLocal:{},exclusive:{},arguments:{},ptConsumer:{})", ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, ptConsumer);
             }
-            String cTag = ChannelHolder.consumeShadowQueue(channel, ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, ptConsumer);
+            ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, new ExceptionSilenceConsumer(ptConsumer));
+            String cTag = consumeResult.getTag();
+            dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(), RabbitmqConstants.IS_AUTO_ACK_FIELD, autoAck);
             if (cTag != null) {
                 ChannelHolder.addConsumerTag(channel, ObjectUtils.toString(advice.getReturnObj()), cTag, ptQueue);
                 if(logger.isDebugEnabled()) {
@@ -120,9 +131,9 @@ public class ChannelNBasicConsumeInterceptor extends AroundInterceptor {
 
     @Override
     public void doException(Advice advice) {
-        logger.error("rabbitmq execute {} occur error: {}", advice.getBehavior().getName(), advice.getParameterArray(), advice.getThrowable());
+        logger.error("rabbitmq execute {} occur error: {}", advice.getBehaviorName(), advice.getParameterArray(), advice.getThrowable());
         if (!PradarSwitcher.isClusterTestEnabled()) {
-            logger.warn("PradarSwitcher isClusterTestEnabled false, {} to start shadow {} skip it", advice.getBehavior().getName(), advice.getBehavior().getName());
+            logger.warn("PradarSwitcher isClusterTestEnabled false, {} to start shadow {} skip it", advice.getBehaviorName(), advice.getBehaviorName());
             return;
         }
 
@@ -160,7 +171,9 @@ public class ChannelNBasicConsumeInterceptor extends AroundInterceptor {
                     logger.debug("RabbitMQ basicConsume(ptQueue:{},autoAck:{},consumerTag:{},noLocal:{},exclusive:{},arguments:{},ptConsumer:{})", ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, ptConsumer);
                 }
 
-                String cTag = ChannelHolder.consumeShadowQueue(channel, ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, ptConsumer);
+                ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, ptConsumer);
+                String cTag = consumeResult.getTag();
+                dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(), RabbitmqConstants.IS_AUTO_ACK_FIELD, autoAck);
                 if (cTag != null) {
                     ChannelHolder.addConsumerTag(channel, ObjectUtils.toString(advice.getReturnObj()), cTag, ptQueue);
                 } else {

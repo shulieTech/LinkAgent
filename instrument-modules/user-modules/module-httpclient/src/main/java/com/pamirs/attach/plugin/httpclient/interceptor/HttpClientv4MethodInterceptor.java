@@ -14,7 +14,16 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.SocketTimeoutException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.alibaba.fastjson.JSONObject;
+
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -25,23 +34,31 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.*;
-import org.apache.http.client.methods.*;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpOptions;
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpTrace;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -93,7 +110,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
@@ -270,7 +287,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         if (httpHost == null) {
             return null;
         }
-
+        InnerWhiteListCheckUtil.check();
         String host = httpHost.getHostName();
         int port = httpHost.getPort();
         String path = httpHost.getHostName();
@@ -313,7 +330,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
             int code = response.getStatusLine().getStatusCode();
             record.setResultCode(code + "");
         }
-
+        InnerWhiteListCheckUtil.check();
         try {
             record.setRequest(getParameters(request));
         } catch (Throwable e) {
@@ -328,7 +345,12 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         HttpRequest request = (HttpRequest) args[1];
         SpanRecord record = new SpanRecord();
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        InnerWhiteListCheckUtil.check();
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
         try {
             record.setRequest(getParameters(request));
         } catch (Throwable e) {

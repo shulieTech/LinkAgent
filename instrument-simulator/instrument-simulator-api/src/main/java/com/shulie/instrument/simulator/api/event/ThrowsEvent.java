@@ -72,10 +72,4 @@ public class ThrowsEvent extends InvokeEvent {
     public Throwable getThrowable() {
         return throwable;
     }
-
-    @Override
-    public void destroy() {
-        super.destroy();
-        throwable = null;
-    }
 }

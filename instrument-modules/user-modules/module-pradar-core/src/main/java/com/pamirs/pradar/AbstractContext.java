@@ -132,23 +132,6 @@ abstract class AbstractContext extends BaseContext {
         response = null;
     }
 
-    //1/1000 trace will be logged
-    public static boolean isForceTraced(String id) {
-        if (id == null) {
-            return false;
-        }
-        if (PradarSwitcher.getMustSamplingInterval() == 1000 && ('0' == id.charAt(id.length() - 6))
-                && ('0' == id.charAt(id.length() - 7)) && ('0' == id.charAt(id.length() - 8))) {
-            return true;
-        } else if (PradarSwitcher.getMustSamplingInterval() == 100 && ('0' == id.charAt(id.length() - 6)) && ('0' == id.charAt(id.length() - 7))) {
-            return true;
-        } else if (PradarSwitcher.getMustSamplingInterval() == 10 && ('0' == id.charAt(id.length() - 6))) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     /**
      * 检查当前上下文是否被采样，有效范围在 [1, 9999] 之间，超出范围的数值都作为全采样处理。
      *
@@ -159,22 +142,28 @@ abstract class AbstractContext extends BaseContext {
             return false;
         }
 
-        if (Pradar.isClusterTest() || Pradar.isDebug()) {
+        if (Pradar.isDebug()) {
             return true;
         }
 
-        //一定有一部分的trace id 被全量采集
-        if (isForceTraced(traceId)) {
-            return true;
-        }
+        boolean clusterTest = Pradar.isClusterTest();
 
-        final int si = PradarSwitcher.getSamplingInterval();
-        if (si <= 1 || si >= 10000) {
+        if (clusterTest) {
+            return isTraceSampled(PradarSwitcher.getClusterTestSamplingInterval());
+        }
+        return isTraceSampled(PradarSwitcher.getSamplingInterval());
+    }
+
+    private boolean isTraceSampled(int si) {
+        if (si <= 1 || si > 10000) {
             return true;
         }
         if (traceId.length() < 25) {
             return traceId.hashCode() % si == 0;
         }
+        /**
+         * 生成的数字在 1 - 上限之间
+         */
         int count = traceId.charAt(21) - '0';
         count = count * 10 + traceId.charAt(22) - '0';
         count = count * 10 + traceId.charAt(23) - '0';
@@ -283,12 +272,13 @@ abstract class AbstractContext extends BaseContext {
     public String putLocalAttribute(String key, String value) {
         // 透传数据的限制
         if (PradarCoreUtils.isBlank(key) || key.length() > Pradar.MAX_LOCAL_DATA_KEY_SIZE) {
-            LOGGER.error("[ERROR] localData is not accepted since key is blank or too long: key: {} value: {}", key, value);
+            LOGGER.warn("[ERROR] localData is not accepted since key is blank or too long: key: {} value: {}", key, value);
             throw new PradarException("[ERROR] localData is not accepted since key is blank or too long: key: " + key + " value: " + value);
         }
         if (value != null && value.length() > Pradar.MAX_LOCAL_DATA_VALUE_SIZE) {
-            LOGGER.warn("[ERROR] localData is not accepted since value is too long: key:{} value: {}", key, value);
-            throw new PradarException("[ERROR] localData is not accepted since value is blank or too long: key: " + key + " value: " + value);
+            LOGGER.warn("[WARN] localData is not accepted since value is too long: key:{} value: {}", key, value);
+            value = value.substring(Pradar.MAX_LOCAL_DATA_VALUE_SIZE - 1);
+//            throw new PradarException("[ERROR] localData is not accepted since value is blank or too long: key: " + key + " value: " + value);
         }
         if (localAttributes == null) {
             localAttributes = new LinkedHashMap<String, String>();

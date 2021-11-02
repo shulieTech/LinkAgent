@@ -90,7 +90,9 @@ public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig
         }
         GlobalConfig.getInstance().getShadowHbaseServerConfigs().clear();
         GlobalConfig.getInstance().setShadowHbaseServerConfigs(newValue);
-        LOGGER.info("publish shadow hbase config successful. config={}", newValue);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("publish shadow hbase config successful. config={}", newValue);
+        }
         return change;
     }
 }

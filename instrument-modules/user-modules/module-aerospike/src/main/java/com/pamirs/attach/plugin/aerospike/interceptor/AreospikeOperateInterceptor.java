@@ -281,7 +281,7 @@ public class AreospikeOperateInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setService(getService(advice.getBehavior().getName(), advice.getParameterArray()));
+        spanRecord.setService(getService(advice.getBehaviorName(), advice.getParameterArray()));
         spanRecord.setMethod(getMethod(advice.getParameterArray()));
         spanRecord.setRemoteIp(getRemoteIp(advice.getTarget()));
         spanRecord.setRequest(advice.getParameterArray());

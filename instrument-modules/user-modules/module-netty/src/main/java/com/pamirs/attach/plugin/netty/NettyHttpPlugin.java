@@ -33,7 +33,7 @@ import org.kohsuke.MetaInfServices;
 public class NettyHttpPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         this.enhanceTemplate.enhance(this, "io.netty.channel.DefaultChannelPipeline", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -49,6 +49,7 @@ public class NettyHttpPlugin extends ModuleLifecycleAdapter implements Extension
                 final InstrumentMethod writeAndFlushMethod2 = target.getDeclaredMethod("writeAndFlush", "java.lang.Object", "io.netty.channel.ChannelPromise");
                 writeAndFlushMethod2.addInterceptor(Listeners.of(ChannelPipelineWriteInterceptor.class, NettyConstants.SCOPE_WRITE, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
+           
         });
 
         this.enhanceTemplate.enhance(this, "io.netty.channel.DefaultChannelPromise", new EnhanceCallback() {
@@ -69,6 +70,7 @@ public class NettyHttpPlugin extends ModuleLifecycleAdapter implements Extension
                 method.addInterceptor(Listeners.of(HttpEncoderInterceptor.class));
             }
         });
+        return true;
     }
 
 }

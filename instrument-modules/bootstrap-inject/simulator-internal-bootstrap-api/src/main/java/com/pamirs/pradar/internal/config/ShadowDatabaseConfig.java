@@ -79,7 +79,7 @@ public class ShadowDatabaseConfig {
     private String applicationName;
 
     /**
-     * 数据源类型 0:影子库 1:影子表
+     * 数据源类型 0:影子库 1:影子表 2:影子库+影子表
      */
     private int dsType;
 
@@ -181,7 +181,7 @@ public class ShadowDatabaseConfig {
         } else if (rawUrl.startsWith("jdbc:mariadb:")) {
             return MARIADB_DRIVER;
         } else if (rawUrl.startsWith("jdbc:oracle:") //
-                || rawUrl.startsWith("JDBC:oracle:")) {
+            || rawUrl.startsWith("JDBC:oracle:")) {
             return ORACLE_DRIVER;
         } else if (rawUrl.startsWith("jdbc:alibaba:oracle:")) {
             return ALI_ORACLE_DRIVER;
@@ -235,9 +235,11 @@ public class ShadowDatabaseConfig {
             return "com.mimer.jdbc.Driver";
         } else if (rawUrl.startsWith("jdbc:polardb:")) {
             return "com.aliyun.polardb.Driver";
+        } else if (rawUrl.startsWith("jdbc:cobar_cluster")) {
+            return "com.alibaba.cobar.jdbc.Driver";
         } else if (rawUrl.startsWith("mongodb:")) {
             return "mongodb";
-        }  else {
+        } else {
             throw new SQLException("unkow jdbc driver : " + rawUrl);
         }
     }
@@ -307,7 +309,11 @@ public class ShadowDatabaseConfig {
     }
 
     public boolean isShadowDatabase() {
-        return dsType == 0;
+        return dsType == 0 || dsType == 2;
+    }
+
+    public boolean isShadowDatabaseWithTable() {
+        return dsType == 2;
     }
 
     public boolean isShadowTable() {
@@ -386,27 +392,30 @@ public class ShadowDatabaseConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {return true;}
+        if (o == null || getClass() != o.getClass()) {return false;}
 
-        ShadowDatabaseConfig that = (ShadowDatabaseConfig) o;
+        ShadowDatabaseConfig that = (ShadowDatabaseConfig)o;
 
-        if (dsType != that.dsType) return false;
-        if (applicationName != null ? !applicationName.equals(that.applicationName) : that.applicationName != null)
+        if (dsType != that.dsType) {return false;}
+        if (applicationName != null ? !applicationName.equals(that.applicationName) : that.applicationName != null) {
             return false;
-        if (url != null ? !url.equals(that.url) : that.url != null) return false;
-        if (username != null ? !username.equals(that.username) : that.username != null) return false;
-        if (schema != null ? !schema.equals(that.schema) : that.schema != null) return false;
-        if (shadowUrl != null ? !shadowUrl.equals(that.shadowUrl) : that.shadowUrl != null) return false;
-        if (shadowDriverClassName != null ? !shadowDriverClassName.equals(that.shadowDriverClassName) : that.shadowDriverClassName != null)
+        }
+        if (url != null ? !url.equals(that.url) : that.url != null) {return false;}
+        if (username != null ? !username.equals(that.username) : that.username != null) {return false;}
+        if (schema != null ? !schema.equals(that.schema) : that.schema != null) {return false;}
+        if (shadowUrl != null ? !shadowUrl.equals(that.shadowUrl) : that.shadowUrl != null) {return false;}
+        if (shadowDriverClassName != null ? !shadowDriverClassName.equals(that.shadowDriverClassName)
+            : that.shadowDriverClassName != null) {return false;}
+        if (shadowUsername != null ? !shadowUsername.equals(that.shadowUsername) : that.shadowUsername != null) {
             return false;
-        if (shadowUsername != null ? !shadowUsername.equals(that.shadowUsername) : that.shadowUsername != null)
+        }
+        if (shadowPassword != null ? !shadowPassword.equals(that.shadowPassword) : that.shadowPassword != null) {
             return false;
-        if (shadowPassword != null ? !shadowPassword.equals(that.shadowPassword) : that.shadowPassword != null)
-            return false;
-        if (shadowSchema != null ? !shadowSchema.equals(that.shadowSchema) : that.shadowSchema != null) return false;
-        if (businessShadowTables != null ? !businessShadowTables.equals(that.businessShadowTables) : that.businessShadowTables != null)
-            return false;
+        }
+        if (shadowSchema != null ? !shadowSchema.equals(that.shadowSchema) : that.shadowSchema != null) {return false;}
+        if (businessShadowTables != null ? !businessShadowTables.equals(that.businessShadowTables)
+            : that.businessShadowTables != null) {return false;}
         return properties != null ? properties.equals(that.properties) : that.properties == null;
     }
 
@@ -430,19 +439,19 @@ public class ShadowDatabaseConfig {
     @Override
     public String toString() {
         return "ShadowDatabaseConfig{" +
-                "applicationName='" + applicationName + '\'' +
-                ", dsType=" + dsType +
-                ", url='" + url + '\'' +
-                ", username='" + username + '\'' +
-                ", schema='" + schema + '\'' +
-                ", shadowUrl='" + shadowUrl + '\'' +
-                ", shadowDriverClassName='" + shadowDriverClassName + '\'' +
-                ", shadowUsername='" + shadowUsername + '\'' +
-                ", shadowPassword=" + shadowPassword == null ? null : "'******'" +
-                ", shadowSchema='" + shadowSchema + '\'' +
-                ", businessShadowTables=" + businessShadowTables +
-                ", properties=" + properties +
-                '}';
+            "applicationName='" + applicationName + '\'' +
+            ", dsType=" + dsType +
+            ", url='" + url + '\'' +
+            ", username='" + username + '\'' +
+            ", schema='" + schema + '\'' +
+            ", shadowUrl='" + shadowUrl + '\'' +
+            ", shadowDriverClassName='" + shadowDriverClassName + '\'' +
+            ", shadowUsername='" + shadowUsername + '\'' +
+            ", shadowPassword=" + shadowPassword == null ? null : "'******'" +
+            ", shadowSchema='" + shadowSchema + '\'' +
+            ", businessShadowTables=" + businessShadowTables +
+            ", properties=" + properties +
+            '}';
     }
 }
 

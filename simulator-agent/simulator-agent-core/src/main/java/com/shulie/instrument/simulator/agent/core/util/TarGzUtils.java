@@ -118,7 +118,7 @@ public class TarGzUtils {
             //如果需要刪除之前解压的gz文件，在这里进行
 
         } catch (Exception e) {
-            LOGGER.warn("decompress failed: {}", tarGzFile, e);
+            LOGGER.error("decompress failed: {}", tarGzFile, e);
             throw new RuntimeException("decompress failed: " + tarGzFile);
         } finally {
             if (fis != null) {
@@ -157,7 +157,7 @@ public class TarGzUtils {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                LOGGER.warn("create new file err: {}", file.getAbsolutePath(), e);
+                LOGGER.error("create new file err: {}", file.getAbsolutePath(), e);
             }
         }
     }

@@ -14,13 +14,22 @@
  */
 package com.pamirs.attach.plugin.logback.interceptor;
 
-import java.util.HashMap;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import ch.qos.logback.core.util.COWArrayList;
 import com.pamirs.attach.plugin.logback.utils.AppenderHolder;
+import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
@@ -31,14 +40,29 @@ import org.slf4j.LoggerFactory;
  * @Date: 2020/12/7 23:37
  * @Description:
  */
-public class AppenderRegisterInterceptor extends AroundInterceptor {
+@ListenerBehavior(isFilterClusterTest = true)
+public class AppenderRegisterInterceptor extends CutoffInterceptorAdaptor {
 
     protected boolean isBusinessLogOpen;
     protected String bizShadowLogPath;
+    private static volatile Field appenderListField;
+    private static volatile Method doAppendMethod;
+    private final Logger log = LoggerFactory.getLogger(AppenderRegisterInterceptor.class);
 
-    private final Logger log = LoggerFactory.getLogger(ComponentTrackerInterceptor.class);
+    private final static ThreadPoolExecutor THREAD_POOL_EXECUTOR = new ThreadPoolExecutor(Runtime.getRuntime()
+        .availableProcessors(), Runtime.getRuntime().availableProcessors(),
+        0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<Runnable>(2048), new ThreadFactory() {
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
 
-    private Map<Object, Long> lastCheckTimes = new HashMap<Object, Long>();
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "shadow-logback-worker-" + threadNumber.getAndIncrement());
+            if (t.isDaemon()) {t.setDaemon(false);}
+            if (t.getPriority() != Thread.NORM_PRIORITY) {t.setPriority(Thread.NORM_PRIORITY);}
+            return t;
+        }
+    }, new ThreadPoolExecutor.DiscardPolicy());
 
     public AppenderRegisterInterceptor(boolean isBusinessLogOpen, String bizShadowLogPath) {
         this.isBusinessLogOpen = isBusinessLogOpen;
@@ -46,41 +70,110 @@ public class AppenderRegisterInterceptor extends AroundInterceptor {
     }
 
     @Override
-    public void doBefore(Advice advice) {
+    public CutOffResult cutoff0(Advice advice) throws Throwable {
         if (!isBusinessLogOpen) {
-            return;
+            return CutOffResult.passed();
         }
-        Object appenderAttachable = advice.getTarget();
-        if (!isNeedScan(appenderAttachable)) { //因为下面都是反射调用，并且不需要每次都扫描一遍，间隔扫描提升性能
-            return;
+        if (!Pradar.isClusterTest()) {
+            return CutOffResult.passed();
         }
-        List appenderList = Reflect.on(appenderAttachable).get("appenderList");
-        if (appenderList == null) {
-            return;
+
+        int clusterTestSamplingInterval = PradarSwitcher.getClusterTestSamplingInterval();
+        //测试代码
+        if (clusterTestSamplingInterval == 9527) {
+            return CutOffResult.cutoff(1);
         }
-        ClassLoader bizClassLoader = appenderAttachable.getClass().getClassLoader();
-        for (Object appender : appenderList) {
-            String appenderName = Reflect.on(appender).call("getName").get();
-            if (appenderName.startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
-                continue;
-            }
-            try {
-                Object ptAppender = AppenderHolder.getOrCreatePtAppender(bizClassLoader, appender, bizShadowLogPath);
-                if (ptAppender != null) {
-                    Reflect.on(appenderAttachable).call("addAppender", ptAppender).get();
-                }
-            } catch (Exception e) {
-                log.error("get pt appender fail!", e);
-            }
+        if (clusterTestSamplingInterval == 9526) {
+            THREAD_POOL_EXECUTOR.submit(new LogRunnable(advice.getTarget(), advice.getParameterArray()[0]));
+            return CutOffResult.cutoff(1);
         }
-        lastCheckTimes.put(appenderAttachable, System.currentTimeMillis());
+
+        new LogRunnable(advice.getTarget(), advice.getParameterArray()[0]).run();
+        return CutOffResult.cutoff(1);
     }
 
-    private boolean isNeedScan(Object appenderAttachable) {
-        Long lastCheckTime = lastCheckTimes.get(appenderAttachable);
-        if (lastCheckTime == null) {
-            lastCheckTime = -1L;
+    private final class LogRunnable implements Runnable {
+
+        private final Object appenderAttachable;
+        private final Object event;
+
+        private LogRunnable(Object appenderAttachable, Object event) {
+            this.appenderAttachable = appenderAttachable;
+            this.event = event;
         }
-        return (System.currentTimeMillis() - lastCheckTime) > 30000;
+
+        @Override
+        public void run() {
+            initAppenderListFieldField(appenderAttachable);
+            List appenderList = Reflect.on(appenderAttachable).get(appenderListField);
+            if (appenderList == null) {
+                return;
+            }
+            ClassLoader bizClassLoader = appenderAttachable.getClass().getClassLoader();
+            COWArrayList<Object> ptAppenderList = getPtAppenderList(appenderList, bizClassLoader);
+            appendLoopOnAppenders(ptAppenderList, event);
+        }
+
+        private COWArrayList<Object> getPtAppenderList(List appenderList, ClassLoader bizClassLoader) {
+            COWArrayList<Object> ptAppenderList = AppenderHolder.getPtAppenders(appenderAttachable);
+            if (ptAppenderList == null) {
+                synchronized (appenderAttachable) {
+                    ptAppenderList = AppenderHolder.getPtAppenders(appenderAttachable);
+                    if (ptAppenderList == null) {
+                        ptAppenderList = new COWArrayList<Object>(new Object[0]);
+                        for (Object appender : appenderList) {
+                            try {
+                                Object ptAppender = AppenderHolder.getOrCreatePtAppender(bizClassLoader, appender,
+                                    bizShadowLogPath);
+                                if (ptAppender != null) {
+                                    ptAppenderList.add(ptAppender);
+                                }
+                            } catch (Exception e) {
+                                log.warn("[logback] create pt appender fail!", e);
+                            }
+                        }
+                        AppenderHolder.putPtAppenders(appenderAttachable, ptAppenderList);
+                    }
+                }
+            }
+            return ptAppenderList;
+        }
     }
+
+    public void appendLoopOnAppenders(COWArrayList<Object> ptAppenderList, Object e) {
+        final Object[] appenderArray = ptAppenderList.asTypedArray();
+        for (Object objectAppender : appenderArray) {
+            try {
+                initDoAppendMethod(objectAppender);
+                doAppendMethod.invoke(objectAppender, e);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
+
+    private static void initAppenderListFieldField(Object appenderAttachable) {
+        if (appenderListField == null) {
+            synchronized (AppenderRegisterInterceptor.class) {
+                if (appenderListField == null) {
+                    appenderListField = Reflect.on(appenderAttachable).field0("appenderList");
+                }
+            }
+        }
+    }
+
+    private static void initDoAppendMethod(Object objectAppender) throws NoSuchMethodException {
+        if (doAppendMethod == null) {
+            synchronized (AppenderRegisterInterceptor.class) {
+                if (doAppendMethod == null) {
+                    doAppendMethod = Reflect.on(objectAppender).exactMethod("doAppend", new Class[] {Object.class});
+                }
+            }
+        }
+    }
+
+    public static void release(){
+        THREAD_POOL_EXECUTOR.shutdownNow();
+    }
+
 }

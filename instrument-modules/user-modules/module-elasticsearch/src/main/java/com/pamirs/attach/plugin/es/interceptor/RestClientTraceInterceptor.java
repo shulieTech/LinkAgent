@@ -19,6 +19,7 @@ import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
 import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.MiddlewareType;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -28,7 +29,11 @@ import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RestClient;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -58,19 +63,22 @@ public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
             LOGGER.error("elasticsearch {} is not supported", args[0].getClass().getName());
             return null;
         }
-        final List<String> indexes = requestIndexRename.getIndex(args[0]);
+        final Set<String> indexes = new HashSet<String>(requestIndexRename.getIndex(args[0]));
         if (CollectionUtils.isEmpty(indexes)) {
             return null;
         }
         record.setService(toString(indexes));
-        record.setMethod(advice.getBehavior().getName());
+        record.setMethod(advice.getBehaviorName());
         String remoteIp = getRemoteIp(target);
         record.setRemoteIp(remoteIp);
+        if(!Pradar.isClusterTest()){
+            record.setPassedCheck(true);
+        }
         return record;
 
     }
 
-    private String toString(List<String> list) {
+    private String toString(Collection<String> list) {
         StringBuilder builder = new StringBuilder();
         for (String str : list) {
             builder.append(str).append(',');
@@ -88,7 +96,7 @@ public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setRequest(args[0]);
-        record.setResponse(result);
+        //record.setResponse(result);
         return record;
 
     }

@@ -14,11 +14,7 @@
  */
 package com.pamirs.attach.plugin.logback;
 
-import com.pamirs.attach.plugin.logback.interceptor.AppenderRegisterInterceptor;
-import com.pamirs.attach.plugin.logback.interceptor.AppenderRouterInterceptor;
-import com.pamirs.attach.plugin.logback.interceptor.AsyncTestMarkSetInterceptor;
-import com.pamirs.attach.plugin.logback.interceptor.ComponentTrackerInterceptor;
-import com.pamirs.attach.plugin.logback.interceptor.SiftingAppenderBaseInterceptor;
+import com.pamirs.attach.plugin.logback.interceptor.*;
 import com.pamirs.attach.plugin.logback.utils.AppenderHolder;
 import com.pamirs.attach.plugin.logback.utils.ClusterTestMarker;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -37,7 +33,8 @@ import org.slf4j.LoggerFactory;
  * @since 2020/8/13 4:10 下午
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = LogbackConstants.PLUGIN_NAME, version = "1.0.0", author = "minzhuo@shulie.io", description = "logback 业务日志与压测日志分流")
+@ModuleInfo(id = LogbackConstants.PLUGIN_NAME, version = "1.0.0", author = "minzhuo@shulie.io",
+        description = "logback 业务日志与压测日志分流")
 public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     private final static Logger logger = LoggerFactory.getLogger(LogbackPlugin.class);
@@ -45,21 +42,25 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
     private String bizShadowLogPath;
 
     @Override
-    public void onActive() {
+    public boolean onActive() {
         this.isBusinessLogOpen = simulatorConfig.getBooleanProperty("pradar.biz.log.divider", false);
         this.bizShadowLogPath = simulatorConfig.getProperty("pradar.biz.log.divider.path", simulatorConfig.getLogPath());
         if (!isBusinessLogOpen) {
-            logger.info("logback biz log divider switcher is not open. ignore enhanced logback.");
-            return;
+            if (logger.isInfoEnabled()) {
+                logger.info("logback biz log divider switcher is not open. ignore enhanced logback.");
+            }
+            return false;
         }
 
+        //改版后sift appender隔离不了，先不支持，有碰到再说
         // for sifting appender start
-        enhanceTemplate.enhance(this, "ch.qos.logback.core.sift.SiftingAppenderBase", new EnhanceCallback() {
+        /*enhanceTemplate.enhance(this, "ch.qos.logback.core.sift.SiftingAppenderBase", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
 
                 InstrumentMethod addAppenderMethod = target.getDeclaredMethods("append", "java.lang.Object");
-                addAppenderMethod.addInterceptor(Listeners.of(SiftingAppenderBaseInterceptor.class, new Object[]{isBusinessLogOpen}));
+                addAppenderMethod.addInterceptor(
+                        Listeners.of(SiftingAppenderBaseInterceptor.class, new Object[]{isBusinessLogOpen}));
             }
         });
 
@@ -68,51 +69,28 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
 
                 InstrumentMethod addAppenderMethod = target.getDeclaredMethods("getOrCreate", "java.lang.String", "long");
-                addAppenderMethod.addInterceptor(Listeners.of(ComponentTrackerInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
+                addAppenderMethod.addInterceptor(
+                        Listeners.of(ComponentTrackerInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
             }
-        });
+        });*/
         // for sifting appender end
-
-        enhanceTemplate.enhance(this, "ch.qos.logback.core.AsyncAppenderBase", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-
-                InstrumentMethod addAppenderMethod = target.getDeclaredMethods("append", "java.lang.Object");
-                addAppenderMethod.addInterceptor(Listeners.of(AsyncTestMarkSetInterceptor.class));
-            }
-        });
 
         enhanceTemplate.enhance(this, "ch.qos.logback.core.spi.AppenderAttachableImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
 
                 InstrumentMethod addAppenderMethod = target.getDeclaredMethods("appendLoopOnAppenders");
-                addAppenderMethod.addInterceptor(Listeners.of(AppenderRegisterInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
+                addAppenderMethod.addInterceptor(
+                        Listeners.of(AppenderRegisterInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
             }
         });
-        //ch.qos.logback.core.UnsynchronizedAppenderBase.doAppend
-        enhanceTemplate.enhance(this, "ch.qos.logback.core.UnsynchronizedAppenderBase",
-                new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod method = target.getDeclaredMethods("doAppend");
-                        method.addInterceptor(Listeners.of(AppenderRouterInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
-                    }
-                });
-
-        enhanceTemplate.enhance(this, "ch.qos.logback.core.AppenderBase",
-                new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod method = target.getDeclaredMethods("doAppend");
-                        method.addInterceptor(Listeners.of(AppenderRouterInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
-                    }
-                });
+        return true;
     }
 
     @Override
     public void onUnload() throws Throwable {
         ClusterTestMarker.release();
         AppenderHolder.release();
+        AppenderRegisterInterceptor.release();
     }
 }

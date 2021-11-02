@@ -14,6 +14,10 @@
  */
 package com.pamirs.attach.plugin.dbcp.utils;
 
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.Type;
+import com.pamirs.attach.plugin.dynamic.template.DbcpTemplate;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Throwables;
@@ -24,6 +28,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -93,6 +98,21 @@ public class DataSourceWrapUtil {
         return false;
     }
 
+
+    public static void attachment(Advice advice) {
+        try {
+            BasicDataSource target = (BasicDataSource) advice.getTarget();
+            ResourceManager.set(new Attachment(target.getUrl(),
+                    "dbcp",
+                    Type.DataBaseType.types(), new DbcpTemplate()
+                    .setUrl(target.getUrl())
+                    .setUsername(target.getUsername())
+                    .setPassword(target.getPassword())
+                    .setDriverClassName(target.getDriverClassName())));
+        } catch (Throwable t) {
+            logger.error(Throwables.getStackTraceAsString(t));
+        }
+    }
     //  static AtomicBoolean inited = new AtomicBoolean(false);
 
     public static void init(DataSourceMeta<BasicDataSource> dataSourceMeta) {
@@ -116,7 +136,9 @@ public class DataSourceWrapUtil {
 
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
             return;
@@ -129,7 +151,9 @@ public class DataSourceWrapUtil {
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    }
                     old.close();
                 }
             } catch (Throwable e) {
@@ -152,10 +176,14 @@ public class DataSourceWrapUtil {
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    }
                     old.close();
                 }
-                logger.info("[dbcp] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[dbcp] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+                }
             } catch (Throwable t) {
                 logger.error("[dbcp] init datasource err!", t);
                 ErrorReporter.buildError()

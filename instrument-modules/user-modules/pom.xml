@@ -47,11 +47,11 @@
         <module>module-jetty</module>
         <module>module-mock</module>
         <module>module-mongodb</module>
-<!--        和mongodb 会有冲突， 暂时注释-->
-<!--        <module>module-mongodb4</module>-->
+        <!--        和mongodb 会有冲突， 暂时注释-->
+        <!--        <module>module-mongodb4</module>-->
         <module>module-motan</module>
         <module>module-mule</module>
-        <module>module-mybatis</module>
+        <!--        <module>module-mybatis</module>-->
         <module>module-neo4j</module>
         <module>module-okhttp</module>
         <module>module-pulsar</module>
@@ -61,7 +61,7 @@
         <module>module-redis-redisson</module>
         <module>module-resin</module>
         <module>module-saturn</module>
-        <module>module-shadow-job</module>
+        <!--        <module>module-shadow-job</module>-->
         <module>module-spring-cache</module>
         <module>module-undertow</module>
         <module>module-xmemcached</module>
@@ -78,32 +78,72 @@
         <module>module-akka</module>
         <module>module-feign</module>
         <module>module-webflux</module>
+        <!--
+                <module>module-dynamic-resource</module>
+        -->
+        <module>module-zuul</module>
     </modules>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.2-beta-5</version>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
                 <configuration>
-                    <appendAssemblyId>false</appendAssemblyId>
+                    <relocations>
+                        <relocation>
+                            <!-- 修改 guava 包名 -->
+                            <pattern>com.google.common</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common
+                            </shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                     <outputDirectory>../../target/modules/${module-name}</outputDirectory>
                 </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>attached</goal>
-                        </goals>
                         <phase>package</phase>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                        </configuration>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
+            <!--            <plugin>-->
+            <!--                <groupId>org.apache.maven.plugins</groupId>-->
+            <!--                <artifactId>maven-assembly-plugin</artifactId>-->
+            <!--                <version>2.2-beta-5</version>-->
+            <!--                <configuration>-->
+            <!--                    <appendAssemblyId>false</appendAssemblyId>-->
+            <!--                    <outputDirectory>../../target/modules/${module-name}</outputDirectory>-->
+            <!--                </configuration>-->
+            <!--                <executions>-->
+            <!--                    <execution>-->
+            <!--                        <goals>-->
+            <!--                            <goal>attached</goal>-->
+            <!--                        </goals>-->
+            <!--                        <phase>package</phase>-->
+            <!--                        <configuration>-->
+            <!--                            <descriptorRefs>-->
+            <!--                                <descriptorRef>jar-with-dependencies</descriptorRef>-->
+            <!--                            </descriptorRefs>-->
+            <!--                        </configuration>-->
+            <!--                    </execution>-->
+            <!--                </executions>-->
+            <!--            </plugin>-->
         </plugins>
     </build>
 </project>

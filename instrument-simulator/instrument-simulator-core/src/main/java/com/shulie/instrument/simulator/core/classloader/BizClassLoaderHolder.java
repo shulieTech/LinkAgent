@@ -14,6 +14,8 @@
  */
 package com.shulie.instrument.simulator.core.classloader;
 
+import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
+
 import java.lang.ref.WeakReference;
 
 /**
@@ -72,13 +74,17 @@ public class BizClassLoaderHolder {
         ClassLoaderNode stack = holder.get();
         if (stack == null) {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            if (classLoader instanceof RoutingURLClassLoader || classLoader == ModuleClassLoader.class.getClassLoader()) {
+            if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
                 return null;
             }
-            return Thread.currentThread().getContextClassLoader();
+            return classLoader;
         }
         ClassLoader classLoader = stack.getClassLoader();
-        return classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
+        ClassLoader bizClassLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
+        if (SimulatorClassUtils.isSimulatorClassLoader(bizClassLoader)) {
+            return null;
+        }
+        return bizClassLoader;
     }
 
     /**
@@ -90,7 +96,7 @@ public class BizClassLoaderHolder {
         ClassLoaderNode parent;
 
         ClassLoaderNode(ClassLoader classLoader, ClassLoaderNode parent) {
-            if (parent != null) {
+            if (classLoader != null) {
                 this.classLoader = new WeakReference<ClassLoader>(classLoader);
             }
             this.parent = parent;

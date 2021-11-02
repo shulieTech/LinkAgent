@@ -34,7 +34,7 @@ import java.net.URL;
 public class ForwardStrategy implements ExecutionStrategy {
 
     @Override
-    public Object processBlock(ClassLoader classLoader, Object params) {
+    public Object processBlock(Class returnType, ClassLoader classLoader, Object params) {
         if (Pradar.isClusterTest()) {
             MatchConfig config = (MatchConfig) params;
             Object request = config.getArgs().get("request");
@@ -56,22 +56,22 @@ public class ForwardStrategy implements ExecutionStrategy {
     }
 
     @Override
-    public Object processBlock(ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
+    public Object processBlock(Class returnType, ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
         if (call instanceof ExecutionForwardCall) {
             ExecutionForwardCall forwardCall = (ExecutionForwardCall) call;
-            Object block = processBlock(classLoader, params);
+            Object block = processBlock(returnType, classLoader, params);
             return forwardCall.forward(block);
         }
-        return processBlock(classLoader, params);
+        return processBlock(returnType, classLoader, params);
     }
 
     @Override
-    public Object processNonBlock(ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
+    public Object processNonBlock(Class returnType, ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
         if (call instanceof ExecutionForwardCall) {
             ExecutionForwardCall forwardCall = (ExecutionForwardCall) call;
-            Object block = processBlock(classLoader, params);
+            Object block = processBlock(returnType, classLoader, params);
             return forwardCall.forward(block);
         }
-        return processBlock(classLoader, params);
+        return processBlock(returnType, classLoader, params);
     }
 }

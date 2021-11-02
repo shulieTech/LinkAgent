@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
 import com.pamirs.attach.plugin.apache.rocketmq.hook.PullConsumeMessageHookImpl;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.consumer.PullResult;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
@@ -27,6 +28,7 @@ import org.apache.rocketmq.common.message.MessageQueue;
 /**
  * Created by xiaobin on 2017/3/10.
  */
+@ListenerBehavior(isNoSilence = true)
 public class PullConsumerInterceptor extends AroundInterceptor {
 
     private PullConsumeMessageHookImpl hook;

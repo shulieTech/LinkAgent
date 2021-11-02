@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.agent.spi.config;
 
 
 import java.io.InputStream;
+import java.util.Map;
 
 /**
  * agent 配置
@@ -95,20 +96,6 @@ public interface AgentConfig {
      * @return agent jar path
      */
     String getAgentJarPath();
-
-    /**
-     * 获取 namespace
-     *
-     * @return namespace
-     */
-    String getNamespace();
-
-    /**
-     * 获取 token
-     *
-     * @return token
-     */
-    String getToken();
 
     /**
      * 获取 zk 地址
@@ -235,4 +222,7 @@ public interface AgentConfig {
      * @return
      */
     String getTroWebUrl();
+
+
+    Map<String, String> getAgentFileConfigs();
 }

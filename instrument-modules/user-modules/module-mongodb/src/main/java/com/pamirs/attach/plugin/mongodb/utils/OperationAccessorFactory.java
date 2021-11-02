@@ -152,9 +152,13 @@ public class OperationAccessorFactory {
                 }
             }
         } catch (ClassNotFoundException e) {
-            LOGGER.info("mongodb class load fail : {} , load other mongodb version!", e.getMessage());
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("mongodb class load fail : {} , load other mongodb version!", e.getMessage());
+            }
         } catch (NoClassDefFoundError error) {
-            LOGGER.info("mongodb class load fail : {} , load other mongodb version!", error.getMessage());
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("mongodb class load fail : {} , load other mongodb version!", error.getMessage());
+            }
         }
     }
 

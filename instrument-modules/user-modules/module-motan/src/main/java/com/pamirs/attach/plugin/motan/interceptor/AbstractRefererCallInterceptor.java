@@ -106,7 +106,7 @@ public class AbstractRefererCallInterceptor extends TraceInterceptorAdaptor {
     }
 
     private boolean isLocalHost(String address) {
-        return "127.0.0.1".equals(address) || "localhost".equalsIgnoreCase(address);
+        return "127.0.0.1".equals(address) || "localhost".equals(address) || "LOCALHOST".equals(address);
     }
 
     @Override

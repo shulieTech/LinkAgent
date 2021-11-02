@@ -32,11 +32,11 @@ import org.kohsuke.MetaInfServices;
  * @Date 2020/8/12 10:37 下午
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = MotanConstants.DYNAMIC_FIELD_SERVICE_URL, version = "1.0.0", author = "xiaobin@shulie.io",description = "motan 远程调用框架,微博开源")
+@ModuleInfo(id = MotanConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "motan 远程调用框架,微博开源")
 public class MotanPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "com.weibo.api.motan.rpc.AbstractReferer", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -53,5 +53,6 @@ public class MotanPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 method.addInterceptor(Listeners.of(ProviderMessageRouterCallInterceptor.class));
             }
         });
+        return true;
     }
 }

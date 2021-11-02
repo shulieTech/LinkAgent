@@ -57,6 +57,6 @@ public class ConsumerCommitAsyncInterceptor extends AbstractProxiedConsumerInter
             return null;
         }
         throw new PressureMeasureError(String.format("未支持的kafka版本！ method : %s(%s)",
-            advice.getBehavior().getName(), Arrays.toString(advice.getBehavior().getParameterTypes())));
+            advice.getBehaviorName(), Arrays.toString(advice.getBehavior().getParameterTypes())));
     }
 }

@@ -42,7 +42,7 @@ public class DbcpPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     private static Logger logger = LoggerFactory.getLogger(DbcpPlugin.class);
 
     @Override
-    public void onActive() {
+    public boolean onActive() {
         enhanceTemplate.enhance(this, "org.apache.commons.dbcp.BasicDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -53,5 +53,6 @@ public class DbcpPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 getConnection0.addInterceptor(Listeners.of(DataSourceGetConnectionCutoffArgsInterceptor.class, "Dbcp_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
+        return true;
     }
 }

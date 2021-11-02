@@ -31,12 +31,12 @@ public class DefaultDeploymentManager implements DeploymentManager {
     }
 
     @Override
-    public void uninstall(String namespace) throws Throwable {
+    public void uninstall() throws Throwable {
 
         MethodUtils.invokeStaticMethod(
                 deploymentClass,
                 "uninstall",
-                namespace
+                new Object[0]
         );
     }
 }

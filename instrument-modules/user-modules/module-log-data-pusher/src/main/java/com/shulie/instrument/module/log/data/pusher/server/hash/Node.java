@@ -88,11 +88,6 @@ public class Node {
     }
 
     @Override
-    public String toString() {
-        return host + ":" + port;
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -114,5 +109,15 @@ public class Node {
         int result = host != null ? host.hashCode() : 0;
         result = 31 * result + port;
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Node{" +
+            "host='" + host + '\'' +
+            ", port=" + port +
+            ", lastErrorTime=" + lastErrorTime +
+            ", errorCount=" + errorCount +
+            '}';
     }
 }

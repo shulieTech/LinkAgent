@@ -14,7 +14,9 @@
  */
 package com.shulie.instrument.simulator.api.listener;
 
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
+import com.shulie.instrument.simulator.api.util.tag.TagUtil;
 
 import java.util.Arrays;
 
@@ -31,6 +33,7 @@ public class Listeners {
 
     private String className;
     private Object[] args;
+    private int listenersTag;
 
     /**
      * 执行策略
@@ -53,26 +56,6 @@ public class Listeners {
     private EventListenerCallback eventListenerCallback;
 
     private Listeners() {
-    }
-
-    public static Listeners of(final String className, final String scopeName, final int policy, AdviceListenerCallback callback, final Object... args) {
-        Listeners listeners = new Listeners();
-        listeners.setClassName(className);
-        listeners.setScopeName(scopeName);
-        listeners.setArgs(args);
-        listeners.setExecutionPolicy(policy);
-        listeners.setAdviceListenerCallback(callback);
-        return listeners;
-    }
-
-    public static Listeners of(final String className, final String scopeName, final int policy, EventListenerCallback callback, final Object... args) {
-        Listeners listeners = new Listeners();
-        listeners.setClassName(className);
-        listeners.setScopeName(scopeName);
-        listeners.setArgs(args);
-        listeners.setExecutionPolicy(policy);
-        listeners.setEventListenerCallback(callback);
-        return listeners;
     }
 
     public static Listeners of(final Class clazz) {
@@ -126,6 +109,7 @@ public class Listeners {
         listeners.setArgs(args);
         listeners.setExecutionPolicy(policy);
         listeners.setEventListenerCallback(callback);
+        listeners.setListenersTag(toListenerTag(clazz));
         return listeners;
     }
 
@@ -139,6 +123,7 @@ public class Listeners {
         listeners.setArgs(args);
         listeners.setExecutionPolicy(policy);
         listeners.setEventListenerCallback(callback);
+        listeners.setListenersTag(toListenerTag(clazz));
         return listeners;
     }
 
@@ -153,6 +138,7 @@ public class Listeners {
         listeners.setArgs(args);
         listeners.setExecutionPolicy(policy);
         listeners.setAdviceListenerCallback(callback);
+        listeners.setListenersTag(toListenerTag(clazz));
         return listeners;
     }
 
@@ -166,35 +152,51 @@ public class Listeners {
         listeners.setArgs(args);
         listeners.setExecutionPolicy(policy);
         listeners.setAdviceListenerCallback(callback);
+        listeners.setListenersTag(toListenerTag(clazz));
         return listeners;
     }
 
-    public void setClassName(String className) {
-        this.className = className;
-    }
 
-    public void setArgs(Object[] args) {
-        this.args = args;
-    }
-
-    public void setExecutionPolicy(int executionPolicy) {
-        this.executionPolicy = executionPolicy;
-    }
-
-    public void setScopeName(String scopeName) {
-        this.scopeName = scopeName;
+    private static int toListenerTag(Class<?> clazz) {
+        ListenerBehavior listenerBehavior = clazz.getAnnotation(ListenerBehavior.class);
+        if (listenerBehavior == null) {
+            return 0;
+        }
+        return TagUtil.toTag(listenerBehavior.isFilterClusterTest(),
+                listenerBehavior.isFilterBusinessData(),
+                listenerBehavior.isNoSilence());
     }
 
     public String getClassName() {
         return className;
     }
 
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
     public Object[] getArgs() {
         return args;
     }
 
+    public void setArgs(Object[] args) {
+        this.args = args;
+    }
+
     public String getScopeName() {
         return scopeName;
+    }
+
+    public void setScopeName(String scopeName) {
+        this.scopeName = scopeName;
+    }
+
+    public int getListenersTag() {
+        return listenersTag;
+    }
+
+    public void setListenersTag(int listenersTag) {
+        this.listenersTag = listenersTag;
     }
 
     public AdviceListenerCallback getAdviceListenerCallback() {
@@ -215,6 +217,10 @@ public class Listeners {
 
     public int getExecutionPolicy() {
         return executionPolicy;
+    }
+
+    public void setExecutionPolicy(int executionPolicy) {
+        this.executionPolicy = executionPolicy;
     }
 
     @Override

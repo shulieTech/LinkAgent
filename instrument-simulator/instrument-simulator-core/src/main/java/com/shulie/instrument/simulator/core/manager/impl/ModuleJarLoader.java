@@ -35,6 +35,7 @@ import java.util.ServiceLoader;
 class ModuleJarLoader {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
     /**
      * 等待加载的模块jar文件
@@ -148,7 +149,7 @@ class ModuleJarLoader {
             }
         }
 
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: loaded module-jar completed, loaded module in module-jar={}, modules={}",
                     moduleJarFile,
                     moduleSpec.getModuleId()
@@ -162,7 +163,7 @@ class ModuleJarLoader {
 
         boolean hasModuleLoadedSuccessFlag = false;
         ClassLoaderFactory classLoaderFactory = null;
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: prepare loading module-jar={};", moduleJarFile);
         }
         try {

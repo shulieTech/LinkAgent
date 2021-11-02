@@ -32,7 +32,7 @@ public class ConsumerOtherMethodInterceptor extends AbstractProxiedConsumerInter
     @Override
     protected Object doCutoff(ConsumerProxy consumerProxy, Advice advice) {
         try {
-            return Reflect.on(consumerProxy).call(advice.getBehavior().getName(), advice.getParameterArray()).get();
+            return Reflect.on(consumerProxy).call(advice.getBehaviorName(), advice.getParameterArray()).get();
         } catch (ReflectException e) {
             return CutOffResult.passed();
         }

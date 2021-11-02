@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
- * @package: com.pamirs.attach.plugin.jedis.shadowserver
+ * @package: jedis单节点匹配策略
  * @Date 2020/12/2 5:13 下午
  */
 public class JedisMatchStrategy implements RedisServerMatchStrategy {
@@ -67,7 +67,19 @@ public class JedisMatchStrategy implements RedisServerMatchStrategy {
                     if (StringUtils.isNotBlank(config.getMaster())) {
                         for (String key : nodes) {
                             if (configKeys.contains(key)) {
-                                return GlobalConfig.getInstance().getShadowRedisConfig(configKey);
+                                if (config.getDatabase() == null) {
+                                    return GlobalConfig.getInstance().getShadowRedisConfig(configKey);
+                                } else {
+                                    //兼容单节点多db的场景
+                                    Integer db = ((JedisNodesStrategy) strategy).getDb(obj);
+                                    if (db != null) {
+                                        ShadowRedisConfig shadowRedisConfig
+                                                = GlobalConfig.getInstance().getShadowRedisConfig(configKey);
+                                        if (db.equals(config.getDatabase())) {
+                                            return shadowRedisConfig;
+                                        }
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -97,4 +109,5 @@ public class JedisMatchStrategy implements RedisServerMatchStrategy {
 
         return null;
     }
+
 }

@@ -38,7 +38,7 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
     @Override
     public void beforeFirst(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         Pradar.setClusterTest(false);
         if (target instanceof com.vip.saturn.job.java.SaturnJavaJob) {

@@ -63,7 +63,9 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
             if (null == newConfig) {
                 // 删除的配置
                 needCloseDataSource.add(old.getValue());
-                logger.info("deleted config:" + key);
+                if (logger.isInfoEnabled()) {
+                    logger.info("deleted config:" + key);
+                }
                 // 不需要再比对
                 continue;
             }
@@ -71,7 +73,9 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
             if (!newConfig.equals(old.getValue())) {
                 // 修改的配置
                 needCloseDataSource.add(old.getValue());
-                logger.info("modified config:" + key);
+                if (logger.isInfoEnabled()) {
+                    logger.info("modified config:" + key);
+                }
             }
         }
         for (Map.Entry<String, ShadowDatabaseConfig> entry : newValue.entrySet()) {
@@ -79,7 +83,9 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
             if (null == GlobalConfig.getInstance().getShadowDatabaseConfig(entry.getKey())) {
                 // 新增的配置
                 needCloseDataSource.add(entry.getValue());
-                logger.info("added config:" + entry.getKey());
+                if (logger.isInfoEnabled()) {
+                    logger.info("added config:" + entry.getKey());
+                }
             }
         }
         if (needCloseDataSource.isEmpty() && newValue.size() == GlobalConfig.getInstance().getShadowDatasourceConfigs().size()) {
@@ -94,11 +100,14 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
         // 清除影子表模式的sql表名替换缓存
         SqlParser.clear();
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.SHADOW_DATABASE_CONFIGS);
-        logger.info("publish datasource config successful. new config: {}", newValue);
-        for (Map.Entry<String, ShadowDatabaseConfig> entry : newValue.entrySet()) {
-            logger.info(entry.getKey());
-            logger.info(entry.getValue().toString());
+        if (logger.isInfoEnabled()) {
+            logger.info("publish datasource config successful. new config: {}", newValue);
+            for (Map.Entry<String, ShadowDatabaseConfig> entry : newValue.entrySet()) {
+                logger.info(entry.getKey());
+                logger.info(entry.getValue().toString());
+            }
         }
+
         return Boolean.TRUE;
     }
 }

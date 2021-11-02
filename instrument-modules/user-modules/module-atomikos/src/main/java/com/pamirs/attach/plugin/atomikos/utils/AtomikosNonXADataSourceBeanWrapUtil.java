@@ -19,10 +19,10 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AtomikosNonXADataSourceBeanWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(AtomikosNonXADataSourceBeanWrapUtil.class.getName());
+    private static final boolean isInfoEnabled = logger.isInfoEnabled();
 
     public static final ConcurrentHashMap<DataSourceMeta, AtomikosNonXADataSourceBeanMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, AtomikosNonXADataSourceBeanMediaDataSource>();
 
@@ -118,7 +119,9 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
 
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                if (isInfoEnabled) {
+                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                }
                 old.close();
             }
             return;
@@ -131,7 +134,9 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                    if (isInfoEnabled) {
+                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                    }
                     old.close();
                 }
             } catch (Throwable e) {
@@ -154,10 +159,14 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                    if (isInfoEnabled) {
+                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                    }
                     old.close();
                 }
-                logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUser(), ptDataSource.getUrl(), ptDataSource.getUser());
+                if (isInfoEnabled) {
+                    logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUser(), ptDataSource.getUrl(), ptDataSource.getUser());
+                }
             } catch (Throwable t) {
                 logger.error("[atomikos] init datasource err!", t);
                 ErrorReporter.buildError()
@@ -191,7 +200,7 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
         String username = ptDataSourceConf.getShadowUsername();
         String password = ptDataSourceConf.getShadowPassword();
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
-        if(StringUtils.isBlank(driverClassName)) {
+        if (StringUtils.isBlank(driverClassName)) {
             driverClassName = sourceDatasource.getDriverClassName();
         }
 

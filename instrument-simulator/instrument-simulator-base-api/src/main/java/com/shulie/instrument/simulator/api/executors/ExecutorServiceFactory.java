@@ -14,14 +14,27 @@
  */
 package com.shulie.instrument.simulator.api.executors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 全局的线程工厂类，所有的扩展线程组都使用该工厂的线程组
@@ -65,27 +78,25 @@ public class ExecutorServiceFactory {
     }
 
     public ScheduledFuture<?> schedule(Runnable command,
-                                       long delay, TimeUnit unit) {
+        long delay, TimeUnit unit) {
         if (globalScheduleExecutorService == null) {
             return null;
         }
         return globalScheduleExecutorService.schedule(command, delay, unit);
     }
 
-
     public <V> ScheduledFuture<V> schedule(Callable<V> callable,
-                                           long delay, TimeUnit unit) {
+        long delay, TimeUnit unit) {
         if (globalScheduleExecutorService == null) {
             return null;
         }
         return globalScheduleExecutorService.schedule(callable, delay, unit);
     }
 
-
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command,
-                                                  long initialDelay,
-                                                  long period,
-                                                  TimeUnit unit) {
+        long initialDelay,
+        long period,
+        TimeUnit unit) {
         if (globalScheduleExecutorService == null) {
             return null;
         }
@@ -93,9 +104,9 @@ public class ExecutorServiceFactory {
     }
 
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command,
-                                                     long initialDelay,
-                                                     long delay,
-                                                     TimeUnit unit) {
+        long initialDelay,
+        long delay,
+        TimeUnit unit) {
         if (globalScheduleExecutorService == null) {
             return null;
         }
@@ -124,7 +135,7 @@ public class ExecutorServiceFactory {
     }
 
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException {
+        throws InterruptedException {
         if (globalExecutorService == null) {
             return null;
         }
@@ -132,8 +143,8 @@ public class ExecutorServiceFactory {
     }
 
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks,
-                                         long timeout, TimeUnit unit)
-            throws InterruptedException {
+        long timeout, TimeUnit unit)
+        throws InterruptedException {
         if (globalExecutorService == null) {
             return null;
         }
@@ -141,7 +152,7 @@ public class ExecutorServiceFactory {
     }
 
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-            throws InterruptedException, ExecutionException {
+        throws InterruptedException, ExecutionException {
         if (globalExecutorService == null) {
             return null;
         }
@@ -149,8 +160,8 @@ public class ExecutorServiceFactory {
     }
 
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks,
-                           long timeout, TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
+        long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException {
         if (globalExecutorService == null) {
             return null;
         }
@@ -215,7 +226,8 @@ public class ExecutorServiceFactory {
                             if (!success && isRunning(taskInfo)) {
                                 taskInfo.failed();
                                 if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                    ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                    ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec,
+                                        TimeUnit.MILLISECONDS);
                                     taskInfo = tasks.get(task);
                                     if (taskInfo == null) {
                                         taskInfo = new TaskInfo(f);
@@ -238,7 +250,8 @@ public class ExecutorServiceFactory {
                             taskInfo.failed();
                             if (isRunning(taskInfo)) {
                                 if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                    ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                    ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec,
+                                        TimeUnit.MILLISECONDS);
                                     taskInfo = tasks.get(task);
                                     if (taskInfo == null) {
                                         taskInfo = new TaskInfo(f);
@@ -280,7 +293,8 @@ public class ExecutorServiceFactory {
                         if (!success && isRunning(taskInfo)) {
                             taskInfo.failed();
                             if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec,
+                                    TimeUnit.MILLISECONDS);
                                 taskInfo = tasks.get(task);
                                 if (taskInfo == null) {
                                     taskInfo = new TaskInfo(f);
@@ -303,7 +317,8 @@ public class ExecutorServiceFactory {
                         taskInfo.failed();
                         if (isRunning(taskInfo)) {
                             if (task.getMaxRetryTimes() >= 0 && taskInfo.getFailedCount() <= task.getMaxRetryTimes()) {
-                                ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec, TimeUnit.MILLISECONDS);
+                                ScheduledFuture f = globalScheduleExecutorService.schedule(this, retryIntervalSec,
+                                    TimeUnit.MILLISECONDS);
                                 taskInfo = tasks.get(task);
                                 if (taskInfo == null) {
                                     taskInfo = new TaskInfo(f);
@@ -393,13 +408,16 @@ public class ExecutorServiceFactory {
      */
     private ScheduledExecutorService getScheduledExecutorService() {
         int processors = Runtime.getRuntime().availableProcessors();
-        if (processors <= 0) {
+        if (processors < 4) {
             processors = 4;
         }
         return new ScheduledThreadPoolExecutor(processors, new ThreadFactory() {
+
+            private final AtomicInteger num = new AtomicInteger(1);
+
             @Override
             public Thread newThread(Runnable runnable) {
-                Thread t = new Thread(runnable, "Simulator-Pool-Schedule-Executor-Service");
+                Thread t = new Thread(runnable, "Simulator-Pool-Schedule-Executor-Service-" + num.getAndIncrement());
                 t.setDaemon(true);
                 t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                     @Override
@@ -422,14 +440,18 @@ public class ExecutorServiceFactory {
      */
     private ExecutorService getExecutorService() {
         int processors = Runtime.getRuntime().availableProcessors();
-        if (processors <= 0) {
+        if (processors < 4) {
             processors = 4;
         }
 
-        return new ThreadPoolExecutor(processors, processors * 2, 1000, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(1000), new ThreadFactory() {
+        return new ThreadPoolExecutor(processors, processors * 2, 1000, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>(1000), new ThreadFactory() {
+
+            private final AtomicInteger num = new AtomicInteger(1);
+
             @Override
             public Thread newThread(Runnable runnable) {
-                Thread t = new Thread(runnable, "Simulator-Pool-Executor-Service");
+                Thread t = new Thread(runnable, "Simulator-Pool-Executor-Service-" + num.getAndIncrement());
                 t.setDaemon(true);
                 t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                     @Override

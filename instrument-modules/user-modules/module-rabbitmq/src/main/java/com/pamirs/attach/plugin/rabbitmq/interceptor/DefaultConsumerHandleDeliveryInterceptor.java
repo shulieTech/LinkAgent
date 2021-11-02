@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.rabbitmq.interceptor;
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
+import com.pamirs.attach.plugin.rabbitmq.common.ExceptionSilenceConsumer;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -48,12 +49,14 @@ import java.util.List;
 @Destroyable(RabbitmqDestroy.class)
 public class DefaultConsumerHandleDeliveryInterceptor extends AroundInterceptor {
     private final static Logger LOGGER = LoggerFactory.getLogger(DefaultConsumerHandleDeliveryInterceptor.class);
+    private final static boolean isInfoEnabled = LOGGER.isInfoEnabled();
 
     private Consumer getConsumer(Object target) {
         if (target == null) {
             return null;
         }
-        if (!"org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$ConsumerDecorator".equals(target.getClass().getName())) {
+        if (!"org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$ConsumerDecorator".equals(
+                target.getClass().getName())) {
             return (Consumer) target;
         }
         try {
@@ -117,7 +120,8 @@ public class DefaultConsumerHandleDeliveryInterceptor extends AroundInterceptor 
         }
 
         if (queueNames.isEmpty()) {
-            LOGGER.warn("RabbitMQ: {} got a null queueName with field [{},{}]. ", consumer, RabbitmqConstants.DYNAMIC_FIELD_QUEUE_NAME, RabbitmqConstants.DYNAMIC_FIELD_QUEUE);
+            LOGGER.warn("[RabbitMQ]: {} got a null queueName with field [{},{}]. ", consumer,
+                    RabbitmqConstants.DYNAMIC_FIELD_QUEUE_NAME, RabbitmqConstants.DYNAMIC_FIELD_QUEUE);
             return;
         }
 
@@ -128,19 +132,22 @@ public class DefaultConsumerHandleDeliveryInterceptor extends AroundInterceptor 
             return;
         }
         ConfigCache.putCache(System.identityHashCode(consumer), ChannelHolder.NULL_OBJECT);
-
+        if (isInfoEnabled) {
+            LOGGER.info("[RabbitMQ] detect queue name : {}", queueNames);
+        }
         for (String queue : queueNames) {
             final Channel channel = consumer.getChannel();
-            String ptQueueName = Pradar.addClusterTestPrefix(queue);
-            boolean exists = ChannelHolder.isQueueExists(channel, ptQueueName);
-            if (!exists) {
-                LOGGER.warn("Try to subscribe rabbitmq queue[{}],but it is not exists. skip it", ptQueueName);
+
+            if (PradarSwitcher.whiteListSwitchOn() && !isInWhiteList(queue)) {
+                LOGGER.warn("SIMULATOR: rabbitmq queue is not in whitelist. ignore it :{}", queue);
                 continue;
             }
 
-            if (PradarSwitcher.whiteListSwitchOn() && !GlobalConfig.getInstance().getMqWhiteList().contains(queue)) {
-                LOGGER.warn("SIMULATOR: rabbitmq queue is not in whitelist. ignore it :{}", queue);
-                return;
+            String ptQueueName = Pradar.addClusterTestPrefix(queue);
+            boolean exists = ChannelHolder.isQueueExists(channel, ptQueueName);
+            if (!exists) {
+                LOGGER.warn("[RabbitMQ] Try to subscribe rabbitmq queue[{}],but it is not exists. skip it", ptQueueName);
+                continue;
             }
 
             String ptConsumerTag = null;
@@ -148,8 +155,35 @@ public class DefaultConsumerHandleDeliveryInterceptor extends AroundInterceptor 
                 ptConsumerTag = Pradar.addClusterTestPrefix(consumerTag);
             }
 
-            ptConsumerTag = channel.basicConsume(ptQueueName, false, ptConsumerTag, false, false, new HashMap<String, Object>(), consumer);
+            if (isInfoEnabled) {
+                LOGGER.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
+                        queue, ptQueueName, consumerTag, ptConsumerTag);
+            }
+            ptConsumerTag = channel.basicConsume(ptQueueName, false, ptConsumerTag, false, false,
+                    new HashMap<String, Object>(), new ExceptionSilenceConsumer(consumer));
             ChannelHolder.addConsumerTag(channel, consumerTag, ptConsumerTag, ptQueueName);
+            if (isInfoEnabled) {
+                LOGGER.info(
+                        "[RabbitMQ] create shadow consumer successful! queue : {} pt_queue : {} tag : {} pt_tag : {}",
+                        queue, ptQueueName, consumerTag, ptConsumerTag);
+            }
         }
+    }
+
+    private boolean isInWhiteList(String queue) {
+        for (String s : GlobalConfig.getInstance().getMqWhiteList()) {
+            int index = s.lastIndexOf("@");
+            if (index > -1) {
+                s = s.substring(index + 1);
+            }
+            index = s.lastIndexOf("#");
+            if (index > -1) {
+                s = s.substring(index + 1);
+            }
+            if (queue.equals(s)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

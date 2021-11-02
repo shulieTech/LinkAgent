@@ -25,6 +25,7 @@ import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.pattern.PatternLayoutBase;
 import org.slf4j.ILoggerFactory;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.security.CodeSource;
@@ -38,10 +39,10 @@ public class LogbackHelper {
 
     static {
         try {
-            Class<?> loggerClass = LogbackHelper.class.getClassLoader().loadClass("ch.qos.logback.classic.Logger");
+            Class<?> loggerClass = LogbackHelper.class.getClassLoader().loadClass(Logger.class.getName());
             // 这里可能会加载到应用中依赖的logback，因此需要判断classloader
             if (loggerClass.getClassLoader().equals(LogbackHelper.class.getClassLoader())) {
-                ILoggerFactory loggerFactory = org.slf4j.LoggerFactory.getILoggerFactory();
+                ILoggerFactory loggerFactory = LoggerFactory.getILoggerFactory();
 
                 if (loggerFactory instanceof LoggerContext) {
                     loggerFactoryInstance = loggerFactory;

@@ -42,7 +42,7 @@ public final class ClusterTestUtils {
      */
     public final static boolean isClusterTestRequest(String value) {
         if (StringUtils.equals(Pradar.PRADAR_CLUSTER_TEST_ON, value)
-                || StringUtils.equalsIgnoreCase(value, Boolean.TRUE.toString())) {
+                || StringUtils.equals(value, Boolean.TRUE.toString())) {
             return true;
         }
         return StringUtils.equals(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX);
@@ -56,7 +56,7 @@ public final class ClusterTestUtils {
      */
     public final static boolean isDebugRequest(String value) {
         if (StringUtils.equals(Pradar.PRADAR_DEBUG_ON, value)
-                || StringUtils.equalsIgnoreCase(value, Boolean.TRUE.toString())) {
+                || StringUtils.equals(value, Boolean.TRUE.toString())) {
             return true;
         }
 
@@ -279,14 +279,14 @@ public final class ClusterTestUtils {
         } catch (PressureMeasureError e) {
             String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] validateClusterTest err!";
             LOGGER.error(message, e);
-            if (Pradar.isClusterTest()) {
+            if (Pradar.isClusterTest() || isClusterTestRequest) {
                 reportFastDebugErrorInfo("agent-0008", e, message);
                 throw e;
             }
         } catch (Throwable e) {
             String message = "ClusterTestSwitcherError: [" + AppNameUtils.appName() + "] validateClusterTest err!";
             LOGGER.error(message, e);
-            if (Pradar.isClusterTest()) {
+            if (Pradar.isClusterTest() || isClusterTestRequest) {
                 reportFastDebugErrorInfo("agent-0008", e, message);
                 throw new PressureMeasureError(message, e);
             }

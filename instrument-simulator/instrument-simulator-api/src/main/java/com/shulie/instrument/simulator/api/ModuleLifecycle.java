@@ -57,8 +57,9 @@ public interface ModuleLifecycle extends LoadCompleted {
      * </p>
      *
      * @throws Throwable 模块激活失败
+     * @return  boolean 模块加载成功返回true，模块关闭返回false
      */
-    void onActive() throws Throwable;
+    boolean onActive() throws Throwable;
 
     /**
      * 模块冻结

@@ -15,6 +15,9 @@
 package com.shulie.instrument.module.log.data.pusher.log.reader.impl;
 
 
+import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.log.parser.DataType;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.log.data.pusher.log.callback.LogCallback;
 
 /**
@@ -41,7 +44,16 @@ public class LogPusherOptions {
     }
 
     public int getVersion() {
-        return version;
+        switch (dataType){
+            case DataType.TRACE_LOG:
+                return GlobalConfig.getInstance().getSimulatorDynamicConfig().getPradarTraceLogVersion(version);
+            case DataType.MONITOR_LOG:
+                return GlobalConfig.getInstance().getSimulatorDynamicConfig().getPradarMonitorLogVersion(version);
+            case DataType.AGENT_LOG:
+                return GlobalConfig.getInstance().getSimulatorDynamicConfig().getPradarErrorLogVersion(version);
+            default:
+                throw new PradarException("unknown log type " + String.valueOf(dataType));
+        }
     }
 
     public void setVersion(int version) {

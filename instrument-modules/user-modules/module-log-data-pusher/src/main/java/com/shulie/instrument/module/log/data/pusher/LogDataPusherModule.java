@@ -59,7 +59,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
     private ScheduledFuture future;
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         isActive = true;
         final PusherOptions pusherOptions = buildPusherOptions();
 
@@ -75,13 +75,16 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
                 try {
                     dataPushManager = SimulatorGuard.getInstance().doGuard(DataPushManager.class, new DefaultDataPushManager(pusherOptions));
                     dataPushManager.start();
-                    logger.info("SIMULATOR: Data push Manager start success.");
+                    if (logger.isInfoEnabled()) {
+                        logger.info("SIMULATOR: Data push Manager start success.");
+                    }
                 } catch (Throwable e) {
                     logger.warn("SIMULATOR: Data Push Manager start failed. log data can't push to the server.", e);
                     future = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                 }
             }
-        }, 0, TimeUnit.SECONDS);
+        }, 30, TimeUnit.SECONDS);
+        return true;
     }
 
     private PusherOptions buildPusherOptions() {
@@ -108,7 +111,22 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         monitorLogOptions.setVersion(Pradar.PRADAR_MONITOR_LOG_VERSION);
         monitorLogOptions.setMaxFailureSleepInterval(simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
         logPusherOptionsList.add(monitorLogOptions);
+
+        LogPusherOptions agentErrorLogOptions = new LogPusherOptions();
+        agentErrorLogOptions.setPath(Pradar.PRADAR_AGENT_ERROR_LOG_FILE);
+        agentErrorLogOptions.setDataType(DataType.AGENT_LOG);
+        agentErrorLogOptions.setVersion(Pradar.PRADAR_ERROR_LOG_VERSION);
+        agentErrorLogOptions.setMaxFailureSleepInterval(simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
+        logPusherOptionsList.add(agentErrorLogOptions);
+
+        LogPusherOptions simulatorErrorLogOptions = new LogPusherOptions();
+        simulatorErrorLogOptions.setPath(Pradar.PRADAR_SIMULATOR_ERROR_LOG_FILE);
+        simulatorErrorLogOptions.setDataType(DataType.AGENT_LOG);
+        simulatorErrorLogOptions.setVersion(Pradar.PRADAR_ERROR_LOG_VERSION);
+        simulatorErrorLogOptions.setMaxFailureSleepInterval(simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
+        logPusherOptionsList.add(simulatorErrorLogOptions);
         pusherOptions.setLogPusherOptions(logPusherOptionsList);
+
         return pusherOptions;
     }
 

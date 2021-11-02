@@ -47,7 +47,7 @@ public abstract class PluginMaxRedisExpireTimeInterceptor extends ModificationIn
                 args[timeUnitKeyIndex] = TimeUnit.MILLISECONDS;
             }
         } catch (Exception exception) {
-            LOGGER.error("redisson maxRedisExpireTime -method: {},new args:{},maxRedisExpireTime:{},exception:{}",advice.getBehavior().getName(),
+            LOGGER.error("redisson maxRedisExpireTime -method: {},new args:{},maxRedisExpireTime:{},exception:{}",advice.getBehaviorName(),
                 Arrays.toString(args),maxRedisExpireTime,
                 Throwables.getStackTraceAsString(exception));
         }

@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.hbase.interceptor;
 
 import com.pamirs.attach.plugin.hbase.HbaseConstants;
 import com.pamirs.attach.plugin.hbase.destroy.HbaseDestroyed;
+import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -45,7 +46,7 @@ public class AliHBaseMultiTableInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         return spanRecord;
     }
@@ -57,7 +58,7 @@ public class AliHBaseMultiTableInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         spanRecord.setResponse(advice.getReturnObj());
         return spanRecord;
@@ -69,9 +70,10 @@ public class AliHBaseMultiTableInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         String tableName = getTableName(hTable);
         spanRecord.setService(tableName);
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         spanRecord.setRequest(advice.getParameterArray()[0]);
         spanRecord.setResponse(advice.getThrowable());
+        spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         return spanRecord;
     }
 

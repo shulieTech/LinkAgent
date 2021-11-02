@@ -39,7 +39,7 @@ import org.kohsuke.MetaInfServices;
 public class OKHttpPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         // Support for OkHttp3
         enhanceTemplate.enhance(this, "okhttp3.Request$Builder", new EnhanceCallback() {
             @Override
@@ -94,6 +94,7 @@ public class OKHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMod
                 constructor.addInterceptor(Listeners.of(AsyncCallConstructorV2Interceptor.class));
             }
         });
+        return true;
 
     }
 }

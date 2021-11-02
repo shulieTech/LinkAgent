@@ -36,7 +36,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = HystrixConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "hystrix 熔断框架")
 public class HystrixPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "com.netflix.hystrix.strategy.concurrency.HystrixContextScheduler$HystrixContextSchedulerWorker", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -74,5 +74,7 @@ public class HystrixPlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 callMethod.addInterceptor(Listeners.of(InvokeInterceptor.class));
             }
         });
+
+        return true;
     }
 }

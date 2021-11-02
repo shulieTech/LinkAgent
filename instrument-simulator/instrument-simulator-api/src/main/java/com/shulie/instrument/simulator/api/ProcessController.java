@@ -14,7 +14,13 @@
  */
 package com.shulie.instrument.simulator.api;
 
-import static com.shulie.instrument.simulator.api.ProcessControlException.*;
+import com.shulie.instrument.simulator.api.util.Castor;
+
+import static com.shulie.instrument.simulator.api.ProcessControlException.NONE_IMMEDIATELY;
+import static com.shulie.instrument.simulator.api.ProcessControlException.RETURN_IMMEDIATELY;
+import static com.shulie.instrument.simulator.api.ProcessControlException.THROWS_IMMEDIATELY;
+import static com.shulie.instrument.simulator.api.ProcessControlException.throwReturnImmediately;
+import static com.shulie.instrument.simulator.api.ProcessControlException.throwThrowsImmediately;
 
 /**
  * 流程控制
@@ -32,6 +38,19 @@ public final class ProcessController {
 
     /**
      * 中断当前代码处理流程,并立即返回指定对象
+     * 返回之前会进行返回值转换校验，检查是否可以进行正常的类型转换
+     *
+     * @param type   返回的类型
+     * @param object 返回对象
+     * @throws ProcessControlException 抛出立即返回流程控制异常
+     */
+    public static void returnImmediately(Class type, final Object object) throws ProcessControlException {
+        //fix bug if object can not cast target  type
+        Castor.canCast(type, object);
+        throwReturnImmediately(object);
+    }
+    /**
+     * 中断当前代码处理流程,并立即返回指定对象
      *
      * @param object 返回对象
      * @throws ProcessControlException 抛出立即返回流程控制异常
@@ -39,7 +58,6 @@ public final class ProcessController {
     public static void returnImmediately(final Object object) throws ProcessControlException {
         throwReturnImmediately(object);
     }
-
     /**
      * 中断当前代码处理流程,并抛出指定异常
      *

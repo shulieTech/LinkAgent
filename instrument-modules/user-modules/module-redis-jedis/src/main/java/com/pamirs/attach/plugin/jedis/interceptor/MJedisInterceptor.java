@@ -23,6 +23,7 @@ import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
@@ -30,6 +31,7 @@ import org.apache.commons.lang.StringUtils;
 import java.util.*;
 
 @Destroyable(JedisDestroyed.class)
+@ListenerBehavior(isFilterClusterTest = true)
 public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override
@@ -68,19 +70,19 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         }
 
         //jedis db非0时候选择不做处理
-        if ("select".equals(advice.getBehavior().getName())) {
+        if ("select".equals(advice.getBehaviorName())) {
             return args;
         }
 
-        if ("xread".equals(advice.getBehavior().getName())) {
+        if ("xread".equals(advice.getBehaviorName())) {
             return processXRead(args, whiteList);
         }
 
-        if ("xreadGroup".equals(advice.getBehavior().getName())) {
+        if ("xreadGroup".equals(advice.getBehaviorName())) {
             return processXReadGroup(args, whiteList);
         }
 
-        if ("mset".equals(advice.getBehavior().getName())||"msetnx".equals(advice.getBehavior().getName())) {
+        if ("mset".equals(advice.getBehaviorName())||"msetnx".equals(advice.getBehaviorName())) {
             return processMset(args, whiteList);
         }
 

@@ -25,7 +25,7 @@ import org.springframework.web.server.ServerWebExchange;
  */
 public class HandlerStartInterceptor extends BaseHandlerInjector {
     @Override
-    public void beforeFirst(Advice advice) throws Exception {
+    public void doBefore(Advice advice) throws Exception {
         Pradar.setClusterTest(false);
         if (advice.getParameterArray()[0] instanceof ServerWebExchange) {
             ServerWebExchange exchange = (ServerWebExchange) advice.getParameterArray()[0];

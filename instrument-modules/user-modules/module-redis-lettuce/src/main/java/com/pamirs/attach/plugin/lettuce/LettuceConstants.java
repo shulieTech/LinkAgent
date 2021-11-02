@@ -29,8 +29,11 @@ public interface LettuceConstants {
     String REFLECT_FIELD_INITIAL_URIS = "initialUris";
     String REFLECT_FIELD_CONNECTION = "connection";
     String REFLECT_FIELD_CHANNEL_WRITER = "channelWriter";
+    String REFLECT_FIELD_DEFAULT_WRITER = "defaultWriter";
+    String REFLECT_FIELD_WRITER = "writer";
     String REFLECT_FIELD_CHANNEL = "channel";
     String REFLECT_FIELD_KEYS = "keys";
+    String REFLECT_FIELD_CLUSTERDISTRIBUTIONCHANNELWRITER = "io.lettuce.core.cluster.ClusterDistributionChannelWriter";
 
     String DYNAMIC_FIELD_REDIS_URIS = "redisURIs";
     String DYNAMIC_FIELD_LETTUCE_TARGET = "lettuceTarget";

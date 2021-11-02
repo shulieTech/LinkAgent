@@ -15,15 +15,22 @@
 package com.pamirs.attach.plugin.grpc.interceptor;
 
 import com.pamirs.attach.plugin.grpc.GrpcConstants;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.ExecutionCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.grpc.ClientCall;
 import io.grpc.Metadata;
 
 import javax.annotation.Resource;
+import java.net.SocketTimeoutException;
 
 /**
  * GRPC调用服务端
@@ -39,6 +46,51 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
     @Override
     public String getPluginName() {
         return GrpcConstants.PLUGIN_NAME;
+    }
+
+
+    @Override
+    public void beforeFirst(final Advice advice) throws Exception {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
+        /**
+         * 白名单校验
+         */
+        Object[] args = advice.getParameterArray();
+        Object target = advice.getTarget();
+        if (args == null || args.length != 2) {
+            return;
+        }
+        if (!(args[1] instanceof Metadata)) {
+            return;
+        }
+        /**
+         * 将"/"转换为#分割符 方便配置
+         */
+        String fullName = getMethodName(target);
+        String interfaceName = "";
+        String methodName = "";
+        if (fullName.contains("/")) {
+            String[] arr = fullName.split("/");
+            interfaceName = arr[0];
+            methodName = arr[1];
+        }
+        MatchConfig matchConfig =
+                ClusterTestUtils.rpcClusterTest(interfaceName, methodName);
+        matchConfig.getStrategy().processBlock(advice.getBehavior().getReturnType()
+                , advice.getClassLoader()
+                , matchConfig
+                , new ExecutionCall() {
+                    @Override
+                    public Object call(Object param) throws ProcessControlException {
+                        ClientCall.Listener observer = (ClientCall.Listener) advice.getParameterArray()[0];
+                        observer.onMessage(param);
+                        return null;
+                    }
+                });
+
+
     }
 
     @Override
@@ -91,7 +143,8 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         final String fullMethodName = getMethodName(target);
         String method = fullMethodName;
         String service = "";
-        final int indexOfMethodName = fullMethodName.lastIndexOf(".");
+        /*  final int indexOfMethodName = fullMethodName.lastIndexOf(".");*/
+        final int indexOfMethodName = fullMethodName.lastIndexOf("/");
         if (indexOfMethodName != -1) {
             service = fullMethodName.substring(0, indexOfMethodName);
             method = fullMethodName.substring(indexOfMethodName + 1);
@@ -129,7 +182,11 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         }
         SpanRecord record = new SpanRecord();
         record.setResponse(throwable);
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
         return record;
     }
 

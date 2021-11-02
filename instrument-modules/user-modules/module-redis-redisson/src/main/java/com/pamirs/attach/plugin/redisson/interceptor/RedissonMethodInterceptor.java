@@ -14,11 +14,17 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
+import java.util.Collection;
+import java.util.Iterator;
+
+import javax.annotation.Resource;
+
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ModificationInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
@@ -29,10 +35,6 @@ import org.redisson.RedissonRx;
 import org.redisson.config.Config;
 import org.redisson.reactive.RedissonBatchReactive;
 import org.redisson.rx.RedissonBatchRx;
-
-import javax.annotation.Resource;
-import java.util.Collection;
-import java.util.Iterator;
 
 /**
  * @Description org.redisson.Redisson增强
@@ -59,6 +61,9 @@ public class RedissonMethodInterceptor extends ModificationInterceptorAdaptor {
             return args;
         }
 
+        if (GlobalConfig.getInstance().isShadowDbRedisServer()) {
+            return args;
+        }
         String name = (String) args[0];
         if (Pradar.isClusterTestPrefix(name)) {
             return args;

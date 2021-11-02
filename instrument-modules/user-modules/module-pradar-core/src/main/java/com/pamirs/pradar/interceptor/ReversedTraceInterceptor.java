@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.interceptor;
 
+import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import static com.pamirs.pradar.interceptor.TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS;
@@ -29,6 +30,7 @@ abstract class ReversedTraceInterceptor extends TraceInterceptor {
     @Override
     public void doBefore(Advice advice) throws Throwable {
         advice.mark(BEFORE_TRACE_SUCCESS);
+        advice.setInvokeContext(Pradar.getInvokeContext());
         super.doAfter(advice);
     }
 

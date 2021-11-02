@@ -14,7 +14,10 @@
  */
 package com.pamirs.attach.plugin.okhttp.v2.interceptor;
 
+import java.io.IOException;
+
 import com.alibaba.fastjson.JSONObject;
+
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.SpanRecord;
@@ -22,6 +25,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -35,8 +39,6 @@ import okhttp3.HttpUrl;
 import okio.Buffer;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
-
-import java.io.IOException;
 
 /**
  * @Description
@@ -73,7 +75,7 @@ public class RealCallEnqueueV2Interceptor extends TraceInterceptorAdaptor {
         config.addArgs("url", url);
         config.addArgs("isInterface", Boolean.FALSE);
         final Request finalRequest = request;
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
             @Override
             public Object forward(Object param) throws ProcessControlException {
                 HttpUrl httpUrl = HttpUrl.parse(config.getForwarding());
@@ -107,6 +109,7 @@ public class RealCallEnqueueV2Interceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        InnerWhiteListCheckUtil.check();
         Object target = advice.getTarget();
         Request request = null;
         try {

@@ -38,7 +38,7 @@ public class MockStrategy implements ExecutionStrategy {
     private final static Logger LOGGER = LoggerFactory.getLogger(MockStrategy.class.getName());
 
     @Override
-    public Object processBlock(ClassLoader classLoader, Object params) throws ProcessControlException {
+    public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
         if (Pradar.isClusterTest()) {
             if (params instanceof MatchConfig) {
                 try {
@@ -46,7 +46,7 @@ public class MockStrategy implements ExecutionStrategy {
                     String scriptContent = config.getScriptContent();
                     ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
                     Object result = evaluator.evaluate(scriptContent, config.getArgs());
-                    ProcessController.returnImmediately(result);
+                    ProcessController.returnImmediately(returnType, result);
                 } catch (ProcessControlException e) {
                     throw e;
                 } catch (Throwable e) {
@@ -66,7 +66,7 @@ public class MockStrategy implements ExecutionStrategy {
     }
 
     @Override
-    public Object processBlock(ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
+    public Object processBlock(Class returnType, ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
         if (Pradar.isClusterTest()) {
             if (params instanceof MatchConfig) {
                 try {
@@ -75,7 +75,7 @@ public class MockStrategy implements ExecutionStrategy {
                     ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
                     Object result = evaluator.evaluate(scriptContent, config.getArgs());
                     Object callResult = call.call(result);
-                    ProcessController.returnImmediately(callResult);
+                    ProcessController.returnImmediately(returnType, callResult);
                 } catch (ProcessControlException e) {
                     throw e;
                 } catch (Throwable e) {
@@ -95,7 +95,7 @@ public class MockStrategy implements ExecutionStrategy {
     }
 
     @Override
-    public Object processNonBlock(ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
+    public Object processNonBlock(Class returnType, ClassLoader classLoader, Object params, ExecutionCall call) throws ProcessControlException {
         if (Pradar.isClusterTest()) {
             if (params instanceof MatchConfig) {
                 try {

@@ -31,6 +31,7 @@ import java.util.Set;
  */
 public class ContextPathBlockList implements IChange<Set<String>, ApplicationConfig> {
     private final static Logger LOGGER = LoggerFactory.getLogger(ContextPathBlockList.class);
+    private final static boolean isInfoEnabled = LOGGER.isInfoEnabled();
     private static ContextPathBlockList INSTANCE;
 
     public static ContextPathBlockList getInstance() {
@@ -58,7 +59,9 @@ public class ContextPathBlockList implements IChange<Set<String>, ApplicationCon
         applicationConfig.setContextPathBlockList(newValue);
         GlobalConfig.getInstance().setContextPathBlockList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.CONTEXT_PATH_BLOCK_LIST);
-        LOGGER.info("publish context path block list config successful. config={}", newValue);
+        if (isInfoEnabled) {
+            LOGGER.info("publish context path block list config successful. config={}", newValue);
+        }
         return Boolean.TRUE;
     }
 }

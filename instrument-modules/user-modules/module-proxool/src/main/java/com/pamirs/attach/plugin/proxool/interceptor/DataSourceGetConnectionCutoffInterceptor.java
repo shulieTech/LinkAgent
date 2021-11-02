@@ -14,12 +14,18 @@
  */
 package com.pamirs.attach.plugin.proxool.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.Type;
+import com.pamirs.attach.plugin.dynamic.template.DbcpTemplate;
+import com.pamirs.attach.plugin.dynamic.template.ProxoolTemplate;
 import com.pamirs.attach.plugin.proxool.ListenerRegisterStatus;
 import com.pamirs.attach.plugin.proxool.destroy.ProxoolDestroy;
 import com.pamirs.attach.plugin.proxool.utils.DataSourceWrapUtil;
 import com.pamirs.attach.plugin.proxool.utils.ProxoolMediaDataSource;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -60,8 +66,26 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
         addListener();
     }
 
+
+    void attachment(Advice advice) {
+        try {
+            ProxoolDataSource target = (ProxoolDataSource) advice.getTarget();
+            ResourceManager.set(new Attachment(target.getDriverUrl(),
+                    "proxool",
+                    Type.DataBaseType.types(), new ProxoolTemplate()
+                    .setUrl(target.getDriverUrl())
+                    .setUsername(target.getUser())
+                    .setPassword(target.getPassword())
+                    .setDriverClassName(target.getDriver())
+                    .setAlias(target.getAlias())));
+        } catch (Throwable t) {
+            logger.error(Throwables.getStackTraceAsString(t));
+        }
+    }
+
     @Override
     public CutOffResult cutoff0(Advice advice) {
+        attachment(advice);
         Object target = advice.getTarget();
         ProxoolDataSource dataSource = (ProxoolDataSource) target;
         DataSourceMeta<ProxoolDataSource> dataSourceMeta = new DataSourceMeta<ProxoolDataSource>(
@@ -143,9 +167,11 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
                             it.remove();
                             try {
                                 value.close();
-                                logger.info(
-                                        "module-proxool: destroyed shadow table datasource success. url:{} ,username:{}",
-                                        entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info(
+                                            "module-proxool: destroyed shadow table datasource success. url:{} ,username:{}",
+                                            entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-proxool: closed datasource err! target:{}, url:{} username:{}",
                                         entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(),

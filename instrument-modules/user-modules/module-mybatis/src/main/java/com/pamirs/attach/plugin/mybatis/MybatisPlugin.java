@@ -14,10 +14,8 @@
  */
 package com.pamirs.attach.plugin.mybatis;
 
-import com.pamirs.attach.plugin.mybatis.interceptor.MappedStatementGetCacheInterceptor;
-import com.pamirs.attach.plugin.mybatis.interceptor.MapperBuilderAssistantAddMappedStatement;
-import com.pamirs.attach.plugin.mybatis.interceptor.MapperBuilderAssistantUseNewCacheInterceptor;
-import com.pamirs.attach.plugin.mybatis.interceptor.MapperMethodExecuteTraceInterceptor;
+import com.pamirs.attach.plugin.mybatis.interceptor.*;
+import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -25,30 +23,42 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 
 /**
  * Created by xiaobin on 2017/2/16.
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = MybatisConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "mybatis 支持，有对应的 trace 日志输出")
+@ModuleInfo(id = MybatisConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "mybatis 支持，有对应的 trace 日志输出")
 public class MybatisPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         /**
          * mybatis 二级缓存
          */
         addInterceptorsForMapperBuilderAssistant();
         addInterceptorsForMappedStatement();
-        enhanceTemplate.enhance(this, "org.apache.ibatis.binding.MapperMethod", new EnhanceCallback() {
+        enhanceTemplate.enhance(this, "org.apache.ibatis.session.defaults.DefaultSqlSession", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod instrumentMethod = target.getDeclaredMethods("execute");
-                instrumentMethod.addInterceptor(Listeners.of(MapperMethodExecuteTraceInterceptor.class));
+                final InstrumentMethod method = target.getDeclaredMethods("selectOne", "selectList", "selectMap", "selectCursor", "select",
+                        "insert", "update", "delete");
+                method.addInterceptor(Listeners.of(SqlSessionOperationInterceptor.class, "MYBATIS_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
+
+        enhanceTemplate.enhance(this, "org.mybatis.spring.SqlSessionTemplate", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                final InstrumentMethod method = target.getDeclaredMethods("selectOne", "selectList", "selectMap", "selectCursor", "select",
+                        "insert", "update", "delete");
+                method.addInterceptor(Listeners.of(SqlSessionOperationInterceptor.class, "MYBATIS_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            }
+        });
+        return true;
     }
 
     private void addInterceptorsForMappedStatement() {

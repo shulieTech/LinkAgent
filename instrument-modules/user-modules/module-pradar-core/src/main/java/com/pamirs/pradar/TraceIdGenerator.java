@@ -81,26 +81,54 @@ public class TraceIdGenerator {
 
     private static String getTraceId(String ip, long timestamp, int nextId) {
         StringBuilder appender = new StringBuilder(32);
-        appender.append(ip).append(timestamp).append(nextId).append(PID_FLAG).append(PID);
+        appender.append(ip).append(timestamp).append(getNextIdStr(nextId)).append(PID_FLAG).append(PID);
         return appender.toString();
     }
 
-    public static String generate() {
-        return getTraceId(IP_16, System.currentTimeMillis(), getNextId());
+    /**
+     * 生成 traceId
+     * 需要指定是否是压测流量，因为压测流量采样率与业务流量采样率是隔离开来的
+     * 所以生成 traceId 的逻辑会有差异
+     *
+     * @param isClusterTestRequest 是否是压测流量
+     * @return
+     */
+    public static String generate(boolean isClusterTestRequest) {
+        return getTraceId(IP_16, System.currentTimeMillis(), getNextId(isClusterTestRequest));
     }
 
-    public static String generate(String ip) {
+    /**
+     * 指定 ip生成 traceId
+     * 需要指定是否是压测流量，因为压测流量采样率与业务流量采样率是隔离开来的
+     * 所以生成 traceId 的逻辑会有差异
+     *
+     * @param ip                   ip
+     * @param isClusterTestRequest 是否是压测流量
+     * @return
+     */
+    public static String generate(String ip, boolean isClusterTestRequest) {
         if (StringUtils.isNotBlank(ip) && validate(ip)) {
-            return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId());
+            return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId(isClusterTestRequest));
         } else {
-            return generate();
+            return generate(isClusterTestRequest);
         }
     }
 
+    /**
+     * 获取当机机器ip数字型字符串，如127.0.0.1则返回1921681100
+     *
+     * @return
+     */
     public static String generateIpv4Id() {
         return IP_int;
     }
 
+    /**
+     * 指定 ip 获取数字型字符串，如127.0.0.1则返回1921681100
+     *
+     * @param ip
+     * @return
+     */
     public static String generateIpv4Id(String ip) {
         if (StringUtils.isNotBlank(ip) && validate(ip)) {
             return getIP_int(ip);
@@ -132,13 +160,61 @@ public class TraceIdGenerator {
         return ip.replace(".", "");
     }
 
-    private static int getNextId() {
+    private static String getNextIdStr(int nextId) {
+        if (nextId > 1000) {
+            return String.valueOf(nextId);
+        }
+        if (nextId > 100) {
+            return "0" + nextId;
+        }
+        if (nextId > 10) {
+            return "00" + nextId;
+        }
+        return "000" + nextId;
+    }
+
+    /**
+     * 获取 traceId 的数字组成部分，此部分会拿来判断是否进行采样
+     * 此值是一个在[1-上限]之内滚动的数字，上限的计算方式是取在10000以内(不包含10000)最大的采样率值的倍数值
+     * 如5000则为5000，4999则为9998，依此类推
+     * <p>
+     * 业务流量与压测流量的采样率不一样，所以针对两种流量的 nextId 的上限也会不一样
+     *
+     * @param isClusterTestRequest
+     * @return
+     */
+    private static int getNextId(boolean isClusterTestRequest) {
+        int si = 0;
+        if (isClusterTestRequest) {
+            si = PradarSwitcher.getClusterTestSamplingInterval();
+        } else {
+            si = PradarSwitcher.getSamplingInterval();
+        }
+        int maxBoundary = 10000 - (9999 % si + 1);
+
         for (; ; ) {
             int current = count.get();
-            int next = (current > 9000) ? 1000 : current + 1;
+            int next = (current > maxBoundary) ? 1 : current + 1;
             if (count.compareAndSet(current, next)) {
                 return next;
             }
         }
+    }
+
+    /**
+     * 从 traceId 中获取 nextId
+     *
+     * @param traceId
+     * @return
+     */
+    public static int getNextId(String traceId) {
+        if (traceId.length() < 25) {
+            return -1;
+        }
+        int count = traceId.charAt(21) - '0';
+        count = count * 10 + traceId.charAt(22) - '0';
+        count = count * 10 + traceId.charAt(23) - '0';
+        count = count * 10 + traceId.charAt(24) - '0';
+        return count;
     }
 }

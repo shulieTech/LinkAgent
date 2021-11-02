@@ -14,48 +14,23 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
-import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
-import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
-import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
-import com.pamirs.attach.plugin.rabbitmq.common.ConsumerMetaData;
+import com.pamirs.attach.plugin.rabbitmq.common.*;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
-import com.pamirs.attach.plugin.rabbitmq.utils.AdminAccessInfo;
-import com.pamirs.attach.plugin.rabbitmq.utils.HttpUtils;
-import com.pamirs.pradar.ErrorTypeEnum;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarService;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.ResultCode;
+import com.pamirs.attach.plugin.rabbitmq.destroy.ShadowConsumerDisableListenerImpl;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.BasicProperties;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Command;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.Consumer;
-import com.rabbitmq.client.DefaultConsumer;
-import com.rabbitmq.client.impl.AMQConnection;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.AMQImpl.Basic;
 import com.rabbitmq.client.impl.AMQImpl.Basic.Deliver;
 import com.rabbitmq.client.impl.ChannelN;
-import com.rabbitmq.client.impl.CredentialsProvider;
 import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.rabbitmq.client.impl.recovery.RecordedConsumer;
@@ -64,10 +39,16 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Author: mubai<chengjiacai @ shulie.io>
@@ -76,15 +57,17 @@ import org.slf4j.LoggerFactory;
  */
 @Destroyable(RabbitmqDestroy.class)
 public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor {
-    private static Logger logger = LoggerFactory.getLogger(ChannelNProcessDeliveryInterceptor.class.getName());
+    private Logger logger = LoggerFactory.getLogger(ChannelNProcessDeliveryInterceptor.class.getName());
+    private boolean isInfoEnabled = logger.isInfoEnabled();
 
     private final SimulatorConfig simulatorConfig;
+
+    @Resource
+    private DynamicFieldManager dynamicFieldManager;
 
     public ChannelNProcessDeliveryInterceptor(SimulatorConfig simulatorConfig) {
         this.simulatorConfig = simulatorConfig;
     }
-
-    private final static Cache<String, ShadowConsumeRunner> shadowConsumeRunners = CacheBuilder.newBuilder().build();
 
     /**
      * 是否是调用端
@@ -108,13 +91,16 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        registerListener();
         Object[] args = advice.getParameterArray();
-        Command command = (Command)args[0];
-        Basic.Deliver method = (Deliver)args[1];
+        Command command = (Command) args[0];
+        Basic.Deliver method = (Deliver) args[1];
         SpanRecord record = new SpanRecord();
         record.setService(method.getExchange());
-        record.setMethod(method.getRoutingKey());
-        BasicProperties contentHeader = (BasicProperties)command.getContentHeader();
+        String routingKey = method.getRoutingKey();
+        String queue = method.getRoutingKey();
+        record.setMethod(routingKey + "@" + queue);
+        BasicProperties contentHeader = (BasicProperties) command.getContentHeader();
         Map<String, Object> headers = contentHeader.getHeaders();
         if (headers != null) {
             Map<String, String> rpcContext = new HashMap<String, String>();
@@ -129,7 +115,24 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         byte[] body = command.getContentBody();
         record.setRequestSize(body.length);
         record.setRequest(body);
+        Channel channel = (Channel) advice.getTarget();
+        Connection connection = channel.getConnection();
+        record.setRemoteIp(connection.getAddress().getHostAddress());
+        record.setPort(connection.getPort() + "");
         return record;
+    }
+
+
+    static AtomicBoolean registered = new AtomicBoolean(false);
+
+    private void registerListener() {
+        if (registered.get()) {
+            return;
+        }
+        final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
+        EventRouter.router().addListener(shadowConsumerDisableListener);
+        registered.set(true);
+
     }
 
     @Override
@@ -150,20 +153,20 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     @Override
     public void beforeFirst(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         if (!PradarSwitcher.isClusterTestEnabled()) {
             logger.warn("PradarSwitcher isClusterTestEnabled false, {} to start shadow {} skip it",
-                advice.getTargetClass().getName(), methodName);
+                    advice.getTargetClass().getName(), methodName);
             return;
         }
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
+        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver) args[1];
         validatePressureMeasurement(m.getConsumerTag());
         try {
-            Command command = (Command)args[0];
-            BasicProperties contentHeader = (BasicProperties)command.getContentHeader();
+            Command command = (Command) args[0];
+            BasicProperties contentHeader = (BasicProperties) command.getContentHeader();
             Map<String, Object> headers = contentHeader.getHeaders();
             if (null != headers && headers.get(PradarService.PRADAR_CLUSTER_TEST_KEY) != null && ClusterTestUtils
-                .isClusterTestRequest(headers.get(PradarService.PRADAR_CLUSTER_TEST_KEY).toString())) {
+                    .isClusterTestRequest(headers.get(PradarService.PRADAR_CLUSTER_TEST_KEY).toString())) {
                 Pradar.setClusterTest(true);
             }
             if (!Pradar.isClusterTest()) {
@@ -189,25 +192,78 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             return;
         }
         Object[] args = advice.getParameterArray();
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
+        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver) args[1];
 
         String consumerTag = m.getConsumerTag();
         if (Pradar.isClusterTestPrefix(consumerTag) || ChannelHolder.existsConsumer(consumerTag)) {
             return;
         }
+        String routingKey = m.getRoutingKey();
+        String exchange = m.getExchange();
         try {
-            final ConsumerMetaData consumerMetaData = getConsumerMetaData((Channel)advice.getTarget(), m.getConsumerTag(),
-                m.getExchange(), m.getRoutingKey());
-            final String ptQueue = Pradar.addClusterTestPrefix(consumerMetaData.getQueue());
-            shadowConsumeRunners.get(ptQueue, new Callable<ShadowConsumeRunner>() {
-                @Override
-                public ShadowConsumeRunner call() throws Exception {
-                    return new ShadowConsumeRunner((Channel)advice.getTarget(), consumerMetaData);
+            Channel channel = (Channel) advice.getTarget();
+            ConsumerMetaData consumerMetaData = getConsumerMetaData(channel, consumerTag,
+                    exchange, routingKey);
+
+            String queue = consumerMetaData.getQueue();
+            if (queue == null || consumerMetaData.isRoutingKeyExchangeModel()) {
+                consumerMetaData.setRoutingKeyExchangeModel(true);
+                for (String s : GlobalConfig.getInstance().getMqWhiteList()) {
+                    if (s.startsWith(exchange + "#" + routingKey)) {
+                        int index = s.lastIndexOf("@");
+                        if (index < 0 || index == s.length() - 1) {
+                            LOGGER.error("[RabbitMQ] rabbit mq config wrong {}, example : {}", s,
+                                    "exchange#routingkey@queue");
+                            continue;
+                        }
+                        queue = s.substring(index + 1);
+                        consumerMetaData.setQueue(queue);
+                        break;
+                    }
                 }
-            }).start();
+                if (queue == null) {
+                    LOGGER.warn(
+                            "[RabbitMQ] SIMULATOR: rabbitmq exchange : {}  routingKey : {} is not in whitelist. ignore it",
+                            exchange, routingKey);
+                    return;
+                }
+            } else {
+                if (PradarSwitcher.whiteListSwitchOn() && !GlobalConfig.getInstance().getMqWhiteList().contains("#" + queue)) {
+                    LOGGER.warn("[RabbitMQ] SIMULATOR: rabbitmq queue : {} is not in whitelist. ignore it", "#" + queue);
+                    return;
+                }
+            }
+
+            String ptQueue = consumerMetaData.getPtQueue();
+            String ptConsumerTag = consumerMetaData.getPtConsumerTag();
+            if (isInfoEnabled) {
+                logger.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
+                        queue, ptQueue, consumerTag, ptConsumerTag);
+            }
+            try {
+                ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, consumerMetaData);
+                String cTag = consumeResult.getTag();
+                dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(), RabbitmqConstants.IS_AUTO_ACK_FIELD, consumerMetaData.isAutoAck());
+                if (cTag != null) {
+                    if (isInfoEnabled) {
+                        logger.info(
+                                "[RabbitMQ] create shadow consumer successful! queue : {} pt_queue : {} tag : {} pt_tag : {}",
+                                queue, ptQueue, consumerTag, ptConsumerTag);
+                    }
+                    ChannelHolder.addConsumerTag(channel, consumerTag, cTag, ptQueue);
+                } else {
+                    reporterError(null, ptQueue, ptConsumerTag, "get shadow channel is null or closed.");
+                }
+            } catch (Throwable e) {
+                reporterError(e, ptQueue, ptConsumerTag);
+            }
         } catch (Throwable e) {
-            reporterError(e, m.getRoutingKey(), consumerTag);
+            reporterError(e, routingKey, consumerTag);
         }
+    }
+
+    @Override
+    public void exceptionLast(Advice advice) {
     }
 
     private static Consumer getConsumerFromChannel(Object channel, String consumerTag) {
@@ -231,192 +287,95 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     }
 
     private ConsumerMetaData getConsumerMetaData(Channel channel, String consumerTag, String exchange,
-        String routingKey) {
+                                                 String routingKey) {
         final int key = System.identityHashCode(channel);
         Consumer consumer = getConsumerFromChannel(channel, consumerTag);
         ConsumerMetaData consumerMetaData = ConfigCache.getConsumerMetaData(key, consumerTag);
         if (consumerMetaData == null) {
-            try {
-                if (channel instanceof RecoveryAwareChannelN) {
-                    if (consumer instanceof DefaultConsumer) {
-                        channel = Reflect.on(consumer).get("_channel");
-                    } else {
-                        Map<String, Consumer> consumers = Reflect.on(channel).get("_consumers");
-                        Consumer consumerFromRecovery = consumers.get(consumerTag);
-                        if (consumerFromRecovery.getClass().getName().contains("AutorecoveringChannel")) {
-                            channel = Reflect.on(consumerFromRecovery).get("this$0");
-                        }
-                    }
+            synchronized (ChannelNProcessDeliveryInterceptor.class) {
+                consumerMetaData = ConfigCache.getConsumerMetaData(key, consumerTag);
+                if (consumerMetaData == null) {
+                    consumerMetaData = buildConsumerMetaData(channel, consumerTag, exchange, routingKey, consumer);
+                    ConfigCache.putConsumerMetaData(key, consumerTag, consumerMetaData);
                 }
-                if (channel instanceof AutorecoveringChannel) {
-                    Connection connection = Reflect.on(channel).get("connection");
-                    if (connection instanceof AutorecoveringConnection) {
-                        Map<String, RecordedConsumer> consumers = Reflect.on(connection).get("consumers");
-                        RecordedConsumer recordedConsumer = consumers.get(consumerTag);
-                        consumerMetaData = new ConsumerMetaData(recordedConsumer, consumer);
-                    }
-                }
-                if (channel instanceof ChannelN) {
-                    logger.info("[rabbitmq] channel is ChannelN, will try to get queue name from rabbitmq admin!");
-                    String queue = getQueueFromWebAdmin(channel, exchange, routingKey);
-                    logger.info("[rabbitmq] channel is ChannelN, get queue name is {}", queue);
-                    if (StringUtils.isEmpty(queue)) {
-                        logger.warn(
-                            "[rabbitmq] cannot find queueName, shadow consumer will subscribe routingKey instead!");
-                        queue = routingKey;
-                    }
-                    consumerMetaData = new ConsumerMetaData(queue, consumerTag, consumer);
-                }
-            } catch (ReflectException e) {
-                throw new PradarException("未支持的rabbitmq版本！无法获取订阅信息", e);
             }
-            ConfigCache.putConsumerMetaData(key, consumerTag, consumerMetaData);
         }
         return consumerMetaData;
     }
 
-    private String getQueueFromWebAdmin(Channel channel, String exchange, String routingKey) {
+    private ConsumerMetaData buildConsumerMetaData(Channel channel, String consumerTag, String exchange, String routingKey,
+                                                   Consumer consumer) {
+        ConsumerMetaData consumerMetaData;
+        String queue = getQueue(channel, consumerTag, exchange, routingKey, consumer);
+        consumerMetaData = new ConsumerMetaData(queue, consumerTag, new ExceptionSilenceConsumer(consumer),
+                simulatorConfig.getBooleanProperty(RabbitmqConstants.EXCLUSIVE_CONFIG, false),
+                simulatorConfig.getBooleanProperty(RabbitmqConstants.AUTO_ACK_CONFIG, true),
+                simulatorConfig.getIntProperty(RabbitmqConstants.PREFETCH_COUNT_CONFIG, 0),
+                simulatorConfig.getBooleanProperty(RabbitmqConstants.NO_LOCAL_CONFIG, false));
+        return consumerMetaData;
+    }
+
+    private String getQueue(Channel channel, String consumerTag, String exchange, String routingKey, Consumer consumer) {
+        if (exchange == null || "".equals(exchange)) {
+            if (isInfoEnabled) {
+                logger.info("[RabbitMQ] using default exchange so use routingKey as queue, it is : {} ", routingKey);
+            }
+            return routingKey;
+        }
+        String queue = null;
         try {
-            Connection connection = Reflect.on(channel).get("_connection");
-            if (connection instanceof AMQConnection) {
-                AdminAccessInfo adminAccessInfo = resolveAdminAccessInfo(connection);
-                if (!isDirectExchange(exchange, adminAccessInfo)) {
-                    logger.warn("[RabbitMQ] exchange : {} is not a direct exchange（only support direct exchange)", exchange);
-                    return null;
-                }
-                return resolveQueueByAdminResponse(exchange, adminAccessInfo, routingKey);
+            channel = unWrapChannel(channel, consumerTag, consumer);
+            if (channel instanceof AutorecoveringChannel) {
+                queue = getQueueWithRecoveringChannel(channel, consumerTag, queue);
             }
-        } catch (Throwable e) {
-            logger.warn("get queue from web admin fail!", e);
+            if (channel instanceof ChannelN) {
+                if (isInfoEnabled) {
+                    logger.info("[RabbitMQ] channel is ChannelN, can not auto detect queue name!");
+                }
+                return null;
+            }
+        } catch (ReflectException e) {
+            throw new PradarException("[RabbitMQ] 未支持的rabbitmq版本！无法获取订阅信息", e);
         }
-        return null;
+        return queue;
     }
 
-    private AdminAccessInfo resolveAdminAccessInfo(Connection connection) {
-        String username = simulatorConfig.getProperty("rabbitmq.admin.username");
-        String password = simulatorConfig.getProperty("rabbitmq.admin.password");
-        if (username == null || password == null) {
-            logger.warn(
-                "[RabbitMQ] missing rabbitmq.admin username or password config, will use server username password "
-                    + "instead");
-            Object object = reflectSilence(connection, "credentialsProvider");
-            if (object != null) {//低版本
-                CredentialsProvider credentialsProvider = (CredentialsProvider)object;
-                username = credentialsProvider.getUsername();
-                password = credentialsProvider.getPassword();
+    private String getQueueWithRecoveringChannel(Channel channel, String consumerTag, String queue) {
+        Connection connection = Reflect.on(channel).get("connection");
+        if (connection instanceof AutorecoveringConnection) {
+            Map<String, RecordedConsumer> consumers = Reflect.on(connection).get("consumers");
+            queue = consumers.get(consumerTag).getQueue();
+        }
+        return queue;
+    }
+
+    private Channel unWrapChannel(Channel channel, String consumerTag, Consumer consumer) {
+        if (channel instanceof RecoveryAwareChannelN) {
+            if (consumer instanceof DefaultConsumer) {
+                channel = Reflect.on(consumer).get("_channel");
             } else {
-                username = reflectSilence(connection, "username");
-                password = reflectSilence(connection, "password");
-                if (username == null || password == null) {
-                    throw new PradarException("未支持的rabbitmq版本！无法获取rabbit连接用户名密码");
+                Map<String, Consumer> consumers = Reflect.on(channel).get("_consumers");
+                Consumer consumerFromRecovery = consumers.get(consumerTag);
+                if (consumerFromRecovery.getClass().getName().contains("AutorecoveringChannel")) {
+                    channel = Reflect.on(consumerFromRecovery).get("this$0");
                 }
             }
         }
-        InetAddress inetAddress = connection.getAddress();
-        String virtualHost = Reflect.on(connection).get("_virtualHost");
-        String host = simulatorConfig.getProperty("rabbitmq.admin.host");
-        Integer port = simulatorConfig.getIntProperty("rabbitmq.admin.port");
-        if (host == null) {
-            host = inetAddress.getHostAddress();
-            logger.warn("[RabbitMQ] missing rabbitmq.admin.host config, will use server host {} instead", host);
-        }
-        if (port == null) {
-            port = Integer.parseInt("1" + connection.getPort());
-            logger.warn("[RabbitMQ] missing rabbitmq.admin.port config, will use default port {} instead", port);
-        }
-        return new AdminAccessInfo(host, port, username, password, virtualHost);
+        return channel;
     }
 
-    private boolean isDirectExchange(String exchange, AdminAccessInfo adminAccessInfo) {
-        String url = String.format("/api/exchanges/%s/%s", adminAccessInfo.getVirtualHostEncode(), exchange);
-        String response = HttpUtils.doGet(adminAccessInfo, url).getResult();
-        JSONObject jsonObject = JSON.parseObject(response);
-        return "direct".equals(jsonObject.get("type"));
-    }
-
-    private String resolveQueueByAdminResponse(String exchange, AdminAccessInfo adminAccessInfo, String routingKey) {
-        String url = String.format("/api/exchanges/%s/%s/bindings/source", adminAccessInfo.getVirtualHostEncode(), exchange);
-        String response = HttpUtils.doGet(adminAccessInfo, url).getResult();
-        JSONArray jsonArray = JSON.parseArray(response);
-        for (Object o : jsonArray) {
-            JSONObject jsonObject = (JSONObject)o;
-            String configRoutingKey = jsonObject.getString("routing_key");
-            if (routingKey.equals(configRoutingKey)) {
-                return jsonObject.getString("destination");
-            }
-        }
-        return null;
-    }
-
-    private static class ShadowConsumeRunner implements Runnable {
-
-        private final Channel channel;
-        private final ConsumerMetaData consumerMetaData;
-        private final Thread thread;
-        private final String ptConsumerTag;
-        private final String ptQueue;
-        private final AtomicBoolean flag = new AtomicBoolean(false);
-
-        public ShadowConsumeRunner(Channel channel, ConsumerMetaData consumerMetaData) {
-            this.channel = channel;
-            this.consumerMetaData = consumerMetaData;
-            this.ptConsumerTag = Pradar.addClusterTestPrefix(consumerMetaData.getConsumerTag());
-            this.ptQueue = Pradar.addClusterTestPrefix(consumerMetaData.getQueue());
-            thread = new Thread(this,
-                String.format("ShadowConsumeRunner for %s-%s", ptQueue, ptConsumerTag));
-        }
-
-        public void start() {
-            if (flag.compareAndSet(false, true)) {
-                thread.start();
-            }
-        }
-
-        @Override
-        public void run() {
-            String consumerTag = consumerMetaData.getConsumerTag();
-            Consumer consumer = consumerMetaData.getConsumer();
-            try {
-                if (logger.isDebugEnabled()) {
-                    logger.debug(
-                        "RabbitMQ basicConsume(ptQueue:{},autoAck:{},consumerTag:{},noLocal:{},exclusive:{},"
-                            + "arguments:{},"
-                            + "ptConsumer:{})",
-                        ptQueue, true, ptConsumerTag, false, false, null, consumer);
-                }
-                String cTag = ChannelHolder.consumeShadowQueue(channel, ptQueue, true, ptConsumerTag, false,
-                    consumerMetaData.isExclusive(), consumerMetaData.getArguments(), consumer);
-                if (cTag != null) {
-                    ChannelHolder.addConsumerTag(channel, consumerTag, cTag, ptQueue);
-                } else {
-                    reporterError(null, this.ptQueue, this.ptConsumerTag, "get shadow channel is null or closed.");
-                }
-            } catch (Throwable e) {
-                reporterError(e, this.ptQueue, this.ptConsumerTag);
-            }
-        }
-    }
-
-    private static void reporterError(Throwable e, String queue, String consumerTag) {
+    private void reporterError(Throwable e, String queue, String consumerTag) {
         reporterError(e, queue, consumerTag, e.getMessage());
     }
 
-    private static void reporterError(Throwable e, String queue, String consumerTag, String cases) {
+    private void reporterError(Throwable e, String queue, String consumerTag, String cases) {
         ErrorReporter.buildError()
-            .setErrorType(ErrorTypeEnum.MQ)
-            .setErrorCode("MQ-0001")
-            .setMessage("RabbitMQ消费端订阅队列失败！")
-            .setDetail("RabbitMqPushConsumerInterceptor:queue:[" + queue + "]," + cases)
-            .report();
-        logger.error("RabbitMQ PT Consumer Inject failed queue:[{}] consumerTag:{}, {}", queue, consumerTag, cases, e);
+                .setErrorType(ErrorTypeEnum.MQ)
+                .setErrorCode("MQ-0001")
+                .setMessage("RabbitMQ消费端订阅队列失败！")
+                .setDetail("RabbitMqPushConsumerInterceptor:queue:[" + queue + "]," + cases)
+                .report();
+        logger.error("[RabbitMQ] PT Consumer Inject failed queue:[{}] consumerTag:{}, {}", queue, consumerTag, cases, e);
     }
 
-    private static <T> T reflectSilence(Object target, String name) {
-        try {
-            return Reflect.on(target).get(name);
-        } catch (ReflectException e) {
-            logger.warn("can not find field '{}' from : '{}'", name, target.getClass().getName());
-            return null;
-        }
-    }
 }

@@ -14,8 +14,6 @@
  */
 package com.pamirs.attach.plugin.es.shadowserver.transport.definition;
 
-import java.net.UnknownHostException;
-
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.TransportClientDefinition;
 import com.pamirs.attach.plugin.es.shadowserver.utils.HostAndPort;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -27,6 +25,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.UnknownHostException;
+
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/04/26 10:16 上午
@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractTransportClientDefinition implements TransportClientDefinition {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+    protected final boolean isInfoEnabled = logger.isInfoEnabled();
 
     @Override
     public TransportClient solve(TransportClient target, ShadowEsServerConfig shadowEsServerConfig) {
@@ -67,15 +68,17 @@ public abstract class AbstractTransportClientDefinition implements TransportClie
         String clusterName = esServerConfig.getPtClusterName();
         if (StringUtils.isEmpty(clusterName)) {
             logger.error("pt cluster.name is empty, use biz cluster.name, biz url = {}"
-                , esServerConfig.getBusinessNodes().toString());
+                    , esServerConfig.getBusinessNodes().toString());
             return settings;
         }
-        logger.info("use pt cluster.name, pt culster.name = {}"
-            , esServerConfig.getPtClusterName());
+        if (isInfoEnabled) {
+            logger.info("use pt cluster.name, pt culster.name = {}"
+                    , esServerConfig.getPtClusterName());
+        }
         return Settings.builder().put(settings).put("cluster.name", clusterName)
-            .build();
+                .build();
     }
 
     protected abstract TransportClient doSolve(Settings settings,
-        TransportClient target);
+                                               TransportClient target);
 }

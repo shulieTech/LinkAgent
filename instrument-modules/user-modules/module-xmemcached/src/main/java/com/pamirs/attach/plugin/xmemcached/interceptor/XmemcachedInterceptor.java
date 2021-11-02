@@ -72,7 +72,7 @@ public class XmemcachedInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         String methodNameExt = XmemcachedUtils.getMethodNameExt(advice.getParameterArray());
         SpanRecord record = new SpanRecord();
-        record.setService(advice.getBehavior().getName());
+        record.setService(advice.getBehaviorName());
         record.setMethod(methodNameExt);
         record.setRemoteIp(null);
         record.setPort(null);

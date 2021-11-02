@@ -188,17 +188,12 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
 
     private ShadowDatabaseConfig getShadowDatabaseConfig(String url, String username) {
         String key = DbUrlUtils.getKey(url, username);
-        logger.info("bus datasource key1 is {}", key);
-        for (Map.Entry<String, ShadowDatabaseConfig> entry : GlobalConfig.getInstance().getShadowDatasourceConfigs().entrySet()) {
-            logger.info("bus datasource config key  is {}", entry.getKey());
-        }
         ShadowDatabaseConfig shadowDatabaseConfig = GlobalConfig.getInstance().getShadowDatabaseConfig(key);
         if (shadowDatabaseConfig == null) {
             /**
              * 解决现在影子表配置没有username的问题,再尝试使用非用户名的判断一次
              */
             key = DbUrlUtils.getKey(url, null);
-            logger.info("bus datasource key2 is {}", key);
         } else {
             return shadowDatabaseConfig;
         }

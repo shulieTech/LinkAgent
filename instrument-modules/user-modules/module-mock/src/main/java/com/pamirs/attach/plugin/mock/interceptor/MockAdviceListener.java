@@ -46,7 +46,7 @@ public class MockAdviceListener extends AdviceListener {
 
             ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
             Object result = evaluator.evaluate(advice.getClassLoader(), scriptContent, binding);
-            ProcessController.returnImmediately(result);
+            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), result);
         }
 
     }

@@ -95,12 +95,12 @@ public class DbUrlUtils {
         if (dataSourceBusiness != null && dataSourcePerformanceTest != null) {
             String schemaBusiness = String.valueOf(dataSourceBusiness.get("schema"));
             String schemaPerformanceTest = String.valueOf(dataSourcePerformanceTest.get("schema"));
-            if (schemaBusiness == null || schemaBusiness.isEmpty() || schemaBusiness.equalsIgnoreCase("null")
-                    || schemaPerformanceTest == null || schemaPerformanceTest.isEmpty() || schemaPerformanceTest.equalsIgnoreCase("null")) {
+            if (schemaBusiness == null || schemaBusiness.isEmpty() || schemaBusiness.equals("null") || schemaBusiness.equals("NULL" )
+                    || schemaPerformanceTest == null || schemaPerformanceTest.isEmpty() || schemaPerformanceTest.equals("null") || schemaPerformanceTest.equals("NULL")) {
                 String urlBusiness = String.valueOf(dataSourceBusiness.get("url"));
                 String urlPerformanceTest = String.valueOf(dataSourcePerformanceTest.get("url"));
-                if (urlBusiness == null || urlBusiness.isEmpty() || urlBusiness.equalsIgnoreCase("null")
-                        || urlPerformanceTest == null || urlPerformanceTest.isEmpty() || urlPerformanceTest.equalsIgnoreCase("null")) {
+                if (urlBusiness == null || urlBusiness.isEmpty() || urlBusiness.equals("null") || urlBusiness.equals("NULL")
+                        || urlPerformanceTest == null || urlPerformanceTest.isEmpty() || urlPerformanceTest.equals("null") || urlPerformanceTest.equals("NULL")) {
                     return;
                 }
                 DbType dbTypeBusiness = DbType.guessDbType(urlBusiness);
@@ -116,8 +116,9 @@ public class DbUrlUtils {
                 schemaBusiness = sqlMetaDataBusiness.getDbName();
                 schemaPerformanceTest = sqlMetaDataPerformanceTest.getDbName();
             }
-            if (schemaBusiness != null && !schemaBusiness.isEmpty() && !schemaBusiness.equalsIgnoreCase("null")
-                    && schemaPerformanceTest != null && !schemaPerformanceTest.isEmpty() && !schemaPerformanceTest.equalsIgnoreCase("null")) {
+            if (schemaBusiness != null && !schemaBusiness.isEmpty() && !schemaBusiness.equals("null") && !schemaBusiness.equals("NULL")
+                    && schemaPerformanceTest != null && !schemaPerformanceTest.isEmpty() && !schemaPerformanceTest.equals("null")
+                    && !schemaPerformanceTest.equals("NULL")) {
                 schemaMap.put(schemaBusiness, schemaPerformanceTest);
             }
         }

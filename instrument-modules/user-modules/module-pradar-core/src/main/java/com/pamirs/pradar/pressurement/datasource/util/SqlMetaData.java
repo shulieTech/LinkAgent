@@ -43,6 +43,7 @@ public class SqlMetaData implements Serializable {
         copy.setPort(sqlMetaData.getPort());
         copy.setDbType(sqlMetaData.getDbType());
         copy.setDbName(sqlMetaData.getDbName());
+        copy.setSql(sqlMetaData.getSql());
         return copy;
     }
 

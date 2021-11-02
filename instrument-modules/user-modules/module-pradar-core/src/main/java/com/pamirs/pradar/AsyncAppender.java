@@ -14,19 +14,21 @@
  */
 package com.pamirs.pradar;
 
-
-import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 异步提交日志，避免影响主线程
@@ -78,6 +80,7 @@ class AsyncAppender extends PradarAppender {
     private String workerName;
 
     private Future future;
+    private ExecutorService asyncAppenderService;
     private AsyncRunnable task;
     private AtomicBoolean running;
 
@@ -110,11 +113,19 @@ class AsyncAppender extends PradarAppender {
         this.workerName = workerName;
 
         task = new AsyncRunnable();
-        future = ExecutorServiceFactory.getFactory().submit(task);
+        asyncAppenderService = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r, "Async-Log-Appender-Service");
+                return t;
+            }
+        });
+        future = asyncAppenderService.submit(task);
+
     }
 
     int size() {
-        return (int) (putIndex.get() - takeIndex.get());
+        return (int)(putIndex.get() - takeIndex.get());
     }
 
     public boolean append(Object ctx) {
@@ -140,7 +151,7 @@ class AsyncAppender extends PradarAppender {
                 }
             }
             if (putIndex.compareAndSet(put, put + 1)) {
-                entries[(int) put & indexMask] = ctx;
+                entries[(int)put & indexMask] = ctx;
                 // 仅仅在队列的日志数超过阈值，且消费者不在运行，且获得锁，才唤醒消费者
                 // 这个做法能保证只有必要时才立即通知消费者，减少上下文切换的开销
                 if (size >= consumerThreshold && !running.get() && lock.tryLock()) {
@@ -183,7 +194,7 @@ class AsyncAppender extends PradarAppender {
                 }
             }
             if (putIndex.compareAndSet(put, put + 1)) {
-                entries[(int) put & indexMask] = ctx;
+                entries[(int)put & indexMask] = ctx;
                 // 仅仅在队列的日志数超过阈值，且消费者不在运行，且获得锁，才唤醒消费者
                 // 这个做法能保证只有必要时才立即通知消费者，减少上下文切换的开销
                 if (size >= consumerThreshold && !running.get() && lock.tryLock()) {
@@ -224,7 +235,7 @@ class AsyncAppender extends PradarAppender {
                 }
             }
             if (putIndex.compareAndSet(put, put + 1)) {
-                entries[(int) put & indexMask] = log;
+                entries[(int)put & indexMask] = log;
                 // 仅仅在队列的日志数超过阈值，且消费者不在运行，且获得锁，才唤醒消费者
                 // 这个做法能保证只有必要时才立即通知消费者，减少上下文切换的开销
                 if (size >= consumerThreshold && !running.get() && lock.tryLock()) {
@@ -267,6 +278,7 @@ class AsyncAppender extends PradarAppender {
         if (task != null) {
             task.shutdown();
         }
+        asyncAppenderService.shutdownNow();
     }
 
     @Override
@@ -342,7 +354,7 @@ class AsyncAppender extends PradarAppender {
                     if (size > 0) {
                         // 直接批量处理掉 size 个日志对象
                         do {
-                            final int idx = (int) take & indexMask;
+                            final int idx = (int)take & indexMask;
                             Object ctx = entries[idx];
                             // 从生产者 claim 到 putIndex 位置，到生产者把日志对象放入队列之间，有可能存在间隙
                             while (ctx == null) {
@@ -357,10 +369,11 @@ class AsyncAppender extends PradarAppender {
 
                         long discardNum = discardCount.get();
                         if (discardNum > 0 &&
-                                (now = System.currentTimeMillis()) - lastOutputTime > outputSpan) {
+                            (now = System.currentTimeMillis()) - lastOutputTime > outputSpan) {
                             discardNum = discardCount.get();
                             discardCount.lazySet(0); // 无需内存屏障，统计的数量稍微丢失一点
-                            LOGGER.warn("{} discarded {} logs, queueSize={}" + queueSize, workerName, discardNum, queueSize);
+                            LOGGER.warn("{} discarded {} logs, queueSize={}" + queueSize, workerName, discardNum,
+                                queueSize);
                             lastOutputTime = now;
                         }
 
@@ -387,7 +400,7 @@ class AsyncAppender extends PradarAppender {
         }
 
         private final void processContext(final Object ctx,
-                                          final PradarAppender appender, final TraceEncoder encoder) throws IOException {
+            final PradarAppender appender, final TraceEncoder encoder) throws IOException {
             if (ctx == EVENT_LOG_FLUSH) {
                 appender.flush();
             } else if (ctx == EVENT_LOG_RELOAD) {
@@ -395,9 +408,9 @@ class AsyncAppender extends PradarAppender {
             } else if (ctx == EVENT_LOG_ROLLOVER) {
                 appender.reload();
             } else if (ctx instanceof BaseContext) {
-                encoder.encode((BaseContext) ctx, appender);
+                encoder.encode((BaseContext)ctx, appender);
             } else if (ctx instanceof String) {
-                appender.append((String) ctx);
+                appender.append((String)ctx);
             }
         }
     }

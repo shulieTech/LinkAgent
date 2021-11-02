@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
 import java.lang.reflect.Field;
+import java.net.SocketTimeoutException;
 import java.util.Map;
 
 import com.alibaba.fastjson.JSONObject;
@@ -121,7 +122,7 @@ public class AsyncHttpClientv5MethodInterceptor extends AroundInterceptor {
         }
         //pradar启动提前为的是捕获白名单异常能trace进去的
         try{
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(),advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 //现在先暂时注释掉因为只有jdk8以上才能用
@@ -213,7 +214,11 @@ public class AsyncHttpClientv5MethodInterceptor extends AroundInterceptor {
     public void exceptionTrace(SimpleHttpRequest request, Throwable throwable) {
         Pradar.request(request.getBody());
         Pradar.response(throwable);
-        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        if (throwable != null && (throwable instanceof SocketTimeoutException)) {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_TIMEOUT, HttpClientConstants.PLUGIN_TYPE);
+        } else {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        }
     }
 
 }

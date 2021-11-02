@@ -59,7 +59,7 @@ public class MongoCollectionTraceInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         record.setRequest(advice.getParameterArray());
         record.setService(mongoCollection.getNamespace().getFullName());
-        record.setMethod(advice.getBehavior().getName());
+        record.setMethod(advice.getBehaviorName());
         try {
             Object mongo = executor.get(target);
             if (getAllAddressMethod == null) {

@@ -32,7 +32,7 @@ public class RequestUtils {
 
 
     private static final boolean checkIP(String ip) {
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+        if (ip == null || ip.length() == 0 || "unknown".equals(ip) ||  "UNKNOWN".equals(ip)) {
             return false;
         } else {
             return true;

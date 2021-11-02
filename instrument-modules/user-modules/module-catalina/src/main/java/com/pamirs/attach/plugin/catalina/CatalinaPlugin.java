@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.catalina;
 
 import com.pamirs.attach.plugin.catalina.interceptor.RequestStartAsyncInterceptor;
+import com.pamirs.attach.plugin.catalina.interceptor.SpringMvcInterceptor;
 import com.pamirs.attach.plugin.catalina.interceptor.StandardHostValveInvokeInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -31,7 +32,7 @@ import org.kohsuke.MetaInfServices;
 public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "org.apache.catalina.core.StandardHostValve", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -47,5 +48,18 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 method.addInterceptor(Listeners.of(RequestStartAsyncInterceptor.class));
             }
         });
+
+        //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.MappingRegistry.getMappingsByUrl
+        enhanceTemplate.enhance(this, "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByUrl",
+                                "java.lang.String");
+                        getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
+
+                    }
+                });
+        return true;
     }
 }

@@ -28,7 +28,7 @@ import org.kohsuke.MetaInfServices;
 public class ServletCommonModule extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         //将simulator home路径和plugin相关的配置全部导入到system property中
         String home = simulatorConfig.getSimulatorHome();
         if (home != null) {
@@ -53,5 +53,6 @@ public class ServletCommonModule extends ModuleLifecycleAdapter implements Exten
         if (responseOn != null) {
             System.setProperty("plugin.response.on", String.valueOf(responseOn));
         }
+        return true;
     }
 }

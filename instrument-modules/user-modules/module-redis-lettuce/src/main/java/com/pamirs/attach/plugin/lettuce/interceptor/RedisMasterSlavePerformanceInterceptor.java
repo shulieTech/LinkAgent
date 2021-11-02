@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.shadowserver.LettuceMasterSlaveFactory;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -35,16 +36,24 @@ public class RedisMasterSlavePerformanceInterceptor extends ResultInterceptorAda
 
     @Override
     protected Object getResult0(Advice advice) {
+
         Object result = advice.getReturnObj();
+        if (!Pradar.isClusterTest()) {
+            return result;
+        }
         try {
             // TODO 这里无论如何都必须初始化成功。
             // 1、判断影子库还是影子表模式
             // 2、影子库模式无论是业务流量还是压测流量都需要创建协调者RedisClient
-            return LettuceMasterSlaveFactory.getFactory().getClient(result);
+            return LettuceMasterSlaveFactory.getFactory().getClient(advice);
         } catch (PressureMeasureError e) {
             throw e;
         } catch (Throwable e) {
-            LOGGER.error(e.getMessage(), e);
+            if (Pradar.isClusterTest()) {
+                LOGGER.error(e.getMessage(), e);
+                throw new PressureMeasureError(e);
+            }
+
         }
         return result;
     }

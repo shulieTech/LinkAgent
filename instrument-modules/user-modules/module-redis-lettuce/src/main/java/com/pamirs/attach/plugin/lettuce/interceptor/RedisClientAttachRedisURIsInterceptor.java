@@ -23,7 +23,6 @@ import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.RedisClusterClient;
 
 import javax.annotation.Resource;
@@ -46,17 +45,17 @@ public class RedisClientAttachRedisURIsInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) {
         Object[] args = advice.getParameterArray();
-        String methodName = advice.getBehavior().getName();
+        String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         Object result = advice.getReturnObj();
         if (target instanceof RedisClusterClient) {
             try {
-                Iterable<RedisURI> initialUris = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_INITIAL_URIS);
-                List<RedisURI> list = new ArrayList<RedisURI>();
+                Iterable<Object> initialUris = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_INITIAL_URIS);
+                List<Object> list = new ArrayList<Object>();
                 if (initialUris != null) {
-                    Iterator<RedisURI> it = initialUris.iterator();
+                    Iterator<Object> it = initialUris.iterator();
                     while (it.hasNext()) {
-                        RedisURI redisURI = it.next();
+                        Object redisURI = it.next();
                         list.add(redisURI);
                     }
                 }
@@ -65,12 +64,12 @@ public class RedisClientAttachRedisURIsInterceptor extends AroundInterceptor {
             }
         } else if (target instanceof RedisClient) {
             try {
-                RedisURI redisURI = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_REDIS_URI);
+                Object redisURI = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_REDIS_URI);
                 manager.setDynamicField(result, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS, Arrays.asList(redisURI));
             } catch (ReflectException e) {
             }
         } else {
-            final List<RedisURI> list = manager.getDynamicField(target, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS);
+            final List<Object> list = manager.getDynamicField(target, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS);
             manager.setDynamicField(result, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS, list);
             manager.setDynamicField(result, LettuceConstants.DYNAMIC_FIELD_LETTUCE_TARGET, target);
             manager.setDynamicField(result, LettuceConstants.DYNAMIC_FIELD_LETTUCE_METHOD, methodName);

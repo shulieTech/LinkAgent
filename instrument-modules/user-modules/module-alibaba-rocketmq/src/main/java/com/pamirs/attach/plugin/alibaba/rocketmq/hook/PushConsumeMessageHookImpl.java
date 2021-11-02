@@ -65,12 +65,27 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
             mqTraceContext.setTopic(context.getMq().getTopic());
             mqTraceContext.setGroup(context.getConsumerGroup());
 
+            boolean silence = PradarService.isSilence();
+
             List<MQTraceBean> beans = new ArrayList<MQTraceBean>();
             for (MessageExt msg : context.getMsgList()) {
                 if (msg == null) {
                     continue;
                 }
                 MQTraceBean traceBean = new MQTraceBean();
+                boolean isClusterTest = msg.getTopic() != null &&
+                        (Pradar.isClusterTestPrefix(msg.getTopic())
+                                || Pradar.isClusterTestPrefix(msg.getTopic(), RETRYSTR)
+                                || Pradar.isClusterTestPrefix(msg.getTopic(), DLQSTR));
+                // 消息的properties是否包含Pradar.PRADAR_CLUSTER_TEST_KEY
+                isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
+                if (isClusterTest) {
+                    traceBean.setClusterTest(Boolean.TRUE.toString());
+                }
+                if (silence && isClusterTest) {
+                    throw new PressureMeasureError(this.getClass().getName() + ":silence module ! can not handle cluster test data");
+                }
+
                 Map<String, String> rpcContext = new HashMap<String, String>();
                 for (String key : Pradar.getInvokeContextTransformKeys()) {
                     String value = msg.getProperty(key);
@@ -107,20 +122,6 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 traceBean.setOffset(msg.getQueueOffset());
                 traceBean.setRetryTimes(msg.getReconsumeTimes());
                 traceBean.setProps(context.getProps());
-                /**
-                 * 如果有压测标则设置压测标，没有则根据topic是否是PT_开头，如果是则设置为压测流量
-                 */
-                traceBean.setClusterTest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
-                boolean isClusterTest = msg.getTopic() != null &&
-                        (Pradar.isClusterTestPrefix(msg.getTopic())
-                                || Pradar.isClusterTestPrefix(msg.getTopic(), RETRYSTR)
-                                || Pradar.isClusterTestPrefix(msg.getTopic(), DLQSTR));
-                // 消息的properties是否包含Pradar.PRADAR_CLUSTER_TEST_KEY
-                isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
-                if (isClusterTest) {
-                    traceBean.setClusterTest(Boolean.TRUE.toString());
-                }
-
                 beans.add(traceBean);
             }
             mqTraceContext.setTraceBeans(beans);

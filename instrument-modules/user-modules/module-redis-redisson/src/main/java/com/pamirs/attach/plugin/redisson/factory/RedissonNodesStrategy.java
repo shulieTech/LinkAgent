@@ -14,6 +14,11 @@
  */
 package com.pamirs.attach.plugin.redisson.factory;
 
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
@@ -22,13 +27,14 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
 import org.redisson.api.RedissonRxClient;
-import org.redisson.config.*;
+import org.redisson.config.ClusterServersConfig;
+import org.redisson.config.Config;
+import org.redisson.config.MasterSlaveServersConfig;
+import org.redisson.config.ReplicatedServersConfig;
+import org.redisson.config.SentinelServersConfig;
+import org.redisson.config.SingleServerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 /**
  * @Auther: vernon
@@ -93,11 +99,22 @@ public class RedissonNodesStrategy implements RedisServerNodesStrategy {
         } catch (ReflectException e) {
         }
         if (singleServerConfig != null) {
-            return RedissonUtils.removePre(singleServerConfig.getAddress());
+            //在这里返回的address在不同版本可能返回String，可能返回URI在这里做处理
+            Object address=Reflect.on(singleServerConfig).get("address");
+            String addressConvert=null;
+            if(address instanceof URI){
+                URI uriConvert=(URI)address;
+                addressConvert=RedissonUtils.addPre(new StringBuilder().append(uriConvert.getHost()).append(":").append(uriConvert.getPort()).toString());
+            }else if(address instanceof String){
+                addressConvert=(String)address;
+            }
+            return RedissonUtils.removePre(addressConvert);
         } else if (clusterServersConfig != null) {
             return RedissonUtils.removePre(clusterServersConfig.getNodeAddresses());
         } else if (sentinelServersConfig != null) {
-            return RedissonUtils.removePre(sentinelServersConfig.getSentinelAddresses());
+            List<String> result = RedissonUtils.removePre(sentinelServersConfig.getSentinelAddresses());
+            result.add(sentinelServersConfig.getMasterName());
+            return result;
         } else if (replicatedServersConfig != null) {
             return RedissonUtils.removePre(replicatedServersConfig.getNodeAddresses());
         } else if (masterSlaveServersConfig != null) {

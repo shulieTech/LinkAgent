@@ -22,8 +22,7 @@ public interface DeploymentManager {
     /**
      * uninstall simulator of namespace
      *
-     * @param namespace
      * @throws Throwable
      */
-    void uninstall(String namespace) throws Throwable;
+    void uninstall() throws Throwable;
 }

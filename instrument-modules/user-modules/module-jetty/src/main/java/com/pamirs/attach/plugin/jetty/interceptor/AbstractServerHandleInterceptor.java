@@ -39,7 +39,9 @@ public abstract class AbstractServerHandleInterceptor extends AroundInterceptor 
     protected final RequestTracer<HttpServletRequest, HttpServletResponse> requestTracer;
 
     public AbstractServerHandleInterceptor() {
-        Pradar.WEB_SERVER_NAME = JettyConstans.PLUGIN_NAME;
+        if(Pradar.WEB_SERVER_NAME == null) {
+            Pradar.WEB_SERVER_NAME = JettyConstans.PLUGIN_NAME;
+        }
         this.requestTracer = new ServletRequestTracer();
     }
 

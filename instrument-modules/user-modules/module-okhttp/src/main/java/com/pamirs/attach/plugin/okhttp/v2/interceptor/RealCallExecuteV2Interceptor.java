@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.okhttp.v2.interceptor;
 
 import com.alibaba.fastjson.JSONObject;
+
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -23,6 +24,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -38,6 +40,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 /**
  * @Description
@@ -73,7 +76,7 @@ public class RealCallExecuteV2Interceptor extends TraceInterceptorAdaptor {
         config.addArgs("url", url);
         config.addArgs("isInterface", Boolean.FALSE);
         final Request finalRequest = request;
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionForwardCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
             @Override
             public Object forward(Object param) throws ProcessControlException {
                 HttpUrl httpUrl = HttpUrl.parse(config.getForwarding());
@@ -108,6 +111,7 @@ public class RealCallExecuteV2Interceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        InnerWhiteListCheckUtil.check();
         Object target = advice.getTarget();
         Request request = null;
         try {
@@ -136,9 +140,14 @@ public class RealCallExecuteV2Interceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
         record.setResponse(advice.getThrowable());
         record.setResponseSize(0);
+        InnerWhiteListCheckUtil.check();
         return record;
     }
 
@@ -147,6 +156,7 @@ public class RealCallExecuteV2Interceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         Response response = (Response) advice.getReturnObj();
         record.setResultCode(String.valueOf(response.code()));
+        InnerWhiteListCheckUtil.check();
         long length = 0;
         try {
             length = response.body().contentLength();

@@ -23,6 +23,8 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.druid.util.JdbcUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,23 +62,27 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
                     }
                     DruidPooledConnection druidPooledConnection = dataSourceBusiness.getConnection();
                     return new DruidPooledNormalConnection(druidPooledConnection,
-                            dbConnectionKey, url, username, this.dbType);
+                            dbConnectionKey, url, username, this.dbType, sqlMetaData);
                 } else {
                     //影子库
                     if (dataSourcePerformanceTest == null) {
                         synchronized (this) {
                             if (dataSourcePerformanceTest == null) {
-                                dataSourcePerformanceTest = DruidDatasourceUtils.generateDatasourceFromConfiguration(dataSourceBusiness, GlobalConfig.getInstance().getShadowDatasourceConfigs());
+                                dataSourcePerformanceTest = DruidDatasourceUtils.generateDatasourceFromConfiguration(
+                                        dataSourceBusiness, GlobalConfig.getInstance().getShadowDatasourceConfigs());
                             }
                         }
                         if (dataSourcePerformanceTest == null) {
-                            throw new PressureMeasureError("Performance dataSource is null. can't get shadow datasource config with business config. bizUrl=" + dataSourceBusiness.getUrl() + ", bizUser=" + dataSourceBusiness.getUsername());
+                            throw new PressureMeasureError(
+                                    "Performance dataSource is null. can't get shadow datasource config with business "
+                                            + "config. bizUrl="
+                                            + dataSourceBusiness.getUrl() + ", bizUser=" + dataSourceBusiness.getUsername());
                         }
                     }
                     DruidPooledConnection druidPooledConnection = dataSourcePerformanceTest.getConnection();
                     return new DruidPooledPressureConnection(druidPooledConnection,
                             dbConnectionKey,
-                            dataSourcePerformanceTest.getUrl(), dataSourcePerformanceTest.getUsername(), this.dbType);
+                            dataSourcePerformanceTest.getUrl(), dataSourcePerformanceTest.getUsername(), this.dbType, sqlMetaData);
                 }
             } catch (Throwable e) {
                 ErrorReporter.Error error = ErrorReporter.buildError()
@@ -89,15 +95,32 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
                                 + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl()) +
                                 ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername())
                                 + "message: " + e.getMessage() + "\r\n" + printStackTrace(e));
-//                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
+                //                error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
                 throw new PressureMeasureError("get connection failed by dbMediatorDataSource. url="
                         + (dataSourceBusiness == null ? null : dataSourceBusiness.getUrl())
                         + ", username=" + (dataSourceBusiness == null ? null : dataSourceBusiness.getUsername()), e);
             }
         } else {
+            initBiz();
             final DruidPooledConnection connection = dataSourceBusiness.getConnection();
-            return new BizConnection(connection, dataSourceBusiness.getUrl(), dataSourceBusiness.getUsername(), dataSourceBusiness.getDbType());
+            return new BizConnection(connection, dataSourceBusiness.getUrl(), dataSourceBusiness.getUsername(), bizDbType, null);
+        }
+    }
+
+    private void initBiz() throws SQLException {
+        if (StringUtils.isBlank(bizDbType)) {
+            String driverClassName = getDriverClassName(dataSourceBusiness);
+            if (driverClassName == null) {
+                driverClassName = JdbcUtils.getDriverClassName(dataSourceBusiness.getUrl());
+            }
+            //cobar用的mysql协议
+            String url = getUrl(dataSourceBusiness);
+            if (url.startsWith("jdbc:cobar_cluster")) {
+                this.bizDbType = "mysql";
+            } else {
+                this.bizDbType = JdbcUtils.getDbType(dataSourceBusiness.getUrl(), driverClassName);
+            }
         }
     }
 
@@ -111,6 +134,5 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
             }
         }
     }
-
 
 }

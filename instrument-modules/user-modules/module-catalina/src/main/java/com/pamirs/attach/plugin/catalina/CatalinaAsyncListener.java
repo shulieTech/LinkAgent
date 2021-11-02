@@ -32,8 +32,8 @@ import java.util.Map;
 
 public class CatalinaAsyncListener implements AsyncListener {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final boolean isDebug = logger.isDebugEnabled();
-    private final boolean isInfo = logger.isInfoEnabled();
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
     private final AsyncContext asyncContext;
     private final Map<String, String> invokeContext_;
     private final HttpServletRequest request;
@@ -51,12 +51,12 @@ public class CatalinaAsyncListener implements AsyncListener {
 
     @Override
     public void onComplete(AsyncEvent asyncEvent) throws IOException {
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("Complete asynchronous operation. event={}", asyncEvent);
         }
 
         if (asyncEvent == null) {
-            if (isInfo) {
+            if (isInfoEnabled) {
                 logger.info("Invalid event. event is null");
             }
             return;
@@ -72,7 +72,7 @@ public class CatalinaAsyncListener implements AsyncListener {
             Pradar.setInvokeContext(invokeContext_);
             requestTracer.endTrace(request, response, null, String.valueOf(getStatusCode(asyncEvent)));
         } catch (Throwable t) {
-            if (isInfo) {
+            if (isInfoEnabled) {
                 logger.info("Failed to async event handle. event={}", asyncEvent, t);
             }
         } finally {
@@ -82,12 +82,12 @@ public class CatalinaAsyncListener implements AsyncListener {
 
     @Override
     public void onTimeout(AsyncEvent asyncEvent) throws IOException {
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("Timeout asynchronous operation. event={}", asyncEvent);
         }
 
         if (asyncEvent == null) {
-            if (isDebug) {
+            if (isDebugEnabled) {
                 logger.debug("Invalid event. event is null");
             }
             return;
@@ -105,12 +105,12 @@ public class CatalinaAsyncListener implements AsyncListener {
 
     @Override
     public void onError(AsyncEvent asyncEvent) throws IOException {
-        if (isDebug) {
+        if (isDebugEnabled) {
             logger.debug("Error asynchronous operation. event={}", asyncEvent);
         }
 
         if (asyncEvent == null) {
-            if (isInfo) {
+            if (isInfoEnabled) {
                 logger.info("Invalid event. event is null");
             }
             return;
@@ -120,7 +120,7 @@ public class CatalinaAsyncListener implements AsyncListener {
             Pradar.setInvokeContext(invokeContext_);
             requestTracer.endTrace(request, response, asyncEvent.getThrowable(), "500");
         } catch (Throwable t) {
-            if (isInfo) {
+            if (isInfoEnabled) {
                 logger.info("Failed to async event handle. event={}", asyncEvent, t);
             }
         } finally {

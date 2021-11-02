@@ -16,9 +16,9 @@ package com.pamirs.attach.plugin.apache.tomcatjdbc.util;
 
 import com.pamirs.attach.plugin.apache.tomcatjdbc.obj.TomcatJdbcMediatorDataSource;
 import com.pamirs.pradar.ErrorTypeEnum;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tomcat.jdbc.pool.DataSource;
@@ -69,7 +69,9 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
             return;
@@ -80,7 +82,9 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
         } else {//影子库
@@ -101,10 +105,14 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourcePerformanceTest(ptDataSource);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                }
                 old.close();
             }
-            LOGGER.info("[tomcat-jdbc] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("[tomcat-jdbc] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+            }
         }
     }
 

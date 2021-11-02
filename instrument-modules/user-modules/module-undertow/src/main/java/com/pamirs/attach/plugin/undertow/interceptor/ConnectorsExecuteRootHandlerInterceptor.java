@@ -27,6 +27,8 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletInitialHandler;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +55,9 @@ public class ConnectorsExecuteRootHandlerInterceptor extends AroundInterceptor i
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        if (!StringUtils.startsWith(advice.getParameterArray()[0].getClass().getName(), ServletInitialHandler.class.getName())){
+            return;
+        }
         HttpServerExchange exchange = (HttpServerExchange) advice.getParameterArray()[1];
         if (exchange == null) {
             logger.warn("Invalid target object, The io.undertow.server.HttpServerExchange is null. target={}", exchange);
@@ -66,6 +71,9 @@ public class ConnectorsExecuteRootHandlerInterceptor extends AroundInterceptor i
     @Override
     public void doAfter(Advice advice) throws Throwable {
         try {
+            if (!StringUtils.startsWith(advice.getParameterArray()[0].getClass().getName(), ServletInitialHandler.class.getName())){
+                return;
+            }
             if (!advice.hasMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS)) {
                 return;
             }
@@ -84,6 +92,9 @@ public class ConnectorsExecuteRootHandlerInterceptor extends AroundInterceptor i
     @Override
     public void doException(Advice advice) throws Throwable {
         try {
+            if (!StringUtils.startsWith(advice.getParameterArray()[0].getClass().getName(), ServletInitialHandler.class.getName())){
+                return;
+            }
             if (!advice.hasMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS)) {
                 return;
             }

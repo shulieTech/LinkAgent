@@ -33,11 +33,9 @@ public class LogbackUtils {
     /**
      * 初始化Logback日志框架
      *
-     * @param namespace             命名空间
      * @param logbackConfigFilePath logback配置文件路径
      */
-    public static void init(final String namespace,
-                            final String logbackConfigFilePath) {
+    public static void init(final String logbackConfigFilePath) {
         final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         final JoranConfigurator configurator = new JoranConfigurator();
         final File configureFile = new File(logbackConfigFilePath);

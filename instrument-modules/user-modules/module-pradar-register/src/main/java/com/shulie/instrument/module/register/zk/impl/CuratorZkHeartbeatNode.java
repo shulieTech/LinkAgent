@@ -14,8 +14,8 @@
  */
 package com.shulie.instrument.module.register.zk.impl;
 
-import org.apache.curator.framework.CuratorFramework;
 import com.shulie.instrument.module.register.zk.ZkHeartbeatNode;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.utils.ZKPaths;
@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
 
     private static final Logger logger = LoggerFactory.getLogger(CuratorZkHeartbeatNode.class);
+    private static final boolean isInfoEnabled = logger.isInfoEnabled();
 
     private CuratorFramework client;
 
@@ -122,7 +123,9 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
                     if (isConnected.compareAndSet(false, true)) {
                         try {
                             reset();
-                            logger.info("recovered from RECONNECTED event, path={}", path);
+                            if (isInfoEnabled) {
+                                logger.info("recovered from RECONNECTED event, path={}", path);
+                            }
                         } catch (Throwable e) {
                             logger.error("fail to reset after reconnection, path={}", path, e);
                         }

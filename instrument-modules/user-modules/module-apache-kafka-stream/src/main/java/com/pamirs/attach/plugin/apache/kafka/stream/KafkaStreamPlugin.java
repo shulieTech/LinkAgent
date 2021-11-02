@@ -31,15 +31,15 @@ import org.kohsuke.MetaInfServices;
  * @since 2021-05-07 11:40
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "apache-kafka-stream", version = "1.0.0", author = "angju@shulie.io", description = "apache kafka-stream 消息中间件")
+@ModuleInfo(id = "kafka-stream", version = "1.0.0", author = "angju@shulie.io", description = "apache kafka-stream 消息中间件")
 public class KafkaStreamPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
-        addHookRegisterInterceptor();
+    public boolean onActive() throws Throwable {
+        return addHookRegisterInterceptor();
     }
 
-    private void addHookRegisterInterceptor() {
+    private boolean addHookRegisterInterceptor() {
         this.enhanceTemplate.enhance(this, "org.apache.kafka.streams.kstream.internals.KStreamMap$KStreamMapProcessor", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -64,6 +64,7 @@ public class KafkaStreamPlugin extends ModuleLifecycleAdapter implements Extensi
             }
         });
 
+        return true;
     }
 
 

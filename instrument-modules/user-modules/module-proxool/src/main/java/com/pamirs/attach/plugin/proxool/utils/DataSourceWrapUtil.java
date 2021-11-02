@@ -18,10 +18,10 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -125,8 +125,10 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
-                        target.getDriverUrl(), target.getUser());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
+                            target.getDriverUrl(), target.getUser());
+                }
                 old.close();
             }
             return;
@@ -138,8 +140,10 @@ public class DataSourceWrapUtil {
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
-                            target.getDriverUrl(), target.getUser());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
+                                target.getDriverUrl(), target.getUser());
+                    }
                     old.close();
                 }
             } catch (Throwable e) {
@@ -165,15 +169,19 @@ public class DataSourceWrapUtil {
                 dataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
-                            target.getDriverUrl(), target.getUser());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
+                                target.getDriverUrl(), target.getUser());
+                    }
                     old.close();
                 }
-                logger.info(
-                        "[proxool] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},"
-                                + "shadow-username:{}",
-                        target.hashCode(), target.getDriverUrl(), target.getUser(), ptDataSource.getDriverUrl(),
-                        ptDataSource.getUser());
+                if (logger.isInfoEnabled()) {
+                    logger.info(
+                            "[proxool] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},"
+                                    + "shadow-username:{}",
+                            target.hashCode(), target.getDriverUrl(), target.getUser(), ptDataSource.getDriverUrl(),
+                            ptDataSource.getUser());
+                }
             } catch (Throwable t) {
                 logger.error("[proxool] init datasource err!", t);
                 ErrorReporter.buildError()

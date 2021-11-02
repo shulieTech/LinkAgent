@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 /**
  * 仿真器
@@ -57,7 +56,7 @@ public class Simulator {
 
     public Simulator(final CoreConfigure config,
                      final Instrumentation inst) {
-        EventListenerHandler eventListenerHandler = new EventListenerHandler(config.getNamespace());
+        EventListenerHandler eventListenerHandler = new EventListenerHandler();
         this.config = config;
         this.classLoaderService = new DefaultClassLoaderService();
         this.classLoaderService.init();
@@ -85,7 +84,7 @@ public class Simulator {
 
     private void init(EventListenerHandler eventListenerHandler) {
         doEarlyLoadSimulatorClass();
-        MessageUtils.init(config.getNamespace(), eventListenerHandler);
+        MessageUtils.init(eventListenerHandler);
         this.coreModuleManager.onStartup();
     }
 
@@ -116,14 +115,14 @@ public class Simulator {
      */
     public void destroy() {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: prepare to destroying simulator instance. namespace: {}, appName: {}", config.getNamespace(), config.getAppName());
+            LOGGER.info("SIMULATOR: prepare to destroying simulator instance. appName: {}", config.getAppName());
         }
 
         // uninstall all modules
         coreModuleManager.unloadAll();
 
-        // clean MessageHandler with namespace
-        MessageUtils.clean(config.getNamespace());
+        // clean MessageHandler
+        MessageUtils.clean();
         // shutdown executor service factory
         ExecutorServiceFactory.getFactory().shutdown();
         /// shutdown CoreModuleManager
@@ -131,7 +130,7 @@ public class Simulator {
         //关闭classLoader service
         classLoaderService.dispose();
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: simulator instance is destroyed success. namespace: {}, appName: {}", config.getNamespace(), config.getAppName());
+            LOGGER.info("SIMULATOR: simulator instance is destroyed success. appName: {}", config.getAppName());
         }
         SimulatorGuard.release();
         ThreadLocalCleaner.clear();

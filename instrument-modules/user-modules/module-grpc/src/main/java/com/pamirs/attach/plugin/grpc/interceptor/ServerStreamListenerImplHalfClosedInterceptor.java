@@ -22,6 +22,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 
 import javax.annotation.Resource;
+import java.net.SocketTimeoutException;
 import java.util.Map;
 
 /**
@@ -121,7 +122,12 @@ public class ServerStreamListenerImplHalfClosedInterceptor extends TraceIntercep
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         SpanRecord record = new SpanRecord();
-        record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        if (advice.getThrowable() instanceof SocketTimeoutException) {
+            record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);
+        } else {
+            record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        }
+        record.setResponse(advice.getThrowable());
         return record;
     }
 }

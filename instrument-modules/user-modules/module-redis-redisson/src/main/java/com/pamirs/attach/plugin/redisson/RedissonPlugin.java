@@ -14,7 +14,15 @@
  */
 package com.pamirs.attach.plugin.redisson;
 
-import com.pamirs.attach.plugin.redisson.interceptor.*;
+import com.pamirs.attach.plugin.redisson.interceptor.CommandAsyncServiceMethodInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.PluginMaxRedisExpireTimeOneTwoInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.PluginMaxRedisExpireTimeTwoThreeInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.PluginMaxRedisExpireTimeZeroOneInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.ReactiveMethodInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.RedissonMethodInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.RedissonTraceMethodInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.ShadowDbMethodInterceptor;
+import com.pamirs.attach.plugin.redisson.interceptor.ShutdownMethodInterceptor;
 import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -63,16 +71,21 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
     };
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         addRedissonMaxRedisExpireTimeZeroOneTransform("org.redisson.RedissonExpirable", "expire", "expireAsync");
 
         addRedissonMaxRedisExpireTimeOneTwoTransform("org.redisson.RedissonMapCache", "putAll", "putAllAsync");
 
-        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.RedissonMapCache", "fastPut", "fastPutIfAbsent", "put", "putIfAbsent");
-        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.reactive.RedissonMapCacheReactive", "fastPut", "fastPutIfAbsent", "put", "putIfAbsent");
-        // addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.api.RMapCacheRx","fastPut","fastPutIfAbsent","put","putIfAbsent");
-        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.RedissonMapCache", "fastPutAsync", "fastPutIfAbsentAsync", "putAsync", "putIfAbsentAsync");
-        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.transaction.RedissonTransactionalMapCache", "fastPutAsync", "fastPutIfAbsentAsync", "putAsync", "putIfAbsentAsync");
+        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.RedissonMapCache", "fastPut", "fastPutIfAbsent",
+                "put", "putIfAbsent");
+        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.reactive.RedissonMapCacheReactive", "fastPut",
+                "fastPutIfAbsent", "put", "putIfAbsent");
+        // addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.api.RMapCacheRx","fastPut","fastPutIfAbsent",
+        // "put","putIfAbsent");
+        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.RedissonMapCache", "fastPutAsync",
+                "fastPutIfAbsentAsync", "putAsync", "putIfAbsentAsync");
+        addRedissonMaxRedisExpireTimeTwoThreeTransform("org.redisson.transaction.RedissonTransactionalMapCache",
+                "fastPutAsync", "fastPutIfAbsentAsync", "putAsync", "putIfAbsentAsync");
         /**
          * 如果有key，则将根据是否是压测流量置压测流量缓存key
          * 判断返回值是否是ConfigAccessor，如果是则设置Config,Config中包含连接信息
@@ -165,7 +178,7 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
         addRedissonCommandTransform("org.redisson.reactive.CommandReactiveService");
         addRedissonCommandTransform("org.redisson.reactive.CommandReactiveBatchService");
         addRedissonCommandTransform("org.redisson.rx.CommandRxBatchService");
-
+        return true;
     }
 
     private void addRedissonMaxRedisExpireTimeZeroOneTransform(String className, final String... methodNames) {
@@ -173,7 +186,8 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
             @Override
             public void doEnhance(InstrumentClass target) {
-                target.getDeclaredMethods(methodNames).addInterceptor(Listeners.of(PluginMaxRedisExpireTimeZeroOneInterceptor.class));
+                target.getDeclaredMethods(methodNames).addInterceptor(
+                        Listeners.of(PluginMaxRedisExpireTimeZeroOneInterceptor.class));
             }
         });
     }
@@ -183,7 +197,8 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
             @Override
             public void doEnhance(InstrumentClass target) {
-                target.getDeclaredMethods(methodNames).addInterceptor(Listeners.of(PluginMaxRedisExpireTimeOneTwoInterceptor.class));
+                target.getDeclaredMethods(methodNames).addInterceptor(
+                        Listeners.of(PluginMaxRedisExpireTimeOneTwoInterceptor.class));
             }
         });
     }
@@ -193,7 +208,8 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
             @Override
             public void doEnhance(InstrumentClass target) {
-                target.getDeclaredMethods(methodNames).addInterceptor(Listeners.of(PluginMaxRedisExpireTimeTwoThreeInterceptor.class));
+                target.getDeclaredMethods(methodNames).addInterceptor(
+                        Listeners.of(PluginMaxRedisExpireTimeTwoThreeInterceptor.class));
             }
         });
     }
@@ -207,10 +223,10 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         Interceptors.SCOPE_CALLBACK));
 
                 InstrumentMethod method0 = target.getDeclaredMethods(RedissonUtils.combine);
-                method0.addInterceptor(Listeners.of(ShadowDbMethodInterceptor.class));
+                method0.addInterceptor(Listeners.of(ShadowDbMethodInterceptor.class, "ShadowDbMethodInterceptor", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
-                shutdownMethod.addInterceptor(Listeners.of(ShutdownMethodInterceptor.class));
+                shutdownMethod.addInterceptor(Listeners.of(ShutdownMethodInterceptor.class), ExecutionPolicy.BOUNDARY);
             }
         });
     }
@@ -219,6 +235,16 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
         this.enhanceTemplate.enhance(this, className, new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
+              /*  InstrumentMethod method = target.getDeclaredMethods(
+                    "createGroup", "createGroupAsync", "ackAsync", "ack", "listPendingAsync", "listPending",
+                    "listPendingAsync", "listPending", "fastClaim", "fastClaimAsync",
+                    "claimAsync", "claim", "readGroupAsync", "readGroup", "addAll", "addAllAsync", "sizeAsync", "read",
+                    "readAsync", "addAsync", "add", "rangeAsync", "range", "rangeReversedAsync",
+                    "rangeReversed", "remove", "trimAsync", "trimNonStrictAsync", "trim", "trimNonStrict",
+                    "removeGroupAsync", "removeGroup", "removeConsumerAsync", "removeConsumer",
+                    "updateGroupMessageIdAsync",
+                    "updateGroupMessageId");*/
+
                 InstrumentMethod method = target.getDeclaredMethods(
                         "createGroup", "createGroupAsync", "ackAsync", "ack", "listPendingAsync", "listPending",
                         "listPendingAsync", "listPending", "fastClaim", "fastClaimAsync",
@@ -227,9 +253,31 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         "rangeReversed", "remove", "trimAsync", "trimNonStrictAsync", "trim", "trimNonStrict",
                         "removeGroupAsync", "removeGroup", "removeConsumerAsync", "removeConsumer",
                         "updateGroupMessageIdAsync",
-                        "updateGroupMessageId");
+                        "updateGroupMessageId",
+
+
+                        "getPermitExpirableSemaphore",
+                        "getSemaphore",
+                        "getCountDownLatch",
+                        "getFairLock",
+                        "getLock",
+                        "getReadWriteLock",
+                        "mergeAsync",
+                        "computeAsync",
+                        "compute",
+                        "computeIfAbsentAsync",
+                        "computeIfAbsent",
+                        "computeIfPresentAsync",
+                        "computeIfPresent",
+                        "get",
+                        "getAll",
+                        "put",
+                        "remove"
+
+
+                );
                 method.addInterceptor(Listeners
-                        .dynamicScope(RedissonTraceMethodInterceptor.class, ExecutionPolicy.BOUNDARY,
+                        .of(RedissonTraceMethodInterceptor.class, "REDISSON_TRACE_SCOPE", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));
             }
         });

@@ -26,6 +26,7 @@ import com.shulie.instrument.simulator.agent.core.register.RegisterFactory;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
 import com.shulie.instrument.simulator.agent.core.uploader.ApplicationUploader;
 import com.shulie.instrument.simulator.agent.core.uploader.HttpApplicationUploader;
+import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.JarUtils;
 import com.shulie.instrument.simulator.agent.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
@@ -105,6 +106,13 @@ public class CoreLauncher {
                 return t;
             }
         });
+        initConfigUtils(agentConfig);
+    }
+
+    private void initConfigUtils(AgentConfig agentConfig){
+        ConfigUtils.setUserAppKey(agentConfig.getUserAppKey());
+        ConfigUtils.setAgentId(agentConfig.getAgentId());
+        ConfigUtils.setAppName(agentConfig.getAppName());
     }
 
 
@@ -192,7 +200,7 @@ public class CoreLauncher {
      * @throws Throwable
      */
     public void start() throws Throwable {
-        this.startService.schedule(new Runnable() {
+        Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 try {
@@ -242,13 +250,26 @@ public class CoreLauncher {
 
                 } catch (AgentDownloadException e) {
                     LOGGER.error("SIMULATOR: download agent occur exception. ", e);
-                    startService.schedule(this, 10, TimeUnit.SECONDS);
+                    if (delay > 0) {
+                        startService.schedule(this, 10, TimeUnit.SECONDS);
+                    }else{
+                        throw e;
+                    }
                 } catch (Throwable t) {
                     LOGGER.error("SIMULATOR: agent start occur exception. ", t);
-                    startService.schedule(this, 10, TimeUnit.SECONDS);
+                    if (delay > 0) {
+                        startService.schedule(this, 10, TimeUnit.SECONDS);
+                    }else{
+                        throw new RuntimeException(t);
+                    }
                 }
             }
-        }, delay, unit);
+        };
+        if (delay <= 0) {
+            runnable.run();
+        }else{
+            this.startService.schedule(runnable, delay, unit);
+        }
         if (LOGGER.isInfoEnabled()) {
             if (tagName != null) {
                 LOGGER.info("SIMULATOR: current load tag file name {}.", tagName);

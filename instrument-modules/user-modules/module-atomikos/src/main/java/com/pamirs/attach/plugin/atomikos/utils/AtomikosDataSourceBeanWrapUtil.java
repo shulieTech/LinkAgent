@@ -19,10 +19,10 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AtomikosDataSourceBeanWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(AtomikosDataSourceBeanWrapUtil.class.getName());
+    private final static boolean isInfoEnabled = logger.isInfoEnabled();
 
     public static final ConcurrentHashMap<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource>();
 
@@ -172,7 +173,9 @@ public class AtomikosDataSourceBeanWrapUtil {
 
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
+                if (isInfoEnabled) {
+                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
+                }
                 old.close();
             }
             return;
@@ -185,7 +188,9 @@ public class AtomikosDataSourceBeanWrapUtil {
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
+                    if (isInfoEnabled) {
+                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
+                    }
                     old.close();
                 }
             } catch (Throwable e) {
@@ -208,10 +213,14 @@ public class AtomikosDataSourceBeanWrapUtil {
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", getUrl(target), getUsername(target));
+                    if (isInfoEnabled) {
+                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", getUrl(target), getUsername(target));
+                    }
                     old.close();
                 }
-                logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), getUrl(target), getUsername(target), getUrl(ptDataSource), getUsername(ptDataSource));
+                if (isInfoEnabled) {
+                    logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), getUrl(target), getUsername(target), getUrl(ptDataSource), getUsername(ptDataSource));
+                }
             } catch (Throwable t) {
                 logger.error("[atomikos] init datasource err!", t);
                 ErrorReporter.buildError()

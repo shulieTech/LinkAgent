@@ -26,9 +26,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since 2020/10/23 10:45 下午
  */
 public class Messager {
-
     private static final ConcurrentHashMap<String, Action> actionMap = new ConcurrentHashMap<String, Action>();
+    private static MessageHandler messageHandler;
+    private static ExceptionHandler exceptionHandler;
+    private static ExecutionTagSupplier executionTagSupplier;
 
+    // 全局序列
+    private static final AtomicInteger sequenceRef = new AtomicInteger(1000);
     /**
      * 控制Messager是否在发生异常时主动对外抛出
      * T:主动对外抛出，会中断方法
@@ -36,79 +40,91 @@ public class Messager {
      */
     public static volatile boolean isMessagerThrows = false;
 
-    private static final ConcurrentHashMap<String, MessageHandler> namespaceMessagerHandlerMap
-            = new ConcurrentHashMap<String, MessageHandler>();
-    private static final ConcurrentHashMap<String, ExceptionHandler> exceptionHandlers
-            = new ConcurrentHashMap<String, ExceptionHandler>();
+    /**
+     * 执行的 tag，可以利用此 tag 添加一些逻辑
+     */
+    private static volatile int executionTag = -1;
 
     /**
      * register ExceptionHandler of namespace
      *
-     * @param exceptionHandler
+     * @param handler
      */
-    public static void registerExceptionHandler(String namespace, ExceptionHandler exceptionHandler) {
-        exceptionHandlers.putIfAbsent(namespace, exceptionHandler);
+    public static void registerExceptionHandler(ExceptionHandler handler) {
+        exceptionHandler = handler;
+    }
+
+    /**
+     * register bytecode enabled
+     */
+    public static void registerExecutionTagSupplier(ExecutionTagSupplier handler) {
+        executionTagSupplier = handler;
     }
 
     /**
      * get ExceptionHandler of namespace
      *
-     * @param namespace
      * @return
      */
-    public static ExceptionHandler getExceptionHandler(String namespace) {
-        return exceptionHandlers.get(namespace);
+    public static ExceptionHandler getExceptionHandler() {
+        return exceptionHandler;
     }
 
+    /**
+     * 获取执行的 tag
+     *
+     * @return
+     */
+    public static int getExecutionTag(int listenerTag) {
+        try {
+            if (exceptionHandler == null) {
+                return ExecutionTagSupplier.EXECUTION_CONTINUE;
+            }
+            return executionTagSupplier.getExecutionTag(listenerTag);
+        } catch (Throwable e) {
+            return ExecutionTagSupplier.EXECUTION_CONTINUE;
+        }
+    }
 
     /**
      * register ExceptionHandler of namespace
      *
-     * @param namespace
      * @return
      */
-    public static boolean isRegisterExceptionHandler(String namespace) {
-        return exceptionHandlers.containsKey(namespace);
+    public static boolean isRegisterExceptionHandler() {
+        return exceptionHandler != null;
     }
 
     /**
      * 判断信使类是否已经完成初始化
      *
-     * @param namespace 命名空间
      * @return TRUE:已完成初始化;FALSE:未完成初始化;
      */
-    public static boolean isInit(final String namespace) {
-        return namespaceMessagerHandlerMap.containsKey(namespace);
+    public static boolean isInit() {
+        return messageHandler != null;
     }
 
     /**
      * 初始化信使
      *
-     * @param namespace      命名空间
-     * @param messageHandler 信使处理器
+     * @param handler 信使处理器
      */
-    public static void init(final String namespace,
-                            final MessageHandler messageHandler) {
-        namespaceMessagerHandlerMap.putIfAbsent(namespace, messageHandler);
+    public static void init(final MessageHandler handler) {
+        messageHandler = handler;
     }
 
     /**
      * 清理信使钩子方法
-     *
-     * @param namespace 命名空间
      */
-    public synchronized static void clean(final String namespace) {
-        MessageHandler messageHandler = namespaceMessagerHandlerMap.remove(namespace);
+    public synchronized static void clean() {
         if (messageHandler != null) {
             messageHandler.destroy();
         }
-        exceptionHandlers.remove(namespace);
+        messageHandler = null;
+        exceptionHandler = null;
+        executionTagSupplier = null;
         actionMap.clear();
     }
-
-
-    // 全局序列
-    private static final AtomicInteger sequenceRef = new AtomicInteger(1000);
 
     /**
      * 生成全局唯一序列，
@@ -121,136 +137,110 @@ public class Messager {
         return sequenceRef.getAndIncrement();
     }
 
-
-    private static void handleException(String namespace, Throwable cause) throws Throwable {
-        if (isMessagerThrows) {
-            throw cause;
-        } else {
-            ExceptionHandler exceptionHandler = getExceptionHandler(namespace);
-            if (exceptionHandler != null) {
-                exceptionHandler.handleException(cause, "", null);
-            } else {
-                cause.printStackTrace();
-            }
-        }
-    }
-
     public static void invokeOnCallBefore(final int lineNumber,
                                           final boolean isInterface,
                                           final String owner,
                                           final String name,
                                           final String desc,
                                           final Class clazz,
-                                          final String namespace,
-                                          final int listenerId) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null != messageHandler) {
-                messageHandler.handleOnCallBefore(listenerId, clazz, isInterface, lineNumber, owner, name, desc);
-            }
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+                                          final int listenerId,
+                                          final String listenerClass,
+                                          final int listenerTag,
+                                          final int executionTag) throws Throwable {
+
+        if (null != messageHandler) {
+            messageHandler.handleOnCallBefore(listenerId, clazz, isInterface, lineNumber, owner, name, desc, listenerClass, listenerTag, executionTag);
         }
+
     }
 
     public static void invokeOnCallReturn(final boolean isInterface,
                                           final Class clazz,
-                                          final String namespace,
-                                          final int listenerId) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null != messageHandler) {
-                messageHandler.handleOnCallReturn(listenerId, clazz, isInterface);
-            }
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+                                          final int listenerId,
+                                          final String listenerClass,
+                                          final int listenerTag,
+                                          final int executionTag) throws Throwable {
+
+        if (null != messageHandler) {
+            messageHandler.handleOnCallReturn(listenerId, clazz, isInterface, listenerClass, listenerTag, executionTag);
         }
+
     }
 
     public static void invokeOnCallThrows(final Throwable e,
                                           final boolean isInterface,
                                           final Class clazz,
-                                          final String namespace,
-                                          final int listenerId) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null != messageHandler) {
-                messageHandler.handleOnCallThrows(listenerId, clazz, isInterface, e);
-            }
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+                                          final int listenerId,
+                                          final String listenerClass,
+                                          final int listenerTag,
+                                          final int executionTag) throws Throwable {
+        if (null != messageHandler) {
+            messageHandler.handleOnCallThrows(listenerId, clazz, isInterface, e, listenerClass, listenerTag, executionTag);
         }
+
     }
 
     public static void invokeOnLine(final int lineNumber,
                                     final Class clazz,
-                                    final String namespace,
-                                    final int listenerId) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null != messageHandler) {
-                messageHandler.handleOnLine(listenerId, clazz, lineNumber);
-            }
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+                                    final int listenerId,
+                                    final String listenerClass,
+                                    final int listenerTag,
+                                    final int executionTag) throws Throwable {
+
+        if (null != messageHandler) {
+            messageHandler.handleOnLine(listenerId, clazz, lineNumber, listenerClass, listenerTag, executionTag);
         }
+
     }
 
     public static Result invokeOnBefore(final Object[] argumentArray,
-                                        final String namespace,
                                         final int listenerId,
                                         final String listenerClass, //只是为了排查时更加方便,所以在字节码增强时将注入的 listener 类名也写到字节码中
+                                        final int listenerTag,
+                                        final int executionTag,
                                         final Class clazz,
                                         final String javaMethodName,
                                         final String javaMethodDesc,
                                         final Object target) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null == messageHandler) {
-                return Result.RESULT_NONE;
-            }
-            return messageHandler.handleOnBefore(
-                    listenerId, argumentArray,
-                    clazz,
-                    javaMethodName,
-                    javaMethodDesc,
-                    target
-            );
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+
+        if (null == messageHandler) {
             return Result.RESULT_NONE;
         }
+        return messageHandler.handleOnBefore(
+                listenerId, argumentArray,
+                clazz,
+                javaMethodName,
+                javaMethodDesc,
+                target, listenerClass, listenerTag, executionTag
+        );
+
     }
 
     public static Result invokeOnReturn(final Object object,
                                         final Class clazz,
-                                        final String namespace,
-                                        final int listenerId) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null == messageHandler) {
-                return Result.RESULT_NONE;
-            }
-            return messageHandler.handleOnReturn(listenerId, clazz, object);
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+                                        final int listenerId,
+                                        final String listenerClass,
+                                        final int listenerTag,
+                                        final int executionTag) throws Throwable {
+
+        if (null == messageHandler) {
             return Result.RESULT_NONE;
         }
+        return messageHandler.handleOnReturn(listenerId, clazz, object, listenerClass, listenerTag, executionTag);
+
     }
 
     public static Result invokeOnThrows(final Throwable throwable,
                                         final Class clazz,
-                                        final String namespace,
-                                        final int listenerId) throws Throwable {
-        try {
-            final MessageHandler messageHandler = namespaceMessagerHandlerMap.get(namespace);
-            if (null == messageHandler) {
-                return Result.RESULT_NONE;
-            }
-            return messageHandler.handleOnThrows(listenerId, clazz, throwable);
-        } catch (Throwable cause) {
-            handleException(namespace, cause);
+                                        final int listenerId,
+                                        final String listenerClass,
+                                        final int listenerTag,
+                                        final int executionTag) throws Throwable {
+
+        if (null == messageHandler) {
             return Result.RESULT_NONE;
         }
+        return messageHandler.handleOnThrows(listenerId, clazz, throwable, listenerClass, listenerTag, executionTag);
+
     }
 }

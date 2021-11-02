@@ -18,6 +18,8 @@ import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
+import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProcessor;
+import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProvider;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -28,6 +30,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -35,10 +38,8 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.header.Headers;
 
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,6 +50,7 @@ import java.util.Map;
  * @Date 2019-08-05 19:25
  */
 @Destroyable(KafkaDestroy.class)
+@ListenerBehavior(isFilterBusinessData = true)
 public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     private Field topicField;
     private Field producerConfigField;
@@ -105,11 +107,11 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(Advice advice) {
-        Object[] args = advice.getParameterArray();
-        ClusterTestUtils.validateClusterTest();
         if (!Pradar.isClusterTest()) {
             return;
         }
+        Object[] args = advice.getParameterArray();
+        ClusterTestUtils.validateClusterTest();
         try {
             final Callback callback = (Callback) advice.getParameterArray()[1];
             final Map<String, String> context = Pradar.getInvokeContextMap();
@@ -117,10 +119,13 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
                 advice.changeParameter(1, new Callback() {
                     @Override
                     public void onCompletion(RecordMetadata metadata, Exception exception) {
-                        try {
+                        boolean clear = false;
+                        if (PradarService.getInvokeContext().isEmpty()) {
                             PradarInternalService.setInvokeContext(context);
-                            callback.onCompletion(metadata, exception);
-                        } finally {
+                            clear = true;
+                        }
+                        callback.onCompletion(metadata, exception);
+                        if (clear) {
                             PradarInternalService.clearInvokeContext();
                         }
                     }
@@ -132,51 +137,23 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
         }
 
         ProducerRecord producerRecord = (ProducerRecord) args[0];
-        if (null != producerRecord) {
-            if (Pradar.isClusterTest()) {
-                String topic = producerRecord.topic();
-                if (!Pradar.isClusterTestPrefix(topic)) {
-                    topic = Pradar.addClusterTestPrefix(topic);
-                }
-                initTopicField(producerRecord);
-                setTopic(producerRecord, topic);
-                if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
-                    try {
-                        Headers headers = producerRecord.headers();
-                        headers.add(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString().getBytes());
-                    } catch (NoSuchMethodError e) {
-                        //可能不存在该方法，如果不存在 headers 方法则直接忽略
-                    }
-                }
+        if (null != producerRecord && Pradar.isClusterTest()) {
+            String topic = producerRecord.topic();
+            if (!Pradar.isClusterTestPrefix(topic)) {
+                topic = Pradar.addClusterTestPrefix(topic);
+            }
+            initTopicField(producerRecord);
+            setTopic(producerRecord, topic);
+            if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
+                HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
+                headerProcessor.setHeader(producerRecord, PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
             }
         }
-    }
-
-    private String getListString(List<String> value) {
-        if (value != null) {
-            if (value.size() == 1) {
-                return value.get(0);
-            } else {
-                StringBuilder builder = new StringBuilder();
-                for (String str : value) {
-                    builder.append(str).append(',');
-                }
-                if (builder.length() > 0) {
-                    builder.deleteCharAt(builder.length() - 1);
-                }
-                return builder.toString();
-            }
-        }
-        return "";
     }
 
     private String getValue(ProducerConfig producerConfig, String key) {
-        try {
-            List<String> value = producerConfig.getList(key);
-            return getListString(value);
-        } catch (Exception e) {
-            return producerConfig.getString(key);
-        }
+        ProducerConfigProcessor processor = ProducerConfigProvider.getProducerConfigProcessor(producerConfig);
+        return processor.getValue(producerConfig, key);
     }
 
     private String getRemoteAddress(Object remoteAddressFieldAccessor) {

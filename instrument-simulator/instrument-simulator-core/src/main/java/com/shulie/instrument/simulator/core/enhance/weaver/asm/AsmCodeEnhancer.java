@@ -39,18 +39,17 @@ import static org.apache.commons.lang.ArrayUtils.contains;
 public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, AsmMethods {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
-    private final String namespace;
     private final String targetJavaClassName;
     private final Map<String/*BehaviorStructure#getSignCode()*/, Set<BuildingForListeners>> signCodes;
 
     public AsmCodeEnhancer(final int api,
                            final ClassVisitor cv,
-                           final String namespace,
                            final String targetClassInternalName,
                            final Map<String/*BehaviorStructure#getSignCode()*/, Set<BuildingForListeners>> signCodes) {
         super(api, cv);
-        this.namespace = namespace;
         this.targetJavaClassName = SimulatorStringUtils.toJavaClassName(targetClassInternalName);
         this.signCodes = signCodes;
 
@@ -167,7 +166,7 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
          * 没匹配上或者是非构造方法
          */
         if (!matchedBehavior) {
-            if (logger.isDebugEnabled()) {
+            if (isDebugEnabled) {
                 logger.debug("SIMULATOR: non-rewrite method {} ;",
                         signCode
                 );
@@ -175,7 +174,7 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
             return mv;
         }
 
-        if (logger.isInfoEnabled()) {
+        if (isInfoEnabled) {
             logger.info("SIMULATOR: rewrite method {};",
                     signCode
             );
@@ -185,6 +184,7 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
         for (BuildingForListeners buildingForListeners : getBuildingForListeners(signCode)) {
             final int listenerId = buildingForListeners.getListenerId();
             final String listenerClassName = buildingForListeners.getListeners().getClassName();
+            final int listenerTag = buildingForListeners.getListeners().getListenersTag();
             final boolean isCallEnable = isCallEnable(buildingForListeners);
             final boolean isLineEnable = isLineEnable(buildingForListeners);
             final boolean hasCallBefore = hasCallBefore(buildingForListeners);
@@ -197,6 +197,7 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                 private final Label startCatchBlock = new Label();
                 private final Label endCatchBlock = new Label();
                 private int newlocal = -1;
+                private int executableLocal = -1;
 
                 // 用来标记一个方法是否已经进入
                 // JVM中的构造函数非常特殊，super();this();是在构造函数方法体执行之外进行，如果在这个之前进行了任何的流程改变操作
@@ -240,12 +241,18 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                     codeLockForTracing.lock(new CodeLock.Block() {
                         @Override
                         public void code() {
+                            executableLocal = newLocal(Type.BOOLEAN_TYPE);
+                            push(listenerTag);
+                            invokeStatic(ASM_TYPE_MESSAGER, GET_EXECUTION_TAG);
+                            storeLocal(executableLocal);
                             mark(beginLabel);
+
                             loadArgArray();
                             dup();
-                            push(namespace);
                             push(listenerId);
                             push(listenerClassName);
+                            push(listenerTag);
+                            loadLocal(executableLocal);
                             push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
                             push(name);
                             push(desc);
@@ -299,12 +306,19 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                         codeLockForTracing.lock(new CodeLock.Block() {
                             @Override
                             public void code() {
+                                final Label finLabel = newLabel();
+                                loadLocal(executableLocal);
+                                ifZCmp(EQ, finLabel);
+
                                 loadReturn(opcode);
                                 push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                                push(namespace);
                                 push(listenerId);
+                                push(listenerClassName);
+                                push(listenerTag);
+                                loadLocal(executableLocal);
                                 invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_RETURN);
                                 processControl();
+                                mark(finLabel);
                             }
                         });
                     }
@@ -323,8 +337,10 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                             storeLocal(newlocal);
                             loadLocal(newlocal);
                             push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                            push(namespace);
                             push(listenerId);
+                            push(listenerClassName);
+                            push(listenerTag);
+                            loadLocal(executableLocal);
                             invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_THROWS);
                             processControl();
                             loadLocal(newlocal);
@@ -347,8 +363,10 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                             public void code() {
                                 push(lineNumber);
                                 push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                                push(namespace);
                                 push(listenerId);
+                                push(listenerClassName);
+                                push(listenerTag);
+                                loadLocal(executableLocal);
                                 invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_LINE);
                             }
                         });
@@ -388,8 +406,10 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                                 push(name);
                                 push(desc);
                                 push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                                push(namespace);
                                 push(listenerId);
+                                push(listenerClassName);
+                                push(listenerTag);
+                                loadLocal(executableLocal);
                                 invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_CALL_BEFORE);
                             }
                         });
@@ -404,8 +424,10 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                             public void code() {
                                 push(isInterface);
                                 push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                                push(namespace);
                                 push(listenerId);
+                                push(listenerClassName);
+                                push(listenerTag);
+                                loadLocal(executableLocal);
                                 invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_CALL_RETURN);
                             }
                         });
@@ -432,8 +454,10 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                             public void code() {
                                 push(isInterface);
                                 push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                                push(namespace);
                                 push(listenerId);
+                                push(listenerClassName);
+                                push(listenerTag);
+                                loadLocal(executableLocal);
                                 invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_CALL_RETURN);
                             }
                         });
@@ -451,8 +475,10 @@ public class AsmCodeEnhancer extends ClassVisitor implements Opcodes, AsmTypes, 
                             dup();
                             push(isInterface);
                             push(Type.getObjectType(targetJavaClassName.replace('.', '/')));
-                            push(namespace);
                             push(listenerId);
+                            push(listenerClassName);
+                            push(listenerTag);
+                            loadLocal(executableLocal);
                             invokeStatic(ASM_TYPE_MESSAGER, MESSAGER_INVOKE_ON_CALL_THROWS);
                         }
                     });

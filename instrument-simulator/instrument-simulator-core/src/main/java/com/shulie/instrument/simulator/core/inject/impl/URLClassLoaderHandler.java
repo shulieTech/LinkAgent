@@ -35,6 +35,7 @@ import java.util.List;
 public class URLClassLoaderHandler implements ClassInjector {
 
     private final Logger logger = LoggerFactory.getLogger(URLClassLoaderHandler.class.getName());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
 
     private static final Method ADD_URL;
 
@@ -92,7 +93,7 @@ public class URLClassLoaderHandler implements ClassInjector {
                 final boolean hasPluginJar = hasPluginJar(urls, url);
 
                 if (!hasPluginJar) {
-                    if (logger.isDebugEnabled()) {
+                    if (isDebugEnabled) {
                         logger.debug("SIMULATOR: add Jar:{}", defineUrls);
                     }
                     ADD_URL.invoke(classLoader, url);

@@ -44,7 +44,7 @@ public class DBCollectionTraceInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         DBCollection coll = (DBCollection)advice.getTarget();
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setMethod(advice.getBehavior().getName());
+        spanRecord.setMethod(advice.getBehaviorName());
         List<ServerAddress> serverAddresses = coll.getDB().getMongo().getAllAddress();
         spanRecord.setRemoteIp(StringUtils.join(serverAddresses, ","));
         spanRecord.setRequest(coll.getName());

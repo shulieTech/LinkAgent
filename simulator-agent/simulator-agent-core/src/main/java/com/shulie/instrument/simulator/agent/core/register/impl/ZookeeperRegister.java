@@ -14,16 +14,32 @@
  */
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.annotation.PostConstruct;
+
 import com.alibaba.fastjson.JSON;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.api.GetChildrenBuilder;
-import org.apache.curator.retry.ExponentialBackoffRetry;
+import com.alibaba.fastjson.JSONObject;
+
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
 import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
+import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
+import com.shulie.instrument.simulator.agent.core.util.JvmArgsCheckUtils;
+import com.shulie.instrument.simulator.agent.core.util.JvmArgsConstants;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
 import com.shulie.instrument.simulator.agent.core.zk.ZkClient;
@@ -33,16 +49,12 @@ import com.shulie.instrument.simulator.agent.core.zk.impl.NetflixCuratorZkClient
 import com.shulie.instrument.simulator.agent.core.zk.impl.ZkClientSpec;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import org.apache.commons.lang.StringUtils;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.api.GetChildrenBuilder;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.UnsupportedEncodingException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * zookeeper 注册器实现
@@ -55,23 +67,24 @@ public class ZookeeperRegister implements Register {
 
     public static void main(String[] args) throws Exception {
         CuratorFramework client = CuratorFrameworkFactory.builder()
-                .connectString("127.0.0.1:2181,127.0.0.1:2181,127.0.0.1:2181")
-                .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-                .connectionTimeoutMs(60000)
-                .sessionTimeoutMs(30000)
-                .threadFactory(new ThreadFactory() {
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        return new Thread(r, "2222");
-                    }
-                })
-                .build();
+            .connectString("127.0.01:2181")
+            .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+            .connectionTimeoutMs(60000)
+            .sessionTimeoutMs(30000)
+            .threadFactory(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, "2222");
+                }
+            })
+            .build();
         client.start();
         GetChildrenBuilder children = client.getChildren();
         for (String s : children.forPath("/config")) {
             System.out.println(s);
         }
     }
+
     /**
      * 基础路径
      */
@@ -104,25 +117,121 @@ public class ZookeeperRegister implements Register {
         this.agentConfig = agentConfig;
     }
 
+    private final String pid = String.valueOf(PidUtils.getPid());
+    private final String name = PidUtils.getName();
+    private String agentId = null;
+    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+
+    private String jvmArgsCheck = null;
+
     private byte[] getHeartbeatDatas() {
+        jvmArgsCheck = jvmArgsCheck == null ? JSON.toJSONString(
+            JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
+
         Map<String, String> map = new HashMap<String, String>();
         map.put("address", AddressUtils.getLocalAddress());
         map.put("host", AddressUtils.getHostName());
-        map.put("name", PidUtils.getName());
-        map.put("pid", String.valueOf(PidUtils.getPid()));
-        map.put("agentId", getAgentId());
-        map.put("agentStatus", AgentStatus.getAgentStatus());
+        map.put("name", name);
+        map.put("pid", pid);
+        if (agentId == null) {
+            agentId = getAgentId();
+        }
+        map.put("agentId", agentId);
+        String agentStatus = AgentStatus.getAgentStatus();
+        StringBuilder errorMsg = new StringBuilder(AgentStatus.getErrorMessage());
         map.put("errorCode", AgentStatus.getErrorCode());
-        map.put("errorMsg", AgentStatus.getErrorMessage());
         map.put("agentLanguage", "JAVA");
         map.put("agentVersion", agentConfig.getAgentVersion());
         map.put("simulatorVersion", AgentStatus.getSimulatorVersion());
+        //应用启动jvm参数
+        map.put("jvmArgs", inputArgs);
+        //设置jdk版本
+        String java_version = System.getProperty("java.version");
+        map.put("jdk", java_version == null ? "" : java_version);
+        //设置agent配置文件参数
+        //        map.put("agentFileConfigs", JSON.toJSONString(agentConfig.getAgentFileConfigs()));
+        //参数比较
+        //        map.put("agentFileConfigsCheck", JSON.toJSONString(checkConfigs()));
+        map.put("jvmArgsCheck", jvmArgsCheck);
+        if (!JvmArgsCheckUtils.getCheckJvmArgsStatus()) {
+            agentStatus = AgentStatus.INSTALL_FAILED;
+            errorMsg.append("启动参数校验失败：").append(jvmArgsCheck);
+        }
+        //校验日志目录是否存在并且有权限
+        String checkSimulatorLogPathResult = checkSimulatorLogPath(agentConfig.getLogPath());
+        if (checkSimulatorLogPathResult != null) {
+            agentStatus = AgentStatus.INSTALL_FAILED;
+            errorMsg.append("启动参数日志目录校验异常：").append(checkSimulatorLogPathResult);
+        }
+        map.put("agentStatus", agentStatus);
+        map.put("errorMsg", errorMsg.toString());
+
         String str = JSON.toJSONString(map);
+
         try {
             return str.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             return str.getBytes();
         }
+    }
+
+    private String checkSimulatorLogPath(String simulatorLogPath) {
+        if (StringUtils.isBlank(simulatorLogPath)) {
+            return String.format(JvmArgsConstants.simulatorLogPathCodeErrorMsg_4, simulatorLogPath);
+        }
+        File file = new File(simulatorLogPath);
+        if (!file.exists()) {
+            return String.format(JvmArgsConstants.simulatorLogPathCodeErrorMsg_1, simulatorLogPath);
+        }
+        if (!file.canWrite()) {
+            return String.format(JvmArgsConstants.simulatorLogPathCodeErrorMsg_3, simulatorLogPath);
+        }
+        if (!file.canRead()) {
+            return String.format(JvmArgsConstants.simulatorLogPathCodeErrorMsg_2, simulatorLogPath);
+        }
+        return null;
+    }
+
+    /**
+     * 校验agent配置文件参数
+     *
+     * @return
+     */
+    private Map<String, String> checkConfigs() {
+        Map<String, String> result = new HashMap<String, String>(32, 1);
+        //当前agent使用配置文件的配置
+        Map<String, String> agentFileConfigs = agentConfig.getAgentFileConfigs();
+        Map<String, Object> agentConfigFromUrl =
+            ConfigUtils.getFixedAgentConfigFromUrl(agentConfig.getTroWebUrl(), agentConfig.getAppName()
+                , agentConfig.getAgentVersion(), agentConfig.getUserAppKey());
+        if (agentConfigFromUrl == null || agentConfigFromUrl.get("success") == null || !Boolean.valueOf(
+            agentConfigFromUrl.get("success").toString())) {
+            result.put("status", "false");
+            result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
+            return result;
+        }
+        boolean status = true;
+        StringBuilder unEqualConfigs = new StringBuilder();
+
+        JSONObject jsonObject = (JSONObject)agentConfigFromUrl.get("data");
+        for (Map.Entry<String, String> entry : agentFileConfigs.entrySet()) {
+            String value = (String)jsonObject.get(entry.getKey());
+            if (entry.getValue().equals(value)) {
+                result.put(entry.getKey(), "true");
+            } else {
+                status = false;
+                result.put(entry.getKey(), "false");
+                unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
+                        entry.getValue())
+                    .append(",").append("远程参数值:").append(value).append(",");
+            }
+        }
+        result.put("status", String.valueOf(result));
+        if (!status) {
+            result.put("errorMsg", unEqualConfigs.toString());
+        }
+        return result;
+
     }
 
     /**
@@ -228,7 +337,7 @@ public class ZookeeperRegister implements Register {
                 }
             }
         } catch (Exception e) {
-            LOGGER.warn("clean expired register node error.", e);
+            LOGGER.error("clean expired register node error.", e);
         }
     }
 
@@ -296,7 +405,8 @@ public class ZookeeperRegister implements Register {
                     try {
                         heartbeatNode.setData(getHeartbeatDatas());
                     } catch (Exception e) {
-                        LOGGER.error("[register] refresh node data to zk for heartbeat node err: {}!", heartbeatPath, e);
+                        LOGGER.error("[register] refresh node data to zk for heartbeat node err: {}!", heartbeatPath,
+                            e);
                         executorService.schedule(this, 5, TimeUnit.SECONDS);
                     }
                 }

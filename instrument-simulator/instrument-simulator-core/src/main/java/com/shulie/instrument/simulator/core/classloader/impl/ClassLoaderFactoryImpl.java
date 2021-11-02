@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.core.classloader.impl;
 import com.shulie.instrument.simulator.api.ModuleRuntimeException;
 import com.shulie.instrument.simulator.api.util.ObjectIdUtils;
 import com.shulie.instrument.simulator.core.CoreConfigure;
+import com.shulie.instrument.simulator.core.classloader.BizClassLoaderHolder;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.ModuleClassLoader;
@@ -28,13 +29,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/13 11:34 下午
  */
 public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
-    private final Logger logger = LoggerFactory.getLogger(ClassLoaderFactoryImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(ClassLoaderFactoryImpl.class);
 
     private final ClassLoaderService classLoaderService;
     private final File moduleJarFile;
@@ -44,9 +46,16 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
     private final CoreConfigure config;
     private ModuleClassLoader defaultClassLoader;
     /**
-     * 是否是中间件扩展模块
+     * 默认类加载器使用于模块的初次加载以及挑选一个对应的业务类加载器，可以允许有一个业务类加载器使用默认模块类加载器
+     * 这个目的主要为了减少模块类加载器数据，保证每个模块最少一个模块类加载器即可完成模块的加载
      */
-    private boolean isMiddlewareModule;
+    private AtomicReference<Integer> defaultBizClassLoaderRef;
+    /**
+     * 是否是中间件扩展模块
+     * 如果非中间件扩展模块(即为基础模块)，则默认使用默认模块类加载器加载，此模块不会因为多个业务类加载器加载而
+     * 生成多个模块加载器
+     */
+    private final boolean isMiddlewareModule;
 
     public ClassLoaderFactoryImpl(final ClassLoaderService classLoaderService, final CoreConfigure config, final File moduleJarFile, final String moduleId, final boolean isMiddlewareModule) throws IOException {
         this.classLoaderService = classLoaderService;
@@ -56,7 +65,8 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
         this.isMiddlewareModule = isMiddlewareModule;
         this.classLoaderCache = new ConcurrentHashMap<Integer, ModuleClassLoader>();
         this.checksumCRC32 = FileUtils.checksumCRC32(moduleJarFile);
-        this.defaultClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, moduleId);
+        this.defaultClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, moduleId, "middleware-module-default-classloader");
+        this.defaultBizClassLoaderRef = new AtomicReference<Integer>();
     }
 
     @Override
@@ -66,12 +76,22 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
 
     @Override
     public ClassLoader getClassLoader(ClassLoader businessClassLoader) {
-        if (businessClassLoader == null || !isMiddlewareModule) {
+        if (!isMiddlewareModule) {
             return defaultClassLoader;
         }
         try {
             int id = ObjectIdUtils.identity(businessClassLoader);
-            if (id == 0) {
+            /**
+             * 如果还没有默认的模块业务类加载器，则将默认模块业务类加载器设置成当前请求的业务类加载器
+             * 返回默认模块类加载器
+             */
+            if (defaultBizClassLoaderRef.compareAndSet(null, id)) {
+                return defaultClassLoader;
+            }
+            /**
+             * 如果默认的模块业务类加载器与当前请求的业务类加载器一致，则使用默认模块类加载器
+             */
+            if (defaultBizClassLoaderRef.get() == id) {
                 return defaultClassLoader;
             }
 
@@ -79,7 +99,7 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
             if (moduleClassLoader != null) {
                 return moduleClassLoader;
             }
-            moduleClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, moduleId);
+            moduleClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, moduleId, businessClassLoader == null ? null : businessClassLoader.toString());
             ModuleClassLoader oldModuleClassLoader = classLoaderCache.putIfAbsent(id, moduleClassLoader);
             if (oldModuleClassLoader != null) {
                 moduleClassLoader.closeIfPossible();
@@ -98,15 +118,16 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
 
     @Override
     public void release() {
-        if (classLoaderCache == null) {
-            return;
+        if (classLoaderCache != null) {
+            for (Map.Entry<Integer, ModuleClassLoader> entry : classLoaderCache.entrySet()) {
+                entry.getValue().closeIfPossible();
+            }
+            classLoaderCache.clear();
+            classLoaderCache = null;
         }
-        for (Map.Entry<Integer, ModuleClassLoader> entry : classLoaderCache.entrySet()) {
-            entry.getValue().closeIfPossible();
+        if (defaultClassLoader != null) {
+            defaultClassLoader.closeIfPossible();
+            defaultClassLoader = null;
         }
-        defaultClassLoader.closeIfPossible();
-        defaultClassLoader = null;
-        classLoaderCache.clear();
-        classLoaderCache = null;
     }
 }

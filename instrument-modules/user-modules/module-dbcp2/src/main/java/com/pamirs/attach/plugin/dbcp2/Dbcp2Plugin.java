@@ -39,7 +39,7 @@ public class Dbcp2Plugin extends ModuleLifecycleAdapter implements ExtensionModu
     private static Logger logger = LoggerFactory.getLogger(Dbcp2Plugin.class);
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "org.apache.commons.dbcp2.BasicDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -51,5 +51,6 @@ public class Dbcp2Plugin extends ModuleLifecycleAdapter implements ExtensionModu
 
             }
         });
+        return true;
     }
 }

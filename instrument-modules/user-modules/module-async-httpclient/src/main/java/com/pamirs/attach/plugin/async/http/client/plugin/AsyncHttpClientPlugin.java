@@ -33,15 +33,17 @@ import org.kohsuke.MetaInfServices;
 public class AsyncHttpClientPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() {
+    public boolean onActive() {
         //org.asynchttpclient.netty.request.NettyRequestSender#sendRequest
         enhanceTemplate.enhance(this, "org.asynchttpclient.netty.request.NettyRequestSender", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethod("sendRequest",
-                        "org.asynchttpclient.Request", "org.asynchttpclient.AsyncHandler", "org.asynchttpclient.netty.NettyResponseFuture");
+
+                InstrumentMethod method = target.getDeclaredMethods("sendRequest"/*,
+                        "org.asynchttpclient.Request", "org.asynchttpclient.PradarAsyncHandler", "org.asynchttpclient.netty.NettyResponseFuture"*/);
                 method.addInterceptor(Listeners.of(NettyRequestSenderSendRequestInterceptor.class));
             }
         });
+        return true;
     }
 }

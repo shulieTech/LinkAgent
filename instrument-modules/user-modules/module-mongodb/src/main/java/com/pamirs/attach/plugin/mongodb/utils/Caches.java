@@ -53,11 +53,13 @@ public class Caches {
                     MongoClient ptMongoClient = getPtMongoClient(shadowDatabaseConfig);
                     String ptDB = busMongoNamespace.getDatabaseName();
                     String ptCOL = busMongoNamespace.getCollectionName();
-                    if (!Pradar.isClusterTestPrefix(ptDB)){
-                        ptDB = Pradar.addClusterTestPrefix(ptDB);
+                    if (!Pradar.isClusterTestPrefix(ptDB)) {
+                        ptDB = fetchShadowDatabase(shadowDatabaseConfig);
                     }
-                    if (!Pradar.isClusterTestPrefix(ptCOL)){
-                        ptCOL = Pradar.addClusterTestPrefix(ptCOL);
+                    if (Pradar.isShadowDatabaseWithShadowTable()) {
+                        if (!Pradar.isClusterTestPrefix(ptCOL)) {
+                            ptCOL = Pradar.addClusterTestPrefix(ptCOL);
+                        }
                     }
                     MongoNamespace ptMongoNamespace = new MongoNamespace(ptDB
                         , ptCOL
@@ -71,6 +73,14 @@ public class Caches {
             }
         }
         return ptExecutor;
+    }
+
+    private static String fetchShadowDatabase(ShadowDatabaseConfig shadowDatabaseConfig) {
+        String shadowUrl = shadowDatabaseConfig.getShadowUrl();
+        String[] split = shadowUrl.split("/");
+        String temp = split[split.length - 1];
+        temp = temp.split("\\?")[0];
+        return temp;
     }
 
     private static MongoClient getPtMongoClient(ShadowDatabaseConfig config) {

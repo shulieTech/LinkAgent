@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 @ModuleInfo(id = "hessian", version = "1.0.0", author = "xiaobin@shulie.io", description = "hessian 远程调用框架")
 public class HessianPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         enhanceTemplate.enhance(this, "com.caucho.hessian.client.HessianProxy", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -79,5 +79,6 @@ public class HessianPlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
             }
         });
+        return true;
     }
 }

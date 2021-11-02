@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.feign.interceptor;
 
 import java.lang.reflect.Method;
 
+import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.feign.FeignConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
@@ -35,8 +36,8 @@ import org.slf4j.LoggerFactory;
  */
 public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
-    private final static Logger logger = LoggerFactory.getLogger(FeignMockInterceptor.class);
-    private final static Logger mockLogger = LoggerFactory.getLogger("FEIGN-MOCK-LOGGER");
+    private final Logger logger = LoggerFactory.getLogger(FeignMockInterceptor.class);
+    private final Logger mockLogger = LoggerFactory.getLogger("FEIGN-MOCK-LOGGER");
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
@@ -52,7 +53,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             config.addArgs("isInterface", Boolean.TRUE);
             config.addArgs("class", className);
             config.addArgs("method", methodName);
-            config.getStrategy().processBlock(advice.getClassLoader(), config);
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
 
     }
@@ -62,6 +63,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Method method = (Method) args[1];
         if (method == null) {
+            logger.info("[debug] feign method =null , args: [{}]", JSON.toJSONString(args));
             return null;
         }
         Object [] arg = (Object[]) args[2];
@@ -71,6 +73,9 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         if (arg != null) {
             record.setRequestSize(arg.length);
         }
+        if(!Pradar.isClusterTest()){
+            record.setPassedCheck(true);
+        }
         return record;
     }
 
@@ -79,9 +84,9 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Method method = (Method) args[1];
         if (method == null) {
+            logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), JSON.toJSONString(args));
             return null;
         }
-
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setService(method.getDeclaringClass().getName());
@@ -114,6 +119,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Method method = (Method) args[1];
         if (method == null) {
+            logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), JSON.toJSONString(args));
             return null;
         }
         Object [] arg = (Object[]) args[2];

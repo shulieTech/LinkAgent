@@ -66,7 +66,7 @@ public abstract class AbstractHttpResolver<T extends AbstractConfig<T>> implemen
     @Override
     public void resolve(T refreshConfig) {
         // scheduled load
-        future = service.scheduleAtFixedRate(getRunnableTask(refreshConfig), 0, this.period, timeUnit);
+        future = service.scheduleAtFixedRate(getRunnableTask(refreshConfig), 20, this.period, timeUnit);
     }
 
     @Override

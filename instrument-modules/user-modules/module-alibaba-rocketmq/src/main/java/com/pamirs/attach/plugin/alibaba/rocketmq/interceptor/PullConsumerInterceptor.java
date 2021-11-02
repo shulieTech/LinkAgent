@@ -21,11 +21,13 @@ import com.alibaba.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl;
 import com.alibaba.rocketmq.common.message.MessageQueue;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PullConsumeMessageHookImpl;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
  * Created by xiaobin on 2017/3/10.
  */
+@ListenerBehavior(isNoSilence = true)
 public class PullConsumerInterceptor extends AroundInterceptor {
 
     private PullConsumeMessageHookImpl hook;

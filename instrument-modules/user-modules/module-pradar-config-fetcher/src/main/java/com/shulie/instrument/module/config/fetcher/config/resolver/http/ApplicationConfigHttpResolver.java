@@ -29,10 +29,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
-import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.agent.shared.service.ShadowDatabaseConfigParser;
+import com.pamirs.pradar.pressurement.agent.shared.service.*;
 import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -43,6 +40,7 @@ import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
@@ -65,10 +63,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ApplicationConfigHttpResolver extends AbstractHttpResolver<ApplicationConfig> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApplicationConfigHttpResolver.class.getName());
+    private final Logger logger = LoggerFactory.getLogger(ApplicationConfigHttpResolver.class.getName());
+    private final boolean isInfoEnabled = logger.isInfoEnabled();
 
     public static final String PRADAR_AGENT_VERSION_CONFIG_ENV = "agent.version";
+    public static final String PRADAR_SIMULATOR_VERSION_CONFIG_ENV = "simulator.version";
 
+
+    private boolean uploadEntranceRule = false;
+    private static final String REGISTER_URL = "/api/agent/api/register";
+    /**
+     * 配置拉取接口
+     */
+    private static final String AGENT_CONFIG_URL = "/api/fast/agent/access/config/agentConfig";
     /**
      * 压测白名单查询接口
      */
@@ -162,6 +169,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     //新增应用参数
     private static final String NODE_UNIQUE_KEY = UUID.randomUUID().toString().replace("_", "");
     private String VERSION;
+    private String simulatorVersion;
 
     private AtomicBoolean whiteListPullSwitch = new AtomicBoolean(Boolean.TRUE);
     private AtomicBoolean shadowConfigPullSwitch = new AtomicBoolean(Boolean.TRUE);
@@ -210,12 +218,16 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
     @Override
     public ApplicationConfig fetch() {
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: prepare to fetch config....");
+        if (isInfoEnabled) {
+            logger.info("SIMULATOR: prepare to fetch config....");
         }
         PradarSwitcher.turnConfigSyncSwitchOn();
         // 获取配置
         String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
+        /**
+         * 上传入口规则
+         */
+        uploadEntranceRule(troControlWebUrl);
         /**
          * 上传应用接入状态,如果上报失败可以忽略
          */
@@ -257,7 +269,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     applicationConfig.setMqList(GlobalConfig.getInstance().getMqWhiteList());
                     applicationConfig.setSearchWhiteList(GlobalConfig.getInstance().getSearchWhiteList());
                 }
-                LOGGER.error("SIMULATOR: get white list from server failed");
+                logger.error("SIMULATOR: get white list from server failed");
             } else {
                 ApplicationConfig.getWhiteList = Boolean.TRUE;
             }
@@ -272,7 +284,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 if (ApplicationConfig.getPressureTable4AccessSimple) {
                     applicationConfig.setShadowDatabaseConfigs(GlobalConfig.getInstance().getShadowDatasourceConfigs());
                 }
-                LOGGER.error("SIMULATOR: get shadow db config from server failed");
+                logger.error("SIMULATOR: get shadow db config from server failed");
             } else {
                 ApplicationConfig.getPressureTable4AccessSimple = Boolean.TRUE;
             }
@@ -283,7 +295,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             isSuccess = getShadowJobConfig(troControlWebUrl, applicationConfig);
             if (!isSuccess) {
                 PradarSwitcher.turnConfigSyncSwitchOff();
-                LOGGER.error("SIMULATOR: get shadow job config from server failed");
+                logger.error("SIMULATOR: get shadow job config from server failed");
             } else {
                 ApplicationConfig.getShadowJobConfig = Boolean.TRUE;
             }
@@ -310,6 +322,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
          */
         getTraceRegularRules(troControlWebUrl);
 
+        /**
+         * 拉取探针动态配置参数
+         */
+        getDynamicSimulatorConfig(troControlWebUrl);
+
 
         /**
          * 拉取mq影子消费者信息
@@ -317,23 +334,23 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         isSuccess = fetchMqShadowConsumer(troControlWebUrl, applicationConfig);
         if (!isSuccess) {
             PradarSwitcher.turnConfigSyncSwitchOff();
-            LOGGER.error("[pradar] get shadow consumer from server failed");
+            logger.error("[pradar] get shadow consumer from server failed");
         }
 
         if (PradarSwitcher.configSyncSwitchOn()
                 || (ApplicationConfig.getWhiteList && ApplicationConfig.getPressureTable4AccessSimple && ApplicationConfig.getShadowJobConfig)) {
             // 配置拉取过程中，配置无异常
             // 或者历史配置有完成拉取的记录
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("SIMULATOR: successful to fetched config.");
+            if (isInfoEnabled) {
+                logger.info("SIMULATOR: successful to fetched config.");
             }
             PradarSwitcher.clusterTestReady();
             switcherManager.switchOn(ConfigFetcherConstants.MODULE_NAME);
         } else {
             // 本次配置没有成功拉取 并且 历史无成功拉取配置
             // 中断压测,配置如果从未成功过，会导致module模块无法加载，所有模块无法生效
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("SIMULATOR: failed to fetched config.");
+            if (isInfoEnabled) {
+                logger.info("SIMULATOR: failed to fetched config.");
             }
             PradarSwitcher.clusterTestPrepare();
             switcherManager.switchOff(ConfigFetcherConstants.MODULE_NAME);
@@ -341,14 +358,14 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         return applicationConfig;
     }
 
-    private static Set<MockConfig> getMockSet(String troControlWebUrl) {
+    private Set<MockConfig> getMockSet(String troControlWebUrl) {
         try {
             String projectName = AppNameUtils.appName();
             String linkGuardUrl = String.format(MOCK_URL, projectName);
             final StringBuilder url = new StringBuilder(troControlWebUrl).append(linkGuardUrl);
             final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("SIMULATOR: [FetchConfig] get mock config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
+                logger.warn("SIMULATOR: [FetchConfig] get mock config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
                 return Collections.EMPTY_SET;
             }
 
@@ -411,7 +428,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
             return mockConfigs;
         } catch (Throwable e) {
-            LOGGER.warn("link guard config parse err!", e);
+            logger.warn("link guard config parse err!", e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
                     .setErrorCode("mock-enhance-0002")
@@ -433,12 +450,12 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     .append(TRO_SHADOW_MQ_CONSUMER_URL).append("?appName=").append(AppNameUtils.appName());
             final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("SIMULATOR: [FetchConfig] get shadow consumer config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
+                logger.warn("SIMULATOR: [FetchConfig] get shadow consumer config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
                 return Boolean.FALSE;
             }
 
             if (StringUtils.isBlank(httpResult.getResult())) {
-                LOGGER.error("[pradar] get shadow consumer config from server with empty response.");
+                logger.error("[pradar] get shadow consumer config from server with empty response.");
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("agent-0009")
@@ -451,7 +468,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             JSONObject dataMap = JSON.parseObject(httpResult.getResult());
             Boolean success = (Boolean) dataMap.get("success");
             if (!success) {
-                LOGGER.error("[pradar] get shadow consumer config from server with a fault response.");
+                logger.error("[pradar] get shadow consumer config from server with a fault response.");
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("agent-0004")
@@ -464,8 +481,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             JSONArray mapList = dataMap.getJSONArray(DATA);
             if (mapList == null || mapList.isEmpty()) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("SIMULATOR: [FetchConfig] get shadow consumer config size is null. ");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("SIMULATOR: [FetchConfig] get shadow consumer config size is null. ");
                 }
                 return Boolean.TRUE;
             }
@@ -493,7 +510,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             return true;
 
         } catch (Throwable e) {
-            LOGGER.error("[pradar] Report Error Shadow mq consumer failed.", e);
+            logger.error("[pradar] Report Error Shadow mq consumer failed.", e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0009")
@@ -528,7 +545,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                             applicationConfig.setContextPathBlockList(GlobalConfig.getInstance().getContextPathBlockList());
                             applicationConfig.setMqList(GlobalConfig.getInstance().getMqWhiteList());
                         }
-                        LOGGER.error("SIMULATOR: get white list from server failed");
+                        logger.error("SIMULATOR: get white list from server failed");
                     } else {
                         ApplicationConfig.getWhiteList = Boolean.TRUE;
                     }
@@ -543,7 +560,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         if (ApplicationConfig.getPressureTable4AccessSimple) {
                             applicationConfig.setShadowDatabaseConfigs(GlobalConfig.getInstance().getShadowDatasourceConfigs());
                         }
-                        LOGGER.error("SIMULATOR: get shadow db config from server failed");
+                        logger.error("SIMULATOR: get shadow db config from server failed");
                     } else {
                         ApplicationConfig.getPressureTable4AccessSimple = Boolean.TRUE;
                     }
@@ -556,7 +573,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     isSuccess = getShadowJobConfig(troControlWebUrl, applicationConfig);
                     if (!isSuccess) {
                         PradarSwitcher.turnConfigSyncSwitchOff();
-                        LOGGER.error("SIMULATOR: get shadow job config from server failed");
+                        logger.error("SIMULATOR: get shadow job config from server failed");
                     } else {
                         ApplicationConfig.getShadowJobConfig = Boolean.TRUE;
                     }
@@ -624,7 +641,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                                      ApplicationConfig applicationConfig) {
         final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
         if (!httpResult.isSuccess() || !JSON.parseObject(httpResult.getResult()).getBoolean("success")) {
-            LOGGER.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url, JSON.toJSONString(httpResult));
+            logger.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url, JSON.toJSONString(httpResult));
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
@@ -642,9 +659,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 applicationConfig.setPluginMaxRedisExpireTime(maxRedisExpireTime);
             }
         } catch (Exception e) {
-            LOGGER.error("set pluginMaxRedisExpireTime error", e);
+            logger.error("set pluginMaxRedisExpireTime error", e);
         }
-        LOGGER.info("[pradar] pull pluginMaxRedisExpireTime success:{}", applicationConfig.getPluginMaxRedisExpireTime());
+        if (isInfoEnabled) {
+            logger.info("[pradar] pull pluginMaxRedisExpireTime success:{}", applicationConfig.getPluginMaxRedisExpireTime());
+        }
         return true;
     }
 
@@ -665,7 +684,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             JSONObject res = JSON.parseObject(response);
             Boolean success = (Boolean) res.get("success");
             if (!success) {
-                LOGGER.error("[pradar] get es shadow config from server with a fault response. url={}, result={}", accessUrl, response);
+                logger.error("[pradar] get es shadow config from server with a fault response. url={}, result={}", accessUrl, response);
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.RedisServer)
                         .setErrorCode("agent-0001")
@@ -702,7 +721,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             applicationConfig.setShadowEsServerConfigs(shadowEsConfigMap);
             GlobalConfig.getInstance().setShadowEsServer(Boolean.TRUE);
         } catch (Throwable e) {
-            LOGGER.error("fetch es server config error. url={}", accessUrl, e);
+            logger.error("fetch es server config error. url={}", accessUrl, e);
         }
 
     }
@@ -716,7 +735,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(builder.toString());
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("SIMULATOR: [FetchConfig] get shadow redis server config error. url={}, status={}, result={}", builder.toString(), httpResult.getStatus(), httpResult.getResult());
+                logger.warn("SIMULATOR: [FetchConfig] get shadow redis server config error. url={}, status={}, result={}", builder.toString(), httpResult.getStatus(), httpResult.getResult());
                 return;
             }
 
@@ -727,7 +746,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             Boolean success = result.getBoolean("success");
             if (!success) {
-                LOGGER.error("SIMULATOR: get redis shadow config from server with a fault response. url={}, result={}", builder.toString(), httpResult.getResult());
+                logger.error("SIMULATOR: get redis shadow config from server with a fault response. url={}, result={}", builder.toString(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.RedisServer)
                         .setErrorCode("agent-0001")
@@ -746,9 +765,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return;
             }
             for (Map data : datas) {
+                if (data.get("dataSourceBusiness") == null
+                        || data.get("dataSourceBusinessPerformanceTest") == null) {
+                    continue;
+                }
                 Map business = (Map) data.get("dataSourceBusiness");
                 StringBuilder keyBuilder = new StringBuilder();
-                if (business.get("master") != null) {
+                if (notEmpty(business.get("master"))) {
                     String businessMaster = (String) business.get("master");
                     keyBuilder.append(businessMaster)
                             .append(",");
@@ -758,19 +781,27 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
                 Map dataSourceBusinessPerformanceTest = (Map) data.get("dataSourceBusinessPerformanceTest");
                 ShadowRedisConfig config = new ShadowRedisConfig();
-                if (dataSourceBusinessPerformanceTest.get("master") != null) {
+                if (notEmpty(dataSourceBusinessPerformanceTest.get("master"))) {
                     String pressureMaster = String.valueOf(dataSourceBusinessPerformanceTest.get("master"));
                     config.setMaster(pressureMaster);
                 }
                 String pressureNodes = String.valueOf(dataSourceBusinessPerformanceTest.get("nodes"));
                 config.setNodes(pressureNodes);
                 String passwd = String.valueOf(dataSourceBusinessPerformanceTest.get("password"));
-                if (!"null".equalsIgnoreCase(passwd)) {
+                if (notEmpty(passwd)) {
                     config.setPassword(passwd);
                 }
                 String database = String.valueOf(dataSourceBusinessPerformanceTest.get("database"));
-                if (!"null".equalsIgnoreCase(database) && NumberUtils.isDigits(database)) {
+                if (notEmpty(data) && NumberUtils.isDigits(database)) {
                     config.setDatabase(Integer.valueOf(database));
+                }
+                String client = String.valueOf(dataSourceBusinessPerformanceTest.get("client"));
+                if (notEmpty(client)) {
+                    config.setClient(client);
+                }
+                String model = String.valueOf(dataSourceBusinessPerformanceTest.get("model"));
+                if (notEmpty(model)) {
+                    config.setModel(model);
                 }
                 shadowRedisConfigMap.put(keyBuilder.toString(), config);
             }
@@ -778,10 +809,20 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             GlobalConfig.getInstance().setShadowDbRedisServer(true);
 
         } catch (Throwable e) {
-            LOGGER.error("fetch redis server config error. url={}", builder.toString()
+            logger.error("fetch redis server config error. url={}", builder.toString()
                     , e);
         }
 
+    }
+
+
+    private boolean notEmpty(Object obj) {
+        return !empty(obj);
+    }
+
+    private boolean empty(Object obj) {
+        String str = String.valueOf(obj);
+        return StringUtil.isEmpty(str) || "null".equalsIgnoreCase(str);
     }
 
     /**
@@ -799,28 +840,68 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             param.put("size", appInfo.getAppDetails().size() + "");
             final HttpUtils.HttpResult httpResult = HttpUtils.doPost(uploadAppInfoUrl.toString(), JSON.toJSONString(param));
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("SIMULATOR: upload app info error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
+                logger.warn("SIMULATOR: upload app info error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
                 return;
             }
             if (httpResult.getResult() != null && (httpResult.getResult().contains("data=true") || httpResult.getResult().contains("data:true"))) {
                 final StringBuilder url2 = new StringBuilder(troWebUrl).append(UPLOAD_APP_INFO);
                 HttpUtils.HttpResult httpResult1 = HttpUtils.doPost(url2.toString(), JSON.toJSONString(appInfo));
                 if (!httpResult1.isSuccess()) {
-                    LOGGER.warn("上传应用信息失败: {}", httpResult1.getResult());
+                    logger.warn("上传应用信息失败: {}", httpResult1.getResult());
                 }
             }
         } catch (Throwable e) {
-            LOGGER.error("upload app info failed. url={}", uploadAppInfoUrl, e);
+            logger.error("upload app info failed. url={}", uploadAppInfoUrl, e);
         }
         final String projectName = AppNameUtils.appName();
         appInfo.setAppName(projectName);
         final StringBuilder uploadAgentVersion = new StringBuilder().append(troWebUrl).append(AGENT_VERSION)
                 .append("?appName=").append(projectName).append("&agentVersion=")
-                .append(getAgentVersion()).append("&pradarVersion=").append(getAgentVersion());
+                .append(getAgentVersion()).append("&pradarVersion=").append(getSimulatorVersion());
         try {
             HttpUtils.doGet(uploadAgentVersion.toString());
         } catch (Throwable e) {
-            LOGGER.error("upload agent version info failed. url={}", uploadAgentVersion.toString(), e);
+            logger.error("upload agent version info failed. url={}", uploadAgentVersion.toString(), e);
+        }
+    }
+
+    /**
+     * 拉取探针动态参数
+     */
+    private void getDynamicSimulatorConfig(String troWeb) {
+        final StringBuilder url = new StringBuilder(troWeb).append(AGENT_CONFIG_URL);
+
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("projectName", AppNameUtils.appName());
+        params.put("version", getSimulatorVersion());
+        params.put("effectMechanism", "1");//动态参数
+        HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
+        if (!httpResult.isSuccess()) {
+            logger.error("获取控制台动态配置信息失败 url={}, result={}", url, httpResult.getResult());
+            return;
+        }
+        Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
+        if (configs != null && configs.get("data") != null) {
+            GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+        } else {
+            logger.error("获取探针动态参数异常");
+        }
+    }
+
+    /**
+     * 上传入口规则,只上传一次成功即可
+     */
+    private void uploadEntranceRule(String troWeb){
+        if (!uploadEntranceRule) {
+            Set<String> apis = GlobalConfig.getInstance().getApis();
+            if (apis == null || apis.size() == 0){
+                return;
+            }
+            Map<String, Set<String>> register = new HashMap<String, Set<String>>();
+            register.put(AppNameUtils.appName(), apis);
+            final String url = new StringBuilder(troWeb).append(REGISTER_URL).toString();
+            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url, JSON.toJSONString(register));
+            uploadEntranceRule = httpResult.isSuccess();
         }
     }
 
@@ -843,15 +924,17 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(result));
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(), JSON.toJSONString(result));
-            }else{
-                LOGGER.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(), JSON.toJSONString(result));
+                logger.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(), JSON.toJSONString(result));
+            } else {
+                if (isInfoEnabled) {
+                    logger.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(), JSON.toJSONString(result));
+                }
             }
             // TODO 存在一个隐患，去除了清空内存中异常信息，改为agent全量发送异常数据
             // 内存消耗会加重，等tro控制台调整异常展示时同步调整
             ErrorReporter.getInstance().clear(errorList);
         } catch (Throwable e) {
-            LOGGER.warn("上传应用接入状态信息报错. url={}", url.toString(), e);
+            logger.warn("上传应用接入状态信息报错. url={}", url.toString(), e);
         }
     }
 
@@ -880,13 +963,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 }
             }
         } catch (IOException e) {
-            LOGGER.error("SIMULATOR: Read ES Block list failed.", e);
+            logger.error("SIMULATOR: Read ES Block list failed.", e);
         } finally {
             if (reader != null) {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    LOGGER.error("SIMULATOR: Read ES Block list failed.", e);
+                    logger.error("SIMULATOR: Read ES Block list failed.", e);
                 }
             }
         }
@@ -908,11 +991,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 params.put("message", shaDowJob.getErrorMessage());
                 HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
                 if (!httpResult.isSuccess()) {
-                    LOGGER.warn("上报错误的影子 job 失败. url={}, result={}", url, httpResult.getResult());
+                    logger.warn("上报错误的影子 job 失败. url={}, result={}", url, httpResult.getResult());
                 }
             }
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: Report Error Shadow job failed. url={}", url, e);
+            logger.error("SIMULATOR: Report Error Shadow job failed. url={}", url, e);
         }
     }
 
@@ -921,13 +1004,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      *
      * @param troControlWebUrl
      */
-    private static boolean getTraceRegularRules(String troControlWebUrl) {
+    private boolean getTraceRegularRules(String troControlWebUrl) {
         StringBuilder url = new StringBuilder(troControlWebUrl)
                 .append(TRACE_REGULAR_RULE_URL).append("?appName=").append(AppNameUtils.appName());
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
-                LOGGER.error("SIMULATOR: [FetchConfig] get trace regular rules config from server with error response. url={}, status={}, result={} ",
+                logger.error("SIMULATOR: [FetchConfig] get trace regular rules config from server with error response. url={}, status={}, result={} ",
                         url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
@@ -941,7 +1024,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             JSONObject map = JSON.parseObject(httpResult.getResult());
             Boolean success = map.getBoolean("success");
             if (!success) {
-                LOGGER.error("SIMULATOR: [FetchConfig] get trace regular rules config from server with a fault response. url={}, status={}, result={} ",
+                logger.error("SIMULATOR: [FetchConfig] get trace regular rules config from server with a fault response. url={}, status={}, result={} ",
                         url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
@@ -963,7 +1046,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 GlobalConfig.getInstance().setTraceRules(sets);
             }
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
+            logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0005")
@@ -987,7 +1070,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             Set<ShadowJob> shadowJobs = new HashSet<ShadowJob>();
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
-                LOGGER.error("SIMULATOR: [FetchConfig] get shadow job config from server with error response. url={}, status={}, result={}"
+                logger.error("SIMULATOR: [FetchConfig] get shadow job config from server with error response. url={}, status={}, result={}"
                         , url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
@@ -1001,7 +1084,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             Map map = JSON.parseObject(httpResult.getResult());
             Boolean success = (Boolean) map.get("success");
             if (!success) {
-                LOGGER.error("SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={}, status={}, result={}"
+                logger.error("SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={}, status={}, result={}"
                         , url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
@@ -1021,6 +1104,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     shaDowJob.setStatus(NumberFormat.getInstance().format(datum.get("status")));
                     Map<String, Object> configCode = JSON.parseObject(String.valueOf(datum.get("configCode")));
                     shaDowJob.setCron(configCode.get("cron") == null ? null : configCode.get("cron").toString());
+                    shaDowJob.setFixedDelay(configCode.get("fixedDelay") == null ? null : Long.parseLong(configCode.get("fixedDelay").toString()));
+                    shaDowJob.setFixedRate(configCode.get("fixedRate") == null ? null : Long.parseLong(configCode.get("fixedRate").toString()));
+                    shaDowJob.setInitialDelay(configCode.get("initialDelay") == null ? null : Long.parseLong(configCode.get("initialDelay").toString()));
                     if (null != configCode.get("listener")) {
                         shaDowJob.setListenerName(configCode.get("listener") == null ? null : configCode.get("listener").toString());
                     }
@@ -1048,7 +1134,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             GlobalConfig.getInstance().clearErrorRegisteredJobs();
             applicationConfig.setShadowJobs(shadowJobs);
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
+            logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
@@ -1071,7 +1157,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(getShadowDatasourceUrl);
             if (!httpResult.isSuccess()) {
-                LOGGER.warn("SIMULATOR: [FetchConfig] get datasource config error. url={}, status={}, result={}"
+                logger.warn("SIMULATOR: [FetchConfig] get datasource config error. url={}, status={}, result={}"
                         , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
@@ -1084,7 +1170,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
             Boolean success = (Boolean) resultMap.get("success");
             if (!success) {
-                LOGGER.warn("SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, status={}, result={}"
+                logger.warn("SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, status={}, result={}"
                         , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
                 String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
                 ErrorReporter.buildError()
@@ -1098,7 +1184,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
 
             if (!resultMap.containsKey("data")) {
-                LOGGER.error("SIMULATOR: get shadow db config with a err response. can't found attributes data from response. url={}, status={}, result={}"
+                logger.error("SIMULATOR: get shadow db config with a err response. can't found attributes data from response. url={}, status={}, result={}"
                         , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
@@ -1112,7 +1198,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             try {
                 dataMapList = (List<Map<String, Object>>) resultMap.get("data");
             } catch (Throwable e) {
-                LOGGER.error("SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from response. url={}", getShadowDatasourceUrl, e);
+                logger.error("SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from response. url={}", getShadowDatasourceUrl, e);
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("agent-0004")
@@ -1150,7 +1236,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             applicationConfig.setShadowDatabaseConfigs(map);
 
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: get shadow db config with a err response. got a unknow err. url={}", getShadowDatasourceUrl, e);
+            logger.error("SIMULATOR: get shadow db config with a err response. got a unknow err. url={}", getShadowDatasourceUrl, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
@@ -1174,7 +1260,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         try {
             return loadList(url, applicationConfig);
         } catch (Throwable e) {
-            LOGGER.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
+            logger.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
@@ -1195,7 +1281,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                              ApplicationConfig applicationConfig) {
         final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
         if (!httpResult.isSuccess()) {
-            LOGGER.warn("SIMULATOR: [FetchConfig] get whitelist config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
+            logger.warn("SIMULATOR: [FetchConfig] get whitelist config error. status: {}, result: {}", httpResult.getStatus(), httpResult.getResult());
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
@@ -1375,6 +1461,16 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         return VERSION;
     }
 
+    private String getSimulatorVersion() {
+        if (StringUtils.isBlank(simulatorVersion)) {
+            String version = System.getProperty(PRADAR_SIMULATOR_VERSION_CONFIG_ENV);
+            if (StringUtils.isNotBlank(version)) {
+                simulatorVersion = version;
+            }
+        }
+        return simulatorVersion;
+    }
+
     private static String userAppKey() {
         String key = System.getProperty(Pradar.USER_APP_KEY);
         if (key == null || key.isEmpty()) {
@@ -1396,7 +1492,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             HttpUtils.HttpResult result = HttpUtils.doGet(url);
 
             if (!result.isSuccess()) {
-                LOGGER.error("pull shadow hbase config error {}, url={}", result.getResult(), troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName());
+                logger.error("pull shadow hbase config error {}, url={}", result.getResult(), troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("agent-0010")
@@ -1420,7 +1516,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
 
             if (!resultMap.containsKey("data")) {
-                LOGGER.error("[pradar] get shadow hbase config with a err response. can't found attributes data from response. url={}", url);
+                logger.error("[pradar] get shadow hbase config with a err response. can't found attributes data from response. url={}", url);
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("agent-0010")
@@ -1433,7 +1529,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             try {
                 dataMapList = (List<Map<String, Object>>) resultMap.get("data");
             } catch (Exception e) {
-                LOGGER.error("[pradar] get shadow hbase config with a err response. can't convert attributes data to map from response. url={}", url, e);
+                logger.error("[pradar] get shadow hbase config with a err response. can't convert attributes data to map from response. url={}", url, e);
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.AgentError)
                         .setErrorCode("agent-0010")
@@ -1464,12 +1560,12 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 }
 
                 applicationConfig.setShadowHbaseConfigs(shadowHbaseConfigMap);
-            }else{
-                LOGGER.warn("获取hbase数据源配置为空：{}", result.getResult());
+            } else {
+                logger.warn("获取hbase数据源配置为空：{}", result.getResult());
             }
 
         } catch (Throwable e) {
-            LOGGER.error("[pradar] get shadow hbase config with a err response. got a unknow err. url={}", url, e);
+            logger.error("[pradar] get shadow hbase config with a err response. got a unknow err. url={}", url, e);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0010")

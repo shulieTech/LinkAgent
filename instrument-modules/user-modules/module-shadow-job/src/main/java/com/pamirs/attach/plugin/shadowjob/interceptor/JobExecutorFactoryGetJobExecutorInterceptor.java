@@ -112,7 +112,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                     ptClassName = PtDataflowJob.class.getName() + shaDowJob.getClassName();
                 }
                 Collection<String> removeList = jobOperateAPI.remove(ptClassName, null);
-                StringBuilder serverIps = new StringBuilder("");
+                StringBuilder serverIps = new StringBuilder(32);
                 for (String serverIp : removeList) {
                     Collection<String> remove = jobOperateAPI.remove(ptClassName, serverIp);
                     if (remove.size() > 0) {

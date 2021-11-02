@@ -99,15 +99,19 @@ public class ShadowJobConfig implements IChange<Set<ShadowJob>, ApplicationConfi
             EventRouter.router().publish(disableEvent);
         }
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.SHADOW_JOB_CONFIGS);
-        if (LOGGER.isInfoEnabled() && (CollectionUtils.isNotEmpty(removeShadowJobs) || CollectionUtils.isNotEmpty(addShadowJobs))) {
-            for (ShadowJob delete : removeShadowJobs) {
-                LOGGER.info("need delete job：" + delete.toString());
+        if (LOGGER.isInfoEnabled()) {
+            if (CollectionUtils.isNotEmpty(removeShadowJobs)) {
+                for (ShadowJob delete : removeShadowJobs) {
+                    LOGGER.info("need delete job：" + delete.toString());
+                }
             }
-            for (ShadowJob newJob : addShadowJobs) {
-                LOGGER.info("need add job：" + newJob.toString());
+            if (CollectionUtils.isNotEmpty(addShadowJobs)) {
+                for (ShadowJob newJob : addShadowJobs) {
+                    LOGGER.info("need add job：" + newJob.toString());
+                }
             }
+            LOGGER.info("publish shadow job config successful. config={}", newValue);
         }
-        LOGGER.info("publish shadow job config successful. config={}", newValue);
         return Boolean.TRUE;
     }
 

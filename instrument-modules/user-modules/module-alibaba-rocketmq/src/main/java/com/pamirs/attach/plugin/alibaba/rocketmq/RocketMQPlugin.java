@@ -14,9 +14,21 @@
  */
 package com.pamirs.attach.plugin.alibaba.rocketmq;
 
-
-import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.*;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultMQPushConsumerImplHasHookListener;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerCreateTopicInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerEarliestMsgStoreTimeInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerMaxOffsetInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerMinOffsetInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerQueryMessageInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerSearchOffsetInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerSendMessageBackInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerShutdownInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerViewMessageInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerSendInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.PullConsumerInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.TransactionCheckInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -34,11 +46,11 @@ import org.kohsuke.MetaInfServices;
 public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
-        addHookRegisterInterceptor();
+    public boolean onActive() throws Throwable {
+        return addHookRegisterInterceptor();
     }
 
-    private void addHookRegisterInterceptor() {
+    private boolean addHookRegisterInterceptor() {
         this.enhanceTemplate.enhance(this,
                 "com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer", new EnhanceCallback() {
                     @Override
@@ -108,16 +120,20 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             }
         });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.producer.TransactionMQProducer", new EnhanceCallback() {
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-
                 //压测代码
-                InstrumentMethod sendMethod = target.getDeclaredMethods("send*");
-                sendMethod.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
+                InstrumentMethod method = target.getDeclaredMethods("sendDefaultImpl");
+                method.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
 
+                InstrumentMethod sendMessageInTransactionMethod = target.getDeclaredMethods("sendMessageInTransaction");
+                sendMessageInTransactionMethod.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
+
+                //压测代码 end
             }
         });
+
 
         this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
             @Override
@@ -127,6 +143,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             }
         });
 
+        return true;
     }
 
 }

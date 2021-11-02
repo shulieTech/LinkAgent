@@ -15,20 +15,16 @@
 package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
-import com.pamirs.attach.plugin.jedis.RedisConstants;
-import com.pamirs.attach.plugin.jedis.util.JedisConstructorConfig;
-import com.shulie.instrument.simulator.api.util.CollectionUtils;
+import com.shulie.instrument.simulator.api.ThrowableUtils;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.HostAndPort;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @Author qianfan
- * @package: com.pamirs.attach.plugin.lettuce.factory
+ * @package: jedis cluster matcher
  * @Date 2020/11/26 11:23 上午
  */
 public class JedisClusterNodesStrategy implements RedisServerNodesStrategy {
@@ -39,20 +35,18 @@ public class JedisClusterNodesStrategy implements RedisServerNodesStrategy {
     public List<String> match(Object obj) {
         List<String> nodes = new ArrayList<String>();
         try {
-            JedisConstructorConfig jedisConfig = RedisConstants.jedisInstance.get(obj);
-            Set<HostAndPort> setNodes = jedisConfig.getSetNodes();
-            if (CollectionUtils.isNotEmpty(setNodes)) {
-                for (HostAndPort node : setNodes) {
-                    nodes.add(getKey(node.getHost(), node.getPort()));
-                }
+            HashMap nodeMap = Reflect.on(Reflect.on(obj).get("cache")).get("nodes");
+            if (nodeMap == null) {
+                return new ArrayList<String>();
+            }
+            Iterator iterator = nodeMap.keySet().iterator();
+            while (iterator.hasNext()) {
+                String node = (String) iterator.next();
+                nodes.add(node);
             }
         } catch (Throwable e) {
-            LOGGER.error("", e);
+            LOGGER.error("", ThrowableUtils.toString(e));
         }
         return nodes;
-    }
-
-    public String getKey(String host, int port) {
-        return host + ":" + port;
     }
 }

@@ -216,6 +216,11 @@ public class ModuleSpec {
      */
     private boolean isMiddlewareModule = true;
 
+    /**
+     * 是否是异步模块
+     */
+    private boolean async = true;
+
     public void loadModuleInfo(ModuleInfo moduleInfo) {
         if (moduleInfo == null) {
             return;
@@ -228,6 +233,14 @@ public class ModuleSpec {
         this.priority = moduleInfo.priority();
         this.description = moduleInfo.description();
         this.switchAuto = moduleInfo.switchAuto();
+    }
+
+    public boolean isAsync() {
+        return async;
+    }
+
+    public void setAsync(boolean async) {
+        this.async = async;
     }
 
     public int[] getSupportedModes() {

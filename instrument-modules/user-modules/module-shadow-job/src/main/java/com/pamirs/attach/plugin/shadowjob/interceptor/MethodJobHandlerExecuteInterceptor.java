@@ -28,7 +28,7 @@ public class MethodJobHandlerExecuteInterceptor extends ParametersWrapperInterce
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {
         Pradar.setClusterTest(false);
-        Pradar.startTrace(null, advice.getTarget().getClass().getName(), advice.getBehavior().getName());
+        Pradar.startTrace(null, advice.getTarget().getClass().getName(), advice.getBehaviorName());
         Object[] args = advice.getParameterArray();
         String param = (String) args[0];
         if (StringUtils.isNotBlank(param) && param.contains("performance=true")){

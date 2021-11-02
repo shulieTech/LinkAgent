@@ -17,6 +17,7 @@ package com.pamirs.pradar;
 
 import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +96,12 @@ public class PradarSwitcher {
     private static AtomicBoolean clusterTestSwitch = new AtomicBoolean(true);
 
     /**
+     * 静默开关 -- 控制台
+     */
+    private static AtomicBoolean silentSwitch = new AtomicBoolean(false);
+
+
+    /**
      * 白名单开关 -- 控制台
      */
     private static AtomicBoolean whiteListSwitchOn = new AtomicBoolean(true);
@@ -115,20 +122,9 @@ public class PradarSwitcher {
     static public final boolean USE_LOCAL_IP = Boolean.valueOf(getUseLocalIp());
 
     /**
-     * 采样频率 1/x，有效范围在 [1, 9999] 之间，超出范围的数值都作为全采样处理。
-     */
-    static private volatile int samplingInterval = 1;
-
-    /**
      * 采样率是否使用zk配置
      */
     static private boolean samplingZkConfig = false;
-
-    /**
-     * 必须采样的traceid， 只有 10,100,1000
-     */
-    static private int mustsamplingInterval = 1000;
-
 
     /**
      * 是否有效期内
@@ -245,6 +241,30 @@ public class PradarSwitcher {
      */
     static public boolean clusterTestSwitchOn() {
         return clusterTestSwitch.get();
+    }
+
+
+    /**
+     * 返回静默模式是否打开
+     *
+     * @return
+     */
+    static public boolean silenceSwitchOn() {
+        return silentSwitch.get();
+    }
+
+    /***
+     * 打开静默模式
+     */
+    static public void turnSilenceSwitchOn() {
+        silentSwitch.set(true);
+    }
+
+    /**
+     * 关闭静默模式
+     */
+    static public void turnSilenceSwitchOff() {
+        silentSwitch.set(false);
     }
 
     /**
@@ -366,47 +386,18 @@ public class PradarSwitcher {
      * @return 采样频率 1/x
      */
     static public int getSamplingInterval() {
-        return samplingInterval;
+        return GlobalConfig.getInstance().getSimulatorDynamicConfig().getTraceSamplingInterval();
     }
 
     /**
-     * @return 必须全量采样频率 1/x
+     * @return 压测采样频率 1/x
      */
-    static public int getMustSamplingInterval() {
-        return mustsamplingInterval;
+    static public int getClusterTestSamplingInterval() {
+        return GlobalConfig.getInstance().getSimulatorDynamicConfig().getClusterTestTraceSamplingInterval();
     }
 
-    /**
-     * @return 必须全量采样频率 1/x
-     */
-    static public void setMustSamplingInterval(int interval) {
-        if (interval < 1 || interval >= 1000) {
-            mustsamplingInterval = 1000;
-        } else if (interval >= 1 || interval <= 10) {
-            mustsamplingInterval = 10;
-        } else if (interval > 10 || interval <= 100) {
-            mustsamplingInterval = 100;
-        } else if (interval > 100 || interval < 1000) {
-            mustsamplingInterval = 1000;
-        } else {
-            mustsamplingInterval = 1000;
-        }
-
-        LOGGER.info("setMustSamplingInterval={}", mustsamplingInterval);
-    }
-
-    /**
-     * @param interval 采样频率 1/x，有效范围在 [1, 9999] 之间，超出范围的数值都作为全采样处理。
-     */
-    static public void setSamplingInterval(int interval) {
-        if (interval < 1) {
-            interval = 1;
-        }
-        if (interval > 9999) {
-            interval = 9999;
-        }
-        LOGGER.info("setSamplingInterval={}", interval);
-        samplingInterval = interval;
+    static public boolean isSwitchSaveBusinessTrace() {
+        return GlobalConfig.getInstance().getSimulatorDynamicConfig().isSwitchSaveBusinessTrace();
     }
 
     /**
@@ -552,7 +543,7 @@ public class PradarSwitcher {
     }
 
     public static boolean isKafkaMessageHeadersEnabled() {
-        return isKafkaMessageHeadersEnabled;
+        return GlobalConfig.getInstance().getSimulatorDynamicConfig().getIsKafkaMessageHeaders(isKafkaMessageHeadersEnabled);
     }
 
     public static boolean isRabbitmqRoutingkeyEnabled() {

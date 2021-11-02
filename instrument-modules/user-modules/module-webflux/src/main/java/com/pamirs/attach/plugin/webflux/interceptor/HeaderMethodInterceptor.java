@@ -30,11 +30,8 @@ import org.springframework.http.server.reactive.AbstractServerHttpRequest;
  */
 public class HeaderMethodInterceptor extends CutoffInterceptorAdaptor {
 
-
     @Override
     public  CutOffResult cutoff0(Advice advice) {
-
-
         if (!PradarSwitcher.isClusterTestEnabled()) {
             return CutOffResult.cutoff(null);
         }

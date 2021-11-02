@@ -22,9 +22,6 @@ import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig
 import com.shulie.instrument.module.config.fetcher.config.resolver.ConfigResolver;
 import com.shulie.instrument.module.config.fetcher.config.resolver.http.ApplicationConfigHttpResolver;
 import com.shulie.instrument.module.config.fetcher.config.resolver.http.ClusterTestConfigHttpResolver;
-import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ApplicationConfigZkResolver;
-import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ClusterTestConfigZkResolver;
-import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ZookeeperOptions;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 
@@ -44,7 +41,6 @@ public final class ConfigManager {
 
     private final ConcurrentHashMap<String, List<ConfigListener>> listenerHolder = new ConcurrentHashMap<String, List<ConfigListener>>();
     private static ConfigManager INSTANCE;
-    private ZookeeperOptions zookeeperOptions;
 
     private ConfigManager(SwitcherManager switcherManager, int interval, TimeUnit timeUnit) {
         /**
@@ -52,13 +48,6 @@ public final class ConfigManager {
          */
         this.applicationConfig = new ApplicationConfig(SimulatorGuard.getInstance().doGuard(ConfigResolver.class, new ApplicationConfigHttpResolver(switcherManager, interval, timeUnit)));
         this.clusterTestConfig = new ClusterTestConfig(SimulatorGuard.getInstance().doGuard(ConfigResolver.class, new ClusterTestConfigHttpResolver(interval, timeUnit)));
-        initAll();
-    }
-
-    private ConfigManager(SwitcherManager switcherManager, ZookeeperOptions zookeeperOptions) {
-        this.zookeeperOptions = zookeeperOptions;
-        this.applicationConfig = new ApplicationConfig(new ApplicationConfigZkResolver(switcherManager, zookeeperOptions));
-        this.clusterTestConfig = new ClusterTestConfig(new ClusterTestConfigZkResolver(zookeeperOptions));
         initAll();
     }
 
@@ -99,24 +88,6 @@ public final class ConfigManager {
     static ConfigManager getInstance() {
         return INSTANCE;
     }
-
-    /**
-     * 获取 ConfigManager 实例
-     *
-     * @param zookeeperOptions zk 配置
-     * @return
-     */
-    public static ConfigManager getInstance(SwitcherManager switcherManager, ZookeeperOptions zookeeperOptions) {
-        if (INSTANCE == null) {
-            synchronized (ConfigManager.class) {
-                if (INSTANCE == null) {
-                    INSTANCE = new ConfigManager(switcherManager, zookeeperOptions);
-                }
-            }
-        }
-        return INSTANCE;
-    }
-
 
     public ConcurrentHashMap<String, List<ConfigListener>> getListenerHolder() {
         return listenerHolder;

@@ -14,8 +14,11 @@
  */
 package com.pamirs.attach.plugin.redisson.utils;
 
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * @Auther: vernon
@@ -83,7 +86,6 @@ public class RedissonUtils<T> {
                     "getKeys",
                     "getLiveObjectService",
                     "shutdown",
-                    "getConfig",
                     "getRedisNodes",
                     "getNodesGroup",
                     "getClusterNodesGroup",
@@ -137,7 +139,6 @@ public class RedissonUtils<T> {
                     "createBatch",
                     "getKeys",
                     "shutdown",
-                    "getConfig",
                     "getNodesGroup",
                     "getClusterNodesGroup",
                     "isShutdown",
@@ -192,7 +193,6 @@ public class RedissonUtils<T> {
                     "createBatch",
                     "getKeys",
                     "shutdown",
-                    "getConfig",
                     "getNodesGroup",
                     "getClusterNodesGroup",
                     "isShutdown",

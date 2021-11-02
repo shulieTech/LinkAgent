@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import java.net.SocketTimeoutException;
 import java.util.Map;
 
 import com.alibaba.fastjson.JSONObject;
@@ -27,6 +28,7 @@ import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
@@ -74,7 +76,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         if (httpHost == null) {
             return;
         }
-
+        InnerWhiteListCheckUtil.check();
         String host = httpHost.getHostName();
         int port = httpHost.getPort();
         String path = httpHost.getHostName();
@@ -97,7 +99,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 //现在先暂时注释掉因为只有jdk8以上才能用
@@ -199,6 +201,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
             Pradar.responseSize(0);
         }
         Pradar.request(request.getParams());
+        InnerWhiteListCheckUtil.check();
         int code = response == null ? 200 : response.getStatusLine().getStatusCode();
         Pradar.endClientInvoke(code + "", HttpClientConstants.PLUGIN_TYPE);
 
@@ -208,7 +211,12 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
     public void exceptionTrace(HttpRequest request, Throwable throwable) {
         Pradar.request(request.getParams());
         Pradar.response(throwable);
-        Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        InnerWhiteListCheckUtil.check();
+        if (throwable != null && (throwable instanceof SocketTimeoutException)) {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_TIMEOUT, HttpClientConstants.PLUGIN_TYPE);
+        } else {
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+        }
     }
 
 }

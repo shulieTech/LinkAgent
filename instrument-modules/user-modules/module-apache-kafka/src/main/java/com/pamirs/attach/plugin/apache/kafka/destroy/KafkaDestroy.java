@@ -14,7 +14,7 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.destroy;
 
-import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
+import com.pamirs.attach.plugin.apache.kafka.util.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.shulie.instrument.simulator.api.listener.Destroyed;

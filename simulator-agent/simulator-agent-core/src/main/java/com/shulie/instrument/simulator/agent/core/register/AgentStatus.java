@@ -25,7 +25,7 @@ public class AgentStatus {
     private final static String INSTALLED = "INSTALLED";
     private final static String UNINSTALL = "UNINSTALL";
     private final static String INSTALLING = "INSTALLING";
-    private final static String INSTALL_FAILED = "INSTALL_FAILED";
+    public final static String INSTALL_FAILED = "INSTALL_FAILED";
     private final static String UNINSTALL_FAILED = "UNINSTALL_FAILED";
     private final static String UNINSTALLING = "UNINSTALLING";
 

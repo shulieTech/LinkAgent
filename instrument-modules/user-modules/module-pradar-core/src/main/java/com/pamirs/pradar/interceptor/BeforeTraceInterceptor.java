@@ -269,7 +269,7 @@ abstract class BeforeTraceInterceptor extends BaseInterceptor {
             }
         }
         if (isTrace0(advice)) {
-            String traceId = TraceIdGenerator.generate(record.getRemoteIp());
+            String traceId = TraceIdGenerator.generate(record.getRemoteIp(), Pradar.isClusterTest());
             Pradar.clearInvokeContext();
             Pradar.startTrace(traceId, record.getService(), record.getMethod());
         } else {
@@ -288,6 +288,7 @@ abstract class BeforeTraceInterceptor extends BaseInterceptor {
             invokeContext.setRequest(record.getRequest());
         }
         advice.mark(BEFORE_TRACE_SUCCESS);
+        advice.setInvokeContext(invokeContext);
         if (record.getRequestSize() != 0) {
             invokeContext.setRequestSize(record.getRequestSize());
         }

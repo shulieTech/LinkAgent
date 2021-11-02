@@ -57,7 +57,7 @@ public class FrameworkClassLoader extends URLClassLoader {
             try {
                 ((Closeable) this).close();
             } catch (Throwable cause) {
-                logger.warn("SIMULATOR: close ModuleJarClassLoader failed. JDK7+", cause);
+                logger.error("SIMULATOR: close ModuleJarClassLoader failed. JDK7+", cause);
             }
             releaseClasses();
             return;
@@ -88,7 +88,7 @@ public class FrameworkClassLoader extends URLClassLoader {
             }
             releaseClasses();
         } catch (Throwable cause) {
-            logger.warn("SIMULATOR: close ModuleJarClassLoader failed. probably not a HOTSPOT VM", cause);
+            logger.error("SIMULATOR: close ModuleJarClassLoader failed. probably not a HOTSPOT VM", cause);
         }
 
 

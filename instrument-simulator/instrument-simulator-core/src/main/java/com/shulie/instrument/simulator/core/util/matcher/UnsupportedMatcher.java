@@ -102,7 +102,7 @@ public class UnsupportedMatcher implements Matcher {
         if (null == loader) {
             return !isEnableUnsafe;
         }
-        return takeJavaClassNames(ClassStructureFactory.createClassStructure(loader.getClass()).getFamilyTypeClassStructures())
+        return takeJavaClassNames(ClassStructureFactory.createClassStructure(loader.getClass()).getFamilyAnnotationTypeClassStructures())
                 .contains(Stealth.class.getName());
     }
 

@@ -38,4 +38,10 @@ public final class RabbitmqConstants {
     public final static String DYNAMIC_FIELD_QUEUES = "queues";
 
     public final static String DYNAMIC_FIELD_DELEGATE = "delegate";
+
+    public final static String AUTO_ACK_CONFIG = "rabbitmq.autoAck";
+    public final static String EXCLUSIVE_CONFIG = "rabbitmq.exclusive";
+    public final static String PREFETCH_COUNT_CONFIG = "rabbitmq.prefetchCount";
+    public final static String NO_LOCAL_CONFIG = "rabbitmq.noLocal";
+    public final static String IS_AUTO_ACK_FIELD = "paradarIsAutoAck";
 }

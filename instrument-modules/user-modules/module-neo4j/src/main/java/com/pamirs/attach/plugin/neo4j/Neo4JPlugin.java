@@ -34,7 +34,7 @@ import org.kohsuke.MetaInfServices;
 public class Neo4JPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         // org.neo4j.ogm.session.Neo4jSession.Neo4jSession
         this.enhanceTemplate.enhance(this, "org.neo4j.ogm.session.Neo4jSession", new EnhanceCallback() {
             @Override
@@ -50,5 +50,6 @@ public class Neo4JPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                         .addInterceptor(Listeners.of(Neo4jSessionOperationCutOffInterceptor.class));
             }
         });
+        return true;
     }
 }

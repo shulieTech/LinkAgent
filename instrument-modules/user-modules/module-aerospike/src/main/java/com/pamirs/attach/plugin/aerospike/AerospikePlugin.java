@@ -35,11 +35,11 @@ import org.kohsuke.MetaInfServices;
 public class AerospikePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
-        addTransformers();
+    public boolean onActive() throws Throwable {
+        return addTransformers();
     }
 
-    private void addTransformers() {
+    private boolean addTransformers() {
         this.enhanceTemplate.enhance(this, "com.aerospike.client.Key", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -78,6 +78,6 @@ public class AerospikePlugin extends ModuleLifecycleAdapter implements Extension
                 scanAllMethod.addInterceptor(Listeners.of(AreospikeScanAllInterceptor.class));
             }
         });
-
+        return true;
     }
 }

@@ -25,6 +25,20 @@ import java.util.List;
  */
 public class ShadowRedisConfig {
 
+    enum Client {
+        jedis,
+        lettuce,
+        redisson
+    }
+
+    enum Mode {
+        single,
+        cluster,
+        sentinel,
+        masterSlave,
+        replicated;
+    }
+
     /**
      * redis 节点列表
      */
@@ -46,6 +60,36 @@ public class ShadowRedisConfig {
      * master 地址
      */
     private String master;
+
+    public String getClient() {
+        return client;
+    }
+
+    public void setClient(String client) {
+        this.client = client;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    public boolean match(Mode mode, Client client) {
+        return mode.name().equals(getModel()) && client.name().equals(getClient());
+    }
+
+    /**
+     * 客户端
+     */
+    private String client;
+    /**
+     * 模式
+     */
+    private String model;
+
 
     public String getMaster() {
         return master;
@@ -97,6 +141,8 @@ public class ShadowRedisConfig {
                 && String.valueOf(password).equals(String.valueOf(that.getPassword()))
                 && String.valueOf(this.database).equals(String.valueOf(that.getDatabase()))
                 && String.valueOf(master).equals(String.valueOf(that.getMaster()))
+                && String.valueOf(this.model).equals(String.valueOf(that.model))
+                && String.valueOf(this.client).equals(String.valueOf(that.client))
                 ;
     }
 

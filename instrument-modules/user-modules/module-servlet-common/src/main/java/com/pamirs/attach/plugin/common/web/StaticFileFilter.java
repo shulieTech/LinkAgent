@@ -28,6 +28,15 @@ public class StaticFileFilter {
     public static final boolean USE_LOCAL_IP = Boolean.valueOf(System.getProperty("pradar.localip.use", "false")).booleanValue();
     public static final String PRADAR_FILTER = "Pradar-Internal-Filter";//过滤内部请求
 
+
+    public static void main(String[] args) {
+        long l = System.nanoTime();
+        int i1 = 1000000;
+        for (int i = 0; i < i1; i++) {
+            needFilter("http://127.0.0.1/213u821291/3231/3423312/11.css");
+        }
+        System.out.println((System.nanoTime() - l) / i1);
+    }
     /**
      * default ignore exts.
      */
@@ -50,23 +59,23 @@ public class StaticFileFilter {
         if (urlPath == null) {
             return null;
         }
-        String fileSuffix = urlPath.toLowerCase();
-        final int indexOfSlash = fileSuffix.lastIndexOf('/');
-        if (indexOfSlash != -1) {
-            fileSuffix = fileSuffix.substring(indexOfSlash + 1);
-        }
-        final int indexOfQuestion = fileSuffix.indexOf('?');
-        if (indexOfQuestion != -1) {
-            fileSuffix = fileSuffix.substring(0, indexOfQuestion);
-        }
-        final int indexOfComma = fileSuffix.indexOf(';');
-        if (indexOfComma != -1) {
-            fileSuffix = fileSuffix.substring(0, indexOfComma);
-        }
+        String fileSuffix = urlPath;
+//        final int indexOfSlash = fileSuffix.lastIndexOf('/');
+//        if (indexOfSlash != -1) {
+//            fileSuffix = fileSuffix.substring(indexOfSlash + 1);
+//        }
+//        final int indexOfQuestion = fileSuffix.indexOf('?');
+//        if (indexOfQuestion != -1) {
+//            fileSuffix = fileSuffix.substring(0, indexOfQuestion);
+//        }
+//        final int indexOfComma = fileSuffix.indexOf(';');
+//        if (indexOfComma != -1) {
+//            fileSuffix = fileSuffix.substring(0, indexOfComma);
+//        }
         if (fileSuffix.indexOf('.') == -1) {
             return null;
         }
-        return fileSuffix.substring(fileSuffix.lastIndexOf('.'));
+        return fileSuffix.substring(fileSuffix.lastIndexOf('.')).toLowerCase();
     }
 
 }

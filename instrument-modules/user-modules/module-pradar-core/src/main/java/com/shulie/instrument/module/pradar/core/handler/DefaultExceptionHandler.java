@@ -33,6 +33,7 @@ public class DefaultExceptionHandler implements ExceptionHandler {
             throw throwable;
         }
         if (Pradar.isClusterTest()) {
+            logger.error("clusterTest error ", throwable);
             throw new PressureMeasureError(throwable, Pradar.isClusterTest());
         } else {
             logger.warn("SIMULATOR: {} listener:{}",

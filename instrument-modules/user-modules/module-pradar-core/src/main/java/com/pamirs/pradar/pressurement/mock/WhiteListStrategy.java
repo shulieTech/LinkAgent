@@ -14,14 +14,14 @@
  */
 package com.pamirs.pradar.pressurement.mock;
 
-import java.util.Map;
-
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+
+import java.util.Map;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -33,11 +33,11 @@ public class WhiteListStrategy implements ExecutionStrategy {
     private static final String TRUE = "true";
 
     @Override
-    public Object processBlock(ClassLoader classLoader, Object params) {
+    public Object processBlock(Class returnType, ClassLoader classLoader, Object params) {
         if (!Pradar.isClusterTest()) {
             return true;
         }
-        if (!PradarSwitcher.whiteListSwitchOn()){
+        if (!PradarSwitcher.whiteListSwitchOn()) {
             return true;
         }
         if (params instanceof MatchConfig) {
@@ -106,12 +106,12 @@ public class WhiteListStrategy implements ExecutionStrategy {
     }
 
     @Override
-    public Object processBlock(ClassLoader classLoader, Object params, ExecutionCall call) {
-        return processBlock(classLoader, params);
+    public Object processBlock(Class returnType, ClassLoader classLoader, Object params, ExecutionCall call) {
+        return processBlock(returnType, classLoader, params);
     }
 
     @Override
-    public Object processNonBlock(ClassLoader classLoader, Object params, ExecutionCall call) {
-        return processBlock(classLoader, params);
+    public Object processNonBlock(Class returnType, ClassLoader classLoader, Object params, ExecutionCall call) {
+        return processBlock(returnType, classLoader, params);
     }
 }

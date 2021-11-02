@@ -15,6 +15,7 @@
 package com.pamirs.pradar.interceptor;
 
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 
 import java.io.Serializable;
 
@@ -24,6 +25,9 @@ import java.io.Serializable;
 public class SpanRecord implements Serializable {
     private final static long serialVersionUID = 1L;
     public final static Object CLEAN_CONTEXT = new Object();
+
+    public final static SpanRecord COMMON_SUCCESS_RECORD = getCommonSuccessRecord();
+    public final static SpanRecord COMMON_FAILED_RECORD = getCommonFailedRecord();
     /**
      * 请求大小
      */
@@ -105,6 +109,31 @@ public class SpanRecord implements Serializable {
      */
     private ContextInject contextInject;
 
+    private static SpanRecord getCommonSuccessRecord() {
+        SpanRecord spanRecord = new SpanRecord();
+        return spanRecord;
+    }
+
+    private static SpanRecord getCommonFailedRecord() {
+        SpanRecord spanRecord = new SpanRecord();
+        spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        return spanRecord;
+    }
+
+    public static SpanRecord getFailedRecord(Throwable throwable) {
+        SpanRecord spanRecord = new SpanRecord();
+        spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
+        spanRecord.setResponse(throwable);
+        return spanRecord;
+    }
+
+    public static SpanRecord getFailedRecord(String resultCode, Throwable throwable) {
+        SpanRecord spanRecord = new SpanRecord();
+        spanRecord.setResultCode(resultCode);
+        spanRecord.setResponse(throwable);
+        return spanRecord;
+    }
+
     public Boolean getClusterTest() {
         return clusterTest;
     }
@@ -166,7 +195,9 @@ public class SpanRecord implements Serializable {
     }
 
     public void setRequest(Object request) {
-        this.request = request;
+        if (GlobalConfig.getInstance().allowTraceRequestResponse()){
+            this.request = request;
+        }
     }
 
     public Object getResponse() {
@@ -174,7 +205,9 @@ public class SpanRecord implements Serializable {
     }
 
     public void setResponse(Object response) {
-        this.response = response;
+        if (GlobalConfig.getInstance().allowTraceRequestResponse()){
+            this.response = response;
+        }
     }
 
     public String getResultCode() {

@@ -50,7 +50,8 @@ public class ArbiterHttpExit implements Exit {
                             Set<MatchConfig> urlWhiteList = GlobalConfig.getInstance().getUrlWhiteList();
                             if (urlWhiteList != null) {
                                 for (MatchConfig matchConfig : urlWhiteList) {
-                                    MatchConfig matching = matching(name, matchConfig);
+                                    /*   MatchConfig matching = matching(name, matchConfig);*/
+                                    MatchConfig matching = match(name, matchConfig);
                                     if (null != matching && matching.isSuccess()) {
                                         return matching;
                                     }
@@ -292,6 +293,14 @@ public class ArbiterHttpExit implements Exit {
      * @param matchConfig 通配符匹配模版
      * @return true:目标字符串符合匹配模版;false:目标字符串不符合匹配模版
      */
+
+
+    private static Matcher matcher = new HttpMatcher();
+
+    public static MatchConfig match(final String string, final MatchConfig matchConfig) {
+        return matcher.match(string, matchConfig);
+    }
+
     public static MatchConfig matching(final String string, final MatchConfig matchConfig) {
         String wildcard = matchConfig.getUrl();
         if ("*".equals(matchConfig.getUrl())) {

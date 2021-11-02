@@ -26,11 +26,14 @@ import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ReversedTraceInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -96,8 +99,9 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
         spanRecord.setRemoteIp(consumerMetaData.getBootstrapServers());
         spanRecord.setRequest(consumerRecords.count());
         spanRecord.setService(consumerRecord.topic());
+        boolean clusterTestPrefix = Pradar.isClusterTestPrefix(topic);
         spanRecord.setMethod(
-                Pradar.isClusterTestPrefix(topic) ? consumerMetaData.getPtGroupId() : consumerMetaData.getGroupId());
+                clusterTestPrefix ? consumerMetaData.getPtGroupId() : consumerMetaData.getGroupId());
         return spanRecord;
     }
 

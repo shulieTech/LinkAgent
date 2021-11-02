@@ -17,8 +17,6 @@ package com.shulie.instrument.simulator.core.classloader;
 import com.shulie.instrument.simulator.api.annotation.Stealth;
 import com.shulie.instrument.simulator.core.util.ReflectUtils;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
@@ -34,7 +32,6 @@ import java.util.jar.JarFile;
  */
 @Stealth
 public class ProviderClassLoader extends RoutingURLClassLoader {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private File providerJarFile;
 
@@ -48,7 +45,7 @@ public class ProviderClassLoader extends RoutingURLClassLoader {
                         "com.shulie.instrument.simulator.spi.*",
                         "org.apache.commons.lang.*",
                         "org.slf4j.*",
-                        "ch.qos.logback.*",
+                        "com.shulie.instrument.simulator.dependencies.ch.qos.logback.*",
                         "org.objectweb.asm.*",
                         "javax.annotation.Resource*"
                 )
@@ -61,7 +58,7 @@ public class ProviderClassLoader extends RoutingURLClassLoader {
 
             // 如果是JDK7+的版本, URLClassLoader实现了Closeable接口，直接调用即可
             if (this instanceof Closeable) {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: JDK is 1.7+, use URLClassLoader[file={}].close()", providerJarFile);
                 }
                 try {
@@ -83,7 +80,7 @@ public class ProviderClassLoader extends RoutingURLClassLoader {
             // 对于JDK6的版本，URLClassLoader要关闭起来就显得有点麻烦，这里弄了一大段代码来稍微处理下
             // 而且还不能保证一定释放干净了，至少释放JAR文件句柄是没有什么问题了
             try {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: JDK is less then 1.7+, use File.release()");
                 }
                 final Object ucp = ReflectUtils.getDeclaredJavaFieldValueUnCaught(URLClassLoader.class, "ucp", this);
@@ -119,7 +116,6 @@ public class ProviderClassLoader extends RoutingURLClassLoader {
 
             // 在这里删除掉临时文件
             FileUtils.deleteQuietly(providerJarFile);
-            classLoadingLock.release();
         }
 
     }

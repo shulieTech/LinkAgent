@@ -44,7 +44,7 @@ public class WebFluxPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
         //org.springframework.cloud.gateway.handler.FilteringWebHandler$DefaultGatewayFilterChain.filter
 //        enhanceTemplate.enhance(this, "org.springframework.cloud.gateway.handler.FilteringWebHandler$DefaultGatewayFilterChain", new EnhanceCallback() {
 //            @Override
@@ -104,7 +104,7 @@ public class WebFluxPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
 
 
-
+        return true;
     }
 
 

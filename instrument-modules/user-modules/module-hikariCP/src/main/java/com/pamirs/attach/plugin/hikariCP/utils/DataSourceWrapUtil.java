@@ -93,6 +93,7 @@ public class DataSourceWrapUtil {
             }
             if (StringUtils.equals(mediatorDataSource.getDataSourcePerformanceTest().getJdbcUrl(), target.getJdbcUrl()) &&
                     StringUtils.equals(mediatorDataSource.getDataSourcePerformanceTest().getUsername(), target.getUsername())) {
+                logger.info("module-hikariCP isPerformanceDataSource !!!");
                 return true;
             }
         }
@@ -102,7 +103,7 @@ public class DataSourceWrapUtil {
     //  static AtomicBoolean inited = new AtomicBoolean(false);
 
     public static void init(DataSourceMeta<HikariDataSource> dataSourceMeta) {
-        if (pressureDataSources.containsKey(dataSourceMeta) && pressureDataSources.get(dataSourceMeta) != null) {
+        if (pressureDataSources.get(dataSourceMeta) != null) {
             return;
         }
         HikariDataSource target = dataSourceMeta.getDataSource();
@@ -121,7 +122,9 @@ public class DataSourceWrapUtil {
             dbMediatorDataSource.setDataSourceBusiness(target);
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                }
                 old.close();
             }
             return;
@@ -133,7 +136,9 @@ public class DataSourceWrapUtil {
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
-                    logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                    }
                     old.close();
                 }
             } catch (Throwable e) {
@@ -154,10 +159,14 @@ public class DataSourceWrapUtil {
                 dataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
-                    logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                    }
                     old.close();
                 }
-                logger.info("[hikariCP] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUsername(), ptDataSource.getJdbcUrl(), ptDataSource.getUsername());
+                if (logger.isInfoEnabled()) {
+                    logger.info("[hikariCP] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUsername(), ptDataSource.getJdbcUrl(), ptDataSource.getUsername());
+                }
             } catch (Throwable t) {
                 logger.error("[hikariCP] init datasource err!", t);
                 ErrorReporter.buildError()
@@ -196,7 +205,7 @@ public class DataSourceWrapUtil {
         }
 
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
-        if(StringUtils.isBlank(driverClassName)) {
+        if (StringUtils.isBlank(driverClassName)) {
             driverClassName = sourceDatasource.getDriverClassName();
         }
 

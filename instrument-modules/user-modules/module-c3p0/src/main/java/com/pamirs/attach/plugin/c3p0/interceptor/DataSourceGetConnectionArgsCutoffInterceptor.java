@@ -19,6 +19,10 @@ import com.pamirs.attach.plugin.c3p0.ListenerRegisterStatus;
 import com.pamirs.attach.plugin.c3p0.destroy.C3p0Destroy;
 import com.pamirs.attach.plugin.c3p0.utils.C3p0MediaDataSource;
 import com.pamirs.attach.plugin.c3p0.utils.DataSourceWrapUtil;
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.Type;
+import com.pamirs.attach.plugin.dynamic.template.C3p0Template;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -59,8 +63,32 @@ public class DataSourceGetConnectionArgsCutoffInterceptor extends CutoffIntercep
         addListener();
     }
 
+    void attachment(Advice advice) {
+        try {
+            ComboPooledDataSource target = (ComboPooledDataSource) advice.getTarget();
+            ResourceManager.set(new Attachment(
+                            target.getJdbcUrl(),
+                            "c3p0",
+                            Type.DataBaseType.types(),
+                            new C3p0Template()
+                                    .setUrl(target.getJdbcUrl())
+                                    .setUsername(target.getUser())
+                                    .setPassword(target.getPassword())
+                                    .setDriverClassName(target.getDriverClass())
+                                    .setInitialPoolSize(target.getInitialPoolSize())
+                                    .setMaxIdleTime(target.getMaxIdleTime())
+                                    .setMaxPoolSize(target.getMaxPoolSize())
+                    )
+            );
+        } catch (Throwable t) {
+            logger.error(t.getMessage());
+        }
+    }
+
     @Override
     public CutOffResult cutoff0(Advice advice) {
+
+        attachment(advice);
         Object target = advice.getTarget();
         ComboPooledDataSource dataSource = (ComboPooledDataSource) target;
         DataSourceMeta<ComboPooledDataSource> dataSourceMeta = new DataSourceMeta<ComboPooledDataSource>(dataSource.getJdbcUrl(), dataSource.getUser(), dataSource);
@@ -136,7 +164,9 @@ public class DataSourceGetConnectionArgsCutoffInterceptor extends CutoffIntercep
                             it.remove();
                             try {
                                 value.close();
-                                logger.info("module-c3p0: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                if (logger.isInfoEnabled()) {
+                                    logger.info("module-c3p0: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                }
                             } catch (Throwable e) {
                                 logger.error("module-c3p0: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }

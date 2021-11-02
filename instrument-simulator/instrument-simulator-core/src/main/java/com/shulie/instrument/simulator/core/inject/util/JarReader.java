@@ -31,6 +31,7 @@ import java.util.jar.JarFile;
 public class JarReader {
 
     private final Logger logger = LoggerFactory.getLogger(JarReader.class.getName());
+    private final boolean isDebugEnabled = logger.isDebugEnabled();
 
     private static final int BUFFER_SIZE = 1024 * 4;
 
@@ -56,7 +57,7 @@ public class JarReader {
         while (entries.hasMoreElements()) {
             final JarEntry jarEntry = entries.nextElement();
             if (jarEntryFilter.filter(jarEntry)) {
-                if (logger.isDebugEnabled()) {
+                if (isDebugEnabled) {
                     logger.debug("SIMULATOR: filter fileName:{}, JarFile:{}", jarEntry.getName(), jarFileName);
                 }
                 FileBinary fileBinary = newFileBinary(bufferedContext, jarEntry, jarFileName);

@@ -33,7 +33,7 @@ import org.kohsuke.MetaInfServices;
 public class WebspherePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
-    public void onActive() throws Throwable {
+    public boolean onActive() throws Throwable {
 
         enhanceTemplate.enhance(this, "com.ibm.ws.webcontainer.srt.SRTServletRequest", new EnhanceCallback() {
             @Override
@@ -52,6 +52,7 @@ public class WebspherePlugin extends ModuleLifecycleAdapter implements Extension
                 handleMethodEditorBuilder.addInterceptor(Listeners.of(WebContainerHandleRequestInterceptor.class));
             }
         });
+        return true;
     }
 
 }

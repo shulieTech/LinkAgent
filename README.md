@@ -11,6 +11,7 @@ English / [中文](README_CN.md)
 
 ## QuickStart
 - see [QuickStart English](doc/QuickStartInEnglish.md)
+- see [guide](https://docs.shulie.io/docs/opensource/opensource-1d62p3g2b9u7u)
 
 ## Instruction
 

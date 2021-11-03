@@ -163,7 +163,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
             int batchLines = ParameterUtils.getInt(params, "batchLines", 100);
             Integer lineStart = ParameterUtils.getInt(params, "lineStart", null);
             PullLogResponse pullLogResponse = new PullLogResponse();
-            pullLogResponse.setAgentId(Pradar.getAgentId());
+            pullLogResponse.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
             pullLogResponse.setAppName(AppNameUtils.appName());
             pullLogResponse.setTraceId(params.get("traceId"));
             pullLogResponse.setType(APP);
@@ -193,7 +193,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
             int batchLines = ParameterUtils.getInt(params, "batchLines", 100);
             Integer lineStart = ParameterUtils.getInt(params, "lineStart", null);
             PullLogResponse pullLogResponse = new PullLogResponse();
-            pullLogResponse.setAgentId(Pradar.getAgentId());
+            pullLogResponse.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
             pullLogResponse.setAppName(AppNameUtils.appName());
             pullLogResponse.setTraceId(params.get("traceId"));
             pullLogResponse.setType(AGENT);

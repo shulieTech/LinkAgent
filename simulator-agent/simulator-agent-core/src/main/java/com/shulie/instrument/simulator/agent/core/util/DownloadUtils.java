@@ -46,7 +46,7 @@ public class DownloadUtils {
     private static final String QUESTION_DELIMITER = "?";
     private static final String CHARSET = "utf-8";
 
-    public static File download(String path, String downloadDir, String userAppKey) {
+    public static File download(String path, String downloadDir, Map<String, String> headers) {
         if (StringUtils.startsWith(path, "http://") || StringUtils.startsWith(path, "https://")) {
             try {
                 // 统一资源
@@ -62,7 +62,15 @@ public class DownloadUtils {
                 httpURLConnection.setRequestMethod("GET");
                 httpURLConnection.setRequestProperty("Content-Type", "application/octet-stream");
                 httpURLConnection.setRequestProperty("Connection", "Keep-Alive");
-                httpURLConnection.setRequestProperty("userAppKey", userAppKey);
+
+                if (!headers.isEmpty()) {
+                    for (Map.Entry<String, String> entry : headers.entrySet()) {
+                        if (!StringUtils.isBlank(entry.getValue())) {
+                            httpURLConnection.setRequestProperty(entry.getKey(), entry.getValue());
+                        }
+                    }
+                }
+
                 // 设置字符编码
                 httpURLConnection.setRequestProperty("Charset", "UTF-8");
                 httpURLConnection.setConnectTimeout(3000);
@@ -166,7 +174,7 @@ public class DownloadUtils {
             return result;
         }
         for (String qParam : queryParams) {
-            if (qParam.indexOf(EQUAL_DELIMITER) == -1) {
+            if (!qParam.contains(EQUAL_DELIMITER)) {
                 continue;
             }
             String[] param = qParam.split(EQUAL_DELIMITER);

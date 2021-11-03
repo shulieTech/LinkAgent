@@ -27,10 +27,11 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.alibaba.fastjson.JSON;
+
 import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.debug.DebugHelper;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
@@ -49,9 +50,15 @@ import static com.pamirs.pradar.InvokeContext.INVOKE_ID_LENGTH_LIMIT;
  */
 public final class Pradar {
     /**
-     * user.app.key
+     * tenant.app.key
      */
-    static final public String USER_APP_KEY = "user.app.key";
+    static final public String TENANT_APP_KEY = "tenant.app.key";
+
+    /**
+     * pradar.env.code
+     */
+    static final public String ENV_CODE = "pradar.env.code";
+
     /**
      * 用来标识线程 ID
      */
@@ -71,22 +78,21 @@ public final class Pradar {
      * 强制指定写日志用的编码
      */
     static final public Charset DEFAULT_CHARSET = getDefaultOutputCharset();
-    static public final int DEFAULT_PRADAR_TRACE_LOG_VERSION = 16;
+    static public final int DEFAULT_PRADAR_TRACE_LOG_VERSION = 17;
     /**
      * trace日志版本号
      */
     static public final int PRADAR_TARCE_LOG_VERSION = getPradarTraceLogVersion();
-    static public final int DEFAULT_PRADAR_MONITOR_LOG_VERSION = 11;
+    static public final int DEFAULT_PRADAR_MONITOR_LOG_VERSION = 13;
     /**
      * monitor日志版本号
      */
     static public final int PRADAR_MONITOR_LOG_VERSION = getPradarMonitorLogVersion();
 
-
     /**
      * error日志版本号
      */
-    static public final int PRADAR_ERROR_LOG_VERSION = 10;
+    static public final int PRADAR_ERROR_LOG_VERSION = 11;
     /**
      * pradar log daemon 运行周期
      */
@@ -98,11 +104,15 @@ public final class Pradar {
     /**
      * pradar user key
      */
-    static public final String PRADAR_USER_KEY = getPradarUserKey();
+    static public final String PRADAR_TENANT_KEY = getPradarTenantKey();
     /**
      * pradar user id
      */
     static public final String PRADAR_USER_ID = getPradarUserId();
+    /**
+     * current env
+     */
+    static public final String PRADAR_ENV_CODE = getEnvCode();
     /**
      * Pradar Invoke 日志文件名
      */
@@ -157,8 +167,8 @@ public final class Pradar {
      * 超长被调整后的 invokeId
      */
     static public final String ADJUST_ROOT_INVOKE_ID = "8";
-    public final static String[] SPECIAL_CHARACTORS = new String[]{
-            "\r\n", "\n", "\r", "\t", "|"
+    public final static String[] SPECIAL_CHARACTORS = new String[] {
+        "\r\n", "\n", "\r", "\t", "|"
     };
     /**
      * InvokeContext 对应的日志类型
@@ -204,9 +214,13 @@ public final class Pradar {
      */
     static public final int DEFAULT_MONITOR_QUEUE_SIZE = 512;
     /**
-     * 获取agent id
+     * 获取agent id携带用户信息
      */
-    static public final String AGENT_ID = getAgentId();
+    static public final String AGENT_ID_CONTAIN_USER_INFO = getAgentId(true);
+    /**
+     * 获取agent id不携带用户信息
+     */
+    static public final String AGENT_ID_NOT_CONTAIN_USER_INFO = getAgentId(false);
     /**
      * 控制门开启
      */
@@ -226,9 +240,9 @@ public final class Pradar {
      * http 请求时统一的压测后缀
      */
     public static final String PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX = "PerfomanceTest";
-    static public final char ENTRY_SEPARATOR = (char) 0x12;
-    static public final char KV_SEPARATOR = (char) 0x1;   // METAQ 不允许使用的分隔符，不能在 UserData 中使用
-    static public final char KV_SEPARATOR2 = (char) 0x14;
+    static public final char ENTRY_SEPARATOR = (char)0x12;
+    static public final char KV_SEPARATOR = (char)0x1;   // METAQ 不允许使用的分隔符，不能在 UserData 中使用
+    static public final char KV_SEPARATOR2 = (char)0x14;
     static final long MAX_RPC_LOG_FILE_SIZE = getMaxRpcLogFileSize();
     static final long MAX_MONITOR_LOG_FILE_SIZE = getMaxMonitorLogFileSize();
     /**
@@ -293,7 +307,7 @@ public final class Pradar {
      * @return
      */
     public static boolean isInterceptorCostEnabled() {
-        return Boolean.valueOf(System.getProperty(INTERCEPTOR_COST_ENABLED_KEY));
+        return Boolean.parseBoolean(System.getProperty(INTERCEPTOR_COST_ENABLED_KEY));
     }
 
     /**
@@ -377,7 +391,7 @@ public final class Pradar {
     public static int getTraceQueueSize() {
         String value = System.getProperty(TRACE_QUEUE_SIZE);
         if (NumberUtils.isDigits(value)) {
-            return Integer.valueOf(value);
+            return Integer.parseInt(value);
         }
         return DEFAULT_TRACE_QUEUE_SIZE;
     }
@@ -390,7 +404,7 @@ public final class Pradar {
     public static int getMonitorQueueSize() {
         String value = System.getProperty(MONITOR_QUEUE_SIZE);
         if (NumberUtils.isDigits(value)) {
-            return Integer.valueOf(value);
+            return Integer.parseInt(value);
         }
         return DEFAULT_MONITOR_QUEUE_SIZE;
     }
@@ -403,7 +417,7 @@ public final class Pradar {
     public static boolean isShadowDatabaseWithShadowTable() {
         String value = System.getProperty(SHADOW_DATABASE_WITH_SHADOW_TABLE);
         if (StringUtils.isNotBlank(value)) {
-            return Boolean.valueOf(value);
+            return Boolean.parseBoolean(value);
         }
         return true;
     }
@@ -438,8 +452,7 @@ public final class Pradar {
         if (StringUtils.isBlank(value)) {
             return false;
         }
-        String clusterTestPrefix = CLUSTER_TEST_PREFIX;
-        return StringUtils.lowerCase(value).contains(StringUtils.lowerCase(clusterTestPrefix));
+        return StringUtils.lowerCase(value).contains(StringUtils.lowerCase(CLUSTER_TEST_PREFIX));
     }
 
     /**
@@ -486,9 +499,8 @@ public final class Pradar {
         if (StringUtils.isBlank(value)) {
             return value;
         }
-        String clusterTestPrefix = CLUSTER_TEST_PREFIX;
         if (isClusterTestPrefix(value)) {
-            value = value.substring(clusterTestPrefix.length());
+            value = value.substring(CLUSTER_TEST_PREFIX.length());
         }
         return value;
     }
@@ -646,27 +658,29 @@ public final class Pradar {
 
     public static String printContextStack() {
         InvokeContext current = InvokeContext.get();
-        LOGGER.warn("===================================={}========= trace info============================", current.getTraceId());
+        LOGGER.warn("===================================={}========= trace info============================",
+            current.getTraceId());
         StringBuilder stringBuilder = new StringBuilder();
         for (StackTraceElement stackTraceElement : Thread.currentThread().getStackTrace()) {
             stringBuilder.append(stackTraceElement.toString()).append("\n\r");
         }
-        LOGGER.warn("invokeId : {},traceId:{},  thread:{}  stack: \n\r{}", current.getInvokeId(), current.getTraceId(), Thread.currentThread(), stringBuilder);
+        LOGGER.warn("invokeId : {},traceId:{},  thread:{}  stack: \n\r{}", current.getInvokeId(), current.getTraceId(),
+            Thread.currentThread(), stringBuilder);
         LOGGER.warn("");
         StrBuilder strBuilder = new StrBuilder();
         while (current != null) {
             StrBuilder temp = new StrBuilder();
             temp.append("[nodeId-{").append(current.getNodeId())
-                    .append("} MiddlewareName:{").append(current.getMiddlewareName())
-                    .append("} serviceName:{").append(current.getServiceName())
-                    .append("} methodName:{").append(current.getMethodName())
-                    .append("} response:{").append(current.getResponse())
-                    .append("} startTime:{").append(current.getStartTime())
-                    .append("} invokeId:{").append(current.getTraceId())
-                    .append("} Thread:{").append(current.getLocalAttribute(InvokeContext.START_THREAD_NAME))
-                    .append("} parentThread:{").append(current.getLocalAttribute("parentThread"))
-                    .append("} traceId:{").append(current.getTraceId())
-                    .append("}]").append("\n\r");
+                .append("} MiddlewareName:{").append(current.getMiddlewareName())
+                .append("} serviceName:{").append(current.getServiceName())
+                .append("} methodName:{").append(current.getMethodName())
+                .append("} response:{").append(current.getResponse())
+                .append("} startTime:{").append(current.getStartTime())
+                .append("} invokeId:{").append(current.getTraceId())
+                .append("} Thread:{").append(current.getLocalAttribute(InvokeContext.START_THREAD_NAME))
+                .append("} parentThread:{").append(current.getLocalAttribute("parentThread"))
+                .append("} traceId:{").append(current.getTraceId())
+                .append("}]").append("\n\r");
             LOGGER.warn(temp.toString());
             strBuilder.append(temp);
             current = current.getParentInvokeContext();
@@ -698,20 +712,30 @@ public final class Pradar {
     /**
      * 获取agentId
      *
-     * @return
+     * @param needUserInfo 是否需要用户信息
+     * @return 字符串
      */
-    public static String getAgentId() {
+    public static String getAgentId(boolean needUserInfo) {
         String agentId = System.getProperty("simulator.agentId");
         if (StringUtils.isBlank(agentId)) {
-            return new StringBuilder(PradarCoreUtils.getLocalAddress()).append("-").append(RuntimeUtils.getPid()).toString();
+            agentId = PradarCoreUtils.getLocalAddress() + "-" + RuntimeUtils.getPid();
         } else {
             Properties properties = new Properties();
             properties.setProperty("pid", String.valueOf(RuntimeUtils.getPid()));
             properties.setProperty("hostname", PradarCoreUtils.getHostName());
             properties.setProperty("ip", PradarCoreUtils.getLocalAddress());
             PropertyPlaceholderHelper propertyPlaceholderHelper = new PropertyPlaceholderHelper("${", "}");
-            return propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
+            agentId = propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
         }
+
+        if (needUserInfo) {
+            // 在agentId后面加上tenantAppKey和currentEnv
+            agentId += "&" + (StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE)
+                + ":" + (StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID)
+                + ":" + (StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY);
+        }
+
+        return agentId;
     }
 
     /**
@@ -839,8 +863,8 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarUserKey() {
-        return getSystemProperty(Pradar.USER_APP_KEY);
+    static final String getPradarTenantKey() {
+        return getSystemProperty(Pradar.TENANT_APP_KEY);
     }
 
     /**
@@ -853,6 +877,15 @@ public final class Pradar {
     }
 
     /**
+     * 返回envCode
+     *
+     * @return 当前环境变量
+     */
+    static final String getEnvCode() {
+        return getSystemProperty(Pradar.ENV_CODE);
+    }
+
+    /**
      * 获取推送日志的大小
      *
      * @return
@@ -860,12 +893,12 @@ public final class Pradar {
     static final int getPushMaxSize() {
         String pushMaxSize = getSystemProperty("pradar.log.push.maxsize");
         if (NumberUtils.isDigits(pushMaxSize)) {
-            return Integer.valueOf(pushMaxSize);
+            return Integer.parseInt(pushMaxSize);
         }
         /**
          * 默认为1M
          */
-        return 1024 * 1024 * 1;
+        return 1024 * 1024;
     }
 
     /**
@@ -878,9 +911,7 @@ public final class Pradar {
             charsetName = charsetName.trim();
             try {
                 cs = Charset.forName(charsetName);
-                if (cs != null) {
-                    return cs;
-                }
+                return cs;
             } catch (Throwable e) {
                 // quietly
             }
@@ -939,8 +970,7 @@ public final class Pradar {
     static private String getPid() {
         try {
             String name = ManagementFactory.getRuntimeMXBean().getName();
-            String pid = StringUtils.split(name, '@')[0];
-            return pid;
+            return StringUtils.split(name, '@')[0];
         } catch (Throwable e) {
             int randomValue = (int)((Math.random() + 1) * 1000);
             return randomValue + "";
@@ -1016,7 +1046,8 @@ public final class Pradar {
      * @param invokeId    额外指定 invokeId，如果为 <code>null</code>，使用 {@link #ROOT_INVOKE_ID}
      * @param serviceName 用户自定义的入口标识值，不能为 <code>null</code>， 建议传入能够唯一标识入口的数据，例如用户访问网络的 http url
      */
-    static public void startTrace(String traceId, String invokeId, String serviceName, String methodName, String middlewareName) {
+    static public void startTrace(String traceId, String invokeId, String serviceName, String methodName,
+        String middlewareName) {
         if (serviceName == null) {
             return;
         }
@@ -1033,7 +1064,8 @@ public final class Pradar {
             // 重复 startTrace 的检测
             if (!ctx.traceId.equals(traceId) || !serviceName.equals(ctx.serviceName)) {
                 // 说明有潜在的埋点问题，先把前面那个调用链结束掉
-                LOGGER.warn("duplicated startTrace detected, overrided {} ({}) to {} ({})", ctx.traceId, ctx.serviceName,
+                LOGGER.warn("duplicated startTrace detected, overrided {} ({}) to {} ({})", ctx.traceId,
+                    ctx.serviceName,
                     traceId, serviceName);
                 endTrace();
             } else {
@@ -1185,8 +1217,8 @@ public final class Pradar {
     static final InvokeContext createContextIfNotExists(final boolean setToThreadLocal) {
         final InvokeContext ctx = InvokeContext.get();
         if (null == ctx) {
-            final InvokeContext newCtx = new InvokeContext(TraceIdGenerator.generate(false), appName(), MAL_ROOT_INVOKE_ID
-                , ctx.traceMethod, ctx.traceServiceName);
+            final InvokeContext newCtx = new InvokeContext(TraceIdGenerator.generate(false), appName(),
+                MAL_ROOT_INVOKE_ID, ctx.traceMethod, ctx.traceServiceName);
 
             if (setToThreadLocal) {
                 // 在这里设置的 ctx，有可能无法释放，例如在没有 startTrace 的上下文中直接
@@ -1238,18 +1270,20 @@ public final class Pradar {
             Boolean isDebug = null;
             boolean isSameThreadId = false;
             if (invokeCtx instanceof Map) {
-                Map<String, String> invokeContextMap = (Map<String, String>) invokeCtx;
+                Map<String, String> invokeContextMap = (Map<String, String>)invokeCtx;
                 String threadId = invokeContextMap.get(THREAD_ID_KEY);
                 /**
                  * 需要如果设置到上下文中的线程 ID与当前的线程 ID一致，并且上下文不为空，则忽略此次重构上下文
                  */
-                if (threadId != null && threadId.equals(String.valueOf(Thread.currentThread().getId())) && getInvokeContext() != null) {
+                if (threadId != null && threadId.equals(String.valueOf(Thread.currentThread().getId()))
+                    && getInvokeContext() != null) {
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug("setInvokeContext is same thread. will append child context auto.");
                     }
                     String identityContextId = invokeContextMap.get(IDENTITY_CONTEXT_ID);
                     //如果需要设置的目标 context 与当前的 context 是同一个，则直接忽略此次的设置上下文
-                    if (identityContextId != null && InvokeContext.get() != null && identityContextId.equals(String.valueOf(InvokeContext.get().getId()))) {
+                    if (identityContextId != null && InvokeContext.get() != null && identityContextId.equals(
+                        String.valueOf(InvokeContext.get().getId()))) {
                         return;
                     }
                     isSameThreadId = true;
@@ -1261,12 +1295,14 @@ public final class Pradar {
                         ctx.parentInvokeContext = InvokeContext.get();
                     }
                 }
-                isClusterTest = ClusterTestUtils.isClusterTestRequest(((Map<String, String>) invokeCtx).get(PradarService.PRADAR_CLUSTER_TEST_KEY));
-                isDebug = ClusterTestUtils.isDebugRequest(((Map<String, String>) invokeCtx).get(PradarService.PRADAR_DEBUG_KEY));
+                isClusterTest = ClusterTestUtils.isClusterTestRequest(
+                    ((Map<String, String>)invokeCtx).get(PradarService.PRADAR_CLUSTER_TEST_KEY));
+                isDebug = ClusterTestUtils.isDebugRequest(
+                    ((Map<String, String>)invokeCtx).get(PradarService.PRADAR_DEBUG_KEY));
             } else if (invokeCtx instanceof InvokeContext) {
-                ctx = (InvokeContext) invokeCtx;
-                isClusterTest = ((InvokeContext) invokeCtx).isClusterTest;
-                isDebug = ((InvokeContext) invokeCtx).isDebug;
+                ctx = (InvokeContext)invokeCtx;
+                isClusterTest = ((InvokeContext)invokeCtx).isClusterTest;
+                isDebug = ((InvokeContext)invokeCtx).isDebug;
             }
             if (ctx != null) {
                 InvokeContext.set(ctx);
@@ -1489,7 +1525,7 @@ public final class Pradar {
         if (rpcCtx instanceof Map) {
             ctx = InvokeContext.fromMap((Map<String, String>)rpcCtx, parent);
         } else if (rpcCtx instanceof InvokeContext) {
-            ctx = (InvokeContext) rpcCtx;
+            ctx = (InvokeContext)rpcCtx;
         }
         return ctx;
     }
@@ -1500,16 +1536,18 @@ public final class Pradar {
         boolean isDebug = false;
         if (rpcCtx instanceof Map) {
             boolean isSampleThreadId = false;
-            final Map<String, String> context = (Map<String, String>) rpcCtx;
+            final Map<String, String> context = (Map<String, String>)rpcCtx;
             String threadId = context.get(THREAD_ID_KEY);
             /**
              * 需要如果设置到上下文中的线程 ID与当前的线程 ID一致，并且上下文不为空，则忽略此次重构上下文
              */
-            if (threadId != null && threadId.equals(String.valueOf(Thread.currentThread().getId())) && getInvokeContext() != null) {
+            if (threadId != null && threadId.equals(String.valueOf(Thread.currentThread().getId()))
+                && getInvokeContext() != null) {
                 LOGGER.warn("setInvokeContext is sample thread. will append child context auto.");
                 String identityContextId = context.get(IDENTITY_CONTEXT_ID);
                 //如果需要设置的目标 context 与当前的 context 是同一个，则直接返回当前的上下文
-                if (identityContextId != null && InvokeContext.get() != null && identityContextId.equals(String.valueOf(InvokeContext.get().getId()))) {
+                if (identityContextId != null && InvokeContext.get() != null && identityContextId.equals(
+                    String.valueOf(InvokeContext.get().getId()))) {
                     return InvokeContext.get();
                 }
                 isSampleThreadId = true;
@@ -1524,7 +1562,7 @@ public final class Pradar {
             isClusterTest = Boolean.valueOf((context).get(PradarService.PRADAR_CLUSTER_TEST_KEY));
             isDebug = Boolean.valueOf((context).get(PradarService.PRADAR_DEBUG_KEY));
         } else if (rpcCtx instanceof InvokeContext) {
-            ctx = (InvokeContext) rpcCtx;
+            ctx = (InvokeContext)rpcCtx;
         }
 
         if (ctx == null) {
@@ -1604,7 +1642,8 @@ public final class Pradar {
             /**
              * 重新生成节点 ID
              */
-//            ctx.setNodeId(ctx.generateNodeId(ctx.getTraceNode(), ctx.getServiceName(), ctx.getMethodName(), middlewareName));
+            //            ctx.setNodeId(ctx.generateNodeId(ctx.getTraceNode(), ctx.getServiceName(), ctx
+            //            .getMethodName(), middlewareName));
         }
     }
 
@@ -1666,7 +1705,8 @@ public final class Pradar {
             }
 
             if (PradarService.isSilence() && Pradar.isClusterTest()) {
-                LOGGER.error("[pradar2]silence module ! can not handle cluster test data in startInvoke: {}", JSON.toJSONString(childCtx));
+                LOGGER.error("[pradar2]silence module ! can not handle cluster test data in startInvoke: {}",
+                    JSON.toJSONString(childCtx));
             }
             return childCtx;
         } catch (Throwable re) {
@@ -1816,7 +1856,7 @@ public final class Pradar {
                     childCtx = createInvokeContext(ctxObj);
                 } else {
                     childCtx = new InvokeContext(TraceIdGenerator.
-                            generate(isClusterTest), appName(), MAL_ROOT_INVOKE_ID
+                        generate(isClusterTest), appName(), MAL_ROOT_INVOKE_ID
                         , method, service);
                     childCtx.setUpAppName(appName());
                 }
@@ -1833,11 +1873,13 @@ public final class Pradar {
                     // 设置上游appName。如没有设置本应用名称
                     childCtx.setUpAppName(ctx.getUpAppName());
                     if (ctxObj instanceof Map) {
-                        isClusterTest = isClusterTest | ClusterTestUtils.isClusterTestRequest(((Map<String, String>) ctxObj).get(PradarService.PRADAR_CLUSTER_TEST_KEY));
+                        isClusterTest = isClusterTest | ClusterTestUtils.isClusterTestRequest(
+                            ((Map<String, String>)ctxObj).get(PradarService.PRADAR_CLUSTER_TEST_KEY));
                         if (isClusterTest) {
                             childCtx.setClusterTest(true);
                         }
-                        isDebug = isDebug | ClusterTestUtils.isDebugRequest(((Map<String, String>) ctxObj).get(PradarService.PRADAR_DEBUG_KEY));
+                        isDebug = isDebug | ClusterTestUtils.isDebugRequest(
+                            ((Map<String, String>)ctxObj).get(PradarService.PRADAR_DEBUG_KEY));
                         if (isDebug) {
                             childCtx.setDebug(true);
                         }
@@ -1868,7 +1910,8 @@ public final class Pradar {
                 Pradar.setDebug(true);
             }
             if (PradarService.isSilence() && Pradar.isClusterTest()) {
-                LOGGER.error("[pradar]silence module ! can not handle cluster test data in startInvoke: {}", JSON.toJSONString(ctx));
+                LOGGER.error("[pradar]silence module ! can not handle cluster test data in startInvoke: {}",
+                    JSON.toJSONString(ctx));
             }
             return ctx;
         } catch (PressureMeasureError e) {
@@ -1964,14 +2007,14 @@ public final class Pradar {
                 }
             }
 
-//             弹出当前 ctx
+            //             弹出当前 ctx
             InvokeContext.set(ctx.parentInvokeContext);
             // server 改为直接清空当前线程上下文, 可能会和dubbox http模式冲突
             /*if (ctx.parentInvokeContext != null && !"dubbo".equals(ctx.getMiddlewareName())) {
                 LOGGER.warn("endServerInvoke, but parentInvokeContext not empty!");
                 printContextStack();
             }*/
-//            clearInvokeContext();
+            //            clearInvokeContext();
         } catch (Throwable re) {
             LOGGER.error("rpcServerSend", re);
         }

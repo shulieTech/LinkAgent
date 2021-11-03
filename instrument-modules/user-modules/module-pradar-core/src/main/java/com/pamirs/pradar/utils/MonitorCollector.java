@@ -14,21 +14,9 @@
  */
 package com.pamirs.pradar.utils;
 
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarCoreUtils;
-import com.pamirs.pradar.PradarSwitcher;
-import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import oshi.SystemInfo;
-import oshi.hardware.*;
-import oshi.software.os.FileSystem;
-import oshi.software.os.OSFileStore;
-import oshi.util.Util;
-
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
@@ -39,6 +27,24 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.pamirs.pradar.AppNameUtils;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarCoreUtils;
+import com.pamirs.pradar.PradarSwitcher;
+import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import oshi.SystemInfo;
+import oshi.hardware.CentralProcessor;
+import oshi.hardware.GlobalMemory;
+import oshi.hardware.HWDiskStore;
+import oshi.hardware.HardwareAbstractionLayer;
+import oshi.hardware.NetworkIF;
+import oshi.software.os.FileSystem;
+import oshi.software.os.OSFileStore;
+import oshi.util.Util;
+
 /**
  * @author angju
  * @date 2020/7/20 13:52
@@ -48,6 +54,8 @@ public class MonitorCollector {
 
     public static final String CPU_USAGE_KEY = "cpuUsage";
     public static final String IO_WAIT_KEY = "ioWait";
+    public static final String NETWORK_BANDWIDTH_KEY = "networkBandwidth";
+    public static final String NETWORK_BANDWIDTH_RATE_KEY = "networkBandwidthRate";
     private final static Logger logger = LoggerFactory.getLogger(MonitorCollector.class.getName());
     private static final ThreadLocal<DecimalFormat> decimalFormatThreadLocal = new ThreadLocal<DecimalFormat>() {
         @Override
@@ -86,6 +94,71 @@ public class MonitorCollector {
      * 初始化 monitor 数据收集任务
      */
     public void start() {
+        boolean runningInContainer = isRunningInsideDocker();
+        if (runningInContainer) {
+            executeResourcesInfoCollectingTaskInsideContainer();
+        } else {
+            executeResourcesInfoCollectingTaskOutsideContainer();
+        }
+    }
+
+    private void executeResourcesInfoCollectingTaskInsideContainer() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
+
+            private ContainerStatsInfoCollector collector;
+
+            @Override
+            public void run() {
+
+                if (!PradarSwitcher.isMonitorEnabled()) {
+                    return;
+                }
+                if (collector == null) {
+                    collector = new ContainerStatsInfoCollector();
+                }
+                try {
+                    long timeStamp = System.currentTimeMillis() / 1000;
+                    String appName = AppNameUtils.appName();
+                    StringBuilder stringBuilder = new StringBuilder();
+                    ContainerStatsInfoCollector.ContainerStatsInfo statsInfo = collector.getContainerStatsInfo();
+
+                    stringBuilder.append(appName).append("|")
+                        .append(timeStamp).append("|")
+                        .append(StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append(
+                            "|")
+                        .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append("|")
+                        .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append("|")
+                        .append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append("|")
+                        .append(statsInfo.getCpuUsagePercent()).append("|")
+                        .append(statsInfo.getLatest1MinLoadAvg()).append("|")
+                        .append(statsInfo.getLatest5MinLoadAvg()).append("|")
+                        .append(statsInfo.getLatest15MinLoadAvg()).append("|")
+                        .append(statsInfo.getMemoryUsagePercent()).append("|")
+                        .append(statsInfo.getTotalMemory()).append("|")
+                        .append(statsInfo.getAvailableMemory()).append("|")
+                        .append(statsInfo.getCpuIoWaitUsagePercent()).append("|")
+                        .append(statsInfo.getNetworkUsage()).append('|')
+                        .append(statsInfo.getNetworkSpeed()).append('|')
+                        .append(statsInfo.getCoresNum()).append("|")
+                        .append(statsInfo.getTotalDiskSpace()).append('|')
+                        .append(statsInfo.getUsableDiskSpace()).append('|')
+                        .append(statsInfo.getDiskReadBytes()).append('|')
+                        .append(statsInfo.getDiskWriteBytes()).append('|')
+                        .append(1).append('|')
+                        .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
+                        .append(PradarCoreUtils.NEWLINE);
+                    Pradar.commitMonitorLog(stringBuilder.toString());
+                } catch (Throwable e) {
+                    if (printLogCount > 0) {
+                        printLogCount--;
+                        logger.error("write server monitor error!", e);
+                    }
+                }
+            }
+        }, 5, 1, TimeUnit.SECONDS);
+    }
+
+    private void executeResourcesInfoCollectingTaskOutsideContainer() {
         future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -98,32 +171,44 @@ public class MonitorCollector {
                     StringBuilder stringBuilder = new StringBuilder();
                     HardwareAbstractionLayer hal = si.getHardware();
                     CentralProcessor processor = si.getHardware().getProcessor();
-                    Map<String, String> cpuInfoResult = getCpuUsageAndIoWait(processor);
+                    Map<String, String> cpuInfoResult = getCpuUsageAndIoWaitAndNetwork(hal);
                     String[] cpuLoad = getCpuLoad(processor);
                     String memoryUsage = getMemoryUsage(hal.getMemory());
                     int cpuNum = getCpus(processor);
                     long[] diskReadWrites = getDisk(hal);
+                    hal.getNetworkIFs()[0].getSpeed();
                     long[] diskUses = getFileSystem();
                     stringBuilder.append(appName).append("|")
-                            .append(timeStamp).append("|")
-                            .append(Pradar.AGENT_ID).append("|")
-                            .append(cpuInfoResult.get(CPU_USAGE_KEY) == null ? "" : cpuInfoResult.get(CPU_USAGE_KEY)).append("|")
-                            .append(cpuLoad[0]).append("|")
-                            .append(cpuLoad[1]).append("|")
-                            .append(cpuLoad[2]).append("|")
-                            .append(memoryUsage).append("|")
-                            .append(hal.getMemory().getTotal()).append("|")
-                            .append(hal.getMemory().getAvailable()).append("|")
-                            .append(cpuInfoResult.get(IO_WAIT_KEY) == null ? "" : cpuInfoResult.get(IO_WAIT_KEY)).append("|")
-                            .append(0).append('|')
-                            .append(0).append('|')
-                            .append(cpuNum).append("|")
-                            .append(diskUses != null ? diskUses[0] : "").append('|')
-                            .append(diskUses != null ? diskUses[1] : "").append('|')
-                            .append(diskReadWrites != null ? diskReadWrites[0] : "").append('|')
-                            .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|')
-                            .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
-                            .append(PradarCoreUtils.NEWLINE);
+                        .append(timeStamp).append("|")
+                        .append(StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append(
+                            "|")
+                        .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append("|")
+                        .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append("|")
+                        .append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append("|")
+                        .append(cpuInfoResult.get(CPU_USAGE_KEY) == null ? "" : cpuInfoResult.get(CPU_USAGE_KEY))
+                        .append("|")
+                        .append(cpuLoad[0]).append("|")
+                        .append(cpuLoad[1]).append("|")
+                        .append(cpuLoad[2]).append("|")
+                        .append(memoryUsage).append("|")
+                        .append(hal.getMemory().getTotal()).append("|")
+                        .append(hal.getMemory().getAvailable()).append("|")
+                        //                            .append(cpuInfoResult.get(IO_WAIT_KEY) == null ? "" :
+                        //                            cpuInfoResult.get(IO_WAIT_KEY)).append("|")
+                        .append(0).append("|")
+                        //                            .append(cpuInfoResult.get(NETWORK_BANDWIDTH_RATE_KEY) == null ?
+                        //                            0 : cpuInfoResult.get(NETWORK_BANDWIDTH_RATE_KEY)).append('|')
+                        .append(0).append("|")
+                        .append(cpuInfoResult.get(NETWORK_BANDWIDTH_KEY) == null ? 0
+                            : cpuInfoResult.get(NETWORK_BANDWIDTH_KEY)).append('|')
+                        .append(cpuNum).append("|")
+                        .append(diskUses != null ? diskUses[0] : "").append('|')
+                        .append(diskUses != null ? diskUses[1] : "").append('|')
+                        .append(diskReadWrites != null ? diskReadWrites[0] : "").append('|')
+                        .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|')
+                        .append(0).append('|')
+                        .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
+                        .append(PradarCoreUtils.NEWLINE);
                     Pradar.commitMonitorLog(stringBuilder.toString());
                 } catch (Throwable e) {
                     if (printLogCount > 0) {
@@ -133,7 +218,6 @@ public class MonitorCollector {
                 }
             }
         }, 5, 1, TimeUnit.SECONDS);
-
     }
 
     public long[] getFileSystem() {
@@ -146,7 +230,7 @@ public class MonitorCollector {
                 totalSpace += store.getTotalSpace();
                 useSpace += store.getUsableSpace();
             }
-            return new long[]{totalSpace, useSpace};
+            return new long[] {totalSpace, useSpace};
         } catch (Throwable e) {
             if (System.currentTimeMillis() - lastErrorTime > 600000) {
                 logger.warn("getFileSystem error! ", e);
@@ -171,13 +255,12 @@ public class MonitorCollector {
                 readBytes += hwDiskStore.getReadBytes();
                 writeBytes += hwDiskStore.getWriteBytes();
             }
-            return new long[]{readBytes, writeBytes};
+            return new long[] {readBytes, writeBytes};
         } catch (Throwable e) {
             return null;
         }
 
     }
-
 
     /**
      * cpu 核数量
@@ -225,7 +308,8 @@ public class MonitorCollector {
         if (name != null) {
             long networkSpeed = getSpeed(name);
             if (networkSpeed > 0) {
-                Double networkUsage = ((afterBytesRecv - beforeBytesRecv) + (afterBytesSend - beforeBytesSend)) * 100d / networkSpeed;
+                Double networkUsage = ((afterBytesRecv - beforeBytesRecv) + (afterBytesSend - beforeBytesSend)) * 100d
+                    / networkSpeed;
                 result.put(NETWORK_USAGE_KEY, decimalFormatThreadLocal.get().format(networkUsage));
                 result.put(NETWORK_SPEED_KEY, networkSpeed);
             } else {
@@ -236,7 +320,6 @@ public class MonitorCollector {
         return result;
     }
 
-
     /**
      * 获取内存使用率
      *
@@ -244,9 +327,9 @@ public class MonitorCollector {
      * @return
      */
     public String getMemoryUsage(GlobalMemory memory) {
-        return decimalFormatThreadLocal.get().format((memory.getTotal() - memory.getAvailable()) * 100d / memory.getTotal());
+        return decimalFormatThreadLocal.get().format(
+            (memory.getTotal() - memory.getAvailable()) * 100d / memory.getTotal());
     }
-
 
     /**
      * 获取总内存
@@ -258,7 +341,6 @@ public class MonitorCollector {
         return memory.getTotal();
     }
 
-
     /**
      * 获取cpuLoad
      *
@@ -266,29 +348,49 @@ public class MonitorCollector {
      */
     public String[] getCpuLoad(CentralProcessor processor) {
         double[] loadAverage = processor.getSystemLoadAverage(3);
-        return new String[]{decimalFormatThreadLocal.get().format(loadAverage[0]), decimalFormatThreadLocal.get().format(loadAverage[1]), decimalFormatThreadLocal.get().format(loadAverage[2])};
+        return new String[] {decimalFormatThreadLocal.get().format(loadAverage[0]),
+            decimalFormatThreadLocal.get().format(loadAverage[1]), decimalFormatThreadLocal.get().format(
+            loadAverage[2])};
     }
-
 
     /**
      * 获取cpu利用率和iowait
      *
      * @return
      */
-    public Map<String, String> getCpuUsageAndIoWait(CentralProcessor processor) {
-        long[] prevTicks = processor.getSystemCpuLoadTicks();
-        Util.sleep(450);
-        long[] ticks = processor.getSystemCpuLoadTicks();
+    public Map<String, String> getCpuUsageAndIoWaitAndNetwork(HardwareAbstractionLayer hal) {
+        long[] prevTicks = hal.getProcessor().getSystemCpuLoadTicks();
+        NetworkIF eth = null;
+        for (NetworkIF networkIF : hal.getNetworkIFs()) {
+            if ("eth0".equals(networkIF.getDisplayName())) {
+                eth = networkIF;
+                break;
+            }
+        }
+        long speed = eth.getSpeed();
+        long bytesRecv = eth.getBytesRecv();
+        long bytesSent = eth.getBytesSent();
+        long sleep = 450;
+        Util.sleep(sleep);
+        long[] ticks = hal.getProcessor().getSystemCpuLoadTicks();
 
-        long user = ticks[CentralProcessor.TickType.USER.getIndex()] - prevTicks[CentralProcessor.TickType.USER.getIndex()];
-        long nice = ticks[CentralProcessor.TickType.NICE.getIndex()] - prevTicks[CentralProcessor.TickType.NICE.getIndex()];
-        long sys = ticks[CentralProcessor.TickType.SYSTEM.getIndex()] - prevTicks[CentralProcessor.TickType.SYSTEM.getIndex()];
-        long idle = ticks[CentralProcessor.TickType.IDLE.getIndex()] - prevTicks[CentralProcessor.TickType.IDLE.getIndex()];
-        long iowait = ticks[CentralProcessor.TickType.IOWAIT.getIndex()] - prevTicks[CentralProcessor.TickType.IOWAIT.getIndex()];
-        long irq = ticks[CentralProcessor.TickType.IRQ.getIndex()] - prevTicks[CentralProcessor.TickType.IRQ.getIndex()];
-        long softirq = ticks[CentralProcessor.TickType.SOFTIRQ.getIndex()] - prevTicks[CentralProcessor.TickType.SOFTIRQ.getIndex()];
-//        long steal = ticks[CentralProcessor.TickType.STEAL.getIndex()] - prevTicks[CentralProcessor.TickType.STEAL.getIndex()];
-//        long totalCpu = user + nice + sys + idle + iowait + irq + softirq + steal;
+        long user = ticks[CentralProcessor.TickType.USER.getIndex()]
+            - prevTicks[CentralProcessor.TickType.USER.getIndex()];
+        long nice = ticks[CentralProcessor.TickType.NICE.getIndex()]
+            - prevTicks[CentralProcessor.TickType.NICE.getIndex()];
+        long sys = ticks[CentralProcessor.TickType.SYSTEM.getIndex()]
+            - prevTicks[CentralProcessor.TickType.SYSTEM.getIndex()];
+        long idle = ticks[CentralProcessor.TickType.IDLE.getIndex()]
+            - prevTicks[CentralProcessor.TickType.IDLE.getIndex()];
+        long iowait = ticks[CentralProcessor.TickType.IOWAIT.getIndex()]
+            - prevTicks[CentralProcessor.TickType.IOWAIT.getIndex()];
+        long irq = ticks[CentralProcessor.TickType.IRQ.getIndex()]
+            - prevTicks[CentralProcessor.TickType.IRQ.getIndex()];
+        long softirq = ticks[CentralProcessor.TickType.SOFTIRQ.getIndex()]
+            - prevTicks[CentralProcessor.TickType.SOFTIRQ.getIndex()];
+        //        long steal = ticks[CentralProcessor.TickType.STEAL.getIndex()] - prevTicks[CentralProcessor
+        //        .TickType.STEAL.getIndex()];
+        //        long totalCpu = user + nice + sys + idle + iowait + irq + softirq + steal;
         long totalCpu = user + nice + sys + idle + iowait + irq + softirq;
         double cpuUsage = (totalCpu - idle) * 100d / totalCpu;
         double ioWait = iowait * 100d / totalCpu;
@@ -303,9 +405,19 @@ public class MonitorCollector {
         } else {
             result.put(IO_WAIT_KEY, decimalFormatThreadLocal.get().format(ioWait));
         }
+
+        // 如果拿不到网卡,默认10000Mbs, 如果控制台配置了host网卡, 会矫正数据
+        if (speed == 0) {
+            speed = 10000 * 1024 * 1024;
+        }
+        result.put(NETWORK_BANDWIDTH_KEY, speed / 1024 / 1024 + "");
+        long bytes = eth.getBytesRecv() - bytesRecv + eth.getBytesSent() - bytesSent;
+        double networkUsage = Double.parseDouble(
+            new DecimalFormat("0.0000000").format(100 * bytes / (speed / 8.0) / sleep * 1000));
+        result.put(NETWORK_BANDWIDTH_RATE_KEY, networkUsage + "");
+
         return result;
     }
-
 
     public long getSpeed(String name) {
         Process pro1 = null;
@@ -338,7 +450,7 @@ public class MonitorCollector {
                 }
             }
         } catch (IOException e) {
-//            logger.error("getSpeed error {}",e.getMessage());
+            //            logger.error("getSpeed error {}",e.getMessage());
         } finally {
             if (pro1 != null) {
                 pro1.destroy();
@@ -354,6 +466,33 @@ public class MonitorCollector {
         }
 
         return 0;
+    }
+
+    private boolean isRunningInsideDocker() {
+        File file = new File("/proc/1/cgroup");
+        if (!file.exists()) {
+            return false;
+        }
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("/docker")) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+
+                }
+            }
+        }
+        return false;
     }
 
     public void stop() {

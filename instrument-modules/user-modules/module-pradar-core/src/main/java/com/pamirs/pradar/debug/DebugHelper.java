@@ -87,7 +87,7 @@ public class DebugHelper {
         args.put("traceId", Pradar.getTraceId());
         args.put("rpcId", Pradar.getInvokeId());
         args.put("logType", Pradar.getLogType() + "");
-        args.put("agentId", Pradar.getAgentId());
+        args.put("agentId", Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
         args.put("appName", AppNameUtils.appName());
         return args;
     }

@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.agent.spi.config;
 
-
 import java.io.InputStream;
 import java.util.Map;
 
@@ -140,11 +139,11 @@ public interface AgentConfig {
     String getAgentId();
 
     /**
-     * 获取 user app key
+     * 获取 tenant app key
      *
      * @return
      */
-    String getUserAppKey();
+    String getTenantAppKey();
 
     /**
      * 获取userid
@@ -223,6 +222,19 @@ public interface AgentConfig {
      */
     String getTroWebUrl();
 
+    /**
+     * 获取当前环境
+     *
+     * @return
+     */
+    String getEnvCode();
+
+    /**
+     * 获取http请求必须携带的head
+     *
+     * @return map集合
+     */
+    Map<String, String> getHttpMustHeaders();
 
     Map<String, String> getAgentFileConfigs();
 }

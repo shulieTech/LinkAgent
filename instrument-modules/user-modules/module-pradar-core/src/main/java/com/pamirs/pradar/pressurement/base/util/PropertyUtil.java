@@ -14,10 +14,10 @@
  */
 package com.pamirs.pradar.pressurement.base.util;
 
+import java.io.File;
+
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
-
-import java.io.File;
 
 public class PropertyUtil {
 
@@ -53,6 +53,6 @@ public class PropertyUtil {
     }
 
     public static String getAppKey() {
-        return System.getProperty(Pradar.USER_APP_KEY, "default");
+        return System.getProperty(Pradar.PRADAR_TENANT_KEY, "default");
     }
 }

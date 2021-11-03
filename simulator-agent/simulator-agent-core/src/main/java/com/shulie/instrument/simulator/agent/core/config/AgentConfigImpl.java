@@ -14,13 +14,13 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
-import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import org.apache.commons.io.IOUtils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
+
+import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
+import org.apache.commons.io.IOUtils;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -111,8 +111,8 @@ public class AgentConfigImpl implements AgentConfig {
     }
 
     @Override
-    public String getUserAppKey() {
-        return coreConfig.getUserAppKey();
+    public String getTenantAppKey() {
+        return coreConfig.getTenantAppKey();
     }
 
     @Override
@@ -172,6 +172,16 @@ public class AgentConfigImpl implements AgentConfig {
     }
 
     @Override
+    public String getEnvCode() {
+        return coreConfig.getEnvCode();
+    }
+
+    @Override
+    public Map<String, String> getHttpMustHeaders() {
+        return coreConfig.getHttpMustHeaders();
+    }
+
+    @Override
     public Map<String, String> getAgentFileConfigs() {
         return Collections.unmodifiableMap(coreConfig.getAgentFileConfigs());
     }
@@ -182,7 +192,8 @@ public class AgentConfigImpl implements AgentConfig {
      * @return
      */
     public String getAgentVersion0() {
-        final InputStream is = getClass().getClassLoader().getResourceAsStream("com/shulie/instrument/simulator/agent/version");
+        final InputStream is = getClass().getClassLoader().getResourceAsStream(
+            "com/shulie/instrument/simulator/agent/version");
         try {
             return IOUtils.toString(is);
         } catch (IOException e) {

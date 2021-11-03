@@ -24,14 +24,14 @@
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>com.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-servlet-common</artifactId>
             <version>1.0.0</version>
             <scope>provided</scope>

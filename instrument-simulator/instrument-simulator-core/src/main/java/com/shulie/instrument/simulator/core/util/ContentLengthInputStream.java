@@ -19,7 +19,7 @@ import java.io.InputStream;
 
 public class ContentLengthInputStream extends InputStream {
 
-    private long contentLength;
+    private final long contentLength;
 
     private long pos = 0;
 

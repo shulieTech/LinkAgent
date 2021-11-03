@@ -14,15 +14,16 @@
  */
 package com.shulie.instrument.simulator.agent.core.uploader;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.alibaba.fastjson.JSON;
+
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -54,7 +55,6 @@ public class HttpApplicationUploader implements ApplicationUploader {
             return;
         }
 
-        String userAppKey = agentConfig.getUserAppKey();
         if (StringUtils.isBlank(webUrl)) {
             logger.error("AGENT: user.app.key is not assigned.");
             return;
@@ -75,10 +75,13 @@ public class HttpApplicationUploader implements ApplicationUploader {
         map.put(APP_COLUMN_CACHE_PATH, appName + "/cache.sh");
         final StringBuilder url = new StringBuilder(webUrl).append(APP_INSERT_URL);
         try {
-            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), userAppKey, JSON.toJSONString(map));
-            if (httpResult == null || !httpResult.isSuccess()) {
+            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), agentConfig.getHttpMustHeaders(),
+                JSON.toJSONString(map));
+            if (httpResult == null) {
+                LOGGER.error("上报应用失败 url={}, result is null", url);
+            } else if (!httpResult.isSuccess()) {
                 LOGGER.error("上报应用失败 url={}, result={}", url, httpResult.getResult());
-            }else{
+            } else {
                 LOGGER.info("上报应用成功 url={}, result={}", url, httpResult.getResult());
             }
         } catch (Throwable e) {

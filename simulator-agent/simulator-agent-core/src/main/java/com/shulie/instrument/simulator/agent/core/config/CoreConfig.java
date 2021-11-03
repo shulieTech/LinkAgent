@@ -112,12 +112,13 @@ public class CoreConfig {
 
     public CoreConfig(String agentHome) {
         //暂时无动态参数，不开启
-//        initFetchConfigTask();
+        //        initFetchConfigTask();
         this.agentHome = agentHome;
         this.configFilePath = agentHome + File.separator + CONFIG_PATH_NAME;
         this.providerFilePath = agentHome + File.separator + PROVIDER_PATH_NAME;
         this.simulatorHome = agentHome + File.separator + AGENT_PATH_NAME;
-        this.simulatorJarPath = this.simulatorHome + File.separator + "simulator" + File.separator + "instrument-simulator-agent.jar";
+        this.simulatorJarPath = this.simulatorHome + File.separator + "simulator" + File.separator
+            + "instrument-simulator-agent.jar";
         this.logConfigFilePath = this.configFilePath + File.separator + "simulator-agent-logback.xml";
         File configFile = new File(configFilePath, "agent.properties");
         Properties properties = new Properties();
@@ -150,6 +151,7 @@ public class CoreConfig {
                 try {
                     configIn.close();
                 } catch (IOException e) {
+                    //ignore
                 }
             }
         }
@@ -181,9 +183,10 @@ public class CoreConfig {
             public void run() {
                 try {
                     Map<String, Object> dynamicConfigs = ConfigUtils.getDynamicAgentConfigFromUrl(getTroWebUrl(),
-                        getAppName(), "", getUserAppKey());
-                    if (dynamicConfigs == null || dynamicConfigs.get("success") == null || !Boolean.valueOf(
-                        dynamicConfigs.get("success").toString())) {
+                        getAppName(), "", getHttpMustHeaders());
+                    if (dynamicConfigs == null
+                        || dynamicConfigs.get("success") == null
+                        || !Boolean.parseBoolean(dynamicConfigs.get("success").toString())) {
                         logger.error("getDynamicAgentConfigFromUrl failed");
                         return;
                     }
@@ -194,7 +197,7 @@ public class CoreConfig {
                     //                        }
                     //                    }
                 } catch (Throwable e) {
-                    logger.error("CoreConfig getRunnableTask error {}", e);
+                    logger.error("CoreConfig getRunnableTask error ", e);
                 }
             }
         };
@@ -436,7 +439,7 @@ public class CoreConfig {
     public String getAgentId() {
         String agentId = internalGetAgentId();
         if (StringUtils.isBlank(agentId)) {
-            return new StringBuilder(AddressUtils.getLocalAddress()).append("-").append(PidUtils.getPid()).toString();
+            return AddressUtils.getLocalAddress() + "-" + PidUtils.getPid();
         } else {
             Properties properties = new Properties();
             properties.setProperty("pid", String.valueOf(PidUtils.getPid()));
@@ -461,13 +464,13 @@ public class CoreConfig {
         return value;
     }
 
-    public String getUserAppKey() {
-        String value = System.getProperty("user.app.key");
+    public String getTenantAppKey() {
+        String value = System.getProperty("tenant.app.key", null);
         if (StringUtils.isBlank(value)) {
-            value = getProperty("user.app.key", null);
+            value = getProperty("tenant.app.key",null);
         }
         if (StringUtils.isBlank(value)) {
-            value = System.getenv("user.app.key");
+            value = System.getenv("tenant.app.key");
         }
         return value;
     }
@@ -492,6 +495,35 @@ public class CoreConfig {
             value = System.getenv("pradar.user.id");
         }
         return value;
+    }
+
+    /**
+     * 获取当前环境
+     *
+     * @return 当前环境
+     */
+    public String getEnvCode() {
+        String value = getProperty("pradar.env.code", null);
+        if (StringUtils.isBlank(value)) {
+            value = System.getProperty("pradar.env.code");
+        }
+        if (StringUtils.isBlank(value)) {
+            value = System.getenv("pradar.env.code");
+        }
+        return value;
+    }
+
+    /**
+     * 获取发起http请求中必须包含的head
+     *
+     * @return map集合
+     */
+    public Map<String, String> getHttpMustHeaders() {
+        Map<String, String> headerMap = new HashMap<String, String>();
+        headerMap.put("tenantAppKey", getTenantAppKey());
+        headerMap.put("userId", getUserId());
+        headerMap.put("envCode", getEnvCode());
+        return headerMap;
     }
 
     /**

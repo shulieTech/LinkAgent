@@ -14,6 +14,23 @@
  */
 package com.shulie.instrument.simulator.agent.core;
 
+import java.io.File;
+import java.io.FileFilter;
+import java.lang.annotation.Annotation;
+import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Field;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.ServiceLoader;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.core.classloader.ProviderClassLoader;
@@ -32,7 +49,11 @@ import com.shulie.instrument.simulator.agent.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
 import com.shulie.instrument.simulator.agent.spi.command.Command;
-import com.shulie.instrument.simulator.agent.spi.command.impl.*;
+import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.ReloadModuleCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
 import com.shulie.instrument.simulator.agent.spi.impl.HttpAgentScheduler;
@@ -40,22 +61,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Resource;
-import java.io.File;
-import java.io.FileFilter;
-import java.lang.annotation.Annotation;
-import java.lang.instrument.Instrumentation;
-import java.lang.reflect.Field;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -84,7 +89,8 @@ public class CoreLauncher {
         this(agentHome, -1L, null, null, null, null);
     }
 
-    public CoreLauncher(String agentHome, long attachId, String attachName, String tagName, Instrumentation instrumentation, ClassLoader classLoader) {
+    public CoreLauncher(String agentHome, long attachId, String attachName, String tagName,
+        Instrumentation instrumentation, ClassLoader classLoader) {
         this.coreConfig = new CoreConfig(agentHome);
         this.instrumentation = instrumentation;
         this.classLoader = classLoader;
@@ -109,12 +115,13 @@ public class CoreLauncher {
         initConfigUtils(agentConfig);
     }
 
-    private void initConfigUtils(AgentConfig agentConfig){
-        ConfigUtils.setUserAppKey(agentConfig.getUserAppKey());
+    private void initConfigUtils(AgentConfig agentConfig) {
+        ConfigUtils.setTenantAppKey(agentConfig.getTenantAppKey());
         ConfigUtils.setAgentId(agentConfig.getAgentId());
+        ConfigUtils.setUserId(agentConfig.getUserId());
+        ConfigUtils.setEnvCode(agentConfig.getEnvCode());
         ConfigUtils.setAppName(agentConfig.getAppName());
     }
-
 
     /**
      * 初始化 Agent Loader
@@ -167,12 +174,14 @@ public class CoreLauncher {
         }
     }
 
-    private static Field[] getFieldsWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
+    private static Field[] getFieldsWithAnnotation(final Class<?> cls,
+        final Class<? extends Annotation> annotationCls) {
         final List<Field> annotatedFieldsList = getFieldsListWithAnnotation(cls, annotationCls);
         return annotatedFieldsList.toArray(new Field[0]);
     }
 
-    private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
+    private static List<Field> getFieldsListWithAnnotation(final Class<?> cls,
+        final Class<? extends Annotation> annotationCls) {
         final List<Field> allFields = getAllFieldsList(cls);
         final List<Field> annotatedFields = new ArrayList<Field>();
         for (final Field field : allFields) {
@@ -210,7 +219,8 @@ public class CoreLauncher {
                     ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
                     applicationUploader.checkAndGenerateApp();
 
-                    Register register = RegisterFactory.getRegister(agentConfig.getProperty("register.name", "zookeeper"));
+                    Register register = RegisterFactory.getRegister(
+                        agentConfig.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
                     register.start();
@@ -220,15 +230,15 @@ public class CoreLauncher {
                         @Override
                         public void execute(Command command) throws Throwable {
                             if (command instanceof StartCommand) {
-                                launcher.startup(((StartCommand) command));
+                                launcher.startup(((StartCommand)command));
                             } else if (command instanceof StopCommand) {
-                                launcher.shutdown((StopCommand) command);
+                                launcher.shutdown((StopCommand)command);
                             } else if (command instanceof LoadModuleCommand) {
-                                launcher.loadModule(((LoadModuleCommand) command));
+                                launcher.loadModule(((LoadModuleCommand)command));
                             } else if (command instanceof UnloadModuleCommand) {
-                                launcher.unloadModule(((UnloadModuleCommand) command));
+                                launcher.unloadModule(((UnloadModuleCommand)command));
                             } else if (command instanceof ReloadModuleCommand) {
-                                launcher.reloadModule(((ReloadModuleCommand) command));
+                                launcher.reloadModule(((ReloadModuleCommand)command));
                             }
                         }
 
@@ -247,19 +257,18 @@ public class CoreLauncher {
                     agentScheduler.init(schedulerArgs);
                     agentScheduler.start();
 
-
                 } catch (AgentDownloadException e) {
                     LOGGER.error("SIMULATOR: download agent occur exception. ", e);
                     if (delay > 0) {
                         startService.schedule(this, 10, TimeUnit.SECONDS);
-                    }else{
+                    } else {
                         throw e;
                     }
                 } catch (Throwable t) {
                     LOGGER.error("SIMULATOR: agent start occur exception. ", t);
                     if (delay > 0) {
                         startService.schedule(this, 10, TimeUnit.SECONDS);
-                    }else{
+                    } else {
                         throw new RuntimeException(t);
                     }
                 }
@@ -267,7 +276,7 @@ public class CoreLauncher {
         };
         if (delay <= 0) {
             runnable.run();
-        }else{
+        } else {
             this.startService.schedule(runnable, delay, unit);
         }
         if (LOGGER.isInfoEnabled()) {
@@ -276,7 +285,8 @@ public class CoreLauncher {
             } else {
                 LOGGER.warn("SIMULATOR: current can't found tag name. may be agent file is incomplete.");
             }
-            LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay, unit.toString());
+            LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay,
+                unit.toString());
         }
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -293,10 +303,12 @@ public class CoreLauncher {
     private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {
         RegisterOptions registerOptions = new RegisterOptions();
         registerOptions.setAppName(agentConfig.getAppName());
-        registerOptions.setRegisterBasePath(agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
+        registerOptions.setRegisterBasePath(
+            agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
         registerOptions.setRegisterName(agentConfig.getProperty("simulator.hearbeat.register.name", "zookeeper"));
         registerOptions.setZkServers(agentConfig.getProperty("simulator.zk.servers", "localhost:2181"));
-        registerOptions.setConnectionTimeoutMillis(agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));
+        registerOptions.setConnectionTimeoutMillis(
+            agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));
         registerOptions.setSessionTimeoutMillis(agentConfig.getIntProperty("simulator.zk.session.timeout.ms", 60000));
         return registerOptions;
     }

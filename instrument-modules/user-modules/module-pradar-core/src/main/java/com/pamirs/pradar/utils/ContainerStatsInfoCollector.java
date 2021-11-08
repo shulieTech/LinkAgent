@@ -1,37 +1,36 @@
-/*
+/**
  * Copyright 2021 Shulie Technology, Co.Ltd
  * Email: shulie@shulie.io
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.pamirs.pradar.utils;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import oshi.util.FileUtil;
 import oshi.util.Util;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * @Description 容器水位信息采集
- * @Author ocean_wll
- * @Date 2021/11/3 3:57 下午
+ * @author jiangjibo
+ * @date 2021/10/22 9:35 上午
+ * @description: 容器水位信息采集
  */
 public class ContainerStatsInfoCollector {
 
@@ -78,6 +77,7 @@ public class ContainerStatsInfoCollector {
         }
         StatsInfo previous = previousRecord;
         StatsInfo latest = this.collectContainerStatsInfo();
+
         // 采集时间差
         long timeDiff = latest.collectingTime - previous.collectingTime;
 
@@ -86,25 +86,21 @@ public class ContainerStatsInfoCollector {
 
         DecimalFormat format = new DecimalFormat("0.00");
 
-        // 100% * 容器使用cpu时间 / 系统使用cpu时间 / 时间差
-        // 数据太大了，容易变成负数，先缩小1000倍， cpu使用率是整体的, 上限就是100，所以不乘核数
-        double containerCpuDelta = 100.0 * (latest.containerCpuValue / 1000
-            - previous.containerCpuValue / 1000) /* * this.coresNum */;
-        double systemCpuDelta = (latest.systemCpuValue - previous.systemCpuValue) * (1000.0 * 1000 /* *1000 */
-            / userHz);
-        statsInfo.cpuUsagePercent = Double.parseDouble(
-            format.format(containerCpuDelta / systemCpuDelta / timeDiff * 1000.0));
-        statsInfo.cpuIoWaitUsagePercent = Double.parseDouble(format.format(
-            100 * (latest.systemIoWaitCpuValue - previous.systemIoWaitCpuValue) / (latest.systemCpuValue
-                - previous.systemCpuValue) / timeDiff * 1000.0));
+        // 100% * 容器使用cpu时间 / 系统使用cpu时间
+        //cpu使用率是整体的, 上限就是100，所以不乘核数
+        BigDecimal containerCpuDelta = latest.containerCpuValue.subtract(previous.containerCpuValue);
+        BigDecimal systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
+
+        statsInfo.cpuUsagePercent = containerCpuDelta.multiply(new BigDecimal(100)).divide(systemCpuDelta, 2, BigDecimal.ROUND_HALF_UP).doubleValue();
+
+        statsInfo.cpuIoWaitUsagePercent = Double.parseDouble(format.format(100 * (latest.systemIoWaitCpuValue - previous.systemIoWaitCpuValue) / (latest.systemCpuValue - previous.systemCpuValue)));
 
         statsInfo.latest1MinLoadAvg = Double.parseDouble(format.format(latest.latest1MinLoadAvg));
         statsInfo.latest5MinLoadAvg = Double.parseDouble(format.format(latest.latest5MinLoadAvg));
         statsInfo.latest15MinLoadAvg = Double.parseDouble(format.format(latest.latest15MinLoadAvg));
         statsInfo.totalMemory = latest.totalMemoryValue;
         statsInfo.availableMemory = latest.memAvailableValue;
-        statsInfo.memoryUsagePercent = Double.parseDouble(
-            format.format(100.0 * latest.usedMemoryValue / latest.totalMemoryValue));
+        statsInfo.memoryUsagePercent = Double.parseDouble(format.format(100.0 * latest.usedMemoryValue / latest.totalMemoryValue));
         statsInfo.totalDiskSpace = latest.totalDiskSpaceValue;
         statsInfo.usableDiskSpace = latest.availableDiskSpaceValue;
         statsInfo.diskReadBytes = latest.diskReadBytesValue;
@@ -116,8 +112,7 @@ public class ContainerStatsInfoCollector {
         statsInfo.rxBytes = latest.rxBytesValue;
         statsInfo.rxRate = (latest.rxBytesValue - previous.rxBytesValue) / timeDiff * 1000;
         statsInfo.networkSpeed = this.networkSpeed;
-        statsInfo.networkUsage = Double.parseDouble(new DecimalFormat("0.0000000").format(
-            100 * (statsInfo.rxRate + statsInfo.txRate) / (networkSpeed / 8.0 * 1024 * 1024)));
+        statsInfo.networkUsage = Double.parseDouble(new DecimalFormat("0.0000000").format(100 * (statsInfo.rxRate + statsInfo.txRate) / (networkSpeed / 8.0 * 1024 * 1024)));
 
         this.previousRecord = latest;
         return statsInfo;
@@ -141,45 +136,35 @@ public class ContainerStatsInfoCollector {
     private StatsInfo doCollectContainerStatsInfo() throws IOException {
         StatsInfo statsInfo = new StatsInfo();
         statsInfo.collectingTime = System.currentTimeMillis();
-
         // CPU
         List<String> contents = FileUtil.readFile("/proc/stat");
         String[] splits = contents.get(0).split("\\s+");
         statsInfo.systemIoWaitCpuValue = Long.parseLong(splits[5]);
-        statsInfo.systemCpuValue = Long.parseLong(splits[1]) + Long.parseLong(splits[2]) + Long.parseLong(splits[3])
-            + Long.parseLong(splits[4]) + Long.parseLong(
-            splits[5] + Long.parseLong(splits[6]) + Long.parseLong(splits[7]));
-        statsInfo.containerCpuValue = Long.parseLong(
-            (String)FileUtil.readFile("/sys/fs/cgroup/cpuacct/cpuacct.usage").get(0));
+        statsInfo.systemCpuValue = Long.parseLong(splits[1]) + Long.parseLong(splits[2]) + Long.parseLong(splits[3]) + Long.parseLong(splits[4]) + Long.parseLong(splits[5]) + Long.parseLong(splits[6]) + Long.parseLong(splits[7]) + Long.parseLong(splits[8]);
 
+        statsInfo.containerCpuValue = new BigDecimal(FileUtil.readFile("/sys/fs/cgroup/cpuacct/cpuacct.usage").get(0));
         // 网口
         if (this.eth == null) {
             this.eth = execCommand("ip -o -4 route show to default | awk '{print $5}'").get(0);
         }
-
         // 网卡
         if (networkSpeed == 0) {
-            this.networkSpeed = Integer.parseInt(
-                FileUtil.readFile(String.format("/sys/class/net/%s/speed", eth)).get(0));
+            this.networkSpeed = Integer.parseInt(FileUtil.readFile(String.format("/sys/class/net/%s/speed", eth)).get(0));
         }
 
         // 用户赫兹
         if (this.userHz == 0) {
             this.userHz = Integer.parseInt(execCommand("getconf CLK_TCK").get(0));
         }
-
         // 网络
-        statsInfo.rxBytesValue = Long.parseLong(
-            FileUtil.readFile(String.format("/sys/class/net/%s/statistics/rx_bytes", eth)).get(0));
-        statsInfo.txBytesValue = Long.parseLong(
-            FileUtil.readFile(String.format("/sys/class/net/%s/statistics/tx_bytes", eth)).get(0));
-
+        statsInfo.rxBytesValue = Long.parseLong(FileUtil.readFile(String.format("/sys/class/net/%s/statistics/rx_bytes", eth)).get(0));
+        statsInfo.txBytesValue = Long.parseLong(FileUtil.readFile(String.format("/sys/class/net/%s/statistics/tx_bytes", eth)).get(0));
         // CPU核心
         if (coresNum == 0) {
             String coreNumLine = FileUtil.readFile("/sys/fs/cgroup/cpuset/cpuset.cpus").get(0);
             int coreNum = 0;
             for (String split : coreNumLine.split(",")) {
-                if (StringUtils.isBlank(split)) {
+                if (split == null || split.trim().length() == 0) {
                     continue;
                 }
                 if (!split.contains("-")) {
@@ -190,14 +175,12 @@ public class ContainerStatsInfoCollector {
             }
             this.coresNum = coreNum;
         }
-
         // 负载
         String loadavgLine = FileUtil.readFile("/proc/loadavg").get(0);
         String[] loadavgs = loadavgLine.split(" ");
         statsInfo.latest1MinLoadAvg = Float.parseFloat(loadavgs[0].trim());
         statsInfo.latest5MinLoadAvg = Float.parseFloat(loadavgs[1].trim());
         statsInfo.latest15MinLoadAvg = Float.parseFloat(loadavgs[2].trim());
-
         // 内存
         List<String> meminfoLines = FileUtil.readFile("/sys/fs/cgroup/memory/memory.stat");
         long limit = Long.MAX_VALUE;
@@ -276,7 +259,7 @@ public class ContainerStatsInfoCollector {
 
     private List<String> execCommand(String cmd) throws IOException {
         List<String> result = new ArrayList<String>();
-        Process ps = Runtime.getRuntime().exec(new String[] {"/bin/sh", "-c", cmd});
+        Process ps = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmd});
         BufferedReader br = new BufferedReader(new InputStreamReader(ps.getInputStream()));
         String line;
         while ((line = br.readLine()) != null) {
@@ -318,7 +301,7 @@ public class ContainerStatsInfoCollector {
         /**
          * 容器使用cpu
          */
-        private long containerCpuValue;
+        private BigDecimal containerCpuValue;
 
         /**
          * 容器内存上限

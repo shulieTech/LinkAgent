@@ -7,6 +7,7 @@ LinkAgent是一个基于Java的开源agent，旨在通过JVM字节码增强，�
 
 ## 快速上手
 - see [快速上手 中文版](doc/QuickStart.md)
+- see [全链路压测指引](https://docs.shulie.io/docs/opensource/opensource-1d2ckv049184j)
 
 ## 使用指引
 

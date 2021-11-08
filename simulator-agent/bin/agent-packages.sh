@@ -13,10 +13,10 @@ exit_on_err() {
 
 # maven package the simulator
 if [ $# != 0 ]; then
-    mvn clean package -P $1 -Dmaven.test.skip=true -f ../pom.xml ||
+    mvn clean install -P $1 -Dmaven.test.skip=true -f ../pom.xml ||
       exit_on_err 1 "package agent failed."
 else
-    mvn clean package -Dmaven.test.skip=true -f ../pom.xml ||
+    mvn clean install -Dmaven.test.skip=true -f ../pom.xml ||
       exit_on_err 1 "package agent failed."
 fi
 

@@ -28,9 +28,7 @@ import oshi.software.os.FileSystem;
 import oshi.software.os.OSFileStore;
 import oshi.util.Util;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -86,6 +84,67 @@ public class MonitorCollector {
      * 初始化 monitor 数据收集任务
      */
     public void start() {
+        boolean runningInContainer = isRunningInsideDocker();
+        if (runningInContainer) {
+            executeResourcesInfoCollectingTaskInsideContainer();
+        } else {
+            executeResourcesInfoCollectingTaskOutsideContainer();
+        }
+    }
+
+    private void executeResourcesInfoCollectingTaskInsideContainer() {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
+
+            private ContainerStatsInfoCollector collector;
+
+            @Override
+            public void run() {
+
+                if (!PradarSwitcher.isMonitorEnabled()) {
+                    return;
+                }
+                if (collector == null) {
+                    collector = new ContainerStatsInfoCollector();
+                }
+                try {
+                    long timeStamp = System.currentTimeMillis() / 1000;
+                    String appName = AppNameUtils.appName();
+                    StringBuilder stringBuilder = new StringBuilder();
+                    ContainerStatsInfoCollector.ContainerStatsInfo statsInfo = collector.getContainerStatsInfo();
+
+                    stringBuilder.append(appName).append("|")
+                            .append(timeStamp).append("|")
+                            .append(Pradar.AGENT_ID).append("|")
+                            .append(statsInfo.getCpuUsagePercent()).append("|")
+                            .append(statsInfo.getLatest1MinLoadAvg()).append("|")
+                            .append(statsInfo.getLatest5MinLoadAvg()).append("|")
+                            .append(statsInfo.getLatest15MinLoadAvg()).append("|")
+                            .append(statsInfo.getMemoryUsagePercent()).append("|")
+                            .append(statsInfo.getTotalMemory()).append("|")
+                            .append(statsInfo.getAvailableMemory()).append("|")
+                            .append(statsInfo.getCpuIoWaitUsagePercent()).append("|")
+                            .append(statsInfo.getNetworkUsage()).append('|')
+                            .append(statsInfo.getNetworkSpeed()).append('|')
+                            .append(statsInfo.getCoresNum()).append("|")
+                            .append(statsInfo.getTotalDiskSpace()).append('|')
+                            .append(statsInfo.getUsableDiskSpace()).append('|')
+                            .append(statsInfo.getDiskReadBytes()).append('|')
+                            .append(statsInfo.getDiskWriteBytes()).append('|')
+                            .append(1).append('|')
+                            .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
+                            .append(PradarCoreUtils.NEWLINE);
+                    Pradar.commitMonitorLog(stringBuilder.toString());
+                } catch (Throwable e) {
+                    if (printLogCount > 0) {
+                        printLogCount--;
+                        logger.error("write server monitor error!", e);
+                    }
+                }
+            }
+        }, 5, 1, TimeUnit.SECONDS);
+    }
+
+    private void executeResourcesInfoCollectingTaskOutsideContainer() {
         future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -98,7 +157,7 @@ public class MonitorCollector {
                     StringBuilder stringBuilder = new StringBuilder();
                     HardwareAbstractionLayer hal = si.getHardware();
                     CentralProcessor processor = si.getHardware().getProcessor();
-                    Map<String, String> cpuInfoResult = getCpuUsageAndIoWait(processor);
+                    Map<String, String> cpuInfoResult = getCpuUsageAndIoWaitAndNetwork(processor);
                     String[] cpuLoad = getCpuLoad(processor);
                     String memoryUsage = getMemoryUsage(hal.getMemory());
                     int cpuNum = getCpus(processor);
@@ -115,13 +174,14 @@ public class MonitorCollector {
                             .append(hal.getMemory().getTotal()).append("|")
                             .append(hal.getMemory().getAvailable()).append("|")
                             .append(cpuInfoResult.get(IO_WAIT_KEY) == null ? "" : cpuInfoResult.get(IO_WAIT_KEY)).append("|")
-                            .append(0).append('|')
-                            .append(0).append('|')
+                            .append(0).append("|")
+                            .append(0).append("|")
                             .append(cpuNum).append("|")
                             .append(diskUses != null ? diskUses[0] : "").append('|')
                             .append(diskUses != null ? diskUses[1] : "").append('|')
                             .append(diskReadWrites != null ? diskReadWrites[0] : "").append('|')
                             .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|')
+                            .append(0).append('|')
                             .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
                             .append(PradarCoreUtils.NEWLINE);
                     Pradar.commitMonitorLog(stringBuilder.toString());
@@ -133,7 +193,6 @@ public class MonitorCollector {
                 }
             }
         }, 5, 1, TimeUnit.SECONDS);
-
     }
 
     public long[] getFileSystem() {
@@ -275,7 +334,7 @@ public class MonitorCollector {
      *
      * @return
      */
-    public Map<String, String> getCpuUsageAndIoWait(CentralProcessor processor) {
+    public Map<String, String> getCpuUsageAndIoWaitAndNetwork(CentralProcessor processor) {
         long[] prevTicks = processor.getSystemCpuLoadTicks();
         Util.sleep(450);
         long[] ticks = processor.getSystemCpuLoadTicks();
@@ -360,5 +419,32 @@ public class MonitorCollector {
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
         }
+    }
+
+    private boolean isRunningInsideDocker() {
+        File file = new File("/proc/1/cgroup");
+        if (!file.exists()) {
+            return false;
+        }
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("/docker")) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+
+                }
+            }
+        }
+        return false;
     }
 }

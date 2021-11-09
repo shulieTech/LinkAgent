@@ -241,6 +241,8 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
 
     private volatile Field messageFiled = null;
 
+    private volatile Field formattedMessageFiled = null;
+
     /**
      * 拼消息
      *
@@ -253,6 +255,10 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
                 if (messageFiled == null) {
                     messageFiled = event.getClass().getDeclaredField("message");
                     messageFiled.setAccessible(true);
+                }
+                if (formattedMessageFiled == null) {
+                    formattedMessageFiled = event.getClass().getDeclaredField("formattedMessage");
+                    formattedMessageFiled.setAccessible(true);
                 }
             } catch (NoSuchFieldException e) {
                 //ignore
@@ -273,6 +279,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
             stringBuilder.append(errorMsg);
             try {
                 messageFiled.set(event, stringBuilder.toString());
+                formattedMessageFiled.set(event, stringBuilder.toString());
             } catch (Exception e) {}
             //            ((LoggingEvent)event).setMessage(errorMsg);
         }

@@ -109,7 +109,7 @@ public abstract class HttpUtils {
         Socket socket = null;
 
         StringBuilder request = new StringBuilder("POST ").append(url).append(" HTTP/1.1\r\n")
-            .append("Host: ").append(":").append(port).append("\r\n")
+            .append("Host: ").append(host).append(":").append(port).append("\r\n")
             .append("Connection: Keep-Alive\r\n");
 
         if (!headers.isEmpty()) {
@@ -280,7 +280,8 @@ public abstract class HttpUtils {
         }
     }
 
-    private static final Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?",
+        Pattern.CASE_INSENSITIVE);
 
     private static HostPort getHostPortUrlFromUrl(String url) {
         String domain = url;

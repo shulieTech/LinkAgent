@@ -183,5 +183,6 @@
         <module>bootstrap-inject</module>
         <module>user-modules</module>
         <module>biz-classloader-inject</module>
+        <module>user-modules/module-zto-jdbc-shadow</module>
     </modules>
 </project>

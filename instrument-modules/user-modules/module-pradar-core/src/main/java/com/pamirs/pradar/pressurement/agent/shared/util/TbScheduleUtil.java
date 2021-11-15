@@ -11,13 +11,16 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *//*
+
 package com.pamirs.pradar.pressurement.agent.shared.util;
 
+*/
 /**
  * @author guohz
  * @since 2020/7/30 3:55 下午
- */
+ *//*
+
 public class TbScheduleUtil {
 
     private static Object factory;
@@ -35,3 +38,4 @@ public class TbScheduleUtil {
     }
 
 }
+*/

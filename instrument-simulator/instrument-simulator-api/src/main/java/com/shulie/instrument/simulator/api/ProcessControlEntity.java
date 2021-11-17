@@ -14,14 +14,15 @@
  */
 package com.shulie.instrument.simulator.api;
 
+import com.shulie.instrument.simulator.api.listener.ext.Advice;
+
 /**
- * 流程控制异常
- * <p>用于控制事件处理器处理事件走向</p>
+ * 流程控制实体类
  *
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/10/23 10:45 下午
  */
-public final class ProcessControlException extends Exception {
+public final class ProcessControlEntity {
     /**
      * 立即返回
      */
@@ -52,34 +53,44 @@ public final class ProcessControlException extends Exception {
      */
     private final boolean isIgnoreProcessEvent;
 
-    ProcessControlException(int state, Object result) {
+    private final static ProcessControlEntity NONE = new ProcessControlEntity(NONE_IMMEDIATELY, null);
+
+    ProcessControlEntity(int state, Object result) {
         this(false, state, result);
     }
 
-    ProcessControlException(boolean isIgnoreProcessEvent, int state, Object result) {
+    ProcessControlEntity(boolean isIgnoreProcessEvent, int state, Object result) {
         this.isIgnoreProcessEvent = isIgnoreProcessEvent;
         this.state = state;
         this.result = result;
+    }
+
+    public static ProcessControlEntity none() {
+        return NONE;
     }
 
     /**
      * 中断当前代码处理流程,并立即返回指定对象
      *
      * @param object 返回对象
-     * @throws ProcessControlException 抛出立即返回流程控制异常
+     * @throws ProcessControlEntity 抛出立即返回流程控制异常
      */
-    static void throwReturnImmediately(final Object object) throws ProcessControlException {
-        throw new ProcessControlException(RETURN_IMMEDIATELY, object);
+    public static ProcessControlEntity returnImmediately(final Object object) {
+        return new ProcessControlEntity(RETURN_IMMEDIATELY, object);
     }
 
     /**
      * 中断当前代码处理流程,并抛出指定异常
      *
      * @param throwable 指定异常
-     * @throws ProcessControlException 抛出立即抛出异常流程控制异常
+     * @throws ProcessControlEntity 抛出立即抛出异常流程控制异常
      */
-    static void throwThrowsImmediately(final Throwable throwable) throws ProcessControlException {
-        throw new ProcessControlException(THROWS_IMMEDIATELY, throwable);
+    static ProcessControlEntity throwThrowsImmediately(final Throwable throwable) {
+        return new ProcessControlEntity(THROWS_IMMEDIATELY, throwable);
+    }
+
+    public static ProcessControlEntity fromAdvice(Advice advice) {
+        return advice.getProcessControlEntity() == null ? NONE : advice.getProcessControlEntity();
     }
 
     /**
@@ -99,12 +110,4 @@ public final class ProcessControlException extends Exception {
         return result;
     }
 
-    @Override
-    public Throwable fillInStackTrace() {
-        return null;
-    }
-
-    public ProcessControlEntity toEntity() {
-        return new ProcessControlEntity(this.isIgnoreProcessEvent, this.state, this.result);
-    }
 }

@@ -14,6 +14,12 @@
  */
 package com.shulie.instrument.simulator.core.enhance.weaver;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.shulie.instrument.simulator.api.ProcessControlEntity;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.event.BeforeEvent;
 import com.shulie.instrument.simulator.api.event.Event;
@@ -34,12 +40,9 @@ import org.apache.commons.lang.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.shulie.instrument.simulator.api.ProcessControlException.*;
+import static com.shulie.instrument.simulator.api.ProcessControlEntity.NONE_IMMEDIATELY;
+import static com.shulie.instrument.simulator.api.ProcessControlEntity.RETURN_IMMEDIATELY;
+import static com.shulie.instrument.simulator.api.ProcessControlEntity.THROWS_IMMEDIATELY;
 import static com.shulie.instrument.simulator.message.Result.newThrows;
 
 /**
@@ -47,7 +50,8 @@ import static com.shulie.instrument.simulator.message.Result.newThrows;
  */
 public class EventListenerHandler implements MessageHandler {
     protected static final Logger TIME_CONSUMING_LOGGER = LoggerFactory.getLogger("TIME-CONSUMING-LOGGER");
-    private static boolean costEnabled = Boolean.parseBoolean(System.getProperty("simulator.messager.cost.enabled", "false"));
+    private static boolean costEnabled = Boolean.parseBoolean(
+        System.getProperty("simulator.messager.cost.enabled", "false"));
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final boolean isDebugEnabled = logger.isDebugEnabled();
     private final boolean isInfoEnabled = logger.isInfoEnabled();
@@ -56,13 +60,13 @@ public class EventListenerHandler implements MessageHandler {
 
     // 全局处理器ID:处理器映射集合
     private final Map<Integer/*LISTENER_ID*/, InvokeProcessor> mappingOfEventProcessor
-            = new ConcurrentHashMap<Integer, InvokeProcessor>();
+        = new ConcurrentHashMap<Integer, InvokeProcessor>();
 
     /**
      * 事件工厂，一个流程有一个单独的事件工厂
      */
     private final EventBuilderFactory eventFactory
-            = new EventBuilderFactory();
+        = new EventBuilderFactory();
 
     private ExceptionHandler exceptionHandler;
 
@@ -98,14 +102,14 @@ public class EventListenerHandler implements MessageHandler {
      * @param eventEventTypes 监听事件集合
      */
     public void active(final int listenerId,
-                       final EventListener listener,
-                       final int[] eventEventTypes) {
+        final EventListener listener,
+        final int[] eventEventTypes) {
         mappingOfEventProcessor.put(listenerId, new InvokeProcessor(listenerId, listener, eventEventTypes));
         if (isInfoEnabled) {
             logger.info("SIMULATOR: activated listener[id={};target={};] event={}",
-                    listenerId,
-                    listener,
-                    com.shulie.instrument.simulator.api.util.ArrayUtils.join(eventEventTypes)
+                listenerId,
+                listener,
+                com.shulie.instrument.simulator.api.util.ArrayUtils.join(eventEventTypes)
             );
         }
     }
@@ -126,8 +130,8 @@ public class EventListenerHandler implements MessageHandler {
 
         if (isInfoEnabled) {
             logger.info("SIMULATOR: frozen listener[id={};target={};]",
-                    listenerId,
-                    processor.listener
+                listenerId,
+                processor.listener
             );
         }
         /**
@@ -148,11 +152,11 @@ public class EventListenerHandler implements MessageHandler {
      * @throws Throwable 当出现未知异常时,且事件处理器为中断流程事件时抛出
      */
     private final Result handleEvent(final int listenerId,
-                                     final int processId,
-                                     final int invokeId,
-                                     final Class clazz,
-                                     final Event event,
-                                     final InvokeProcessor processor) throws Throwable {
+        final int processId,
+        final int invokeId,
+        final Class clazz,
+        final Event event,
+        final InvokeProcessor processor) throws Throwable {
         final EventListener listener = processor.listener;
 
         /**
@@ -165,142 +169,22 @@ public class EventListenerHandler implements MessageHandler {
         try {
             if (isDebugEnabled) {
                 logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}",
-                        event.getType(),
-                        processId,
-                        invokeId,
-                        listenerId
+                    event.getType(),
+                    processId,
+                    invokeId,
+                    listenerId
                 );
             }
             /**
              * 调用事件处理
              */
-            listener.onEvent(event);
+            ProcessControlEntity pce = listener.onEvent(event);
+            int state = pce.getState();
+            if (state != Result.RESULT_STATE_NONE) {
+                return processInterrupt(listenerId, processId, invokeId, clazz, event, processor, pce);
+            }
         } catch (ProcessControlException pce) {
-            /**
-             * 代码执行流程变更，如返回或者抛出异常
-             */
-            if (!processor.isRunning()) {
-                logger.warn("SIMULATOR: EventProcessor is closed. {}", clazz.getName());
-                return Result.RESULT_NONE;
-            }
-            final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
-
-            final int state = pce.getState();
-            if (isDebugEnabled) {
-                logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, process-changed: {}. isIgnoreProcessEvent={};",
-                        event.getType(),
-                        processId,
-                        invokeId,
-                        listenerId,
-                        state,
-                        pce.isIgnoreProcessEvent()
-                );
-            }
-
-            /**
-             * 如果流程控制要求忽略后续处理所有事件，则需要在此处进行标记
-             */
-            if (pce.isIgnoreProcessEvent()) {
-                invokeProcess.markIgnoreProcess();
-            }
-
-            switch (state) {
-
-                // 立即返回对象
-                case RETURN_IMMEDIATELY: {
-
-                    /**
-                     * 如果已经禁止后续返回任何事件了，则不进行后续的操作
-                     */
-                    if (pce.isIgnoreProcessEvent()) {
-                        if (isDebugEnabled) {
-                            logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, ignore immediately-return-event, isIgnored.",
-                                    event.getType(),
-                                    processId,
-                                    invokeId,
-                                    listenerId
-                            );
-                        }
-                    } else {
-                        /**
-                         * 补偿立即返回事件, 补偿立即返回事件为了保证BEFORE、RETURN/THROWS 能成对的调用
-                         * 避免调用栈出现不对称的情况
-                         * 如果 BEFORE 事件触发立即返回事件，
-                         */
-                        compensateProcessControlEvent(pce, processor, invokeProcess, event);
-                    }
-
-                    /**
-                     * 如果是在BEFORE中立即返回，则后续不会再有RETURN事件产生
-                     * 这里需要主动对齐堆栈
-                     */
-                    if (event.getType() == EventType.BEFORE) {
-                        invokeProcess.popInvokeId();
-                    }
-
-                    /**
-                     * 让流程立即返回
-                     */
-                    return Result.newReturn(pce.getResult());
-
-                }
-
-                // 立即抛出异常
-                case THROWS_IMMEDIATELY: {
-
-                    final Throwable throwable = (Throwable) pce.getResult();
-
-                    /**
-                     * 如果已经禁止后续返回任何事件了，则不进行后续的操作
-                     */
-                    if (pce.isIgnoreProcessEvent()) {
-                        if (isDebugEnabled) {
-                            logger.debug("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, ignore immediately-throws-event, isIgnored.",
-                                    event.getType(),
-                                    processId,
-                                    invokeId,
-                                    listenerId
-                            );
-                        }
-                    } else {
-
-                        /**
-                         *  如果是在BEFORE中立即抛出，则后续不会再有THROWS事件产生
-                         *  这里需要主动对齐堆栈
-                         */
-                        if (event.getType() == EventType.BEFORE) {
-                            invokeProcess.popInvokeId();
-                        }
-
-                        /**
-                         * 标记本次异常由ImmediatelyException产生，让下次异常事件处理直接忽略
-                         */
-                        if (event.getType() != EventType.THROWS) {
-                            invokeProcess.markExceptionFromImmediately();
-                        }
-
-                        /**
-                         * 补偿立即抛出事件
-                         */
-                        compensateProcessControlEvent(pce, processor, invokeProcess, event);
-                    }
-
-                    /**
-                     * 让流程立即抛出异常
-                     */
-                    return Result.newThrows(throwable);
-
-                }
-
-                /**
-                 * 什么都不操作，立即返回
-                 */
-                case NONE_IMMEDIATELY:
-                default: {
-                    return Result.RESULT_NONE;
-                }
-            }
-
+            return processInterrupt(listenerId, processId, invokeId, clazz, event, processor, pce.toEntity());
         } catch (Throwable throwable) {
             /**
              * BEFORE处理异常,打日志,并通知下游不需要进行处理
@@ -319,15 +203,19 @@ public class EventListenerHandler implements MessageHandler {
                 ExceptionHandler exceptionHandler = getExceptionHandler();
                 if (exceptionHandler != null) {
                     exceptionHandler.handleException(throwable,
-                            String.format("on-event: event -> eventType=%s, processId=%s, invokeId=%s, listenerId=%s occur an error.", EventType.name(event.getType()), processId, invokeId, listenerId),
-                            listener);
+                        String.format(
+                            "on-event: event -> eventType=%s, processId=%s, invokeId=%s, listenerId=%s occur an error.",
+                            EventType.name(event.getType()), processId, invokeId, listenerId),
+                        listener);
                 } else {
-                    logger.warn("SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} occur an error.",
-                            event.getType(),
-                            processId,
-                            invokeId,
-                            listenerId,
-                            throwable
+                    logger.warn(
+                        "SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} occur an "
+                            + "error.",
+                        event.getType(),
+                        processId,
+                        invokeId,
+                        listenerId,
+                        throwable
                     );
                 }
             }
@@ -339,6 +227,123 @@ public class EventListenerHandler implements MessageHandler {
         return Result.RESULT_NONE;
     }
 
+    private Result processInterrupt(int listenerId, int processId, int invokeId, Class clazz, Event event,
+        InvokeProcessor processor, ProcessControlEntity pce) {
+        int state = pce.getState();
+        /**
+         * 代码执行流程变更，如返回或者抛出异常
+         */
+        if (!processor.isRunning()) {
+            logger.warn("SIMULATOR: EventProcessor is closed. {}", clazz.getName());
+            return Result.RESULT_NONE;
+        }
+        final InvokeProcessor.InvokeProcess invokeProcess = processor.getOrCreate();
+
+        if (isDebugEnabled) {
+            logger.debug(
+                "SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={}, "
+                    + "process-changed: {}.",
+                event.getType(),
+                processId,
+                invokeId,
+                listenerId,
+                state
+            );
+        }
+
+        /**
+         * 如果流程控制要求忽略后续处理所有事件，则需要在此处进行标记
+         */
+        if (pce.isIgnoreProcessEvent()) {
+            invokeProcess.markIgnoreProcess();
+        }
+
+        switch (state) {
+
+            // 立即返回对象
+            case RETURN_IMMEDIATELY: {
+
+                /**
+                 * 补偿立即返回事件, 补偿立即返回事件为了保证BEFORE、RETURN/THROWS 能成对的调用
+                 * 避免调用栈出现不对称的情况
+                 * 如果 BEFORE 事件触发立即返回事件，
+                 */
+                compensateProcessControlEvent(pce, processor, invokeProcess, event);
+
+                /**
+                 * 如果是在BEFORE中立即返回，则后续不会再有RETURN事件产生
+                 * 这里需要主动对齐堆栈
+                 */
+                if (event.getType() == EventType.BEFORE) {
+                    invokeProcess.popInvokeId();
+                }
+
+                /**
+                 * 让流程立即返回
+                 */
+                return Result.newReturn(pce.getResult());
+
+            }
+
+            // 立即抛出异常
+            case THROWS_IMMEDIATELY: {
+
+                final Throwable throwable = (Throwable)pce.getResult();
+
+                /**
+                 * 如果已经禁止后续返回任何事件了，则不进行后续的操作
+                 */
+                if (pce.isIgnoreProcessEvent()) {
+                    if (isDebugEnabled) {
+                        logger.debug(
+                            "SIMULATOR: on-event: event -> eventType={}, processId={}, invokeId={}, listenerId={},"
+                                + " ignore immediately-throws-event, isIgnored.",
+                            event.getType(),
+                            processId,
+                            invokeId,
+                            listenerId
+                        );
+                    }
+                } else {
+
+                    /**
+                     *  如果是在BEFORE中立即抛出，则后续不会再有THROWS事件产生
+                     *  这里需要主动对齐堆栈
+                     */
+                    if (event.getType() == EventType.BEFORE) {
+                        invokeProcess.popInvokeId();
+                    }
+
+                    /**
+                     * 标记本次异常由ImmediatelyException产生，让下次异常事件处理直接忽略
+                     */
+                    if (event.getType() != EventType.THROWS) {
+                        invokeProcess.markExceptionFromImmediately();
+                    }
+
+                    /**
+                     * 补偿立即抛出事件
+                     */
+                    compensateProcessControlEvent(pce, processor, invokeProcess, event);
+                }
+
+                /**
+                 * 让流程立即抛出异常
+                 */
+                return Result.newThrows(throwable);
+
+            }
+
+            /**
+             * 什么都不操作，立即返回
+             */
+            case NONE_IMMEDIATELY:
+            default: {
+                return Result.RESULT_NONE;
+            }
+        }
+    }
+
     /**
      * 构建流程控制事件的补偿，流程控制事件包括立即返回和立即抛出异常
      *
@@ -347,31 +352,33 @@ public class EventListenerHandler implements MessageHandler {
      * @param invokeProcess 调用流程
      * @param event         当前的事件，这个事件是触发流程控制事件的源事件
      */
-    private final void compensateProcessControlEvent(ProcessControlException pce, InvokeProcessor processor, InvokeProcessor.InvokeProcess invokeProcess, Event event) {
+    private final void compensateProcessControlEvent(ProcessControlEntity pce, InvokeProcessor processor,
+        InvokeProcessor.InvokeProcess invokeProcess, Event event) {
+        int state = pce.getState();
 
         /**
          * 判断是否需要补偿
          */
         if (!(event instanceof InvokeEvent)
-                || !ArrayUtils.contains(processor.eventEventTypes, event.getType())) {
+            || !ArrayUtils.contains(processor.eventEventTypes, event.getType())) {
             return;
         }
 
-        final InvokeEvent iEvent = (InvokeEvent) event;
+        final InvokeEvent iEvent = (InvokeEvent)event;
         final Event compensateEvent;
 
-        if (pce.getState() == ProcessControlException.RETURN_IMMEDIATELY) {
+        if (state == RETURN_IMMEDIATELY) {
             /**
              * 构建补偿立即返回事件
              */
             compensateEvent = eventFactory
-                    .buildImmediatelyReturnEvent(iEvent.getProcessId(), iEvent.getInvokeId(), pce.getResult());
-        } else if (pce.getState() == ProcessControlException.THROWS_IMMEDIATELY) {
+                .buildImmediatelyReturnEvent(iEvent.getProcessId(), iEvent.getInvokeId(), pce.getResult());
+        } else if (state == THROWS_IMMEDIATELY) {
             /**
              * 构建补偿立即抛出事件
              */
             compensateEvent = eventFactory
-                    .buildImmediatelyThrowsEvent(iEvent.getProcessId(), iEvent.getInvokeId(), (Throwable) pce.getResult());
+                .buildImmediatelyThrowsEvent(iEvent.getProcessId(), iEvent.getInvokeId(), (Throwable)pce.getResult());
         } else {
             /**
              * 其他情况直接忽略,不补偿
@@ -381,12 +388,14 @@ public class EventListenerHandler implements MessageHandler {
 
         try {
             if (isDebugEnabled) {
-                logger.debug("SIMULATOR: compensate-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} when ori-event:{}",
-                        compensateEvent.getType(),
-                        iEvent.getProcessId(),
-                        iEvent.getInvokeId(),
-                        processor.listenerId,
-                        event.getType()
+                logger.debug(
+                    "SIMULATOR: compensate-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} when "
+                        + "ori-event:{}",
+                    compensateEvent.getType(),
+                    iEvent.getProcessId(),
+                    iEvent.getInvokeId(),
+                    processor.listenerId,
+                    event.getType()
                 );
             }
             /**
@@ -395,13 +404,15 @@ public class EventListenerHandler implements MessageHandler {
              */
             processor.listener.onEvent(compensateEvent);
         } catch (Throwable cause) {
-            logger.warn("SIMULATOR: compensate-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} when ori-event:{} occur error.",
-                    compensateEvent.getType(),
-                    iEvent.getProcessId(),
-                    iEvent.getInvokeId(),
-                    processor.listenerId,
-                    event.getType(),
-                    cause
+            logger.warn(
+                "SIMULATOR: compensate-event: event -> eventType={}, processId={}, invokeId={}, listenerId={} when "
+                    + "ori-event:{} occur error.",
+                compensateEvent.getType(),
+                iEvent.getProcessId(),
+                iEvent.getInvokeId(),
+                processor.listenerId,
+                event.getType(),
+                cause
             );
         }
     }
@@ -414,14 +425,15 @@ public class EventListenerHandler implements MessageHandler {
      * @param isEmptyStack 堆栈是否为空
      */
     private final boolean checkProcessStack(final int processId,
-                                            final int invokeId,
-                                            final boolean isEmptyStack) {
+        final int invokeId,
+        final boolean isEmptyStack) {
         return (processId == invokeId && !isEmptyStack)
-                || (processId != invokeId && isEmptyStack);
+            || (processId != invokeId && isEmptyStack);
     }
 
     @Override
-    public Result handleOnBefore(int listenerId, Object[] argumentArray, Class clazz, String javaMethodName, String javaMethodDesc, Object target, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public Result handleOnBefore(int listenerId, Object[] argumentArray, Class clazz, String javaMethodName,
+        String javaMethodDesc, Object target, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
         long startTimeRecord = costEnabled ? System.nanoTime() : 0;
         try {
             if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
@@ -454,7 +466,8 @@ public class EventListenerHandler implements MessageHandler {
 
             if (!processor.isRunning()) {
                 if (isDebugEnabled) {
-                    logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.", listenerId);
+                    logger.debug("SIMULATOR: listener={} EventProcessor is closed, ignore processing before-event.",
+                        listenerId);
                 }
                 return Result.RESULT_NONE;
             }
@@ -492,14 +505,14 @@ public class EventListenerHandler implements MessageHandler {
                  */
                 BizClassLoaderHolder.setBizClassLoader(javaClassLoader);
                 final BeforeEvent event = eventFactory.buildBeforeEvent(
-                        processId,
-                        invokeId,
-                        javaClassLoader,
-                        clazz,
-                        javaMethodName,
-                        javaMethodDesc,
-                        target,
-                        argumentArray
+                    processId,
+                    invokeId,
+                    javaClassLoader,
+                    clazz,
+                    javaMethodName,
+                    javaMethodDesc,
+                    target,
+                    argumentArray
                 );
                 try {
                     return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
@@ -515,7 +528,8 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public Result handleOnThrows(int listenerId, Class clazz, Throwable throwable, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public Result handleOnThrows(int listenerId, Class clazz, Throwable throwable, String listenerClassName, int listenerTag,
+        int executionTag) throws Throwable {
         long startTimeRecord = costEnabled ? System.nanoTime() : 0;
         try {
             if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
@@ -530,7 +544,8 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public Result handleOnReturn(int listenerId, Class clazz, Object object, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public Result handleOnReturn(int listenerId, Class clazz, Object object, String listenerClassName, int listenerTag,
+        int executionTag) throws Throwable {
         long startTimeRecord = costEnabled ? System.nanoTime() : 0;
         try {
             if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
@@ -554,18 +569,18 @@ public class EventListenerHandler implements MessageHandler {
         exceptionHandler = null;
     }
 
-
     private final Result handleOnEnd(final int listenerId,
-                                     final Class clazz,
-                                     final Object object,
-                                     final boolean isReturn) throws Throwable {
+        final Class clazz,
+        final Object object,
+        final boolean isReturn) throws Throwable {
 
         /**
          * 在守护区内产生的事件不需要响应
          */
         if (SimulatorGuard.getInstance().isInGuard()) {
             if (isDebugEnabled) {
-                logger.debug("SIMULATOR: listener={} is in protecting, ignore processing {}-event", listenerId, isReturn ? "return" : "throws");
+                logger.debug("SIMULATOR: listener={} is in protecting, ignore processing {}-event", listenerId,
+                    isReturn ? "return" : "throws");
             }
             return Result.RESULT_NONE;
         }
@@ -577,7 +592,8 @@ public class EventListenerHandler implements MessageHandler {
          */
         if (null == processor) {
             if (isDebugEnabled) {
-                logger.debug("SIMULATOR: listener={} is not activated, ignore processing return-event|throws-event.", listenerId);
+                logger.debug("SIMULATOR: listener={} is not activated, ignore processing return-event|throws-event.",
+                    listenerId);
             }
             return Result.RESULT_NONE;
         }
@@ -603,7 +619,7 @@ public class EventListenerHandler implements MessageHandler {
             // 如果异常来自于ImmediatelyException，则忽略处理直接返回抛异常
             final boolean isExceptionFromImmediately = !isReturn && invokeProcess.rollingIsExceptionFromImmediately();
             if (isExceptionFromImmediately) {
-                return newThrows((Throwable) object);
+                return newThrows((Throwable)object);
             }
 
             // 继续异常处理
@@ -620,15 +636,15 @@ public class EventListenerHandler implements MessageHandler {
             // 如果不为空需要输出日志进行告警
             if (checkProcessStack(processId, invokeId, invokeProcess.isEmptyStack())) {
                 logger.warn("SIMULATOR: ERROR process-stack. pid={};iid={};listener={};",
-                        processId,
-                        invokeId,
-                        listenerId
+                    processId,
+                    invokeId,
+                    listenerId
                 );
             }
 
             final Event event = isReturn
-                    ? eventFactory.buildReturnEvent(processId, invokeId, object)
-                    : eventFactory.buildThrowsEvent(processId, invokeId, (Throwable) object);
+                ? eventFactory.buildReturnEvent(processId, invokeId, object)
+                : eventFactory.buildThrowsEvent(processId, invokeId, (Throwable)object);
 
             return handleEvent(listenerId, processId, invokeId, clazz, event, processor);
         } finally {
@@ -637,9 +653,10 @@ public class EventListenerHandler implements MessageHandler {
 
     }
 
-
     @Override
-    public void handleOnCallBefore(final int listenerId, final Class clazz, final boolean isInterface, final int lineNumber, final String owner, final String name, final String desc, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public void handleOnCallBefore(final int listenerId, final Class clazz, final boolean isInterface, final int lineNumber,
+        final String owner, final String name, final String desc, String listenerClassName, int listenerTag,
+        int executionTag) throws Throwable {
         if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
             return;
         }
@@ -688,7 +705,7 @@ public class EventListenerHandler implements MessageHandler {
             }
 
             final Event event = eventFactory
-                    .buildCallBeforeEvent(processId, invokeId, lineNumber, isInterface, owner, name, desc);
+                .buildCallBeforeEvent(processId, invokeId, lineNumber, isInterface, owner, name, desc);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
@@ -701,7 +718,8 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public void handleOnCallReturn(final int listenerId, final Class clazz, final boolean isInterface, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public void handleOnCallReturn(final int listenerId, final Class clazz, final boolean isInterface,
+        String listenerClassName, int listenerTag, int executionTag) throws Throwable {
         if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
             return;
         }
@@ -743,7 +761,7 @@ public class EventListenerHandler implements MessageHandler {
             }
 
             final Event event = eventFactory
-                    .buildCallReturnEvent(processId, invokeId, isInterface);
+                .buildCallReturnEvent(processId, invokeId, isInterface);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
@@ -756,7 +774,8 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public void handleOnCallThrows(final int listenerId, final Class clazz, final boolean isInterface, Throwable e, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public void handleOnCallThrows(final int listenerId, final Class clazz, final boolean isInterface, Throwable e,
+        String listenerClassName, int listenerTag, int executionTag) throws Throwable {
         if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
             return;
         }
@@ -798,7 +817,7 @@ public class EventListenerHandler implements MessageHandler {
             }
 
             final Event event = eventFactory
-                    .buildCallThrowsEvent(processId, invokeId, isInterface, e);
+                .buildCallThrowsEvent(processId, invokeId, isInterface, e);
             try {
                 BizClassLoaderHolder.setBizClassLoader(clazz.getClassLoader());
                 handleEvent(listenerId, processId, invokeId, clazz, event, wrap);
@@ -811,7 +830,8 @@ public class EventListenerHandler implements MessageHandler {
     }
 
     @Override
-    public void handleOnLine(int listenerId, Class clazz, int lineNumber, String listenerClassName, int listenerTag, int executionTag) throws Throwable {
+    public void handleOnLine(int listenerId, Class clazz, int lineNumber, String listenerClassName, int listenerTag,
+        int executionTag) throws Throwable {
         if (executionTag == ExecutionTagSupplier.EXECUTION_IGNORE) {
             return;
         }
@@ -871,6 +891,7 @@ public class EventListenerHandler implements MessageHandler {
         if (!costEnabled) {
             return;
         }
-        TIME_CONSUMING_LOGGER.info("[simulator cost]class {},listenerType {},cost {}ns", listenerClass, listenerType, System.nanoTime() - startTime);
+        TIME_CONSUMING_LOGGER.info("[simulator cost]class {},listenerType {},cost {}ns", listenerClass, listenerType,
+            System.nanoTime() - startTime);
     }
 }

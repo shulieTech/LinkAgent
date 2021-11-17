@@ -81,7 +81,7 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
                 InstrumentMethod addAppenderMethod = target.getDeclaredMethods("appendLoopOnAppenders");
                 addAppenderMethod.addInterceptor(
-                        Listeners.of(AppenderRegisterInterceptor.class, new Object[]{isBusinessLogOpen, bizShadowLogPath}));
+                        Listeners.of(LogInterceptor.class, new Object[]{bizShadowLogPath}));
             }
         });
         return true;
@@ -91,6 +91,5 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
     public void onUnload() throws Throwable {
         ClusterTestMarker.release();
         AppenderHolder.release();
-        AppenderRegisterInterceptor.release();
     }
 }

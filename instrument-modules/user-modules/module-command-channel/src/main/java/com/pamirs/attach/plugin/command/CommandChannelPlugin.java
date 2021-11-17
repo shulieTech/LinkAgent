@@ -66,7 +66,8 @@ public class CommandChannelPlugin extends ModuleLifecycleAdapter implements Exte
                     return t;
                 }
             }))
-            .registerUserAppKey(simulatorConfig.getProperty(Pradar.TENANT_APP_KEY))
+            .registerTenantAndEnv(simulatorConfig.getProperty(Pradar.TENANT_APP_KEY),
+                simulatorConfig.getProperty(Pradar.ENV_CODE))
             .registerHandler(new CustomCommand("DEFAULT_CHANNEL"),
                 new DispatcherCommandHandler(commandInvoker))
             .build(config);

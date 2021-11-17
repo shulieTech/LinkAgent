@@ -180,7 +180,7 @@ public class EventListenerHandler implements MessageHandler {
              */
             ProcessControlEntity pce = listener.onEvent(event);
             int state = pce.getState();
-            if (state != Result.RESULT_STATE_NONE) {
+            if (state != ProcessControlEntity.NONE_IMMEDIATELY) {
                 return processInterrupt(listenerId, processId, invokeId, clazz, event, processor, pce);
             }
         } catch (ProcessControlException pce) {

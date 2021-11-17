@@ -82,6 +82,8 @@
                 <module>module-dynamic-resource</module>
         -->
         <module>module-zuul</module>
+        <module>module-apache-cxf</module>
+        <module>module-apache-axis</module>
     </modules>
 
     <build>

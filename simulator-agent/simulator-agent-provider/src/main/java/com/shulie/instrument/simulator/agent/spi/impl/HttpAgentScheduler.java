@@ -15,7 +15,10 @@
 package com.shulie.instrument.simulator.agent.spi.impl;
 
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
+import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
+import com.shulie.instrument.simulator.agent.api.model.CommandExecuteResponse;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
+import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
 import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
@@ -24,6 +27,7 @@ import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
 import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
+import com.shulie.instrument.simulator.agent.spi.impl.model.UpgradeBatchConfig;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -34,10 +38,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -78,6 +80,33 @@ public class HttpAgentScheduler implements AgentScheduler {
      * 已经执行的 commandId,只有新的 commandId 比当前的大才会执行
      */
     private long executeCommandId;
+
+    /**
+     * 在线升级的指令，只有这个指令由当前agent操作
+     */
+    private final long onlineUpgradeCommandId = 110000;
+
+    /**
+     * 一批指令中包涵这个和升级的指令，需要优先处理这个指令，忽略升级指令
+     */
+    private final long checkStorageCommandId = 100100;
+
+    private UpgradeBatchConfig upgradeBatchConfig = new UpgradeBatchConfig();
+
+
+    private ExecutorService commandExecutorService = new ThreadPoolExecutor(1, 3,
+            0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<Runnable>(10), new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r);
+            t.setName("command-executor-" + t.getId());
+            return t;
+        }
+    });
+
+
+    private Map<CommandExecuteKey, FutureTask<CommandExecuteResponse>> futureTaskMap = new ConcurrentHashMap<CommandExecuteKey, FutureTask<CommandExecuteResponse>>(16, 1);
 
     /**
      * 是否是初始化 simulator
@@ -291,12 +320,95 @@ public class HttpAgentScheduler implements AgentScheduler {
     @Override
     public void start() {
         //install local if no latest command packet found
+        //卸载的命令在的时候，重启的时候这里这个installLocal会无法执行，
         CommandPacket commandPacket = getLatestCommandPacket();
         if (commandPacket == null) {
             installLocal();
         }
         startScheduler();
     }
+
+    /**
+     * 检查一遍在运行任务的结果
+     * @return
+     */
+    private List<CommandExecuteResponse> getCommandExecuteResponses(){
+        if (futureTaskMap.isEmpty()){
+            return Collections.EMPTY_LIST;
+        }
+        List<CommandExecuteResponse> commandExecuteResponseList = new ArrayList<CommandExecuteResponse>(futureTaskMap.size());
+        List<CommandExecuteKey> failedCommandIds = new ArrayList<CommandExecuteKey>(futureTaskMap.size());
+        for (Map.Entry<CommandExecuteKey, FutureTask<CommandExecuteResponse>> entry : futureTaskMap.entrySet()){
+            boolean success = false;
+            String errorMsg = null;
+            if (entry.getValue().isDone()){
+                try {
+                    commandExecuteResponseList.add(entry.getValue().get());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    success = true;
+                    errorMsg = e.getMessage();
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                    success = true;
+                    errorMsg = e.getMessage();
+                } finally {
+                    if (success){
+                        CommandExecuteResponse commandExecuteResponse = new CommandExecuteResponse();
+                        commandExecuteResponse.setCommandId(entry.getKey().getCommandId());
+                        commandExecuteResponse.setTaskId(entry.getKey().getTaskId());
+                        commandExecuteResponse.setResult(false);
+                        commandExecuteResponse.setMsg(errorMsg);
+                        commandExecuteResponseList.add(commandExecuteResponse);
+                        entry.getValue().cancel(true);
+                        failedCommandIds.add(entry.getKey());
+                    }
+                }
+            }
+        }
+        //失败的直接去除掉
+        if (!failedCommandIds.isEmpty()){
+            for (CommandExecuteKey id : failedCommandIds){
+                futureTaskMap.remove(id);
+            }
+        }
+        return commandExecuteResponseList;
+    }
+
+
+
+
+    /**
+     * 上报心跳，获取指令
+     * @return
+     */
+    private CommandPacket getCommandPacketByHeart(){
+        List<CommandExecuteResponse> commandExecuteResponseList = getCommandExecuteResponses();
+        HeartRequest heartRequest = new HeartRequest();
+        heartRequest.setCommandExecuteResponseList(commandExecuteResponseList);
+        List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
+        if (commandPacketList == null || commandPacketList.isEmpty()) {
+            return null;
+        }
+
+        if (commandPacketList.size() > 1){
+            Map<Long, CommandPacket> commandPacketMap = new HashMap<Long, CommandPacket>(commandPacketList.size(), 1);
+            for (CommandPacket commandPacket : commandPacketList){
+                commandPacketMap.put(commandPacket.getId(), commandPacket);
+            }
+            if (commandPacketMap.containsKey(onlineUpgradeCommandId) &&
+                commandPacketMap.containsKey(checkStorageCommandId)){
+                commandPacketMap.remove(onlineUpgradeCommandId);
+                commandPacketList = (List<CommandPacket>) commandPacketMap.values();
+            }
+        }
+
+        for (CommandPacket commandPacket : commandPacketList){
+
+        }
+        return null;
+    }
+
 
     /**
      * get latest command packet

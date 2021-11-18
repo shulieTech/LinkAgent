@@ -46,7 +46,6 @@ public class ConfigUtils {
     //配置控制台地址
     private static final String AGENT_CONFIG_URL = "/api/fast/agent/access/config/agentConfig";
 
-
     public static String doConfig(String url, String userAppKey) {
         if (StringUtils.startsWith(url, "http://") || StringUtils.startsWith(url, "https://")) {
             return HttpUtils.doGet(url, userAppKey);

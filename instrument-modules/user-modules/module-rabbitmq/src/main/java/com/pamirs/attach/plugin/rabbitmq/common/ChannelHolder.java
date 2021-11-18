@@ -1,38 +1,36 @@
-/**
- * Copyright 2021 Shulie Technology, Co.Ltd
- * Email: shulie@shulie.io
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.pamirs.attach.plugin.rabbitmq.common;
-
-import com.pamirs.pradar.exception.PradarException;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.Consumer;
-import com.rabbitmq.client.impl.*;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
-import com.shulie.instrument.simulator.api.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
+import com.pamirs.attach.plugin.rabbitmq.utils.AdminAccessInfo;
 import com.pamirs.pradar.Pradar;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.Consumer;
+import com.rabbitmq.client.impl.AMQConnection;
+import com.rabbitmq.client.impl.ChannelManager;
+import com.rabbitmq.client.impl.ChannelN;
+import com.rabbitmq.client.impl.ConsumerWorkService;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 负责与业务 Channel 一对一进行映射，防止直接操作业务 Channel 导致 Channel 关闭的问题
@@ -180,8 +178,8 @@ public class ChannelHolder {
 
     public static ConsumeResult consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws IOException {
         return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
-                consumerMetaData.getPtConsumerTag(), consumerMetaData.isNoLocal(), consumerMetaData.isExclusive(),
-                consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), consumerMetaData.getConsumer());
+                consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
+                consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), new ExceptionSilenceConsumer(consumerMetaData.getConsumer()));
     }
 
     public static ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
@@ -370,29 +368,16 @@ public class ChannelHolder {
     }
 
     private static ConnectionFactory connectionFactory(Connection connection) {
-        String username, password;
-        Object object = Reflect.on(connection).getSilence("credentialsProvider");
-        if (object != null) {//低版本
-            CredentialsProvider credentialsProvider = (CredentialsProvider) object;
-            username = credentialsProvider.getUsername();
-            password = credentialsProvider.getPassword();
-        } else {
-            username = Reflect.on(connection).getSilence("username");
-            password = Reflect.on(connection).getSilence("password");
-            if (username == null || password == null) {
-                throw new PradarException("未支持的rabbitmq版本！无法获取rabbit连接用户名密码");
-            }
-        }
-        String virtualHost = Reflect.on(connection).get("_virtualHost");
+        AdminAccessInfo adminAccessInfo = AdminAccessInfo.solveByConnection(connection);
         String host = connection.getAddress().getHostAddress();
         int port = connection.getPort();
         ConnectionFactory connectionFactory = new ConnectionFactory();
         // 配置连接信息
         connectionFactory.setHost(host);
         connectionFactory.setPort(port);
-        connectionFactory.setUsername(username);
-        connectionFactory.setPassword(password);
-        connectionFactory.setVirtualHost(virtualHost);
+        connectionFactory.setUsername(adminAccessInfo.getUsername());
+        connectionFactory.setPassword(adminAccessInfo.getPassword());
+        connectionFactory.setVirtualHost(adminAccessInfo.getVirtualHost());
         connectionFactory.setConnectionTimeout(10000);
         connectionFactory.setHandshakeTimeout(10000);
         connectionFactory.setSharedExecutor(initWorkService(connection));

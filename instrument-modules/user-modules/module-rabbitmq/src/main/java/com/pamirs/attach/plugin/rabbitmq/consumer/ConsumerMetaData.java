@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.rabbitmq.common;
+package com.pamirs.attach.plugin.rabbitmq.consumer;
 
 import com.pamirs.pradar.Pradar;
 import com.rabbitmq.client.Consumer;
@@ -26,39 +26,26 @@ import java.util.Map;
  */
 public class ConsumerMetaData {
 
-    private String queue;
-    private String ptQueue;
+    private final String queue;
+    private final String ptQueue;
     private final String consumerTag;
     private final String ptConsumerTag;
     private final Consumer consumer;
     private final boolean exclusive;
     private final boolean autoAck;
     private final int prefetchCount;
-    private final boolean noLocal;
     private final Map<String, Object> arguments;
-    private boolean routingKeyExchangeModel = false;
-
-    public boolean isRoutingKeyExchangeModel() {
-        return routingKeyExchangeModel;
-    }
-
-    public void setRoutingKeyExchangeModel(boolean routingKeyExchangeModel) {
-        this.routingKeyExchangeModel = routingKeyExchangeModel;
-    }
 
     public ConsumerMetaData(String queue, String consumerTag, Consumer consumer, boolean exclusive, boolean autoAck,
-                            int prefetchCount, boolean noLocal) {
+                            int prefetchCount) {
         this.queue = queue;
         this.consumerTag = consumerTag;
         this.consumer = consumer;
         this.exclusive = exclusive;
         this.autoAck = autoAck;
         this.prefetchCount = prefetchCount;
-        this.noLocal = noLocal;
         this.arguments = Collections.emptyMap();
-        if (queue != null) {
-            this.ptQueue = Pradar.addClusterTestPrefix(queue);
-        }
+        this.ptQueue = Pradar.addClusterTestPrefix(queue);
         this.ptConsumerTag = Pradar.addClusterTestPrefix(consumerTag);
     }
 
@@ -82,17 +69,8 @@ public class ConsumerMetaData {
         return autoAck;
     }
 
-    public void setQueue(String queue) {
-        this.ptQueue  = Pradar.addClusterTestPrefix(queue);
-        this.queue = queue;
-    }
-
     public int getPrefetchCount() {
         return prefetchCount;
-    }
-
-    public boolean isNoLocal() {
-        return noLocal;
     }
 
     public String getPtQueue() {

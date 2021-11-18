@@ -17,6 +17,8 @@ package com.pamirs.attach.plugin.rabbitmq.common;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
+
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/5/9 1:56 上午

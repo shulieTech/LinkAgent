@@ -8,6 +8,11 @@ public class CommandExecuteKey {
     private String taskId;
     private Long commandId;
 
+    public CommandExecuteKey(Long commandId, String taskId){
+        this.commandId = commandId;
+        this.taskId = taskId;
+    }
+
     public String getTaskId() {
         return taskId;
     }

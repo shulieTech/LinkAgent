@@ -71,6 +71,11 @@ public class CommandPacket {
     private int liveTime = -1;
 
     /**
+     * 任务ID
+     */
+    private String taskId;
+
+    /**
      * 附加数据
      */
     private Map<String, String> extras = Collections.EMPTY_MAP;
@@ -149,5 +154,14 @@ public class CommandPacket {
         commandPacket.setCommandType(COMMAND_TYPE_FRAMEWORK);
         commandPacket.setOperateType(OPERATE_TYPE_INSTALL);
         return commandPacket;
+    }
+
+
+    public String getTaskId() {
+        return taskId;
+    }
+
+    public void setTaskId(String taskId) {
+        this.taskId = taskId;
     }
 }

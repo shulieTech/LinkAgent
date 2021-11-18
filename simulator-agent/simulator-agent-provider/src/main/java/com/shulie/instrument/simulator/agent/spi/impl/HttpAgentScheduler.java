@@ -27,8 +27,8 @@ import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
 import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
-import com.shulie.instrument.simulator.agent.spi.impl.model.UpgradeBatchConfig;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
+import com.shulie.instrument.simulator.agent.spi.impl.utils.HeartCommandUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,32 +81,9 @@ public class HttpAgentScheduler implements AgentScheduler {
      */
     private long executeCommandId;
 
-    /**
-     * 在线升级的指令，只有这个指令由当前agent操作
-     */
-    private final long onlineUpgradeCommandId = 110000;
-
-    /**
-     * 一批指令中包涵这个和升级的指令，需要优先处理这个指令，忽略升级指令
-     */
-    private final long checkStorageCommandId = 100100;
-
-    private UpgradeBatchConfig upgradeBatchConfig = new UpgradeBatchConfig();
 
 
-    private ExecutorService commandExecutorService = new ThreadPoolExecutor(1, 3,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>(10), new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName("command-executor-" + t.getId());
-            return t;
-        }
-    });
 
-
-    private Map<CommandExecuteKey, FutureTask<CommandExecuteResponse>> futureTaskMap = new ConcurrentHashMap<CommandExecuteKey, FutureTask<CommandExecuteResponse>>(16, 1);
 
     /**
      * 是否是初始化 simulator
@@ -333,12 +310,12 @@ public class HttpAgentScheduler implements AgentScheduler {
      * @return
      */
     private List<CommandExecuteResponse> getCommandExecuteResponses(){
-        if (futureTaskMap.isEmpty()){
+        if (HeartCommandUtils.futureTaskMap.isEmpty()){
             return Collections.EMPTY_LIST;
         }
-        List<CommandExecuteResponse> commandExecuteResponseList = new ArrayList<CommandExecuteResponse>(futureTaskMap.size());
-        List<CommandExecuteKey> failedCommandIds = new ArrayList<CommandExecuteKey>(futureTaskMap.size());
-        for (Map.Entry<CommandExecuteKey, FutureTask<CommandExecuteResponse>> entry : futureTaskMap.entrySet()){
+        List<CommandExecuteResponse> commandExecuteResponseList = new ArrayList<CommandExecuteResponse>(HeartCommandUtils.futureTaskMap.size());
+        List<CommandExecuteKey> failedCommandIds = new ArrayList<CommandExecuteKey>(HeartCommandUtils.futureTaskMap.size());
+        for (Map.Entry<CommandExecuteKey, FutureTask<CommandExecuteResponse>> entry : HeartCommandUtils.futureTaskMap.entrySet()){
             boolean success = false;
             String errorMsg = null;
             if (entry.getValue().isDone()){
@@ -369,7 +346,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         //失败的直接去除掉
         if (!failedCommandIds.isEmpty()){
             for (CommandExecuteKey id : failedCommandIds){
-                futureTaskMap.remove(id);
+                HeartCommandUtils.futureTaskMap.remove(id);
             }
         }
         return commandExecuteResponseList;
@@ -382,7 +359,7 @@ public class HttpAgentScheduler implements AgentScheduler {
      * 上报心跳，获取指令
      * @return
      */
-    private CommandPacket getCommandPacketByHeart(){
+    private List<CommandPacket> getCommandPacketByHeart(){
         List<CommandExecuteResponse> commandExecuteResponseList = getCommandExecuteResponses();
         HeartRequest heartRequest = new HeartRequest();
         heartRequest.setCommandExecuteResponseList(commandExecuteResponseList);
@@ -390,22 +367,37 @@ public class HttpAgentScheduler implements AgentScheduler {
         if (commandPacketList == null || commandPacketList.isEmpty()) {
             return null;
         }
-
-        if (commandPacketList.size() > 1){
-            Map<Long, CommandPacket> commandPacketMap = new HashMap<Long, CommandPacket>(commandPacketList.size(), 1);
-            for (CommandPacket commandPacket : commandPacketList){
-                commandPacketMap.put(commandPacket.getId(), commandPacket);
-            }
-            if (commandPacketMap.containsKey(onlineUpgradeCommandId) &&
-                commandPacketMap.containsKey(checkStorageCommandId)){
-                commandPacketMap.remove(onlineUpgradeCommandId);
-                commandPacketList = (List<CommandPacket>) commandPacketMap.values();
-            }
-        }
-
+        Map<CommandExecuteKey, CommandPacket> commandPacketMap = new HashMap<CommandExecuteKey, CommandPacket>(commandPacketList.size(), 1);
+        CommandPacket startCommandPacket = null;
+        CommandPacket checkStorageCommandPacket = null;
+        CommandPacket upgradeCommandPacket = null;
+        List<CommandPacket> list = new ArrayList<CommandPacket>();
         for (CommandPacket commandPacket : commandPacketList){
-
+            if (HeartCommandUtils.startCommandId == commandPacket.getId()){
+                startCommandPacket = commandPacket;
+                break;
+            }
+            if (HeartCommandUtils.checkStorageCommandId == commandPacket.getId()){
+                checkStorageCommandPacket = commandPacket;
+            } else if (HeartCommandUtils.onlineUpgradeCommandId == commandPacket.getId()){
+                upgradeCommandPacket = commandPacket;
+            } else {
+                list.add(commandPacket);
+            }
         }
+
+        if (startCommandPacket != null){
+            list.clear();
+            list.add(startCommandPacket);
+            return list;
+        }
+
+        if (checkStorageCommandPacket != null && upgradeCommandPacket != null) {
+            list.add(checkStorageCommandPacket);
+        }
+
+
+
         return null;
     }
 

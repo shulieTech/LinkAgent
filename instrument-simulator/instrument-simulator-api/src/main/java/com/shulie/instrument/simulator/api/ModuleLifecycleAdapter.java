@@ -114,4 +114,9 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
     public void loadCompleted() {
     }
 
+    @Override
+    public void executeCommand(){
+
+    }
+
 }

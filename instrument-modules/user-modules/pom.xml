@@ -61,7 +61,7 @@
         <module>module-redis-redisson</module>
         <module>module-resin</module>
         <module>module-saturn</module>
-        <!--        <module>module-shadow-job</module>-->
+        <module>module-shadow-job</module>
         <module>module-spring-cache</module>
         <module>module-undertow</module>
         <module>module-xmemcached</module>

@@ -60,11 +60,14 @@ class TraceInvokeContextEncoder extends TraceEncoder {
         StringBuilder buffer = this.buffer;
         buffer.delete(0, buffer.length());
         buffer.append(ctx.getTraceId() == null ? "" : ctx.getTraceId()).append('|')
-            .append(ctx.getStartTime()).append('|')
-            .append(StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append('|')
-            .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append('|')
-            .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append('|')
-            .append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append('|')
+            .append(ctx.getStartTime()).append('|');
+        // 新版本兼容老版本的控制台和大数据
+        if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
+            buffer.append(StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append('|')
+                .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append('|')
+                .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append('|');
+        }
+        buffer.append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append('|')
             .append(ctx.getInvokeId() == null ? "" : ctx.getInvokeId()).append('|')
             .append(ctx.getInvokeType()).append('|')
             .append(PradarCoreUtils.makeLogSafe(AppNameUtils.appName())).append('|')

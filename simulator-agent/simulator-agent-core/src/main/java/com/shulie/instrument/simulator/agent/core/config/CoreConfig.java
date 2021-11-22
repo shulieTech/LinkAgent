@@ -465,36 +465,37 @@ public class CoreConfig {
     }
 
     public String getTenantAppKey() {
-        String value = System.getProperty("tenant.app.key", null);
+        // 兼容老版本，如果有user.app.key，则优先使用user.app.key
+        String value = getProperty("user.app.key");
         if (StringUtils.isBlank(value)) {
-            value = getProperty("tenant.app.key",null);
+            value = getProperty("tenant.app.key");
+        }
+        return value;
+    }
+
+    /**
+     * 获取配置信息 优先级：启动参数 > 配置文件 > 环境变量
+     *
+     * @param key 配置key
+     * @return value
+     */
+    private String getProperty(String key) {
+        String value = System.getProperty(key, null);
+        if (StringUtils.isBlank(value)) {
+            value = getProperty(key, null);
         }
         if (StringUtils.isBlank(value)) {
-            value = System.getenv("tenant.app.key");
+            value = System.getenv(key);
         }
         return value;
     }
 
     public String getTroWebUrl() {
-        String value = System.getProperty("tro.web.url");
-        if (StringUtils.isBlank(value)) {
-            value = getProperty("tro.web.url", null);
-        }
-        if (StringUtils.isBlank(value)) {
-            value = System.getenv("tro.web.url");
-        }
-        return value;
+        return getProperty("tro.web.url");
     }
 
     public String getUserId() {
-        String value = System.getProperty("pradar.user.id");
-        if (StringUtils.isBlank(value)) {
-            value = getProperty("pradar.user.id", null);
-        }
-        if (StringUtils.isBlank(value)) {
-            value = System.getenv("pradar.user.id");
-        }
-        return value;
+        return getProperty("pradar.user.id");
     }
 
     /**
@@ -503,14 +504,7 @@ public class CoreConfig {
      * @return 当前环境
      */
     public String getEnvCode() {
-        String value = getProperty("pradar.env.code", null);
-        if (StringUtils.isBlank(value)) {
-            value = System.getProperty("pradar.env.code");
-        }
-        if (StringUtils.isBlank(value)) {
-            value = System.getenv("pradar.env.code");
-        }
-        return value;
+        return getProperty("pradar.env.code");
     }
 
     /**
@@ -520,9 +514,14 @@ public class CoreConfig {
      */
     public Map<String, String> getHttpMustHeaders() {
         Map<String, String> headerMap = new HashMap<String, String>();
-        headerMap.put("tenantAppKey", getTenantAppKey());
-        headerMap.put("userId", getUserId());
-        headerMap.put("envCode", getEnvCode());
+        // 根据envCode判断是新版请求头还是老版请求头
+        if (StringUtils.isBlank(getEnvCode())) {
+            headerMap.put("userAppKey", getTenantAppKey());
+        } else {
+            headerMap.put("tenantAppKey", getTenantAppKey());
+            headerMap.put("userId", getUserId());
+            headerMap.put("envCode", getEnvCode());
+        }
         return headerMap;
     }
 

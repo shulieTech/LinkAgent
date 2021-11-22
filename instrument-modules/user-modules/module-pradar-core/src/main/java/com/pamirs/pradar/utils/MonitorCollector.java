@@ -122,13 +122,17 @@ public class MonitorCollector {
                     StringBuilder stringBuilder = new StringBuilder();
                     ContainerStatsInfoCollector.ContainerStatsInfo statsInfo = collector.getContainerStatsInfo();
 
-                    stringBuilder.append(appName).append("|")
-                        .append(timeStamp).append("|")
-                        .append(StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append(
-                            "|")
-                        .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append("|")
-                        .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append("|")
-                        .append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append("|")
+                    stringBuilder.append(appName).append("|").append(timeStamp).append("|");
+                    if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
+                        stringBuilder.append(
+                                StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append(
+                                "|")
+                            .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append(
+                                "|")
+                            .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append(
+                                "|");
+                    }
+                    stringBuilder.append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append("|")
                         .append(statsInfo.getCpuUsagePercent()).append("|")
                         .append(statsInfo.getLatest1MinLoadAvg()).append("|")
                         .append(statsInfo.getLatest5MinLoadAvg()).append("|")
@@ -143,9 +147,12 @@ public class MonitorCollector {
                         .append(statsInfo.getTotalDiskSpace()).append('|')
                         .append(statsInfo.getUsableDiskSpace()).append('|')
                         .append(statsInfo.getDiskReadBytes()).append('|')
-                        .append(statsInfo.getDiskWriteBytes()).append('|')
-                        .append(1).append('|')
-                        .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
+                        .append(statsInfo.getDiskWriteBytes()).append('|');
+                    if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
+                        stringBuilder.append(1).append('|');
+                    }
+
+                    stringBuilder.append(Pradar.PRADAR_MONITOR_LOG_VERSION)
                         .append(PradarCoreUtils.NEWLINE);
                     Pradar.commitMonitorLog(stringBuilder.toString());
                 } catch (Throwable e) {
@@ -178,13 +185,18 @@ public class MonitorCollector {
                     long[] diskReadWrites = getDisk(hal);
                     hal.getNetworkIFs()[0].getSpeed();
                     long[] diskUses = getFileSystem();
-                    stringBuilder.append(appName).append("|")
-                        .append(timeStamp).append("|")
-                        .append(StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append(
-                            "|")
-                        .append(StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE).append("|")
-                        .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append("|")
-                        .append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append("|")
+                    stringBuilder.append(appName).append("|").append(timeStamp).append("|");
+                    // 新版本兼容老版本的控制台和大数据
+                    if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
+                        stringBuilder.append(
+                                StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY).append(
+                                "|")
+                            .append(Pradar.PRADAR_ENV_CODE).append("|")
+                            .append(StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID).append(
+                                "|");
+                    }
+
+                    stringBuilder.append(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO).append("|")
                         .append(cpuInfoResult.get(CPU_USAGE_KEY) == null ? "" : cpuInfoResult.get(CPU_USAGE_KEY))
                         .append("|")
                         .append(cpuLoad[0]).append("|")
@@ -205,9 +217,12 @@ public class MonitorCollector {
                         .append(diskUses != null ? diskUses[0] : "").append('|')
                         .append(diskUses != null ? diskUses[1] : "").append('|')
                         .append(diskReadWrites != null ? diskReadWrites[0] : "").append('|')
-                        .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|')
-                        .append(0).append('|')
-                        .append(Pradar.PRADAR_MONITOR_LOG_VERSION)
+                        .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|');
+                    if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
+                        stringBuilder.append(0).append('|');
+
+                    }
+                    stringBuilder.append(Pradar.PRADAR_MONITOR_LOG_VERSION)
                         .append(PradarCoreUtils.NEWLINE);
                     Pradar.commitMonitorLog(stringBuilder.toString());
                 } catch (Throwable e) {

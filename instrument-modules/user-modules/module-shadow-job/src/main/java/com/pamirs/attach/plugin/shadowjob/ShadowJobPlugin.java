@@ -28,7 +28,6 @@ import com.pamirs.attach.plugin.shadowjob.interceptor.ReflectiveMethodInvocation
 import com.pamirs.attach.plugin.shadowjob.interceptor.RequestMappingHandlerAdapterInterceptor;
 import com.pamirs.attach.plugin.shadowjob.interceptor.ScheduledMethodRunnableRunInterceptor;
 import com.pamirs.attach.plugin.shadowjob.interceptor.SpringContextInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.TbScheduleManagerFactoryInterceptor;
 import com.pamirs.attach.plugin.shadowjob.interceptor.XxlInitAdapterInterceptor;
 import com.pamirs.attach.plugin.shadowjob.util.ElasticJobRegisterUtil;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -27,7 +27,6 @@ import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
-import com.pamirs.pradar.pressurement.agent.shared.util.TbScheduleUtil;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.util.SqlMetadataParser;
 import com.pamirs.pradar.upload.uploader.AgentOnlineUploader;
@@ -55,7 +54,7 @@ import org.slf4j.LoggerFactory;
  */
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "pradar-core", version = "1.0.0", author = "xiaobin@shulie.io",
-    description = "pradar core 模式，提供链路追踪 trace 埋点以及压测标等服务")
+        description = "pradar core 模式，提供链路追踪 trace 埋点以及压测标等服务")
 public class PradarCoreModule extends ModuleLifecycleAdapter implements ExtensionModule {
     private final static Logger logger = LoggerFactory.getLogger(PradarCoreModule.class);
 
@@ -131,7 +130,6 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         SqlParser.release();
         ClassUtils.release();
         PradarSpringUtil.release();
-        TbScheduleUtil.release();
         SqlMetadataParser.clear();
     }
 }

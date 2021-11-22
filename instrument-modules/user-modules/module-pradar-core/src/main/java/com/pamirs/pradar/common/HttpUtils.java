@@ -343,9 +343,15 @@ public abstract class HttpUtils {
 
     private static Map<String, String> getHttpMustHeaders() {
         Map<String, String> headers = new HashMap<String, String>();
-        headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR));
-        headers.put("userId", getProperty(PRADAR_USER_ID_STR));
-        headers.put("envCode", getProperty(PRADAR_ENV_CODE_STR));
+        String envCode = getProperty(PRADAR_ENV_CODE_STR);
+        // 新探针兼容老版本的控制台
+        if (StringUtils.isBlank(envCode)) {
+            headers.put("userAppKey", getProperty(TENANT_APP_KEY_STR));
+        } else {
+            headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR));
+            headers.put("userId", getProperty(PRADAR_USER_ID_STR));
+            headers.put("envCode", envCode);
+        }
         return headers;
     }
 

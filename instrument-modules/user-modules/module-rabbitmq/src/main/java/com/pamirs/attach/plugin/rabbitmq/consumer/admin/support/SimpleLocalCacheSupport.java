@@ -48,8 +48,10 @@ public class SimpleLocalCacheSupport extends AbstractCacheSupport implements Cac
     @Override
     public void destroy() {
         synchronized (SimpleLocalCacheSupport.class) {
-            cache.clear();
-            cache = null;
+            if (cache != null) {
+                cache.clear();
+                cache = null;
+            }
         }
     }
 

@@ -87,8 +87,10 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
     @Override
     public void destroy() {
         synchronized (ZkCacheSupport.class) {
-            CACHE.clear();
-            CACHE = null;
+            if (CACHE != null) {
+                CACHE.clear();
+                CACHE = null;
+            }
         }
     }
 

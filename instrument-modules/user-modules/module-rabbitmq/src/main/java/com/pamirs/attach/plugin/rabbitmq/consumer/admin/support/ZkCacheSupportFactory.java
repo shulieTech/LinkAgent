@@ -75,8 +75,10 @@ public class ZkCacheSupportFactory {
 
     public static void destroy() {
         synchronized (ZkCacheSupportFactory.class) {
-            ZK_CACHE_SUPPORT.destroy();
-            ZK_CACHE_SUPPORT = null;
+            if (ZK_CACHE_SUPPORT != null) {
+                ZK_CACHE_SUPPORT.destroy();
+                ZK_CACHE_SUPPORT = null;
+            }
         }
     }
 }

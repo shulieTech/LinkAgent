@@ -177,7 +177,7 @@ public class ConsumerRegistry {
                 caches.remove(businessConsumer);
                 return false;
             }
-            /**
+            /*
              * 将注册的影子消费者添加到列表中，用于检测消费者是否是影子消费者
              */
             shadowConsumers.put(shadowConsumer, EMPTY);

@@ -16,8 +16,11 @@ package com.pamirs.attach.plugin.jetcache.interceptor;
 
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
+
+import java.util.Collection;
 
 /**
  * @Description
@@ -35,10 +38,24 @@ public class ExternalCacheBuildKeyInterceptor extends ResultInterceptorAdaptor {
 
         byte[] data = (byte[]) result;
         String key = new String(data);
+
+        //白名单 忽略
+        if (whiteListValidate(GlobalConfig.getInstance().getCacheKeyWhiteList(), key)) {
+            return result;
+        }
         if (!Pradar.isClusterTestPrefix(key)) {
             key = Pradar.addClusterTestPrefix(key);
             result = key.getBytes();
         }
         return result;
+    }
+
+    private boolean whiteListValidate(Collection<String> whiteList, String key) {
+        for (String white : whiteList) {
+            if (key.startsWith(white)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

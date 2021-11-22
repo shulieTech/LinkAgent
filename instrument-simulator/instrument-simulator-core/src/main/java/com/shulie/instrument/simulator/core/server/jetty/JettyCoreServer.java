@@ -25,10 +25,11 @@ import com.shulie.instrument.simulator.core.util.Initializer;
 import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,19 +131,19 @@ public class JettyCoreServer implements CoreServer {
             throw new IOException("server was not bind yet.");
         }
 
-        SelectChannelConnector scc = null;
+        ServerConnector scc = null;
         final Connector[] connectorArray = httpServer.getConnectors();
         if (null != connectorArray) {
             for (final Connector connector : connectorArray) {
-                if (connector instanceof SelectChannelConnector) {
-                    scc = (SelectChannelConnector) connector;
+                if (connector instanceof ServerConnector) {
+                    scc = (ServerConnector) connector;
                     break;
                 }
             }
         }
 
         if (null == scc) {
-            throw new IllegalStateException("not found SelectChannelConnector");
+            throw new IllegalStateException("not found ServerConnector");
         }
 
         return new InetSocketAddress(
@@ -189,17 +190,17 @@ public class JettyCoreServer implements CoreServer {
             ));
         }
 
+        httpServer = new Server(new InetSocketAddress(serverIp, serverPort));
         int maxThreads = Math.max(Runtime.getRuntime().availableProcessors(), 8);
         int minThreads = Math.max(maxThreads / 2, 1);
-        QueuedThreadPool qtp = new QueuedThreadPool(maxThreads);
+        QueuedThreadPool qtp = (QueuedThreadPool) httpServer.getThreadPool();
+        qtp.setMaxThreads(maxThreads);
         qtp.setMinThreads(minThreads);
         /**
          * jetty线程设置为daemon，防止应用启动失败进程无法正常退出
          */
         qtp.setDaemon(true);
         qtp.setName("simulator-jetty-qtp-" + qtp.hashCode());
-        httpServer = new Server(new InetSocketAddress(serverIp, serverPort));
-        httpServer.setThreadPool(qtp);
     }
 
     @Override

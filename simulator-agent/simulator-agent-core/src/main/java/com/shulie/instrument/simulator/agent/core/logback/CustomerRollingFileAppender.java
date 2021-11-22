@@ -268,12 +268,16 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
             stringBuilder.append(AddressUtils.getLocalAddress()).append("|");
             stringBuilder.append(0).append("|");
             stringBuilder.append(System.currentTimeMillis()).append("|");
-            stringBuilder.append(
-                StringUtils.isBlank(ConfigUtils.getTenantAppKey()) ? "" : ConfigUtils.getTenantAppKey()).append("|");
-            stringBuilder.append(StringUtils.isBlank(ConfigUtils.getEnvCode()) ? "" : ConfigUtils.getEnvCode()).append(
-                "|");
-            stringBuilder.append(StringUtils.isBlank(ConfigUtils.getUserId()) ? "" : ConfigUtils.getUserId()).append(
-                "|");
+            // 新版本兼容老版本的控制台和大数据
+            if (StringUtils.isNotBlank(ConfigUtils.getEnvCode())) {
+                stringBuilder.append(
+                    StringUtils.isBlank(ConfigUtils.getTenantAppKey()) ? "" : ConfigUtils.getTenantAppKey()).append(
+                    "|");
+                stringBuilder.append(ConfigUtils.getEnvCode()).append("|");
+                stringBuilder.append(StringUtils.isBlank(ConfigUtils.getUserId()) ? "" : ConfigUtils.getUserId())
+                    .append("|");
+            }
+
             stringBuilder.append(ConfigUtils.getAgentId()).append("|");
             stringBuilder.append(ConfigUtils.getAppName()).append("|");
             stringBuilder.append(errorMsg);

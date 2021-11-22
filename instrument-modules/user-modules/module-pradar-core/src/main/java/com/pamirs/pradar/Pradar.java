@@ -728,9 +728,10 @@ public final class Pradar {
             agentId = propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
         }
 
-        if (needUserInfo) {
+        // 新版探针兼容老版本的控制台，当envCode没有时不需要再agentId后加上租户信息
+        if (needUserInfo && !StringUtils.isBlank(Pradar.PRADAR_ENV_CODE)) {
             // 在agentId后面加上tenantAppKey和currentEnv
-            agentId += "&" + (StringUtils.isBlank(Pradar.PRADAR_ENV_CODE) ? "" : Pradar.PRADAR_ENV_CODE)
+            agentId += "&" + Pradar.PRADAR_ENV_CODE
                 + ":" + (StringUtils.isBlank(Pradar.PRADAR_USER_ID) ? "" : Pradar.PRADAR_USER_ID)
                 + ":" + (StringUtils.isBlank(Pradar.PRADAR_TENANT_KEY) ? "" : Pradar.PRADAR_TENANT_KEY);
         }

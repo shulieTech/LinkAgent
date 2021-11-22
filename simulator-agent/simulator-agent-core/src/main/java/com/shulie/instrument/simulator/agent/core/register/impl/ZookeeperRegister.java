@@ -258,9 +258,10 @@ public class ZookeeperRegister implements Register {
             agentId = propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
         }
 
-        if (needUserInfo) {
+        // 新版探针兼容老版本的控制台，当envCode没有时不需要再agentId后加上租户信息
+        if (needUserInfo && !StringUtils.isBlank(agentConfig.getEnvCode())) {
             // agentId中加上tenantAppKey、userId和currentEnv
-            agentId += "&" + (StringUtils.isBlank(agentConfig.getEnvCode()) ? "" : agentConfig.getEnvCode())
+            agentId += "&" + agentConfig.getEnvCode()
                 + ":" + (StringUtils.isBlank(agentConfig.getUserId()) ? "" : agentConfig.getUserId())
                 + ":" + (StringUtils.isBlank(agentConfig.getTenantAppKey()) ? "" : agentConfig.getTenantAppKey());
         }

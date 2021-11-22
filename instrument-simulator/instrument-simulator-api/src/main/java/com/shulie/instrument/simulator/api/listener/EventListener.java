@@ -14,9 +14,12 @@
  */
 package com.shulie.instrument.simulator.api.listener;
 
-import com.shulie.instrument.simulator.api.event.Event;
-
 import java.lang.ref.WeakReference;
+
+import com.shulie.instrument.simulator.api.ProcessControlEntity;
+import com.shulie.instrument.simulator.api.ProcessController;
+import com.shulie.instrument.simulator.api.event.Event;
+import com.shulie.instrument.simulator.message.Result;
 
 /**
  * 事件监听器
@@ -76,10 +79,11 @@ public abstract class EventListener implements BizClassLoaderWrapper {
      * </pre>
      *
      * @param event 触发事件
+     * @return
      * @throws Throwable 处理异常
      */
-    public void onEvent(Event event) throws Throwable {
-
+    public ProcessControlEntity onEvent(Event event) throws Throwable {
+        return ProcessControlEntity.none();
     }
 
     /**

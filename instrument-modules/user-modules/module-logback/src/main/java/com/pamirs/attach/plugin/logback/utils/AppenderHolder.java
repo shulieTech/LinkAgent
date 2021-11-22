@@ -134,6 +134,7 @@ public class AppenderHolder {
         Reflect.on(ptPolicy).call("setContext", Reflect.on(rollingPolicy).call("getContext").get());
         Reflect.on(ptPolicy).call("setMaxHistory", Reflect.on(rollingPolicy).call("getMaxHistory").get());
         Reflect.on(ptPolicy).call("setParent", ptAppender);
+        Reflect.on(ptPolicy).call("setTotalSizeCap", Reflect.on(rollingPolicy).get("totalSizeCap"));
         try {
             Reflect.on(ptPolicy).call("setMaxFileSize", Reflect.on(rollingPolicy).get("maxFileSize"));
         } catch (ReflectException ignore) {

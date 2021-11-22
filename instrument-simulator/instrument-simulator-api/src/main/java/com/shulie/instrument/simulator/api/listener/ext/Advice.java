@@ -14,8 +14,12 @@
  */
 package com.shulie.instrument.simulator.api.listener.ext;
 
+import com.shulie.instrument.simulator.api.ProcessControlEntity;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.event.EventType;
 import com.shulie.instrument.simulator.api.event.InvokeEvent;
+import com.shulie.instrument.simulator.api.util.Castor;
+import com.shulie.instrument.simulator.message.Result;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -63,6 +67,7 @@ public class Advice implements Attachment {
 
     private Object invokeContext;
 
+    private ProcessControlEntity processControlEntity = null;
     /**
      * 构造通知
      *
@@ -366,6 +371,18 @@ public class Advice implements Attachment {
     }
 
     /**
+     * 中断当前代码处理流程,并立即返回指定对象
+     * 返回之前会进行返回值转换校验，检查是否可以进行正常的类型转换
+     *
+     * @param object 返回对象
+     * @throws ProcessControlException 抛出立即返回流程控制异常
+     */
+    public void returnImmediately(final Object object) throws ProcessControlException {
+        //fix bug if object can not cast target  type
+        Castor.canCast(this.getBehavior().getReturnType(), object);
+        this.processControlEntity = ProcessControlEntity.returnImmediately(object);
+    }
+    /**
      * 获取绑定的上下文信息
      *
      * @return
@@ -401,6 +418,14 @@ public class Advice implements Attachment {
         return callTarget;
     }
 
+    public ProcessControlEntity getProcessControlEntity() {
+        return processControlEntity;
+    }
+
+    public void setProcessControlEntity(ProcessControlEntity processControlEntity) {
+        this.processControlEntity = processControlEntity;
+    }
+
     /**
      * 销毁 advice
      */
@@ -417,6 +442,7 @@ public class Advice implements Attachment {
         top = null;
         parent = null;
         invokeContext = null;
+        processControlEntity = null;
     }
 }
 

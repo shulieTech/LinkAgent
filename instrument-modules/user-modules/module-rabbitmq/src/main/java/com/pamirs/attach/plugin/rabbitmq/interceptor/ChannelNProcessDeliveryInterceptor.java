@@ -1,7 +1,30 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Resource;
 
@@ -9,11 +32,15 @@ import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumeResult;
-import com.pamirs.attach.plugin.rabbitmq.common.DeliverDetail;
+import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
 import com.pamirs.attach.plugin.rabbitmq.consumer.AdminApiConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.AutorecoveringChannelConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.SimpleLocalCacheSupport;
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ZkCacheSupportFactory;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
+import com.pamirs.attach.plugin.rabbitmq.utils.OnceExecutor;
+import com.pamirs.attach.plugin.rabbitmq.utils.RabbitMqUtils;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -30,9 +57,17 @@ import com.rabbitmq.client.BasicProperties;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Command;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.Consumer;
+import com.rabbitmq.client.impl.AMQConnection;
 import com.rabbitmq.client.impl.AMQImpl.Basic.Deliver;
+import com.rabbitmq.client.impl.ChannelManager;
+import com.rabbitmq.client.impl.ChannelN;
+import com.rabbitmq.client.impl.SocketFrameHandler;
+import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
+import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
@@ -53,6 +88,20 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Resource
     private DynamicFieldManager dynamicFieldManager;
+
+    private final static ScheduledThreadPoolExecutor THREAD_POOL_EXECUTOR = new ScheduledThreadPoolExecutor(
+        Runtime.getRuntime()
+            .availableProcessors(), new ThreadFactory() {
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "shadow-consumer-register-" + threadNumber.getAndIncrement());
+            if (t.isDaemon()) {t.setDaemon(false);}
+            if (t.getPriority() != Thread.NORM_PRIORITY) {t.setPriority(Thread.NORM_PRIORITY);}
+            return t;
+        }
+    });
 
     public ChannelNProcessDeliveryInterceptor(SimulatorConfig simulatorConfig) {
         this.simulatorConfig = simulatorConfig;
@@ -164,55 +213,135 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         if (ConfigCache.isWorkWithSpring()) {
             return;
         }
-        Object[] args = advice.getParameterArray();
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
-
-        String consumerTag = m.getConsumerTag();
-        if (Pradar.isClusterTestPrefix(consumerTag) || ChannelHolder.existsConsumer(consumerTag)) {
+        Channel channel = (Channel)advice.getTarget();
+        Connection connection = channel.getConnection();
+        if (Pradar.isClusterTestPrefix(connection.getClientProvidedName())) {
             return;
         }
-        String routingKey = m.getRoutingKey();
-        String exchange = m.getExchange();
-        Channel channel = (Channel)advice.getTarget();
-        DeliverDetail deliverDetail = new DeliverDetail(consumerTag, exchange, routingKey, channel);
-        try {
-            ConsumerMetaData consumerMetaData = getConsumerMetaData(deliverDetail);
-            if (consumerMetaData == null) {
-                LOGGER.error("[RabbitMQ] SIMULATOR: can not build consumerMetaData!");
-                return;
+        //每个connection只进来一次，一次流量带所有的影子消费者，如果失败异步任务会自动重试
+        OnceExecutor.execute(connection, new OnceExecutor.Consumer<Connection>() {
+            @Override
+            public void accept(Connection connection) {
+                List<ConsumerDetail> consumerDetails = getAllConsumersFromConnection(connection);
+                for (ConsumerDetail consumerDetail : consumerDetails) {
+                    THREAD_POOL_EXECUTOR.execute(new ShadowConsumerRegisterRunnable(consumerDetail));
+                }
             }
+        });
+    }
 
-            String queue = consumerMetaData.getQueue();
-            if (!GlobalConfig.getInstance().getMqWhiteList().contains("#" + queue)) {
-                LOGGER.warn("[RabbitMQ] SIMULATOR: {} is not in whitelist. ignore it", queue);
-                return;
+    private List<ConsumerDetail> getAllConsumersFromConnection(Connection connection) {
+        List<ConsumerDetail> consumerDetails = new ArrayList<ConsumerDetail>();
+        Set<Channel> channels = new HashSet<Channel>();
+        if (connection instanceof AMQConnection) {
+            ChannelManager _channelManager = Reflect.on(connection).get("_channelManager");
+            Map<Integer, ChannelN> _channelMap = Reflect.on(_channelManager).get("_channelMap");
+            channels.addAll(_channelMap.values());
+        } else if (connection instanceof AutorecoveringConnection) {
+            Map<Integer, AutorecoveringChannel> _channels = Reflect.on(connection).get("channels");
+            channels.addAll(_channels.values());
+        } else {
+            logger.error("[RabbitMQ] SIMULATOR unsupport rabbitmqConnection");
+        }
+        AMQConnection amqConnection = RabbitMqUtils.unWrapConnection(connection);
+        SocketFrameHandler frameHandler = Reflect.on(amqConnection).get("_frameHandler");
+        String localIp = frameHandler.getLocalAddress().getHostAddress();
+        int localPort = frameHandler.getLocalPort();
+        for (Channel channel : channels) {
+            ChannelN channelN = RabbitMqUtils.unWrapChannel(channel);
+            Map<String, Consumer> _consumers = Reflect.on(channelN).get("_consumers");
+            for (Entry<String, Consumer> entry : _consumers.entrySet()) {
+                consumerDetails.add(new ConsumerDetail(connection, entry.getKey(),
+                    channel, entry.getValue(), localIp, localPort));
             }
-            String ptQueue = consumerMetaData.getPtQueue();
-            String ptConsumerTag = consumerMetaData.getPtConsumerTag();
-            if (isInfoEnabled) {
+        }
+        return consumerDetails;
+    }
+
+    private class ShadowConsumerRegisterRunnable implements Runnable {
+
+        private final ConsumerDetail consumerDetail;
+
+        private final int retryTimes;
+
+        private ShadowConsumerRegisterRunnable(ConsumerDetail consumerDetail, int retryTimes) {
+            this.consumerDetail = consumerDetail;
+            this.retryTimes = retryTimes;
+        }
+
+        private ShadowConsumerRegisterRunnable(ConsumerDetail consumerDetail) {
+            this(consumerDetail, 0);
+        }
+
+        @Override
+        public void run() {
+            logger.info("[RabbitMQ] SIMULATOR prepare create shadow consumer {} {} current retry times : {}",
+                consumerDetail.getChannel(), consumerDetail.getConsumerTag(), retryTimes);
+            String consumerTag = consumerDetail.getConsumerTag();
+            Channel channel = consumerDetail.getChannel();
+            try {
+                ConsumerMetaData consumerMetaData = getConsumerMetaData(consumerDetail);
+                if (consumerMetaData == null) {
+                    logger.warn("[RabbitMQ] SIMULATOR: can not find consumerMetaData for channel : {}, consumerTag : {}"
+                        , consumerDetail.getChannel(), consumerDetail.getConsumerTag());
+                    retry();
+                    return;
+                }
+
+                String queue = consumerMetaData.getQueue();
+                if (!GlobalConfig.getInstance().getMqWhiteList().contains("#" + queue)) {
+                    logger.warn("[RabbitMQ] SIMULATOR: {} is not in whitelist. ignore it", queue);
+                    //todo need retry？
+                    retry();
+                    return;
+                }
+                String ptQueue = consumerMetaData.getPtQueue();
+                String ptConsumerTag = consumerMetaData.getPtConsumerTag();
                 logger.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
                     queue, ptQueue, consumerTag, ptConsumerTag);
-            }
-            try {
-                ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, consumerMetaData);
-                String cTag = consumeResult.getTag();
-                dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(), RabbitmqConstants.IS_AUTO_ACK_FIELD,
-                    consumerMetaData.isAutoAck());
-                if (cTag != null) {
-                    if (isInfoEnabled) {
-                        logger.info(
-                            "[RabbitMQ] create shadow consumer successful! queue : {} pt_queue : {} tag : {} pt_tag : {}",
-                            queue, ptQueue, consumerTag, ptConsumerTag);
+                try {
+                    ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, consumerMetaData);
+                    if (consumeResult == null) {
+                        retry();
+                        return;
                     }
-                    ChannelHolder.addConsumerTag(channel, consumerTag, cTag, ptQueue);
-                } else {
-                    reporterError(null, ptQueue, ptConsumerTag, "get shadow channel is null or closed.");
+                    String cTag = consumeResult.getTag();
+                    dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(),
+                        RabbitmqConstants.IS_AUTO_ACK_FIELD,
+                        consumerMetaData.isAutoAck());
+                    if (cTag != null) {
+                        if (isInfoEnabled) {
+                            logger.info(
+                                "[RabbitMQ] create shadow consumer successful! queue : {} pt_queue : {} tag : {} pt_tag : "
+                                    + "{}",
+                                queue, ptQueue, consumerTag, ptConsumerTag);
+                        }
+                        ChannelHolder.addConsumerTag(channel, consumerTag, cTag, ptQueue);
+                    } else {
+                        reporterError(null, ptQueue, ptConsumerTag, "get shadow channel is null or closed.");
+                        retry();
+                    }
+                } catch (Throwable e) {
+                    reporterError(e, ptQueue, ptConsumerTag);
+                    retry();
                 }
             } catch (Throwable e) {
-                reporterError(e, ptQueue, ptConsumerTag);
+                reporterError(e, null, consumerTag);
+                retry();
             }
-        } catch (Throwable e) {
-            reporterError(e, routingKey, consumerTag);
+        }
+
+        private void retry() {
+            int nexRetryTimes = this.retryTimes + 1;
+            if (nexRetryTimes >= 10) {
+                logger.error("consumerDetail : {} reach max retry time, give up retry!", consumerDetail);
+                return;
+            }
+            long time = (nexRetryTimes) * 60L;
+            long maxTime = 60 * 5L;
+            time = Math.min(time, maxTime);
+            THREAD_POOL_EXECUTOR.schedule(
+                new ShadowConsumerRegisterRunnable(consumerDetail, nexRetryTimes), time, TimeUnit.SECONDS);
         }
     }
 
@@ -235,7 +364,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         }
     }
 
-    private ConsumerMetaData getConsumerMetaData(DeliverDetail deliverDetail) {
+    private ConsumerMetaData getConsumerMetaData(ConsumerDetail deliverDetail) throws Exception {
         Channel channel = deliverDetail.getChannel();
         String consumerTag = deliverDetail.getConsumerTag();
         final int key = System.identityHashCode(channel);
@@ -245,17 +374,23 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 consumerMetaData = ConfigCache.getConsumerMetaData(key, consumerTag);
                 if (consumerMetaData == null) {
                     consumerMetaData = buildConsumerMetaData(deliverDetail);
-                    ConfigCache.putConsumerMetaData(key, consumerTag, consumerMetaData);
+                    if (consumerMetaData != null) {
+                        ConfigCache.putConsumerMetaData(key, consumerTag, consumerMetaData);
+                    }
                 }
             }
         }
         return consumerMetaData;
     }
 
-    private ConsumerMetaData buildConsumerMetaData(DeliverDetail deliverDetail) {
-        ConsumerMetaData consumerMetaData = AutorecoveringChannelConsumerMetaDataBuilder.getInstance().tryBuild(deliverDetail);
-        return consumerMetaData != null ? consumerMetaData : new AdminApiConsumerMetaDataBuilder(simulatorConfig, null).tryBuild(
-            deliverDetail);
+    private ConsumerMetaData buildConsumerMetaData(ConsumerDetail deliverDetail) throws Exception {
+        ConsumerMetaData consumerMetaData = AutorecoveringChannelConsumerMetaDataBuilder.getInstance()
+            .tryBuild(deliverDetail);
+        return consumerMetaData != null ? consumerMetaData :
+            new AdminApiConsumerMetaDataBuilder(simulatorConfig,
+                simulatorConfig.getBooleanProperty("rabbitmq.admin.api.zk.control", false) ?
+                    ZkCacheSupportFactory.create(simulatorConfig) : SimpleLocalCacheSupport.getInstance())
+                .tryBuild(deliverDetail);
     }
 
     private void reporterError(Throwable e, String queue, String consumerTag) {
@@ -272,4 +407,8 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         logger.error("[RabbitMQ] PT Consumer Inject failed queue:[{}] consumerTag:{}, {}", queue, consumerTag, cases, e);
     }
 
+    @Override
+    protected void clean() {
+        THREAD_POOL_EXECUTOR.shutdownNow();
+    }
 }

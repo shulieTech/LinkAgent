@@ -14,11 +14,11 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.consumer;
 
-import com.pamirs.pradar.Pradar;
-import com.rabbitmq.client.Consumer;
-
 import java.util.Collections;
 import java.util.Map;
+
+import com.pamirs.pradar.Pradar;
+import com.rabbitmq.client.Consumer;
 
 /**
  * @author jirenhe | jirenhe@shulie.io

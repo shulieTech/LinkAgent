@@ -29,8 +29,7 @@ public class ConfigCache {
     private static Map<Integer, Object> caches = new ConcurrentHashMap<Integer, Object>();
     private static Map<Integer, String> queueCaches = new ConcurrentHashMap<Integer, String>();
     private static Map<ConsumerMetaDataCacheKey, ConsumerMetaData> consumerMetaDataCaches
-            = new ConcurrentHashMap<ConsumerMetaDataCacheKey, ConsumerMetaData>();
-
+        = new ConcurrentHashMap<ConsumerMetaDataCacheKey, ConsumerMetaData>();
 
     public static void removeConsumerMetaDataCaches(ConsumerMetaDataCacheKey key) {
         consumerMetaDataCaches.remove(key);
@@ -108,9 +107,9 @@ public class ConfigCache {
                 return true;
             }
             if (obj instanceof ConsumerMetaDataCacheKey) {
-                ConsumerMetaDataCacheKey anotherObject = (ConsumerMetaDataCacheKey) obj;
+                ConsumerMetaDataCacheKey anotherObject = (ConsumerMetaDataCacheKey)obj;
                 return anotherObject.channelKey == this.channelKey && anotherObject.consumerTag.equals(
-                        this.consumerTag);
+                    this.consumerTag);
             }
             return false;
         }

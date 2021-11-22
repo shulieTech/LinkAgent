@@ -1,10 +1,24 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.rabbitmq.consumer;
 
 import java.util.List;
 
 import com.alibaba.fastjson.JSON;
 
-import com.pamirs.attach.plugin.rabbitmq.common.DeliverDetail;
+import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.CacheSupport;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.CacheSupport.CacheKey;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
@@ -35,29 +49,34 @@ public class AdminApiConsumerMetaDataBuilder implements ConsumerMetaDataBuilder 
     }
 
     @Override
-    public ConsumerMetaData tryBuild(DeliverDetail deliverDetail) {
-        Channel channel = deliverDetail.getChannel();
+    public ConsumerMetaData tryBuild(final ConsumerDetail consumerDetail) {
         try {
-            Connection connection = Reflect.on(channel).get("_connection");
-            String virtualHost = Reflect.on(connection).get("_virtualHost");
-            AdminAccessInfo adminAccessInfo = resolveAdminAccessInfoByConfig(virtualHost);
-            if (adminAccessInfo == null) {
-                adminAccessInfo = resolveAdminAccessInfoByConnection(connection, virtualHost);
-            }
-            final AdminAccessInfo finalAdminAccessInfo = adminAccessInfo;
-            ConsumerApiResult consumerApiResults = cacheSupport
-                .computeIfAbsent(new CacheKey(deliverDetail.getConsumerTag(), channel.getChannelNumber()),
+            ConsumerApiResult consumerApiResult = cacheSupport
+                .computeIfAbsent(consumerDetailToCacheKey(consumerDetail),
                     new CacheSupport.Supplier() {
                         @Override
                         public List<ConsumerApiResult> get() {
+                            Channel channel = consumerDetail.getChannel();
+                            Connection connection = Reflect.on(channel).get("_connection");
+                            String virtualHost = Reflect.on(connection).get("_virtualHost");
+                            AdminAccessInfo adminAccessInfo = resolveAdminAccessInfoByConfig(virtualHost);
+                            if (adminAccessInfo == null) {
+                                adminAccessInfo = resolveAdminAccessInfoByConnection(connection, virtualHost);
+                            }
+                            final AdminAccessInfo finalAdminAccessInfo = adminAccessInfo;
                             return getAllConsumers(finalAdminAccessInfo);
                         }
                     });
-            return consumerApiResults.toConsumerMetaData(deliverDetail.getConsumer());
+            return consumerApiResult == null ? null : consumerApiResult.toConsumerMetaData(consumerDetail.getConsumer());
         } catch (Throwable e) {
             logger.warn("get queue from web admin fail!", e);
         }
         return null;
+    }
+
+    private CacheKey consumerDetailToCacheKey(ConsumerDetail consumerDetail) {
+        return new CacheKey(consumerDetail.getConsumerTag(), consumerDetail.getChannel().getChannelNumber(),
+            consumerDetail.getConnectionLocalIp(), consumerDetail.getConnectionLocalPort());
     }
 
     private AdminAccessInfo resolveAdminAccessInfoByConfig(String virtualHost) {

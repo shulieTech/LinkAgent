@@ -14,8 +14,22 @@
  */
 package com.pamirs.attach.plugin.rabbitmq;
 
-import com.pamirs.attach.plugin.rabbitmq.interceptor.*;
+import com.pamirs.attach.plugin.rabbitmq.destroy.ShadowConsumerDisableListenerImpl;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.AMQConnectionInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.BlockingQueueConsumerConsumeFromQueueInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNAckInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicCancelInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicConsumeInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicGetInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicPublishInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNProcessDeliveryInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.DefaultConsumerHandleDeliveryInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.QueueingConsumerHandleInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringRabbitRabbitAdminDeclareQueueInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.StrictExceptionHandlerInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -36,6 +50,9 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
+        final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
+        EventRouter.router().addListener(shadowConsumerDisableListener);
+
         return addHookRegisterInterceptor();
     }
 

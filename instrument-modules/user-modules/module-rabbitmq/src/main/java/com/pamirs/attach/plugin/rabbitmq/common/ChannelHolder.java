@@ -1,3 +1,17 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.rabbitmq.common;
 
 import java.io.IOException;
@@ -178,8 +192,8 @@ public class ChannelHolder {
 
     public static ConsumeResult consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws IOException {
         return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
-                consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
-                consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), new ExceptionSilenceConsumer(consumerMetaData.getConsumer()));
+            consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
+            consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), new ExceptionSilenceConsumer(consumerMetaData.getConsumer()));
     }
 
     public static ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
@@ -200,7 +214,7 @@ public class ChannelHolder {
      * @param consumer
      * @return 返回 consumerTag
      */
-    public static ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
+    public static synchronized ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
                                                    boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
                                                    Consumer consumer) throws IOException {
         Channel shadowChannel = getShadowChannel(target);
@@ -320,7 +334,11 @@ public class ChannelHolder {
     }
 
     public static boolean isShadowChannel(Channel channel) {
-        return channelCache.values().contains(channel);
+        return channelCache.containsValue(channel);
+    }
+
+    public static boolean isShadowConnection(Connection connection) {
+        return connectionCache.containsValue(connection);
     }
 
     /**
@@ -360,7 +378,7 @@ public class ChannelHolder {
     private static Connection getPtConnect(Connection connection) throws IOException, TimeoutException {
         int key = System.identityHashCode(connection);
         Connection ptConnection = connectionCache.get(key);
-        if (ptConnection == null) {
+        if (ptConnection == null || !ptConnection.isOpen()) {
             ptConnection = connectionFactory(connection).newConnection("pt_connect-" + connection.toString());
             connectionCache.put(key, ptConnection);
         }

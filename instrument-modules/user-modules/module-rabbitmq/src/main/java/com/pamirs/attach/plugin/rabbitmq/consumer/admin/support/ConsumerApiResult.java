@@ -1,3 +1,17 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.rabbitmq.consumer.admin.support;
 
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
@@ -20,7 +34,7 @@ public class ConsumerApiResult {
             "vhost": "/"
         },
         "channel_details": {
-        "name": "127.0.0.1:62756 -> 127.0.0.1:5672 (1)",
+            "name": "127.0.0.1:62756 -> 127.0.0.1:5672 (1)",
             "number": 1,
             "user": "root",
             "connection_name": "127.0.0.1:62756 -> 192.168.1.95:5672",
@@ -38,6 +52,8 @@ public class ConsumerApiResult {
     private String consumer_tag;
 
     private Queue queue;
+
+    private ChannelDetail channel_details;
 
     public int getPrefetch_count() {
         return prefetch_count;
@@ -77,6 +93,15 @@ public class ConsumerApiResult {
 
     public void setQueue(Queue queue) {
         this.queue = queue;
+    }
+
+    public ChannelDetail getChannel_details() {
+        return channel_details;
+    }
+
+    public void setChannel_details(
+        ChannelDetail channel_details) {
+        this.channel_details = channel_details;
     }
 
     public static class Queue {

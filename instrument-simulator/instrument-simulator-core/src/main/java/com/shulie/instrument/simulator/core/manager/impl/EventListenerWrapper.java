@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.core.manager.impl;
 
+import com.shulie.instrument.simulator.api.ProcessControlEntity;
 import com.shulie.instrument.simulator.api.event.Event;
 import com.shulie.instrument.simulator.api.listener.Destroyed;
 import com.shulie.instrument.simulator.api.listener.EventListener;
@@ -45,8 +46,8 @@ public class EventListenerWrapper extends EventListener {
     }
 
     @Override
-    public void onEvent(Event event) throws Throwable {
-        eventListener.onEvent(event);
+    public ProcessControlEntity onEvent(Event event) throws Throwable {
+        return eventListener.onEvent(event);
     }
 
     @Override

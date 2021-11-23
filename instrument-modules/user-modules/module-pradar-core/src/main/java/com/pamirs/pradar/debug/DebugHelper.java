@@ -33,7 +33,9 @@ import org.slf4j.LoggerFactory;
 public class DebugHelper {
 
     private static ModuleCommandInvoker moduleCommandInvoker;
-    private final static String MODULE_ID_DEBUG = "DEBUG-MODULE";
+    //private final static String MODULE_ID_DEBUG = "DEBUG-MODULE";
+    private final static String MODULE_ID_DEBUG = "debug-module";
+
     private final static String ADD_DEBUG_COMMAND = "addDebugInfo";
     private final static String MACHINE_DEBUG_COMMAND = "addMachineDebugInfo";
     private static boolean hasDebugModule = true;
@@ -55,7 +57,7 @@ public class DebugHelper {
                 moduleCommandInvoker.invokeCommand(MODULE_ID_DEBUG, ADD_DEBUG_COMMAND, args);
             } catch (ModuleRuntimeException e) {
                 if (ErrorCode.MODULE_NOT_EXISTED.equals(e.getErrorCode())) {
-                    hasDebugModule = false;
+                    //hasDebugModule = false;
                     if (warnAlready.compareAndSet(false, true)) {
                         LOGGER.warn("debug module is not existed! debug will not take effect");
                     }
@@ -73,7 +75,7 @@ public class DebugHelper {
                 moduleCommandInvoker.invokeCommand(MODULE_ID_DEBUG, MACHINE_DEBUG_COMMAND, args);
             } catch (ModuleRuntimeException e) {
                 if (ErrorCode.MODULE_NOT_EXISTED.equals(e.getErrorCode())) {
-                    hasDebugModule = false;
+                    //hasDebugModule = false;
                     if (warnAlready.compareAndSet(false, true)) {
                         LOGGER.warn("debug module is not existed! debug will not take effect");
                     }

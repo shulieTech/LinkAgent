@@ -28,6 +28,10 @@
     <artifactId>module-apache-axis</artifactId>
     <name>${project.artifactId} ${project.version}</name>
 
+    <properties>
+        <module-name>apache-axis</module-name>
+    </properties>
+
     <dependencies>
 
         <dependency>

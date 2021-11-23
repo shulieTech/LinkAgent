@@ -66,7 +66,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
                     classNames.add(name);
                 }
                 return CommandResponse.success(classNames);
-            } else if (StringUtils.equals("s", type)) {
+            } else if (StringUtils.equals("i", type)) {
                 Set<Class<?>> classes = loadedClassDataSource.find(new InterfaceNameRegexFilter(cnPattern, ".*", true, true));
                 List<String> classNames = new ArrayList<String>();
                 for (Class<?> clazz : classes) {

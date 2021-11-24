@@ -28,6 +28,10 @@
     <artifactId>module-apache-cxf</artifactId>
     <name>${project.artifactId} ${project.version}</name>
 
+    <properties>
+        <module-name>apache-cxf</module-name>
+    </properties>
+
     <dependencies>
 
         <dependency>

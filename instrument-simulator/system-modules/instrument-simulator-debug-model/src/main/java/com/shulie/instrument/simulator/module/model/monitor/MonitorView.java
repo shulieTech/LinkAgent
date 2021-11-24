@@ -187,9 +187,9 @@ public class MonitorView implements Serializable {
                 .append('\t').append(count)
                 .append('\t').append(success)
                 .append('\t').append(fail)
-                .append('\t').append(maxCost)
-                .append('\t').append(minCost)
-                .append('\t').append(avgCost);
+                .append('\t').append(maxCost / 1000000).append("ms")
+                .append('\t').append(minCost / 1000000).append("ms")
+                .append('\t').append(avgCost / 1000000).append("ms");
         return builder.toString();
     }
 }

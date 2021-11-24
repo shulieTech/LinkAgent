@@ -122,7 +122,7 @@ public class AgentLauncher {
     private static final String DEFAULT_TRO_WEB_URL = "";
 
     private static final String KEY_ENV_CODE = "envCode";
-    private static final String DEFAULT_ENV_CODE = "test";
+    private static final String DEFAULT_ENV_CODE = "";
 
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";

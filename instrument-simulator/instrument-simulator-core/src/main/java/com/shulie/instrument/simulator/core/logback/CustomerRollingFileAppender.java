@@ -30,6 +30,7 @@ import ch.qos.logback.core.rolling.helper.CompressionMode;
 import ch.qos.logback.core.rolling.helper.FileNamePattern;
 import ch.qos.logback.core.util.ContextUtil;
 import com.shulie.instrument.simulator.core.util.CustomerReflectUtils;
+import org.apache.commons.lang.StringUtils;
 
 import static ch.qos.logback.core.CoreConstants.CODES_URL;
 import static ch.qos.logback.core.CoreConstants.MORE_INFO_PREFIX;
@@ -274,9 +275,11 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
             stringBuilder.append("127.0.0.1").append("|");
             stringBuilder.append(0).append("|");
             stringBuilder.append(System.currentTimeMillis()).append("|");
-            stringBuilder.append(System.getProperty("tenant.app.key")).append("|");
-            stringBuilder.append(System.getProperty("pradar.env.code")).append("|");
-            stringBuilder.append(System.getProperty("pradar.user.id")).append("|");
+            if (StringUtils.isNotBlank(System.getProperty("pradar.env.code"))) {
+                stringBuilder.append(System.getProperty("tenant.app.key")).append("|");
+                stringBuilder.append(System.getProperty("pradar.env.code")).append("|");
+                stringBuilder.append(System.getProperty("pradar.user.id")).append("|");
+            }
             stringBuilder.append(System.getProperty("agentId")).append("|");
             stringBuilder.append(System.getProperty("app_name")).append("|");
             stringBuilder.append(errorMsg);

@@ -258,11 +258,22 @@ public class AgentLauncher {
             }
             builder.append(";zkConnectionTimeout=").append(this.agentConfig.getZkConnectionTimeout());
             builder.append(";zkSessionTimeout=").append(this.agentConfig.getZkSessionTimeout());
-            builder.append(";agentVersion=").append(this.agentConfig.getAgentVersion());
-            builder.append(";troWebUrl=").append(this.agentConfig.getTroWebUrl());
-            builder.append(";tenantAppKey=").append(this.agentConfig.getTenantAppKey());
-            builder.append(";userId=").append(this.agentConfig.getUserId());
-            builder.append(";envCode=").append(this.agentConfig.getEnvCode());
+            if (StringUtils.isNotBlank(this.agentConfig.getAgentVersion())) {
+                builder.append(";agentVersion=").append(this.agentConfig.getAgentVersion());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getTroWebUrl())) {
+                builder.append(";troWebUrl=").append(this.agentConfig.getTroWebUrl());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getTenantAppKey())) {
+                builder.append(";tenantAppKey=").append(this.agentConfig.getTenantAppKey());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getUserId())) {
+                builder.append(";userId=").append(this.agentConfig.getUserId());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getEnvCode())) {
+                builder.append(";envCode=").append(this.agentConfig.getEnvCode());
+            }
+
             /**
              * 指定simulator配置文件的获取地址
              */

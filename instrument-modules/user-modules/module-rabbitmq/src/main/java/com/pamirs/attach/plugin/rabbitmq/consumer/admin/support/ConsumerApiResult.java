@@ -167,8 +167,8 @@ public class ConsumerApiResult {
             consumer,
             this.exclusive,
             !this.ack_required,
-            this.prefetch_count
-        );
+            this.prefetch_count,
+            false);
     }
 
 }

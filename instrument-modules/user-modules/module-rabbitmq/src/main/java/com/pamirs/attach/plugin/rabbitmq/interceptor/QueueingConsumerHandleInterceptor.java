@@ -64,41 +64,12 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeFirst(Advice advice) {
-        Object[] args = advice.getParameterArray();
-        if (args == null || args.length == 0 || args[0] == null) {
-            return;
-        }
-
-        Object target = advice.getTarget();
-        Class<?>[] classes = target.getClass().getClasses();
-        if (classes.length != 1) {
-            return;
-        }
-        Object deliveryObj = args[0];
-        if (deliveryObj == null) {
-            return;
-        }
-        String topic = null;
-        String group = null;
-        try {
-            Envelope envelope = Reflect.on(deliveryObj).get(RabbitmqConstants.DYNAMIC_FIELD_ENVELOPE);
-            topic = envelope.getExchange();
-            group = envelope.getRoutingKey();
-        } catch (ReflectException e) {
-        }
-    }
-
-    @Override
     public void beforeLast(Advice advice) {
         Object[] args = advice.getParameterArray();
         if (args == null || args[0] == null) {
             return;
         }
         Delivery queue = (Delivery) args[0];
-        if (queue == null) {
-            return;
-        }
         Envelope envelope = queue.getEnvelope();
         if (envelope == null) {
             return;

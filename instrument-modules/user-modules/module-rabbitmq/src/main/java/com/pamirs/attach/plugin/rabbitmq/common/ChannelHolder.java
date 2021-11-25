@@ -193,7 +193,7 @@ public class ChannelHolder {
     public static ConsumeResult consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws IOException {
         return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
             consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
-            consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), new ExceptionSilenceConsumer(consumerMetaData.getConsumer()));
+            consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
     }
 
     public static ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,

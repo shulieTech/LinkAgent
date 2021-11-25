@@ -35,15 +35,17 @@ public class ConsumerMetaData {
     private final boolean autoAck;
     private final int prefetchCount;
     private final Map<String, Object> arguments;
+    private final boolean useOriginChannel;
 
     public ConsumerMetaData(String queue, String consumerTag, Consumer consumer, boolean exclusive, boolean autoAck,
-                            int prefetchCount) {
+        int prefetchCount, boolean useOriginChannel) {
         this.queue = queue;
         this.consumerTag = consumerTag;
         this.consumer = consumer;
         this.exclusive = exclusive;
         this.autoAck = autoAck;
         this.prefetchCount = prefetchCount;
+        this.useOriginChannel = useOriginChannel;
         this.arguments = Collections.emptyMap();
         this.ptQueue = Pradar.addClusterTestPrefix(queue);
         this.ptConsumerTag = Pradar.addClusterTestPrefix(consumerTag);
@@ -83,5 +85,9 @@ public class ConsumerMetaData {
 
     public Map<String, Object> getArguments() {
         return arguments;
+    }
+
+    public boolean isUseOriginChannel() {
+        return useOriginChannel;
     }
 }

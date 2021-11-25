@@ -15,19 +15,14 @@
 package com.pamirs.attach.plugin.rabbitmq;
 
 import com.pamirs.attach.plugin.rabbitmq.destroy.ShadowConsumerDisableListenerImpl;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.AMQConnectionInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.BlockingQueueConsumerConsumeFromQueueInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNAckInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicCancelInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicConsumeInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicGetInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicPublishInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNProcessDeliveryInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.DefaultConsumerHandleDeliveryInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.QueueingConsumerHandleInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringRabbitRabbitAdminDeclareQueueInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.StrictExceptionHandlerInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -63,7 +58,8 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 "org.springframework.amqp.rabbit.core.RabbitAdmin", new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod handle = target.getDeclaredMethod("declareQueue", "org.springframework.amqp.core.Queue");
+                        InstrumentMethod handle = target.getDeclaredMethod("declareQueue",
+                            "org.springframework.amqp.core.Queue");
                         handle.addInterceptor(Listeners.of(SpringRabbitRabbitAdminDeclareQueueInterceptor.class));
                     }
                 });
@@ -111,6 +107,7 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             }
         });
 
+        //异步Consumer，作用是打标&trace
         this.enhanceTemplate.enhance(this,
             "com.rabbitmq.client.QueueingConsumer", new EnhanceCallback() {
                 @Override
@@ -121,23 +118,7 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 }
             });
 
-        this.enhanceTemplate.enhance(this,
-            "com.rabbitmq.client.impl.AMQConnection", new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    target.getDeclaredMethods("close").addInterceptor(Listeners.of(AMQConnectionInterceptor.class));
-                }
-            });
-
-        this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.StrictExceptionHandler", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                target.getDeclaredMethods("handleConsumerException").addInterceptor(
-                    Listeners.of(StrictExceptionHandlerInterceptor.class));
-            }
-        });
-
-        //spring 是异步消费的，这里要保留spring相关，否则压测标会丢失
+        //spring 是异步消费的，这里只保留trace相关interceptor，消费者注册逻辑与原生合并see SpringConsumerMetaDataBuilder
         if (simulatorConfig.getBooleanProperty("auto.create.queue.rabbitmq", false)) {
             this.enhanceTemplate.enhance(this,
                 "org.springframework.amqp.rabbit.core.RabbitAdmin", new EnhanceCallback() {
@@ -161,37 +142,6 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     method1.addInterceptor(Listeners.of(SpringBlockingQueueConsumerDeliveryInterceptor.class));
                 }
             });
-        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.support.PublisherCallbackChannelImpl",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod handle = target.getDeclaredMethod("basicConsume", "java.lang.Boolean",
-                        "com.rabbitmq.client.DefaultConsumer");
-                    handle.addInterceptor(Listeners.of(ChannelNBasicConsumeInterceptor.class));
-                }
-            });
-        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$InternalConsumer",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod method = target.getDeclaredMethods("handleDelivery", "java.lang.String",
-                        "com.rabbitmq.client.Envelope", "com.rabbitmq.client.AMQP$BasicProperties", "byte[]");
-                    method.addInterceptor(Listeners.of(DefaultConsumerHandleDeliveryInterceptor.class, "Handle_Delivery",
-                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-
-                }
-            });
-
-        this.enhanceTemplate.enhance(this, "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    final InstrumentMethod instrumentMethod = target.getDeclaredMethod("handle",
-                        "org.springframework.amqp.rabbit.support.Delivery");
-                    instrumentMethod.addInterceptor(Listeners.of(BlockingQueueConsumerConsumeFromQueueInterceptor.class));
-
-            }
-        });
         return true;
     }
 

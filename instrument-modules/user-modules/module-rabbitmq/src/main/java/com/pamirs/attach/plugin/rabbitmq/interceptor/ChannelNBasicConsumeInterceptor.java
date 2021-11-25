@@ -21,7 +21,7 @@ import javax.annotation.Resource;
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumeResult;
-import com.pamirs.attach.plugin.rabbitmq.common.ExceptionSilenceConsumer;
+import com.pamirs.attach.plugin.rabbitmq.common.ShadowConsumerProxy;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -99,7 +99,7 @@ public class ChannelNBasicConsumeInterceptor extends AroundInterceptor {
             if (logger.isDebugEnabled()) {
                 logger.debug("RabbitMQ basicConsume(ptQueue:{},autoAck:{},consumerTag:{},noLocal:{},exclusive:{},arguments:{},ptConsumer:{})", ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, ptConsumer);
             }
-            ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, new ExceptionSilenceConsumer(ptConsumer));
+            ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, ptQueue, autoAck, consumerTag, noLocal, exclusive, arguments, new ShadowConsumerProxy(ptConsumer));
             String cTag = consumeResult.getTag();
             dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(), RabbitmqConstants.IS_AUTO_ACK_FIELD, autoAck);
             if (cTag != null) {

@@ -18,7 +18,6 @@ import java.io.IOException;
 
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
@@ -30,13 +29,13 @@ import org.slf4j.LoggerFactory;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/09/01 3:59 下午
  */
-public class ExceptionSilenceConsumer implements Consumer {
+public class ShadowConsumerProxy implements Consumer {
 
     private final Consumer consumer;
 
-    private final Logger log = LoggerFactory.getLogger(ExceptionSilenceConsumer.class);
+    private final Logger log = LoggerFactory.getLogger(ShadowConsumerProxy.class);
 
-    public ExceptionSilenceConsumer(Consumer consumer) {this.consumer = consumer;}
+    public ShadowConsumerProxy(Consumer consumer) {this.consumer = consumer;}
 
     @Override
     public void handleConsumeOk(String consumerTag) {

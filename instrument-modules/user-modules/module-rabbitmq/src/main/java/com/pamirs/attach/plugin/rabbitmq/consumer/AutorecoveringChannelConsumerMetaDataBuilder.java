@@ -61,7 +61,7 @@ public class AutorecoveringChannelConsumerMetaDataBuilder implements ConsumerMet
             consumer,
             (Boolean)Reflect.on(recordedConsumer).get("exclusive"),
             (Boolean)Reflect.on(recordedConsumer).get("autoAck"),
-            (Integer)Reflect.on(channel).get("prefetchCountConsumer"));
+            (Integer)Reflect.on(channel).get("prefetchCountConsumer"), false);
     }
 
     private Channel unWrapChannel(Channel channel, String consumerTag, Consumer consumer) {

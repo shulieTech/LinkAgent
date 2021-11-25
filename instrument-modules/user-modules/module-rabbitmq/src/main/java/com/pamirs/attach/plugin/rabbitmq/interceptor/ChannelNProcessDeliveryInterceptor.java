@@ -33,9 +33,12 @@ import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumeResult;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
+import com.pamirs.attach.plugin.rabbitmq.common.ShadowConsumerProxy;
 import com.pamirs.attach.plugin.rabbitmq.consumer.AdminApiConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.AutorecoveringChannelConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
+import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaDataBuilder;
+import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.SimpleLocalCacheSupport;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ZkCacheSupportFactory;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
@@ -89,6 +92,8 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     @Resource
     private DynamicFieldManager dynamicFieldManager;
 
+    private final List<ConsumerMetaDataBuilder> consumerMetaDataBuilders = new ArrayList<ConsumerMetaDataBuilder>();
+
     private final static ScheduledThreadPoolExecutor THREAD_POOL_EXECUTOR = new ScheduledThreadPoolExecutor(
         Runtime.getRuntime()
             .availableProcessors(), new ThreadFactory() {
@@ -103,8 +108,13 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         }
     });
 
-    public ChannelNProcessDeliveryInterceptor(SimulatorConfig simulatorConfig) {
+    public ChannelNProcessDeliveryInterceptor(SimulatorConfig simulatorConfig) throws Exception {
         this.simulatorConfig = simulatorConfig;
+        consumerMetaDataBuilders.add(SpringConsumerMetaDataBuilder.getInstance());
+        consumerMetaDataBuilders.add(AutorecoveringChannelConsumerMetaDataBuilder.getInstance());
+        consumerMetaDataBuilders.add(new AdminApiConsumerMetaDataBuilder(simulatorConfig,
+            simulatorConfig.getBooleanProperty("rabbitmq.admin.api.zk.control", false) ?
+                ZkCacheSupportFactory.create(simulatorConfig) : SimpleLocalCacheSupport.getInstance()));
     }
 
     /**
@@ -210,9 +220,6 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public void afterLast(final Advice advice) {
-        if (ConfigCache.isWorkWithSpring()) {
-            return;
-        }
         Channel channel = (Channel)advice.getTarget();
         Connection connection = channel.getConnection();
         if (Pradar.isClusterTestPrefix(connection.getClientProvidedName())) {
@@ -300,7 +307,17 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 logger.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
                     queue, ptQueue, consumerTag, ptConsumerTag);
                 try {
-                    ConsumeResult consumeResult = ChannelHolder.consumeShadowQueue(channel, consumerMetaData);
+                    ConsumeResult consumeResult;
+                    if (consumerMetaData.isUseOriginChannel()) {
+                        //spring 要用业务本身的channel去订阅
+                        String tag = channel.basicConsume(consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(), ptConsumerTag,
+                            false, consumerMetaData.isExclusive(),
+                            new HashMap<String, Object>(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
+                        consumeResult = new ConsumeResult(channel, tag);
+                        ChannelHolder.addConsumerTag(channel, consumerTag, tag, consumerMetaData.getQueue());
+                    } else {
+                        consumeResult = ChannelHolder.consumeShadowQueue(channel, consumerMetaData);
+                    }
                     if (consumeResult == null) {
                         retry();
                         return;
@@ -384,13 +401,13 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     }
 
     private ConsumerMetaData buildConsumerMetaData(ConsumerDetail deliverDetail) throws Exception {
-        ConsumerMetaData consumerMetaData = AutorecoveringChannelConsumerMetaDataBuilder.getInstance()
-            .tryBuild(deliverDetail);
-        return consumerMetaData != null ? consumerMetaData :
-            new AdminApiConsumerMetaDataBuilder(simulatorConfig,
-                simulatorConfig.getBooleanProperty("rabbitmq.admin.api.zk.control", false) ?
-                    ZkCacheSupportFactory.create(simulatorConfig) : SimpleLocalCacheSupport.getInstance())
-                .tryBuild(deliverDetail);
+        for (ConsumerMetaDataBuilder consumerMetaDataBuilder : consumerMetaDataBuilders) {
+            ConsumerMetaData consumerMetaData = consumerMetaDataBuilder.tryBuild(deliverDetail);
+            if (consumerMetaData != null) {
+                return consumerMetaData;
+            }
+        }
+        return null;
     }
 
     private void reporterError(Throwable e, String queue, String consumerTag) {

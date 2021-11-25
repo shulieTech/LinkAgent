@@ -222,7 +222,11 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     public void afterLast(final Advice advice) {
         Channel channel = (Channel)advice.getTarget();
         Connection connection = channel.getConnection();
-        if (Pradar.isClusterTestPrefix(connection.getClientProvidedName())) {
+        Object[] args = advice.getParameterArray();
+        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver) args[1];
+        String consumerTag = m.getConsumerTag();
+        if (Pradar.isClusterTestPrefix(consumerTag) ||
+            ChannelHolder.existsConsumer(consumerTag)) {
             return;
         }
         //每个connection只进来一次，一次流量带所有的影子消费者，如果失败异步任务会自动重试

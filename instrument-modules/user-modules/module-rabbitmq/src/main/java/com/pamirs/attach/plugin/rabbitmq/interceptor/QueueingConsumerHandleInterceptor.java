@@ -14,6 +14,9 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
@@ -26,17 +29,13 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
+import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.amqp.rabbit.support.Delivery;
-
-import java.util.HashMap;
-import java.util.Map;
-
 
 /**
  * @Author: guohz
@@ -69,7 +68,7 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
         if (args == null || args[0] == null) {
             return;
         }
-        Delivery queue = (Delivery) args[0];
+        Delivery queue = (Delivery)args[0];
         Envelope envelope = queue.getEnvelope();
         if (envelope == null) {
             return;
@@ -110,9 +109,12 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
             if (headers != null) {
                 Map<String, String> rpcContext = new HashMap<String, String>();
                 for (String key : Pradar.getInvokeContextTransformKeys()) {
-                    String value = (String) headers.get(key);
-                    if (value != null) {
-                        rpcContext.put(key, value);
+                    Object tmp = headers.get(key);
+                    if (tmp != null) {
+                        String value = tmp.toString();
+                        if (value != null) {
+                            rpcContext.put(key, value);
+                        }
                     }
                 }
                 record.setContext(rpcContext);
@@ -182,13 +184,14 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
             exchange = StringUtils.trimToEmpty(exchange);
             String routingKey = envelope.getRoutingKey();
             if (exchange != null
-                    && Pradar.isClusterTestPrefix(exchange)) {
+                && Pradar.isClusterTestPrefix(exchange)) {
                 Pradar.setClusterTest(true);
             } else if (PradarSwitcher.isRabbitmqRoutingkeyEnabled()
-                    && routingKey != null
-                    && Pradar.isClusterTestPrefix(routingKey)) {
+                && routingKey != null
+                && Pradar.isClusterTestPrefix(routingKey)) {
                 Pradar.setClusterTest(true);
-            } else if (null != properties.getHeaders() && ClusterTestUtils.isClusterTestRequest(ObjectUtils.toString(properties.getHeaders().get(PradarService.PRADAR_CLUSTER_TEST_KEY)))) {
+            } else if (null != properties.getHeaders() && ClusterTestUtils.isClusterTestRequest(
+                ObjectUtils.toString(properties.getHeaders().get(PradarService.PRADAR_CLUSTER_TEST_KEY)))) {
                 Pradar.setClusterTest(true);
             }
         } catch (Throwable e) {

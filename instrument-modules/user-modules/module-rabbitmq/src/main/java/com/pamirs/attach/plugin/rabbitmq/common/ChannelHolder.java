@@ -57,12 +57,13 @@ public class ChannelHolder {
     private final static boolean isInfoEnabled = LOGGER.isInfoEnabled();
     public static final Object NULL_OBJECT = new Object();
     private static ConcurrentHashMap<Integer, ConcurrentMap<String, Object>> consumerTags
-            = new ConcurrentHashMap<Integer, ConcurrentMap<String, Object>>();
+        = new ConcurrentHashMap<Integer, ConcurrentMap<String, Object>>();
     private static ConcurrentHashMap<String, String> queueTags = new ConcurrentHashMap<String, String>();
     /**
      * 影子channel和业务consumerMeta的映射
      */
-    public static ConcurrentHashMap<Channel,ConfigCache.ConsumerMetaDataCacheKey> shadowChannelWithBizMetaCache = new ConcurrentHashMap();
+    public static ConcurrentHashMap<Channel, ConfigCache.ConsumerMetaDataCacheKey> shadowChannelWithBizMetaCache
+        = new ConcurrentHashMap();
     /**
      * queue和channel应该是一对多
      */
@@ -176,7 +177,7 @@ public class ChannelHolder {
          * 影子channel和consumerMeta的映射
          */
         shadowChannelWithBizMetaCache.put(shadowChannel,
-                new ConfigCache.ConsumerMetaDataCacheKey(System.identityHashCode(target), businessConsumerTag));
+            new ConfigCache.ConsumerMetaDataCacheKey(System.identityHashCode(target), businessConsumerTag));
     }
 
     private static void cacheQueuewithShadowChannel(String queue, Channel channel) {
@@ -193,11 +194,12 @@ public class ChannelHolder {
     public static ConsumeResult consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws IOException {
         return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
             consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
-            consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
+            consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(),
+            new ShadowConsumerProxy(consumerMetaData.getConsumer()));
     }
 
     public static ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
-                                                   boolean noLocal, boolean exclusive, Map<String, Object> arguments, final Consumer consumer) throws IOException {
+        boolean noLocal, boolean exclusive, Map<String, Object> arguments, final Consumer consumer) throws IOException {
         return consumeShadowQueue(target, ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments, -1, consumer);
     }
 
@@ -214,18 +216,19 @@ public class ChannelHolder {
      * @param consumer
      * @return 返回 consumerTag
      */
-    public static synchronized ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
-                                                   boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
-                                                   Consumer consumer) throws IOException {
+    public static synchronized ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck,
+        String ptConsumerTag,
+        boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
+        Consumer consumer) throws IOException {
         Channel shadowChannel = getShadowChannel(target);
         if (shadowChannel == null) {
             LOGGER.warn("rabbitmq basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}",
-                    ptQueue, ptConsumerTag);
+                ptQueue, ptConsumerTag);
             return null;
         }
         if (!shadowChannel.isOpen()) {
             LOGGER.warn("rabbitmq basicConsume failed. cause by shadow channel is not closed. queue={}, consumerTag={}",
-                    ptQueue, ptConsumerTag);
+                ptQueue, ptConsumerTag);
             return null;
         }
         if (prefetchCount > 0) {
@@ -247,7 +250,7 @@ public class ChannelHolder {
         Channel shadowChannel = getShadowChannel(target);
         if (shadowChannel == null || !shadowChannel.isOpen()) {
             LOGGER.warn("rabbitmq basicCancel failed. cause by shadow channel is not found or closed. consumerTag={}",
-                    consumerTag);
+                consumerTag);
             return;
         }
         try {
@@ -379,7 +382,12 @@ public class ChannelHolder {
         int key = System.identityHashCode(connection);
         Connection ptConnection = connectionCache.get(key);
         if (ptConnection == null || !ptConnection.isOpen()) {
-            ptConnection = connectionFactory(connection).newConnection("pt_connect-" + connection.toString());
+            try {
+                ptConnection = connectionFactory(connection).newConnection("pt_connect-" + connection.toString());
+            } catch (NoSuchMethodError e) {
+                //低版本
+                ptConnection = connectionFactory(connection).newConnection();
+            }
             connectionCache.put(key, ptConnection);
         }
         return ptConnection;
@@ -397,7 +405,11 @@ public class ChannelHolder {
         connectionFactory.setPassword(adminAccessInfo.getPassword());
         connectionFactory.setVirtualHost(adminAccessInfo.getVirtualHost());
         connectionFactory.setConnectionTimeout(10000);
-        connectionFactory.setHandshakeTimeout(10000);
+        try {
+            connectionFactory.setHandshakeTimeout(10000);
+        } catch (Throwable ignore) {
+            //版本兼容性
+        }
         connectionFactory.setSharedExecutor(initWorkService(connection));
         // 网络异常自动连接恢复
         connectionFactory.setAutomaticRecoveryEnabled(true);
@@ -411,10 +423,10 @@ public class ChannelHolder {
         ThreadPoolInfo threadPoolInfo = getThreadPoolInfo(connection);
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info(
-                    "[RabbitMQ] create shadow consumer ExecutorService with [coreSize : {}, maxSize : {}, keepAliveTime : {}, "
-                            + "queueSize : {}]",
-                    threadPoolInfo.getCoreSize(), threadPoolInfo.getMaxSize(), threadPoolInfo.getKeepAliveTime(),
-                    threadPoolInfo.getBlockQueueCapacity());
+                "[RabbitMQ] create shadow consumer ExecutorService with [coreSize : {}, maxSize : {}, keepAliveTime : {}, "
+                    + "queueSize : {}]",
+                threadPoolInfo.getCoreSize(), threadPoolInfo.getMaxSize(), threadPoolInfo.getKeepAliveTime(),
+                threadPoolInfo.getBlockQueueCapacity());
         }
         return threadPoolInfo.build();
     }
@@ -435,8 +447,8 @@ public class ChannelHolder {
 
     private static ThreadPoolInfo getDefaultThreadPoolInfo() {
         return new ThreadPoolInfo(Runtime.getRuntime().availableProcessors() * 3,
-                Runtime.getRuntime().availableProcessors() * 3,
-                120, Integer.MAX_VALUE);
+            Runtime.getRuntime().availableProcessors() * 3,
+            120, Integer.MAX_VALUE);
     }
 
     private static ThreadPoolInfo getThreadPoolInfoFromConfig() {
@@ -445,7 +457,7 @@ public class ChannelHolder {
         String keepAliveTimeStr = System.getProperty("rabbitmq.consumer.keepAliveTime");
         String queueSizeStr = System.getProperty("rabbitmq.consumer.queueSize");
         if (!StringUtil.isEmpty(maxPoolsizeStr) && !StringUtil.isEmpty(coreSizeStr) && !StringUtil.isEmpty(
-                keepAliveTimeStr) && !StringUtil.isEmpty(queueSizeStr)) {
+            keepAliveTimeStr) && !StringUtil.isEmpty(queueSizeStr)) {
             try {
                 if (isInfoEnabled) {
                     LOGGER.info("[RabbitMQ] consumer thread pool use config value");
@@ -453,8 +465,8 @@ public class ChannelHolder {
                 int queueSize = Integer.parseInt(queueSizeStr);
                 queueSize = queueSize < 0 ? Integer.MAX_VALUE : queueSize;
                 return new ThreadPoolInfo(Integer.parseInt(coreSizeStr),
-                        Integer.parseInt(maxPoolsizeStr),
-                        Integer.parseInt(keepAliveTimeStr), queueSize);
+                    Integer.parseInt(maxPoolsizeStr),
+                    Integer.parseInt(keepAliveTimeStr), queueSize);
             } catch (NumberFormatException e) {
                 if (isInfoEnabled) {
                     LOGGER.info("[RabbitMQ] consumer thread pool config error must all num");
@@ -470,28 +482,29 @@ public class ChannelHolder {
                 ConsumerWorkService workService = Reflect.on(connection).get("_workService");
                 ExecutorService executorService = Reflect.on(workService).get("executor");
                 if (executorService instanceof ThreadPoolExecutor) {
-                    ThreadPoolExecutor te = (ThreadPoolExecutor) executorService;
+                    ThreadPoolExecutor te = (ThreadPoolExecutor)executorService;
                     int queueSize = getQueueSize(te.getQueue());
                     if (isInfoEnabled) {
                         LOGGER.info(
-                                "[RabbitMQ] biz consumer use thread pool info : [coreSize : {}, maxSize : {}, keepAliveTime : {} "
-                                        + "queueSize : {}]",
-                                te.getCorePoolSize(), te.getMaximumPoolSize(), te.getKeepAliveTime(TimeUnit.SECONDS), queueSize);
+                            "[RabbitMQ] biz consumer use thread pool info : [coreSize : {}, maxSize : {}, keepAliveTime : "
+                                + "{} "
+                                + "queueSize : {}]",
+                            te.getCorePoolSize(), te.getMaximumPoolSize(), te.getKeepAliveTime(TimeUnit.SECONDS), queueSize);
                     }
                     return new ThreadPoolInfo(te.getCorePoolSize(), te.getMaximumPoolSize(),
-                            (int) te.getKeepAliveTime(TimeUnit.SECONDS), queueSize);
+                        (int)te.getKeepAliveTime(TimeUnit.SECONDS), queueSize);
                 }
             } catch (Exception e) {
                 LOGGER.warn("[RabbitMQ]  can not get executor from connection"
-                                + " try set max pool size equal channel num connection is : {}",
-                        connection.getClass().getName(), e);
+                        + " try set max pool size equal channel num connection is : {}",
+                    connection.getClass().getName(), e);
                 try {
                     ChannelManager channelManager = Reflect.on(connection).get("_channelManager");
                     Map map = Reflect.on(channelManager).get("_channelMap");
                     return new ThreadPoolInfo(map.size(), map.size(), 10, Integer.MAX_VALUE);
                 } catch (ReflectException ex) {
                     LOGGER.warn("[RabbitMQ]  can not get channels from connection connection is : {}",
-                            connection.getClass().getName(), e);
+                        connection.getClass().getName(), e);
                 }
             }
         }
@@ -503,7 +516,7 @@ public class ChannelHolder {
             return Reflect.on(queue).get("capacity");
         }
         if (queue instanceof ArrayBlockingQueue) {
-            return ((Object[]) Reflect.on(queue).get("items")).length;
+            return ((Object[])Reflect.on(queue).get("items")).length;
         }
         if (queue instanceof SynchronousQueue) {
             return 0;
@@ -515,6 +528,5 @@ public class ChannelHolder {
     public static ConcurrentHashMap<String, List<Channel>> getQueueChannel() {
         return queueChannel;
     }
-
 
 }

@@ -29,6 +29,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
 import com.pamirs.attach.plugin.rabbitmq.utils.AdminAccessInfo;
 import com.pamirs.pradar.Pradar;
@@ -189,55 +190,6 @@ public class ChannelHolder {
             value.add(channel);
         }
         queueChannel.put(queue, value);
-    }
-
-    public static ConsumeResult consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws IOException {
-        return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
-            consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
-            consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(),
-            new ShadowConsumerProxy(consumerMetaData.getConsumer()));
-    }
-
-    public static ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck, String ptConsumerTag,
-        boolean noLocal, boolean exclusive, Map<String, Object> arguments, final Consumer consumer) throws IOException {
-        return consumeShadowQueue(target, ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments, -1, consumer);
-    }
-
-    /**
-     * 增加影子消费者的订阅
-     *
-     * @param target
-     * @param ptQueue
-     * @param autoAck
-     * @param ptConsumerTag
-     * @param noLocal
-     * @param exclusive
-     * @param arguments
-     * @param consumer
-     * @return 返回 consumerTag
-     */
-    public static synchronized ConsumeResult consumeShadowQueue(Channel target, String ptQueue, boolean autoAck,
-        String ptConsumerTag,
-        boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
-        Consumer consumer) throws IOException {
-        Channel shadowChannel = getShadowChannel(target);
-        if (shadowChannel == null) {
-            LOGGER.warn("rabbitmq basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}",
-                ptQueue, ptConsumerTag);
-            return null;
-        }
-        if (!shadowChannel.isOpen()) {
-            LOGGER.warn("rabbitmq basicConsume failed. cause by shadow channel is not closed. queue={}, consumerTag={}",
-                ptQueue, ptConsumerTag);
-            return null;
-        }
-        if (prefetchCount > 0) {
-            shadowChannel.basicQos(prefetchCount);
-        }
-        String result = shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments, consumer);
-        final int key = System.identityHashCode(shadowChannel);
-        ConfigCache.putQueue(key, ptQueue);
-        return new ConsumeResult(shadowChannel, result);
     }
 
     /**

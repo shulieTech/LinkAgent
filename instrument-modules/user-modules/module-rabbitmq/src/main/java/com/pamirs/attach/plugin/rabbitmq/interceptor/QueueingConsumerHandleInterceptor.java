@@ -24,8 +24,8 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.interceptor.ReversedTraceInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.SpanRecord;
-import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
@@ -45,7 +45,7 @@ import org.apache.commons.lang.StringUtils;
  * @Description:
  */
 @Destroyable(RabbitmqDestroy.class)
-public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
+public class QueueingConsumerHandleInterceptor extends ReversedTraceInterceptorAdaptor {
 
     @Override
     public String getPluginName() {
@@ -98,6 +98,9 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         try {
             Envelope envelope = Reflect.on(deliveryObj).get(RabbitmqConstants.DYNAMIC_FIELD_ENVELOPE);
+            if (envelope == null) {//说明是毒药，已经报错了
+                return null;
+            }
             record.setService(envelope.getExchange());
             record.setMethod(envelope.getRoutingKey());
         } catch (ReflectException e) {

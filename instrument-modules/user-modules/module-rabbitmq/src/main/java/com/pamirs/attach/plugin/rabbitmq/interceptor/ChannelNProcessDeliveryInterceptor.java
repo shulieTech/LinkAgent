@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +32,6 @@ import javax.annotation.Resource;
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
-import com.pamirs.attach.plugin.rabbitmq.common.ConsumeResult;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
 import com.pamirs.attach.plugin.rabbitmq.common.ShadowConsumerProxy;
 import com.pamirs.attach.plugin.rabbitmq.consumer.AdminApiConsumerMetaDataBuilder;
@@ -223,7 +223,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         Channel channel = (Channel)advice.getTarget();
         Connection connection = channel.getConnection();
         Object[] args = advice.getParameterArray();
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver) args[1];
+        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
         String consumerTag = m.getConsumerTag();
         if (Pradar.isClusterTestPrefix(consumerTag) ||
             ChannelHolder.existsConsumer(consumerTag)) {
@@ -311,25 +311,16 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 logger.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
                     queue, ptQueue, consumerTag, ptConsumerTag);
                 try {
-                    ConsumeResult consumeResult;
+                    String cTag;
                     if (consumerMetaData.isUseOriginChannel()) {
-                        //spring 要用业务本身的channel去订阅
-                        String tag = channel.basicConsume(consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(), ptConsumerTag,
+                        //spring 要用业务本身的channel去订阅，spring的永远自动提交
+                        cTag = channel.basicConsume(consumerMetaData.getPtQueue(), true, ptConsumerTag,
                             false, consumerMetaData.isExclusive(),
                             new HashMap<String, Object>(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
-                        consumeResult = new ConsumeResult(channel, tag);
-                        ChannelHolder.addConsumerTag(channel, consumerTag, tag, consumerMetaData.getQueue());
+                        ChannelHolder.addConsumerTag(channel, consumerTag, cTag, consumerMetaData.getQueue());
                     } else {
-                        consumeResult = ChannelHolder.consumeShadowQueue(channel, consumerMetaData);
+                        cTag = consumeShadowQueue(channel, consumerMetaData);
                     }
-                    if (consumeResult == null) {
-                        retry();
-                        return;
-                    }
-                    String cTag = consumeResult.getTag();
-                    dynamicFieldManager.setDynamicField(consumeResult.getShadowChannel(),
-                        RabbitmqConstants.IS_AUTO_ACK_FIELD,
-                        consumerMetaData.isAutoAck());
                     if (cTag != null) {
                         if (isInfoEnabled) {
                             logger.info(
@@ -349,6 +340,44 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             } catch (Throwable e) {
                 reporterError(e, null, consumerTag);
                 retry();
+            }
+        }
+
+        public String consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws
+            IOException {
+            return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
+                consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
+                consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(),
+                new ShadowConsumerProxy(consumerMetaData.getConsumer()));
+        }
+
+        public String consumeShadowQueue(Channel target, String ptQueue, boolean autoAck,
+            String ptConsumerTag,
+            boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
+            Consumer consumer) throws IOException {
+            synchronized (ChannelHolder.class) {
+                Channel shadowChannel = ChannelHolder.getShadowChannel(target);
+                if (shadowChannel == null) {
+                    logger.warn(
+                        "[RabbitMQ] basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}",
+                        ptQueue, ptConsumerTag);
+                    return null;
+                }
+                if (!shadowChannel.isOpen()) {
+                    logger.warn(
+                        "[RabbitMQ] basicConsume failed. cause by shadow channel is not closed. queue={}, consumerTag={}",
+                        ptQueue, ptConsumerTag);
+                    return null;
+                }
+                if (prefetchCount > 0) {
+                    shadowChannel.basicQos(prefetchCount);
+                }
+                dynamicFieldManager.setDynamicField(shadowChannel, RabbitmqConstants.IS_AUTO_ACK_FIELD, autoAck);
+                String result = shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments,
+                    consumer);
+                final int key = System.identityHashCode(shadowChannel);
+                ConfigCache.putQueue(key, ptQueue);
+                return result;
             }
         }
 

@@ -141,7 +141,7 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
             Map<String, List<ConsumerApiResult>> ipGroupMap = ipGroup(consumerApiResults);
             for (Entry<String, List<ConsumerApiResult>> entry : ipGroupMap.entrySet()) {
                 String ip = entry.getKey();
-                String jsonStr = JSON.toJSONString(consumerApiResults);
+                String jsonStr = JSON.toJSONString(entry.getValue());
                 byte[] bytes = jsonStr.getBytes("UTF-8");
                 logger.info("[RabbitMQ] prepare put consumers data to zk ip {} total bytes(uncompressed) : {}", ip,
                     bytes.length);
@@ -175,21 +175,12 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
             }
             byte[] bytes = zkClient.getData()
                 .decompressed().forPath(zkIpPath(connectionLocalIp));
-            logger.info("[RabbitMQ] get consumers data from zk ip total bytes(decompressed) : {}", bytes.length);
+            logger.info("[RabbitMQ] get consumers data from zk ip total bytes(uncompressed) : {}", bytes.length);
             String jsonStr = new String(bytes, "UTF-8");
             return JSON.parseArray(jsonStr, ConsumerApiResult.class);
         } catch (KeeperException.NoNodeException e) {
             return null;
         } catch (ZipException e) {
-            try {
-                lock.acquire();
-                try {
-                    zkClient.delete().forPath(zkDataPath);
-                } finally {
-                    lock.release();
-                }
-            } catch (Exception ignore) {
-            }
             return null;
         } catch (Exception e) {
             throw new PradarException(e);

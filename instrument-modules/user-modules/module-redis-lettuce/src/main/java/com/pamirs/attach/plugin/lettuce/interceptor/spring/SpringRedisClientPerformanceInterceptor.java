@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -40,6 +40,30 @@ public class SpringRedisClientPerformanceInterceptor extends SpringRedisClientIn
     private static final Logger LOGGER = LoggerFactory.getLogger(
             SpringRedisClientPerformanceInterceptor.class.getName());
 
+    interface Supplier<T, V> {
+        V get(T t);
+    }
+
+    Supplier connectionSupplier;
+
+    public SpringRedisClientPerformanceInterceptor() {
+        connectionSupplier = new Supplier() {
+            @Override
+            public Object get(Object t) {
+                LettuceConnectionFactory conn = (LettuceConnectionFactory) t;
+                LettuceConnectionFactory target = cache.get(conn);
+                if (target == null) {
+                    target = new LettuceFactoryProxy().setBiz(conn).getFactory();
+                    if (target != null) {
+                        cache.put(conn, target);
+                    }
+                }
+                return target;
+            }
+        };
+    }
+
+
     @Override
     protected Object getResult0(Advice advice) {
         if (!Pradar.isClusterTest() || !GlobalConfig.getInstance().isShadowDbRedisServer()
@@ -53,15 +77,8 @@ public class SpringRedisClientPerformanceInterceptor extends SpringRedisClientIn
             return advice.getReturnObj();
         }
 
-        LettuceConnectionFactory factory = null;
-
-        factory = cache.get(advice.getTarget());
-        if (factory == null) {
-            factory = new LettuceFactoryProxy().setBiz((LettuceConnectionFactory) advice.getTarget()).getFactory();
-            if (factory != null) {
-                cache.put((LettuceConnectionFactory) advice.getTarget(), factory);
-            }
-        }
+        LettuceConnectionFactory factory
+                = (LettuceConnectionFactory) connectionSupplier.get(advice.getTarget());
         try {
 
             return Reflect.on(factory).call(advice.getBehavior().getName()).get();
@@ -75,4 +92,6 @@ public class SpringRedisClientPerformanceInterceptor extends SpringRedisClientIn
         }
         return null;
     }
+
+
 }

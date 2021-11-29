@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipException;
 
 import com.alibaba.fastjson.JSON;
 
@@ -28,6 +29,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessLock;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -42,6 +45,8 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
     private final CuratorFramework zkClient;
 
     private final String zkDataPath;
+
+    private final Logger logger = LoggerFactory.getLogger(ZkCacheSupport.class);
 
     ZkCacheSupport(CuratorFramework zkClient, String parentPath) {
         if (parentPath.endsWith("/")) {
@@ -105,8 +110,8 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
                     if (newList == null) {
                         throw new PradarException("supplier invoke but not data return!");
                     }
-                    putInZK(newList);
                     CACHE = group(newList);
+                    putInZK(newList);
                 } finally {
                     lock.release();
                 }
@@ -138,7 +143,11 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
                 String ip = entry.getKey();
                 String jsonStr = JSON.toJSONString(consumerApiResults);
                 byte[] bytes = jsonStr.getBytes("UTF-8");
-                zkClient.create()./*compressed().*/forPath(zkIpPath(ip), bytes);
+                logger.info("[RabbitMQ] prepare put consumers data to zk ip {} total bytes(uncompressed) : {}", ip,
+                    bytes.length);
+                zkClient.create().compressed().forPath(zkIpPath(ip), bytes);
+                logger.info("[RabbitMQ] put consumers data to zk ip {} total bytes(uncompressed) : {}", ip,
+                    bytes.length);
             }
         } catch (Exception e) {
             throw new PradarException(e);
@@ -165,10 +174,22 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
                 return null;
             }
             byte[] bytes = zkClient.getData()
-                /*.decompressed()*/.forPath(zkIpPath(connectionLocalIp));
+                .decompressed().forPath(zkIpPath(connectionLocalIp));
+            logger.info("[RabbitMQ] get consumers data from zk ip total bytes(decompressed) : {}", bytes.length);
             String jsonStr = new String(bytes, "UTF-8");
             return JSON.parseArray(jsonStr, ConsumerApiResult.class);
         } catch (KeeperException.NoNodeException e) {
+            return null;
+        } catch (ZipException e) {
+            try {
+                lock.acquire();
+                try {
+                    zkClient.delete().forPath(zkDataPath);
+                } finally {
+                    lock.release();
+                }
+            } catch (Exception ignore) {
+            }
             return null;
         } catch (Exception e) {
             throw new PradarException(e);

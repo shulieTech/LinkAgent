@@ -14,21 +14,22 @@
  */
 package com.shulie.instrument.simulator.agent.spi.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
-import com.shulie.instrument.simulator.agent.api.model.CommandExecuteResponse;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
+import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
+import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
-import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
+import com.shulie.instrument.simulator.agent.spi.impl.model.UpgradeBatchConfig;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
-import com.shulie.instrument.simulator.agent.spi.impl.utils.HeartCommandUtils;
+import com.shulie.instrument.simulator.agent.spi.impl.utils.SimulatorStatus;
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -53,6 +56,9 @@ public class HttpAgentScheduler implements AgentScheduler {
 
     @Resource
     private ExternalAPI externalAPI;
+
+    private UpgradeBatchConfig upgradeBatchConfig = new UpgradeBatchConfig();
+
 
     /**
      * agent 配置
@@ -217,9 +223,9 @@ public class HttpAgentScheduler implements AgentScheduler {
      */
     private Result install(CommandPacket commandPacket) {
         try {
-            if (StringUtils.isBlank(commandPacket.getDataPath()) && !commandPacket.isUseLocal()) {
-                throw new RuntimeException("missing agent download path from command packet!");
-            }
+//            if (StringUtils.isBlank(commandPacket.getDataPath()) && !commandPacket.isUseLocal()) {
+//                throw new RuntimeException("missing agent download path from command packet!");
+//            }
             if (commandExecutor.isInstalled()) {
                 uninstall(commandPacket);
             }
@@ -231,6 +237,9 @@ public class HttpAgentScheduler implements AgentScheduler {
             return Result.errorResult(t);
         }
     }
+
+
+
 
     /**
      * 执行命令包
@@ -300,105 +309,130 @@ public class HttpAgentScheduler implements AgentScheduler {
         //卸载的命令在的时候，重启的时候这里这个installLocal会无法执行，
         CommandPacket commandPacket = getLatestCommandPacket();
         if (commandPacket == null) {
-            installLocal();
+            installLocalOrRemote();
         }
         startScheduler();
     }
 
     /**
-     * 检查一遍在运行任务的结果
+     * 获取一遍在运行任务的结果进行上报
      * @return
      */
     private List<CommandExecuteResponse> getCommandExecuteResponses(){
-        if (HeartCommandUtils.futureTaskMap.isEmpty()){
+        if (HeartCommandUtils.futureMapEmpty() && HeartCommandUtils.completedMapEmpty()){
             return Collections.EMPTY_LIST;
         }
-        List<CommandExecuteResponse> commandExecuteResponseList = new ArrayList<CommandExecuteResponse>(HeartCommandUtils.futureTaskMap.size());
-        List<CommandExecuteKey> failedCommandIds = new ArrayList<CommandExecuteKey>(HeartCommandUtils.futureTaskMap.size());
-        for (Map.Entry<CommandExecuteKey, FutureTask<CommandExecuteResponse>> entry : HeartCommandUtils.futureTaskMap.entrySet()){
-            boolean success = false;
-            String errorMsg = null;
-            if (entry.getValue().isDone()){
-                try {
-                    commandExecuteResponseList.add(entry.getValue().get());
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    success = true;
-                    errorMsg = e.getMessage();
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                    success = true;
-                    errorMsg = e.getMessage();
-                } finally {
-                    if (success){
-                        CommandExecuteResponse commandExecuteResponse = new CommandExecuteResponse();
-                        commandExecuteResponse.setCommandId(entry.getKey().getCommandId());
-                        commandExecuteResponse.setTaskId(entry.getKey().getTaskId());
-                        commandExecuteResponse.setResult(false);
-                        commandExecuteResponse.setMsg(errorMsg);
-                        commandExecuteResponseList.add(commandExecuteResponse);
-                        entry.getValue().cancel(true);
-                        failedCommandIds.add(entry.getKey());
-                    }
+        List<CommandExecuteResponse> commandExecuteResponseList = new ArrayList<CommandExecuteResponse>(HeartCommandUtils.futureMapSize());
+
+        //获取上次异步的数据，请求执行结果
+        if (!HeartCommandUtils.futureMapEmpty()){
+            List<String> keyList = new ArrayList<String>();
+            for (Map.Entry<CommandExecuteKey, CommandExecuteResponse> entry : HeartCommandUtils.getFutureMap().entrySet()){
+                if (entry.getValue() != null && entry.getValue().isSuccess()
+                        && ("finished".equals(entry.getValue().getExecuteStatus())
+                        || "failed".equals(entry.getValue().getExecuteStatus()))){
+                    commandExecuteResponseList.add(entry.getValue());
+                } else {
+                    keyList.add(entry.getKey().getCommandId() + ":" + entry.getKey().getTaskId());
                 }
             }
-        }
-        //失败的直接去除掉
-        if (!failedCommandIds.isEmpty()){
-            for (CommandExecuteKey id : failedCommandIds){
-                HeartCommandUtils.futureTaskMap.remove(id);
+            CommandPacket commandPacket = new CommandPacket();
+            commandPacket.setId(-2);
+            commandPacket.setSync(true);
+            commandPacket.setUuid("-2");
+            Map<String, String> extras = new HashMap<String, String>();
+            extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
+            extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_GET_COMMAND_RESULT);
+            extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, String.valueOf(commandPacket.isSync()));
+            extras.put(HeartCommandConstants.REQUEST_COMMAND_TASK_RESULT_KEY, JSON.toJSONString(keyList));
+            extras.put(HeartCommandConstants.COMMAND_ID_KEY, String.valueOf(commandPacket.getId()));
+            extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
+            commandPacket.setExtras(extras);
+            HeartCommand<CommandPacket> requestCommandResults = new HeartCommand<CommandPacket>(commandPacket);
+            try {
+                CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(requestCommandResults);
+                if (commandExecuteResponse.isSuccess() && null != commandExecuteResponse.getResult() ){
+                    Map<String, Object> map = (Map<String, Object>) commandExecuteResponse.getResult();
+                    if (!map.isEmpty()){
+                        List<String> successList = (List<String>) map.get("success");
+                        Map<String, String> failedMap = (Map<String, String>) map.get("failed");
+                        if (!successList.isEmpty()){
+                            for (String key : successList){
+                                String[] keys = key.split(":");
+                                CommandExecuteResponse response = HeartCommandUtils.getCommandExecuteResponseFuture(Long.valueOf(keys[0]), keys[1]);
+                                if (response != null){
+                                    response.setExecuteStatus("finished");
+                                    response.setMsg(null);
+                                    commandExecuteResponseList.add(response);
+                                } else {
+                                    logger.warn("task {} no result", key);
+                                }
+                            }
+                        }
+                        if (!failedMap.isEmpty()){
+                            for (Map.Entry<String, String> entry : failedMap.entrySet()){
+                                String[] keys = entry.getKey().split(":");
+                                CommandExecuteResponse response = HeartCommandUtils.getCommandExecuteResponseFuture(Long.valueOf(keys[0]), keys[1]);
+                                if (response != null){
+                                    response.setExecuteStatus("failed");
+                                    response.setMsg(entry.getValue());
+                                    commandExecuteResponseList.add(response);
+                                } else {
+                                    logger.warn("task {} no result", entry.getKey());
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable throwable) {
+                logger.error("getCommandExecuteResponses error", throwable);
+                return commandExecuteResponseList;
             }
         }
+
         return commandExecuteResponseList;
     }
 
 
 
+    private CommandPacket getStartCommandPacket(){
+        HeartRequest heartRequest = new HeartRequest();
+        heartRequest.setCommandExecuteResponseList(Collections.EMPTY_LIST);
+        heartRequest.setCurUpgradeBatch(upgradeBatchConfig.getCurUpgradeBatch());
+        List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
+        if (null == commandPacketList || commandPacketList.isEmpty()){
+            return null;
+        }
+        upgradeBatchConfig.setCurUpgradeBatch(commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
+        return commandPacketList.get(0);
+    }
 
     /**
      * 上报心跳，获取指令
      * @return
      */
     private List<CommandPacket> getCommandPacketByHeart(){
-        List<CommandExecuteResponse> commandExecuteResponseList = getCommandExecuteResponses();
+        List<CommandExecuteResponse> preCommandExecuteResponseList = getCommandExecuteResponses();
         HeartRequest heartRequest = new HeartRequest();
-        heartRequest.setCommandExecuteResponseList(commandExecuteResponseList);
-        List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
-        if (commandPacketList == null || commandPacketList.isEmpty()) {
-            return null;
+        heartRequest.setCommandExecuteResponseList(preCommandExecuteResponseList);
+        heartRequest.setCurUpgradeBatch(upgradeBatchConfig.getCurUpgradeBatch());
+        List<CommandPacket> newCommandPacketList = externalAPI.sendHeart(heartRequest);
+        //所有已经存在的任务，是成功或者进行中的，不要再下发
+        Iterator<CommandPacket> iterator = newCommandPacketList.iterator();
+        while (iterator.hasNext()){
+            CommandPacket commandPacket = iterator.next();
+           CommandExecuteResponse commandExecuteResponse = HeartCommandUtils.getCommandExecuteResponseFuture(commandPacket.getId(), commandPacket.getUuid());
+           if (commandExecuteResponse != null && commandExecuteResponse.isSuccess() && !"inExecute".equals(commandExecuteResponse.getExecuteStatus())){
+                iterator.remove();
+           }
         }
-        Map<CommandExecuteKey, CommandPacket> commandPacketMap = new HashMap<CommandExecuteKey, CommandPacket>(commandPacketList.size(), 1);
-        CommandPacket startCommandPacket = null;
-        CommandPacket checkStorageCommandPacket = null;
-        CommandPacket upgradeCommandPacket = null;
-        List<CommandPacket> list = new ArrayList<CommandPacket>();
-        for (CommandPacket commandPacket : commandPacketList){
-            if (HeartCommandUtils.startCommandId == commandPacket.getId()){
-                startCommandPacket = commandPacket;
-                break;
-            }
-            if (HeartCommandUtils.checkStorageCommandId == commandPacket.getId()){
-                checkStorageCommandPacket = commandPacket;
-            } else if (HeartCommandUtils.onlineUpgradeCommandId == commandPacket.getId()){
-                upgradeCommandPacket = commandPacket;
-            } else {
-                list.add(commandPacket);
+        //说明交互成功，清楚本地已经失败或者成功的任务，说明已经上报成功了
+        if (null != newCommandPacketList && !preCommandExecuteResponseList.isEmpty()){
+            for (CommandExecuteResponse commandExecuteResponse : preCommandExecuteResponseList){
+                HeartCommandUtils.removeCommandExecuteResponseFuture(commandExecuteResponse.getCommandId(), commandExecuteResponse.getTaskId());
             }
         }
-
-        if (startCommandPacket != null){
-            list.clear();
-            list.add(startCommandPacket);
-            return list;
-        }
-
-        if (checkStorageCommandPacket != null && upgradeCommandPacket != null) {
-            list.add(checkStorageCommandPacket);
-        }
-
-
-
-        return null;
+        return newCommandPacketList;
     }
 
 
@@ -423,50 +457,128 @@ public class HttpAgentScheduler implements AgentScheduler {
     /**
      * use local jar installed if exists
      */
-    private void installLocal() {
-        CommandPacket commandPacket = new CommandPacket();
-        commandPacket.setCommandType(CommandPacket.COMMAND_TYPE_FRAMEWORK);
-        commandPacket.setOperateType(CommandPacket.OPERATE_TYPE_INSTALL);
-        commandPacket.setUseLocal(true);
-        install(commandPacket);
+    private void installLocalOrRemote() {
+        CommandPacket startCommandPacket;
+        //直到成功为止，控制台可能重启、网络问题等原因
+        //TODO
+        while ((startCommandPacket = getStartCommandPacket()) == null){
+            try {
+                logger.warn("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");
+                Thread.sleep(500 );
+            } catch (InterruptedException ignore) {
+            }
+        }
+        install(startCommandPacket);
+    }
+
+
+    private void executeCommand(){
+        try {
+            //获取simulator状态数据
+            if (SimulatorStatus.isUnInstall()){
+                CommandPacket commandPacket = new CommandPacket();
+                commandPacket.setId(HeartCommandConstants.getSimulatorStatusCommandId);
+                commandPacket.setSync(true);
+                commandPacket.setUuid("-1");
+                Map<String, String> extras = new HashMap<String, String>();
+                extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_REGISTER);
+                extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_REGISTER);
+                extras.put(HeartCommandConstants.COMMAND_ID_KEY, String.valueOf(commandPacket.getId()));
+                extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
+                extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, "true");
+                commandPacket.setExtras(extras);
+                CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
+                if (commandExecuteResponse.isSuccess()){
+                    SimulatorStatus.setAgentStatus((String)commandExecuteResponse.getResult(), commandExecuteResponse.getMsg());
+                }
+            }
+
+
+            List<CommandPacket> heartCommandPackets = getCommandPacketByHeart();
+            boolean asyncTaskResult = true;
+            if (null != heartCommandPackets && !heartCommandPackets.isEmpty()){
+                for (final CommandPacket commandPacket : heartCommandPackets){
+                    commandPacket.getExtras().put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
+                    commandPacket.getExtras().put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_DO_COMAAND);
+                    commandPacket.getExtras().put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, String.valueOf(commandPacket.isSync()));
+                    commandPacket.getExtras().put(HeartCommandConstants.COMMAND_ID_KEY, String.valueOf(commandPacket.getId()));
+                    commandPacket.getExtras().put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
+                    //目前同步的只有一个启动的操作
+                    if (commandPacket.isSync()){
+                        CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
+                        HeartCommandUtils.putCommandExecuteResponse(commandPacket.getId(), commandPacket.getUuid(), commandExecuteResponse);
+                        //同步失败则直接跳出，所有任务不执行
+                        if (!commandExecuteResponse.isSuccess() || "1".equals(commandExecuteResponse.getExecuteStatus())){
+                            asyncTaskResult = false;
+                            break;
+                        } else if (HeartCommandConstants.startCommandId == commandPacket.getId()){
+                            HeartCommandUtils.startCommandResult = true;
+                        }
+                    } else {
+                        CommandExecuteResponse commandExecuteResponse = null;
+                        try {
+                            commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
+                        } catch (Throwable t){
+                            commandExecuteResponse.setCommandId(commandPacket.getId());
+                            commandExecuteResponse.setTaskId(commandPacket.getUuid());
+                            commandExecuteResponse.setResult(false);
+                            commandExecuteResponse.setMsg(t.getMessage());
+                        }
+                        commandExecuteResponse.setExtrasString(commandPacket.getExtrasString());
+                        HeartCommandUtils.putCommandExecuteResponseFuture(commandPacket.getId(), commandPacket.getUuid(),
+                                commandExecuteResponse);
+                    }
+                }
+            }
+
+            //TODO 这里是否会有问题？？
+            if (!asyncTaskResult){
+                return;
+            }
+
+            /**
+             * 获取最新的命令包
+             */
+            final CommandPacket commandPacket = getLatestCommandPacket();
+            if (commandPacket == null) {
+                return;
+            }
+            try {
+                Result result = executeCommandPacket(commandPacket);
+                if (result != null) {
+                    executeCommandId = commandPacket.getId();
+                    reportCommandExecuteResult(commandPacket.getId(), result.isSuccess, result.errorMsg);
+                }
+            } catch (Throwable throwable) {
+                logger.error("execute command failed. command={}", commandPacket, throwable);
+                reportCommandExecuteResult(commandPacket.getId(), false,
+                        HttpAgentScheduler.toString(throwable));
+            }
+        } catch (Throwable t) {
+            logger.error("execute scheduler failed. ", t);
+        } finally {
+            try {
+                schedulerArgs.getIntervalUnit().sleep(schedulerArgs.getInterval());
+            } catch (InterruptedException e) {
+            }
+        }
     }
 
     private void startScheduler() {
+        //启动先执行一次
         this.scheduledExecutorService.schedule(new Runnable() {
             @Override
             public void run() {
                 while (!isShutdown) {
-                    try {
-                        /**
-                         * 获取最新的命令包
-                         */
-                        CommandPacket commandPacket = getLatestCommandPacket();
-                        if (commandPacket == null) {
-                            continue;
-                        }
-                        try {
-                            Result result = executeCommandPacket(commandPacket);
-                            if (result != null) {
-                                executeCommandId = commandPacket.getId();
-                                reportCommandExecuteResult(commandPacket.getId(), result.isSuccess, result.errorMsg);
-                            }
-                        } catch (Throwable throwable) {
-                            logger.error("execute command failed. command={}", commandPacket, throwable);
-                            reportCommandExecuteResult(commandPacket.getId(), false,
-                                    HttpAgentScheduler.toString(throwable));
-                        }
-                    } catch (Throwable t) {
-                        logger.error("execute scheduler failed. ", t);
-                    } finally {
-                        try {
-                            schedulerArgs.getIntervalUnit().sleep(schedulerArgs.getInterval());
-                        } catch (InterruptedException e) {
-                        }
-                    }
+                    executeCommand();
                 }
             }
         }, Math.max(schedulerArgs.getDelay(), 0), schedulerArgs.getDelayUnit());
     }
+
+
+
+
 
     public static String toString(Throwable throwable) {
         if (throwable == null) {

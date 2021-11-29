@@ -14,6 +14,8 @@
  */
 package com.shulie.instrument.simulator.agent.api.model;
 
+import com.alibaba.fastjson.JSON;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,7 +25,7 @@ import java.util.Map;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/5/22 11:55 上午
  */
-public class CommandPacket {
+public class CommandPacket extends HeartCommandPacket {
     public final static int COMMAND_TYPE_FRAMEWORK = 1;
     public final static int COMMAND_TYPE_MODULE = 2;
 
@@ -69,11 +71,6 @@ public class CommandPacket {
      * 命令存活时长,默认无限长
      */
     private int liveTime = -1;
-
-    /**
-     * 任务ID
-     */
-    private String taskId;
 
     /**
      * 附加数据
@@ -137,6 +134,9 @@ public class CommandPacket {
     }
 
     public Map<String, String> getExtras() {
+        if (extras.isEmpty() && null != getExtrasString() && !"".equals(getExtrasString())){
+            extras = JSON.parseObject(getExtrasString(), Map.class);
+        }
         return extras;
     }
 
@@ -154,14 +154,5 @@ public class CommandPacket {
         commandPacket.setCommandType(COMMAND_TYPE_FRAMEWORK);
         commandPacket.setOperateType(OPERATE_TYPE_INSTALL);
         return commandPacket;
-    }
-
-
-    public String getTaskId() {
-        return taskId;
-    }
-
-    public void setTaskId(String taskId) {
-        this.taskId = taskId;
     }
 }

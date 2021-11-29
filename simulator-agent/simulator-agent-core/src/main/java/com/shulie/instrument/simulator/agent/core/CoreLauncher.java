@@ -36,6 +36,7 @@ import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
 import com.shulie.instrument.simulator.agent.spi.impl.HttpAgentScheduler;
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.slf4j.Logger;
@@ -215,10 +216,30 @@ public class CoreLauncher {
                     register.init(registerOptions);
                     register.start();
 
+
+
                     agentScheduler.setAgentConfig(agentConfig);
+//                    String defaultAgentHome
+//                            = new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
+//                            .getParent();
+//                    String EE_HOME = defaultAgentHome.replace("core", "ee");
+//                    File file = new File(EE_HOME + "/module-agent-command-1.0.0.jar");
+//                    if (file.exists()){
+//                        URL url1 = new URL("file:" + EE_HOME + "/module-agent-command-1.0.0.jar");
+//                        URLClassLoader myClassLoader1 = new URLClassLoader(new URL[] { url1 }, this.getClass().getClassLoader());
+//                        Class<?> agentCommandExecutorClass = myClassLoader1.loadClass("com.pamirs.attach.plugin.agent.command.AgentCommandExecutor");
+//                        Constructor constructor = agentCommandExecutorClass.getConstructor(CommandExecutor.class);
+//                        CommandExecutor agentCommandExecutor = (CommandExecutor) constructor.newInstance(new DefaultCommandExecutor(launcher));
+//                        agentScheduler.setCommandExecutor(agentCommandExecutor);
+//                    } else {
+//                        agentScheduler.setCommandExecutor(new DefaultCommandExecutor(launcher));
+//                    }
+
                     agentScheduler.setCommandExecutor(new CommandExecutor() {
+
                         @Override
-                        public void execute(Command command) throws Throwable {
+                        public CommandExecuteResponse execute(Command command) throws Throwable {
+                            CommandExecuteResponse commandExecuteResponse = null;
                             if (command instanceof StartCommand) {
                                 launcher.startup(((StartCommand) command));
                             } else if (command instanceof StopCommand) {
@@ -229,7 +250,10 @@ public class CoreLauncher {
                                 launcher.unloadModule(((UnloadModuleCommand) command));
                             } else if (command instanceof ReloadModuleCommand) {
                                 launcher.reloadModule(((ReloadModuleCommand) command));
+                            } else if (command instanceof HeartCommand){
+                                commandExecuteResponse = launcher.commandModule((HeartCommand)command);
                             }
+                            return commandExecuteResponse;
                         }
 
                         @Override

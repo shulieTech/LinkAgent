@@ -16,16 +16,16 @@ package com.shulie.instrument.simulator.agent.core;
 
 import com.alibaba.fastjson.JSON;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
+import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
-import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.apache.commons.lang.ArrayUtils;
@@ -197,24 +197,14 @@ public class AgentLauncher {
     public void startup(StartCommand<CommandPacket> startCommand) throws Throwable {
         AgentStatus.installing();
         try {
-            if (!startCommand.getPacket().isUseLocal()) {
-                File file = new File(agentConfig.getSimulatorHome());
-                File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp",
-                        agentConfig.getUserAppKey());
-                if (file.exists()) {
-                    FileUtils.delete(file);
-                }
-                f.renameTo(file);
+            if (HeartCommandConstants.startCommandId != startCommand.getPacket().getId() ){
+                throw new IllegalArgumentException("startCommand commandId is wrong " + startCommand.getPacket().getId());
             }
-            if (!new File(agentConfig.getAgentJarPath()).exists()) {
-                if (startCommand.getPacket().isUseLocal()) {
-                    logger.warn("AGENT: launch on agent failed. agent jar file is not found. ");
-                    AgentStatus.uninstall();
-                    return;
-                } else {
-                    logger.error("AGENT: launch on agent err. agent jar file is not found. ");
-                    throw new RuntimeException("AGENT: launch on agent err. agent jar file is not found.");
-                }
+
+            if (!HeartCommandConstants.PATH_TYPE_LOCAL_VALUE.equals(startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY))){
+                //TODO
+//                OssOperationClient ossOperationClient
+//                FtpOperationClient ftpOperationClient
             }
 
             if (!isRunning.compareAndSet(false, true)) {
@@ -298,6 +288,7 @@ public class AgentLauncher {
             }
             AgentStatus.installed(result[2]);
             this.baseUrl = "http://" + result[0] + ":" + result[1] + "/simulator";
+
             logger.info("AGENT: got a available agent url: {} version : {}", this.baseUrl, result[2]);
             System.setProperty("ttl.disabled", "false");
         } catch (Throwable throwable) {
@@ -318,6 +309,59 @@ public class AgentLauncher {
             logger.error("AGENT: agent startup failed.", throwable);
             throw throwable;
         }
+    }
+
+
+    public CommandExecuteResponse commandModule(HeartCommand<CommandPacket> heartCommand){
+        CommandExecuteResponse commandExecuteResponse = new CommandExecuteResponse();
+        commandExecuteResponse.setCommandId(heartCommand.getPacket().getId());
+        commandExecuteResponse.setTaskId(heartCommand.getPacket().getUuid());
+        String moduleId = heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_ID_KEY);
+        String moduleMethod = heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_METHOD_KEY);
+        String sync = heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY);
+        String requests = heartCommand.getPacket().getExtra(HeartCommandConstants.REQUEST_COMMAND_TASK_RESULT_KEY);
+        String commandId = heartCommand.getPacket().getExtra(HeartCommandConstants.COMMAND_ID_KEY);
+        String taskId = heartCommand.getPacket().getExtra(HeartCommandConstants.TASK_ID_KEY);
+        if (StringUtils.isBlank(moduleId) || StringUtils.isBlank(moduleId) || StringUtils.isBlank(sync)
+            || StringUtils.isBlank(commandId) || StringUtils.isBlank(taskId)){
+            throw new IllegalArgumentException("command 参数不完整!");
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("prepare to load module from path={}.", moduleId);
+        }
+        try {
+            String loadUrl = baseUrl + File.separator + moduleId + File.separator + moduleMethod + "?useApi=true&path="
+                    + moduleId + "&extrasString=" + heartCommand.getPacket().getExtrasString() + "&sync=" + sync
+                    + "&commandId=" + commandId + "&taskId=" + taskId;
+            if (StringUtils.isNotBlank(requests)){
+                loadUrl = loadUrl + "&requests=" + requests;
+            }
+
+            HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl, agentConfig.getUserAppKey(), heartCommand.getPacket().getExtrasString());
+
+            if (content == null) {
+                commandExecuteResponse.setSuccess(false);
+                commandExecuteResponse.setResult(null);
+                commandExecuteResponse.setMsg("请求模块ID:" + moduleId + "数据返回null");
+                return commandExecuteResponse;
+            }
+
+            Response response = JSON.parseObject(content.getResult(), Response.class);
+
+            if (logger.isInfoEnabled()) {
+                logger.info("commandModule successful from path={}.", moduleId);
+            }
+            commandExecuteResponse.setSuccess(response.isSuccess());
+            commandExecuteResponse.setResult(response.getResult());
+            commandExecuteResponse.setMsg(response.getMessage());
+            return commandExecuteResponse;
+        } catch (Throwable e) {
+            logger.error("AGENT: commandModule failed.", e);
+            commandExecuteResponse.setResult(e.getMessage());
+            commandExecuteResponse.setSuccess(false);
+            return commandExecuteResponse;
+        }
+
     }
 
     /**

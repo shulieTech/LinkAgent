@@ -24,7 +24,6 @@ import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import com.shulie.instrument.simulator.agent.spi.impl.model.UpgradeBatchConfig;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.apache.commons.lang.StringUtils;
@@ -54,7 +53,6 @@ public class ExternalAPIImpl implements ExternalAPI {
     private final static String HEART_URL = "api/agent/heartbeat";
     private final static String REPORT_URL = "api/agent/application/node/probe/operateResult";
 
-    private UpgradeBatchConfig upgradeBatchConfig = new UpgradeBatchConfig();
 
 
 
@@ -151,11 +149,11 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     @Override
     public List<CommandPacket> sendHeart(HeartRequest heartRequest) {
-        HeartRequestUtil.configHeartRequest(heartRequest, agentConfig, upgradeBatchConfig);
+        HeartRequestUtil.configHeartRequest(heartRequest, agentConfig);
         String webUrl = agentConfig.getTroWebUrl();
         if (StringUtils.isBlank(webUrl)) {
             logger.warn("AGENT: tro.web.url is not assigned.");
-            return Collections.EMPTY_LIST;
+            return null;
         }
         String agentHeartUrl = joinUrl(webUrl, HEART_URL);
 
@@ -163,7 +161,7 @@ public class ExternalAPIImpl implements ExternalAPI {
 
         if (null == resp) {
             logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
-            return Collections.EMPTY_LIST;
+            return null;
         }
 
         try {
@@ -176,7 +174,7 @@ public class ExternalAPIImpl implements ExternalAPI {
             return response.getData();
         } catch (Throwable e) {
             logger.error("AGENT: parse command err. {}", resp, e);
-            return Collections.EMPTY_LIST;
+            return null;
         }
     }
 

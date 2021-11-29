@@ -25,6 +25,8 @@ public class CommandResponse<T> {
     private T result;
     private String message;
 
+    private String commandStatus;
+
     public boolean isSuccess() {
         return success;
     }
@@ -75,6 +77,14 @@ public class CommandResponse<T> {
         response.setSuccess(false);
         response.setMessage(message + " " + ThrowableUtils.toString(e));
         return response;
+    }
+
+    public String getCommandStatus() {
+        return commandStatus;
+    }
+
+    public void setCommandStatus(String commandStatus) {
+        this.commandStatus = commandStatus;
     }
 
     @Override

@@ -1,4 +1,20 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.shulie.instrument.simulator.agent.api.model;
+
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 
 import java.util.List;
 
@@ -58,12 +74,12 @@ public class HeartRequest {
     /**
      * 卸载状态，0:未卸载，1:已卸载
      */
-    private String uninstallStatus;
+    private int uninstallStatus = 0;
 
     /**
      * 休眠状态，0:为休眠，1:已休眠
      */
-    private String dormantStatus;
+    private int dormantStatus = 0;
 
     /**
      * agent版本
@@ -74,6 +90,12 @@ public class HeartRequest {
      * 模块版本信息
      */
     private String dependencyInfo;
+
+
+    /**
+     * 开源标志
+     */
+    private String flag = "shulieEnterprise";
 
 
     /**
@@ -154,19 +176,19 @@ public class HeartRequest {
         this.simulatorErrorInfo = simulatorErrorInfo;
     }
 
-    public String getUninstallStatus() {
+    public int getUninstallStatus() {
         return uninstallStatus;
     }
 
-    public void setUninstallStatus(String uninstallStatus) {
+    public void setUninstallStatus(int uninstallStatus) {
         this.uninstallStatus = uninstallStatus;
     }
 
-    public String getDormantStatus() {
+    public int getDormantStatus() {
         return dormantStatus;
     }
 
-    public void setDormantStatus(String dormantStatus) {
+    public void setDormantStatus(int dormantStatus) {
         this.dormantStatus = dormantStatus;
     }
 
@@ -193,5 +215,10 @@ public class HeartRequest {
 
     public void setDependencyInfo(String dependencyInfo) {
         this.dependencyInfo = dependencyInfo;
+    }
+
+
+    public String getFlag() {
+        return flag;
     }
 }

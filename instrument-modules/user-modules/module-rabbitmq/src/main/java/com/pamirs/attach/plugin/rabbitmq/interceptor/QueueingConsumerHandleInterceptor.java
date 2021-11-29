@@ -14,6 +14,9 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
@@ -21,22 +24,18 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.interceptor.ReversedTraceInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.SpanRecord;
-import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
+import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.amqp.rabbit.support.Delivery;
-
-import java.util.HashMap;
-import java.util.Map;
-
 
 /**
  * @Author: guohz
@@ -46,7 +45,7 @@ import java.util.Map;
  * @Description:
  */
 @Destroyable(RabbitmqDestroy.class)
-public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
+public class QueueingConsumerHandleInterceptor extends ReversedTraceInterceptorAdaptor {
 
     @Override
     public String getPluginName() {
@@ -64,41 +63,12 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeFirst(Advice advice) {
-        Object[] args = advice.getParameterArray();
-        if (args == null || args.length == 0 || args[0] == null) {
-            return;
-        }
-
-        Object target = advice.getTarget();
-        Class<?>[] classes = target.getClass().getClasses();
-        if (classes.length != 1) {
-            return;
-        }
-        Object deliveryObj = args[0];
-        if (deliveryObj == null) {
-            return;
-        }
-        String topic = null;
-        String group = null;
-        try {
-            Envelope envelope = Reflect.on(deliveryObj).get(RabbitmqConstants.DYNAMIC_FIELD_ENVELOPE);
-            topic = envelope.getExchange();
-            group = envelope.getRoutingKey();
-        } catch (ReflectException e) {
-        }
-    }
-
-    @Override
     public void beforeLast(Advice advice) {
         Object[] args = advice.getParameterArray();
         if (args == null || args[0] == null) {
             return;
         }
-        Delivery queue = (Delivery) args[0];
-        if (queue == null) {
-            return;
-        }
+        Delivery queue = (Delivery)args[0];
         Envelope envelope = queue.getEnvelope();
         if (envelope == null) {
             return;
@@ -128,6 +98,9 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         try {
             Envelope envelope = Reflect.on(deliveryObj).get(RabbitmqConstants.DYNAMIC_FIELD_ENVELOPE);
+            if (envelope == null) {//说明是毒药，已经报错了
+                return null;
+            }
             record.setService(envelope.getExchange());
             record.setMethod(envelope.getRoutingKey());
         } catch (ReflectException e) {
@@ -139,9 +112,12 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
             if (headers != null) {
                 Map<String, String> rpcContext = new HashMap<String, String>();
                 for (String key : Pradar.getInvokeContextTransformKeys()) {
-                    String value = (String) headers.get(key);
-                    if (value != null) {
-                        rpcContext.put(key, value);
+                    Object tmp = headers.get(key);
+                    if (tmp != null) {
+                        String value = tmp.toString();
+                        if (value != null) {
+                            rpcContext.put(key, value);
+                        }
                     }
                 }
                 record.setContext(rpcContext);
@@ -211,13 +187,14 @@ public class QueueingConsumerHandleInterceptor extends TraceInterceptorAdaptor {
             exchange = StringUtils.trimToEmpty(exchange);
             String routingKey = envelope.getRoutingKey();
             if (exchange != null
-                    && Pradar.isClusterTestPrefix(exchange)) {
+                && Pradar.isClusterTestPrefix(exchange)) {
                 Pradar.setClusterTest(true);
             } else if (PradarSwitcher.isRabbitmqRoutingkeyEnabled()
-                    && routingKey != null
-                    && Pradar.isClusterTestPrefix(routingKey)) {
+                && routingKey != null
+                && Pradar.isClusterTestPrefix(routingKey)) {
                 Pradar.setClusterTest(true);
-            } else if (null != properties.getHeaders() && ClusterTestUtils.isClusterTestRequest(ObjectUtils.toString(properties.getHeaders().get(PradarService.PRADAR_CLUSTER_TEST_KEY)))) {
+            } else if (null != properties.getHeaders() && ClusterTestUtils.isClusterTestRequest(
+                ObjectUtils.toString(properties.getHeaders().get(PradarService.PRADAR_CLUSTER_TEST_KEY)))) {
                 Pradar.setClusterTest(true);
             }
         } catch (Throwable e) {

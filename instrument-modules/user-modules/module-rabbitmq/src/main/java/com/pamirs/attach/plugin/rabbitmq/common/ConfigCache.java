@@ -17,40 +17,21 @@ package com.pamirs.attach.plugin.rabbitmq.common;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
+
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/5/9 1:56 上午
  */
 public class ConfigCache {
 
-    private static boolean workWithSpring;
     private static Map<Integer, Object> caches = new ConcurrentHashMap<Integer, Object>();
     private static Map<Integer, String> queueCaches = new ConcurrentHashMap<Integer, String>();
     private static Map<ConsumerMetaDataCacheKey, ConsumerMetaData> consumerMetaDataCaches
-            = new ConcurrentHashMap<ConsumerMetaDataCacheKey, ConsumerMetaData>();
-
+        = new ConcurrentHashMap<ConsumerMetaDataCacheKey, ConsumerMetaData>();
 
     public static void removeConsumerMetaDataCaches(ConsumerMetaDataCacheKey key) {
         consumerMetaDataCaches.remove(key);
-    }
-
-    static {
-        try {
-            Class.forName("org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer");
-            workWithSpring = true;
-        } catch (ClassNotFoundException e) {
-            workWithSpring = false;
-        }
-    }
-
-    public static void release() {
-        caches.clear();
-        queueCaches.clear();
-        consumerMetaDataCaches.clear();
-    }
-
-    public static boolean isWorkWithSpring() {
-        return workWithSpring;
     }
 
     public static boolean containsQueue(Integer key) {
@@ -106,9 +87,9 @@ public class ConfigCache {
                 return true;
             }
             if (obj instanceof ConsumerMetaDataCacheKey) {
-                ConsumerMetaDataCacheKey anotherObject = (ConsumerMetaDataCacheKey) obj;
+                ConsumerMetaDataCacheKey anotherObject = (ConsumerMetaDataCacheKey)obj;
                 return anotherObject.channelKey == this.channelKey && anotherObject.consumerTag.equals(
-                        this.consumerTag);
+                    this.consumerTag);
             }
             return false;
         }

@@ -75,7 +75,7 @@ public class CommandPacket extends HeartCommandPacket {
     /**
      * 附加数据
      */
-    private Map<String, String> extras = Collections.EMPTY_MAP;
+    private Map<String, Object> extras = Collections.EMPTY_MAP;
 
     public boolean isUseLocal() {
         return useLocal;
@@ -133,18 +133,18 @@ public class CommandPacket extends HeartCommandPacket {
         this.dataPath = dataPath;
     }
 
-    public Map<String, String> getExtras() {
+    public Map<String, Object> getExtras() {
         if (extras.isEmpty() && null != getExtrasString() && !"".equals(getExtrasString())){
             extras = JSON.parseObject(getExtrasString(), Map.class);
         }
         return extras;
     }
 
-    public String getExtra(String key) {
+    public Object getExtra(String key) {
         return extras != null ? extras.get(key) : null;
     }
 
-    public void setExtras(Map<String, String> extras) {
+    public void setExtras(Map<String, Object> extras) {
         this.extras = extras;
     }
 

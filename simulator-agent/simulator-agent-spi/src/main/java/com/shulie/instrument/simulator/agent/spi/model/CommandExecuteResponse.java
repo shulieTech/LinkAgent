@@ -22,7 +22,7 @@ package com.shulie.instrument.simulator.agent.spi.model;
  */
 public class CommandExecuteResponse {
     private String taskId;
-    private long commandId;
+    private long id;
     private boolean success;
 
     private Object result;
@@ -35,6 +35,15 @@ public class CommandExecuteResponse {
 
     private String extrasString = null;
 
+    /**
+     *     结果产生的时间
+     */
+    private long startTime = System.currentTimeMillis();
+
+    public long getStartTime() {
+        return startTime;
+    }
+
     public String getTaskId() {
         return taskId;
     }
@@ -43,12 +52,12 @@ public class CommandExecuteResponse {
         this.taskId = taskId;
     }
 
-    public long getCommandId() {
-        return commandId;
+    public long getId() {
+        return id;
     }
 
-    public void setCommandId(long commandId) {
-        this.commandId = commandId;
+    public void setId(long commandId) {
+        this.id = commandId;
     }
 
     public boolean isSuccess() {

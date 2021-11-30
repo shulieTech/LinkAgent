@@ -94,14 +94,8 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     public CommandResponse<Object> getCommandResult(Map<String, String> args){
         CommandResponse commandResponse = new CommandResponse();
         commandResponse.setSuccess(true);
-        String requests = args.get("requests");
-        if (StringUtils.isBlank(requests)){
-            commandResponse.setMessage("requests is null");
-            return commandResponse;
-        }
-        List<String> list = JSON.parseObject(args.get("requests"), List.class);
-        ConcurrentHashMap<String, Future<CommandResponse<Object>>> temp = taskKeySet;
 
+        ConcurrentHashMap<String, Future<CommandResponse<Object>>> temp = taskKeySet;
         if (temp.isEmpty()){
             commandResponse.setMessage("当前没有任务可供查询");
             commandResponse.setResult(Collections.EMPTY_MAP);
@@ -110,25 +104,23 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
         List<String> successList = new ArrayList<String>();
         Map<String, String> failedMap = new HashMap<String, String>();
         Set<String> removeList = new HashSet<String>();
-        for (String s : list){
-            Future<CommandResponse<Object>> future = temp.get(s);
+        for (Map.Entry<String, Future<CommandResponse<Object>>> entry : temp.entrySet()){
+            Future<CommandResponse<Object>> future = entry.getValue();
             if (future.isDone()){
                 try {
                     CommandResponse<Object> c = future.get();
                     if (CommandTaskStatus.FINISHED.name().equals(c.getCommandStatus())){
-                        successList.add(s);
-                        removeList.add(s);
+                        successList.add(entry.getKey());
+                        removeList.add(entry.getKey());
                     }
                     if (CommandTaskStatus.FAILED.name().equals(c.getCommandStatus())){
-                        failedMap.put(s, c.getMessage());
-                        removeList.add(s);
+                        failedMap.put(entry.getKey(), c.getMessage());
+                        removeList.add(entry.getKey());
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    //TODO
+                    exceptionHandler(future, failedMap, removeList, e.getMessage(), entry.getKey());
                 } catch (ExecutionException e) {
-                    e.printStackTrace();
-                    //TODO
+                    exceptionHandler(future, failedMap, removeList, e.getMessage(), entry.getKey());
                 }
             }
         }
@@ -143,6 +135,14 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
         return commandResponse;
     }
 
+
+    private void exceptionHandler(Future  future, Map<String, String> failedMap, Set<String> removeList, String errMsg, String key){
+        failedMap.put(key, errMsg);
+        removeList.add(key);
+        if (future != null){
+            future.cancel(true);
+        }
+    }
 
     /**
      *

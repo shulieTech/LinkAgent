@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.agent.spi.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
@@ -100,11 +99,11 @@ public class HttpAgentScheduler implements AgentScheduler {
     }
 
     private Result uninstallModule(CommandPacket commandPacket) {
-        Map<String, String> extras = commandPacket.getExtras();
+        Map<String, Object> extras = commandPacket.getExtras();
         if (extras == null || extras.isEmpty()) {
             return Result.errorResult("未找到指定的模块[moduleId 为空]");
         }
-        String moduleId = extras.get("moduleId");
+        String moduleId = (String) extras.get("moduleId");
         if (StringUtils.isBlank(moduleId)) {
             return Result.errorResult("卸载的模块 ID 为空");
         }
@@ -172,11 +171,11 @@ public class HttpAgentScheduler implements AgentScheduler {
      * @return
      */
     private Result installModule(CommandPacket commandPacket) {
-        Map<String, String> extras = commandPacket.getExtras();
+        Map<String, Object> extras = commandPacket.getExtras();
         if (extras == null || extras.isEmpty()) {
             return Result.errorResult("未找到指定的模块[moduleId 为空]");
         }
-        String moduleId = extras.get("moduleId");
+        String moduleId = (String) extras.get("moduleId");
         if (StringUtils.isBlank(moduleId)) {
             return Result.errorResult("升级的模块 ID 为空");
         }
@@ -326,36 +325,27 @@ public class HttpAgentScheduler implements AgentScheduler {
 
         //获取上次异步的数据，请求执行结果
         if (!HeartCommandUtils.futureMapEmpty()){
-            List<String> keyList = new ArrayList<String>();
-            for (Map.Entry<CommandExecuteKey, CommandExecuteResponse> entry : HeartCommandUtils.getFutureMap().entrySet()){
-                if (entry.getValue() != null && entry.getValue().isSuccess()
-                        && ("finished".equals(entry.getValue().getExecuteStatus())
-                        || "failed".equals(entry.getValue().getExecuteStatus()))){
-                    commandExecuteResponseList.add(entry.getValue());
-                } else {
-                    keyList.add(entry.getKey().getCommandId() + ":" + entry.getKey().getTaskId());
-                }
-            }
             CommandPacket commandPacket = new CommandPacket();
             commandPacket.setId(-2);
             commandPacket.setSync(true);
             commandPacket.setUuid("-2");
-            Map<String, String> extras = new HashMap<String, String>();
+            Map<String, Object> extras = new HashMap<String, Object>();
             extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
             extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_GET_COMMAND_RESULT);
             extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, String.valueOf(commandPacket.isSync()));
-            extras.put(HeartCommandConstants.REQUEST_COMMAND_TASK_RESULT_KEY, JSON.toJSONString(keyList));
-            extras.put(HeartCommandConstants.COMMAND_ID_KEY, String.valueOf(commandPacket.getId()));
+            extras.put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
             extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
             commandPacket.setExtras(extras);
-            HeartCommand<CommandPacket> requestCommandResults = new HeartCommand<CommandPacket>(commandPacket);
+            HeartCommand<CommandPacket> requestResultsCommand = new HeartCommand<CommandPacket>(commandPacket);
             try {
-                CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(requestCommandResults);
+                CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(requestResultsCommand);
                 if (commandExecuteResponse.isSuccess() && null != commandExecuteResponse.getResult() ){
                     Map<String, Object> map = (Map<String, Object>) commandExecuteResponse.getResult();
                     if (!map.isEmpty()){
                         List<String> successList = (List<String>) map.get("success");
                         Map<String, String> failedMap = (Map<String, String>) map.get("failed");
+
+                        //成功的处理
                         if (!successList.isEmpty()){
                             for (String key : successList){
                                 String[] keys = key.split(":");
@@ -363,17 +353,20 @@ public class HttpAgentScheduler implements AgentScheduler {
                                 if (response != null){
                                     response.setExecuteStatus("finished");
                                     response.setMsg(null);
+                                    response.setSuccess(true);
                                     commandExecuteResponseList.add(response);
                                 } else {
                                     logger.warn("task {} no result", key);
                                 }
                             }
                         }
+                        //失败的处理
                         if (!failedMap.isEmpty()){
                             for (Map.Entry<String, String> entry : failedMap.entrySet()){
                                 String[] keys = entry.getKey().split(":");
                                 CommandExecuteResponse response = HeartCommandUtils.getCommandExecuteResponseFuture(Long.valueOf(keys[0]), keys[1]);
                                 if (response != null){
+                                    response.setSuccess(true);
                                     response.setExecuteStatus("failed");
                                     response.setMsg(entry.getValue());
                                     commandExecuteResponseList.add(response);
@@ -382,6 +375,15 @@ public class HttpAgentScheduler implements AgentScheduler {
                                 }
                             }
                         }
+
+                        //未知的处理
+                        for (Map.Entry<CommandExecuteKey, CommandExecuteResponse> entry : HeartCommandUtils.getFutureMap().entrySet()){
+                            if (!entry.getValue().isSuccess() && "unknown".equals(entry.getValue().getExecuteStatus())){
+                                entry.getValue().setExecuteStatus("failed");
+                                commandExecuteResponseList.add(entry.getValue());
+                            }
+                        }
+
                     }
                 }
             } catch (Throwable throwable) {
@@ -397,13 +399,13 @@ public class HttpAgentScheduler implements AgentScheduler {
 
     private CommandPacket getStartCommandPacket(){
         HeartRequest heartRequest = new HeartRequest();
-        heartRequest.setCommandExecuteResponseList(Collections.EMPTY_LIST);
+        heartRequest.setCommandResult(Collections.EMPTY_LIST);
         heartRequest.setCurUpgradeBatch(upgradeBatchConfig.getCurUpgradeBatch());
         List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
         if (null == commandPacketList || commandPacketList.isEmpty()){
             return null;
         }
-        upgradeBatchConfig.setCurUpgradeBatch(commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
+        upgradeBatchConfig.setCurUpgradeBatch((String) commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
         return commandPacketList.get(0);
     }
 
@@ -412,9 +414,12 @@ public class HttpAgentScheduler implements AgentScheduler {
      * @return
      */
     private List<CommandPacket> getCommandPacketByHeart(){
-        List<CommandExecuteResponse> preCommandExecuteResponseList = getCommandExecuteResponses();
         HeartRequest heartRequest = new HeartRequest();
-        heartRequest.setCommandExecuteResponseList(preCommandExecuteResponseList);
+        if (HeartCommandUtils.futureMapSize() > 30){
+            heartRequest.setTaskExceed(true);
+        }
+        List<CommandExecuteResponse> preCommandExecuteResponseList = getCommandExecuteResponses();
+        heartRequest.setCommandResult(preCommandExecuteResponseList);
         heartRequest.setCurUpgradeBatch(upgradeBatchConfig.getCurUpgradeBatch());
         List<CommandPacket> newCommandPacketList = externalAPI.sendHeart(heartRequest);
         //所有已经存在的任务，是成功或者进行中的，不要再下发
@@ -429,7 +434,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         //说明交互成功，清楚本地已经失败或者成功的任务，说明已经上报成功了
         if (null != newCommandPacketList && !preCommandExecuteResponseList.isEmpty()){
             for (CommandExecuteResponse commandExecuteResponse : preCommandExecuteResponseList){
-                HeartCommandUtils.removeCommandExecuteResponseFuture(commandExecuteResponse.getCommandId(), commandExecuteResponse.getTaskId());
+                HeartCommandUtils.removeCommandExecuteResponseFuture(commandExecuteResponse.getId(), commandExecuteResponse.getTaskId());
             }
         }
         return newCommandPacketList;
@@ -480,10 +485,10 @@ public class HttpAgentScheduler implements AgentScheduler {
                 commandPacket.setId(HeartCommandConstants.getSimulatorStatusCommandId);
                 commandPacket.setSync(true);
                 commandPacket.setUuid("-1");
-                Map<String, String> extras = new HashMap<String, String>();
+                Map<String, Object> extras = new HashMap<String, Object>();
                 extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_REGISTER);
                 extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_REGISTER);
-                extras.put(HeartCommandConstants.COMMAND_ID_KEY, String.valueOf(commandPacket.getId()));
+                extras.put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
                 extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
                 extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, "true");
                 commandPacket.setExtras(extras);
@@ -496,12 +501,12 @@ public class HttpAgentScheduler implements AgentScheduler {
 
             List<CommandPacket> heartCommandPackets = getCommandPacketByHeart();
             boolean asyncTaskResult = true;
-            if (null != heartCommandPackets && !heartCommandPackets.isEmpty()){
+            if (null != heartCommandPackets && !heartCommandPackets.isEmpty() && HeartCommandUtils.futureMapSize() < 30){
                 for (final CommandPacket commandPacket : heartCommandPackets){
                     commandPacket.getExtras().put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
                     commandPacket.getExtras().put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_DO_COMAAND);
                     commandPacket.getExtras().put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, String.valueOf(commandPacket.isSync()));
-                    commandPacket.getExtras().put(HeartCommandConstants.COMMAND_ID_KEY, String.valueOf(commandPacket.getId()));
+                    commandPacket.getExtras().put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
                     commandPacket.getExtras().put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
                     //目前同步的只有一个启动的操作
                     if (commandPacket.isSync()){
@@ -519,10 +524,11 @@ public class HttpAgentScheduler implements AgentScheduler {
                         try {
                             commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
                         } catch (Throwable t){
-                            commandExecuteResponse.setCommandId(commandPacket.getId());
+                            commandExecuteResponse.setId(commandPacket.getId());
                             commandExecuteResponse.setTaskId(commandPacket.getUuid());
-                            commandExecuteResponse.setResult(false);
+                            commandExecuteResponse.setSuccess(false);
                             commandExecuteResponse.setMsg(t.getMessage());
+                            commandExecuteResponse.setExecuteStatus("unknown");
                         }
                         commandExecuteResponse.setExtrasString(commandPacket.getExtrasString());
                         HeartCommandUtils.putCommandExecuteResponseFuture(commandPacket.getId(), commandPacket.getUuid(),
@@ -531,7 +537,7 @@ public class HttpAgentScheduler implements AgentScheduler {
                 }
             }
 
-            //TODO 这里是否会有问题？？
+            //目前只有一个启动的任务，未成功无法启动任何操作
             if (!asyncTaskResult){
                 return;
             }

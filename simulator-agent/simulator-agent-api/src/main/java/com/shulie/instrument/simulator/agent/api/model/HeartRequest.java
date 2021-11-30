@@ -97,11 +97,12 @@ public class HeartRequest {
      */
     private String flag = "shulieEnterprise";
 
+    private boolean taskExceed = false;
 
     /**
      *
      */
-    List<CommandExecuteResponse> commandExecuteResponseList;
+    List<CommandExecuteResponse> commandResult;
 
 
     public String getProjectName() {
@@ -200,12 +201,12 @@ public class HeartRequest {
         this.agentVersion = agentVersion;
     }
 
-    public List<CommandExecuteResponse> getCommandExecuteResponseList() {
-        return commandExecuteResponseList;
+    public List<CommandExecuteResponse> getCommandResult() {
+        return commandResult;
     }
 
-    public void setCommandExecuteResponseList(List<CommandExecuteResponse> commandExecuteResponseList) {
-        this.commandExecuteResponseList = commandExecuteResponseList;
+    public void setCommandResult(List<CommandExecuteResponse> commandExecuteResponseList) {
+        this.commandResult = commandExecuteResponseList;
     }
 
 
@@ -220,5 +221,14 @@ public class HeartRequest {
 
     public String getFlag() {
         return flag;
+    }
+
+
+    public boolean isTaskExceed() {
+        return taskExceed;
+    }
+
+    public void setTaskExceed(boolean taskExceed) {
+        this.taskExceed = taskExceed;
     }
 }

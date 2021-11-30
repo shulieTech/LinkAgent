@@ -314,16 +314,15 @@ public class AgentLauncher {
 
     public CommandExecuteResponse commandModule(HeartCommand<CommandPacket> heartCommand){
         CommandExecuteResponse commandExecuteResponse = new CommandExecuteResponse();
-        commandExecuteResponse.setCommandId(heartCommand.getPacket().getId());
+        commandExecuteResponse.setId(heartCommand.getPacket().getId());
         commandExecuteResponse.setTaskId(heartCommand.getPacket().getUuid());
-        String moduleId = heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_ID_KEY);
-        String moduleMethod = heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_METHOD_KEY);
-        String sync = heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY);
-        String requests = heartCommand.getPacket().getExtra(HeartCommandConstants.REQUEST_COMMAND_TASK_RESULT_KEY);
-        String commandId = heartCommand.getPacket().getExtra(HeartCommandConstants.COMMAND_ID_KEY);
-        String taskId = heartCommand.getPacket().getExtra(HeartCommandConstants.TASK_ID_KEY);
-        if (StringUtils.isBlank(moduleId) || StringUtils.isBlank(moduleId) || StringUtils.isBlank(sync)
-            || StringUtils.isBlank(commandId) || StringUtils.isBlank(taskId)){
+        String moduleId = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_ID_KEY);
+        String moduleMethod = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_METHOD_KEY);
+        String sync = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY);
+        Long commandId = (Long) heartCommand.getPacket().getExtra(HeartCommandConstants.COMMAND_ID_KEY);
+        String taskId = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.TASK_ID_KEY);
+        if (StringUtils.isBlank(moduleId) || StringUtils.isBlank(moduleMethod) || StringUtils.isBlank(sync)
+            || commandId == 0 || StringUtils.isBlank(taskId)){
             throw new IllegalArgumentException("command 参数不完整!");
         }
         if (logger.isInfoEnabled()) {
@@ -333,9 +332,7 @@ public class AgentLauncher {
             String loadUrl = baseUrl + File.separator + moduleId + File.separator + moduleMethod + "?useApi=true&path="
                     + moduleId + "&extrasString=" + heartCommand.getPacket().getExtrasString() + "&sync=" + sync
                     + "&commandId=" + commandId + "&taskId=" + taskId;
-            if (StringUtils.isNotBlank(requests)){
-                loadUrl = loadUrl + "&requests=" + requests;
-            }
+
 
             HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl, agentConfig.getUserAppKey(), heartCommand.getPacket().getExtrasString());
 
@@ -343,6 +340,7 @@ public class AgentLauncher {
                 commandExecuteResponse.setSuccess(false);
                 commandExecuteResponse.setResult(null);
                 commandExecuteResponse.setMsg("请求模块ID:" + moduleId + "数据返回null");
+                commandExecuteResponse.setExecuteStatus("unknown");
                 return commandExecuteResponse;
             }
 
@@ -359,6 +357,7 @@ public class AgentLauncher {
             logger.error("AGENT: commandModule failed.", e);
             commandExecuteResponse.setResult(e.getMessage());
             commandExecuteResponse.setSuccess(false);
+            commandExecuteResponse.setExecuteStatus("unknown");
             return commandExecuteResponse;
         }
 
@@ -371,7 +370,7 @@ public class AgentLauncher {
      * @throws Throwable
      */
     public void loadModule(LoadModuleCommand<CommandPacket> command) throws Throwable {
-        String moduleId = command.getPacket().getExtra("moduleId");
+        String moduleId = (String) command.getPacket().getExtra("moduleId");
         if (logger.isInfoEnabled()) {
             logger.info("prepare to load module from path={}.", moduleId);
         }
@@ -410,7 +409,7 @@ public class AgentLauncher {
     }
 
     public void unloadModule(UnloadModuleCommand<CommandPacket> command) throws Throwable {
-        String moduleId = command.getPacket().getExtra("moduleId");
+        String moduleId = (String) command.getPacket().getExtra("moduleId");
         if (logger.isInfoEnabled()) {
             logger.info("prepare to unload module {}.", moduleId);
         }
@@ -451,7 +450,7 @@ public class AgentLauncher {
     }
 
     public void reloadModule(ReloadModuleCommand<CommandPacket> command) throws Throwable {
-        final String moduleId = command.getPacket().getExtra("moduleId");
+        final String moduleId = (String) command.getPacket().getExtra("moduleId");
         if (logger.isInfoEnabled()) {
             logger.info("prepare to reload module {}.", moduleId);
         }

@@ -14,18 +14,20 @@
  */
 package com.pamirs.attach.plugin.jedis.util;
 
-import com.pamirs.pradar.Pradar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.*;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import redis.clients.jedis.BinaryJedis;
+import redis.clients.jedis.Client;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisSentinelPool;
 
 /**
  * @Auther: vernon
@@ -93,7 +95,6 @@ public class Model {
         return masterSlaveMapping.get(slave);
     }
 
-
     /**
      * 是否哨兵模式
      *
@@ -103,7 +104,11 @@ public class Model {
     public boolean isSentinelMode(Object jedis) {
         if (Jedis.class.getName().equals(jedis.getClass().getName())) {
             try {
-                return JedisSentinelPool.class.isAssignableFrom(Reflect.on(jedis).get("dataSource").getClass());
+                Object dataSource = Reflect.on(jedis).get("dataSource");
+                if (dataSource == null) {
+                    return false;
+                }
+                return JedisSentinelPool.class.isAssignableFrom(dataSource.getClass());
             } catch (Throwable t) {
                 logger.error("[redis-jedis]: judge sentinel model error,{}", Throwables.getStackTraceAsString(t));
             }
@@ -138,7 +143,6 @@ public class Model {
         pressureNotSingleModelCache.add(node);
     }
 
-
     /**
      * 因为jedis比较特殊，最后都会转换为Jedis对象，预先缓存下压测节点信息，方便后续过滤
      *
@@ -152,8 +156,8 @@ public class Model {
 
         //兼容历史数据
         if (!"single".equals(shadowRedisConfig.getModel()) || shadowRedisConfig.getMaster() != null
-                || (shadowRedisConfig.getNodes() != null && (shadowRedisConfig.getNodes().contains(",") ||
-                shadowRedisConfig.getNodes().contains(";")))) {
+            || (shadowRedisConfig.getNodes() != null && (shadowRedisConfig.getNodes().contains(",") ||
+            shadowRedisConfig.getNodes().contains(";")))) {
             for (String node : shadowRedisConfig.getNodes().split(",")) {
                 addPressureNotSingleModelCache(node);
                 addPressureNotSingleModelCache(shadowRedisConfig.getMaster());

@@ -12,24 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.rabbitmq.interceptor;
+package com.pamirs.attach.plugin.log4j.interceptor.v2.appender.creator;
 
-import com.pamirs.pradar.interceptor.AroundInterceptor;
-import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.core.Appender;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
- * @since 2021/08/31 10:21 下午
+ * @since 2021/11/05 11:50 上午
  */
-public class AMQConnectionInterceptor extends AroundInterceptor {
+public interface ShadowAppenderCreator<T extends Appender> {
 
-    private static Logger logger = LoggerFactory.getLogger(ChannelNProcessDeliveryInterceptor.class.getName());
-
-    @Override
-    public void doAfter(Advice advice) throws Throwable {
-        logger.warn("[RabbitMQ] AMQConnection has closed!");
-    }
-
+    T creatorPtAppender(T appender, String bizShadowLogPath);
 }

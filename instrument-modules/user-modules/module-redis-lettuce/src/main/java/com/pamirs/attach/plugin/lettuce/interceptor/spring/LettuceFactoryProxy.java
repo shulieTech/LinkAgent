@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerMatchSt
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.springframework.data.redis.connection.*;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
@@ -74,30 +75,67 @@ class FactoryInitializer extends MatchStrategy {
             return null;
         }
 
-
         RedisConfiguration standaloneConfiguration = biz.getStandaloneConfiguration();
         RedisConfiguration clusterConfiguration = biz.getClusterConfiguration();
         RedisConfiguration sentinelConfiguration = biz.getSentinelConfiguration();
 
+
         if (clusterConfiguration != null) {
             matcher = CLUSTER_MODE_MATCHER;
-            Set nodes = ((RedisClusterConfiguration) clusterConfiguration).getClusterNodes();
+            Set<RedisNode> nodes = ((RedisClusterConfiguration) clusterConfiguration).getClusterNodes();
             String password = null;
             try {
                 char[] passwdbyte = ((RedisClusterConfiguration) clusterConfiguration).getPassword().get();
                 password = new String(passwdbyte);
-
-                ShadowRedisConfig shadowRedisConfig = matcher.getConfig(Arrays.asList(nodes));
-
-                String shadowPassword = shadowRedisConfig.getPassword();
-                shadowRedisConfig.getNodes();
-                shadowRedisConfig.getDatabase();
-                shadowRedisConfig.getMaster();
-                RedisClusterConfiguration shadowRedisClusterConfiguration
-                        = new RedisClusterConfiguration();
-            } catch (NoSuchElementException e) {
-                //
+            } catch (NoSuchElementException t) {
+                //ignore
             }
+
+
+            List<Key> keys = new ArrayList<Key>();
+            Iterator<RedisNode> iterator = nodes.iterator();
+            while (iterator.hasNext()) {
+                RedisNode node = iterator.next();
+                keys.add(new Key(node.getHost(), node.getPort(), 0, password));
+            }
+            ShadowRedisConfig shadowRedisConfig = matcher.getConfig(keys);
+
+            String shadowPassword = shadowRedisConfig.getPassword();
+
+
+            /**
+             * 创建影子配置
+             */
+            RedisClusterConfiguration shadowRedisClusterConfiguration
+                    = new RedisClusterConfiguration();
+
+            /**
+             * 填充密码
+             */
+            if (!StringUtil.isEmpty(shadowPassword)) {
+                shadowRedisClusterConfiguration.setPassword(shadowPassword);
+
+            }
+            /**
+             * 填充连接地址
+             */
+            for (String configNode : shadowRedisConfig.getNodes().split(",")) {
+                shadowRedisClusterConfiguration.addClusterNode(
+                        RedisNode.newRedisNode().listeningAt
+                                (configNode.split(":")[0], Integer.parseInt(configNode.split(":")[1]))
+                                .build()
+                );
+            }
+            /**
+             * 构建连接
+             */
+            LettuceConnectionFactory shadowConnectionFactory =
+                    new LettuceConnectionFactory(shadowRedisClusterConfiguration);
+            /**
+             * 初始化连接
+             */
+            shadowConnectionFactory.afterPropertiesSet();
+            return shadowConnectionFactory;
 
         } else if (sentinelConfiguration != null) {
             RedisSentinelConfiguration redisSentinelConfiguration = (RedisSentinelConfiguration) sentinelConfiguration;
@@ -146,14 +184,23 @@ class FactoryInitializer extends MatchStrategy {
                 LettuceConnectionFactory shadowConnectionFactory = new LettuceConnectionFactory();
                 shadowConnectionFactory.setHostName(shadowHost);
                 shadowConnectionFactory.setPort(shadowPort);
+                /**
+                 * 填充密码
+                 */
                 if (shadowPassword != null) {
                     shadowConnectionFactory.setPassword(shadowPassword);
                 }
+                /**
+                 * 填充db
+                 */
                 if (shadowDb != null) {
                     shadowConnectionFactory.setDatabase(shadowDb);
                 } else {
                     shadowConnectionFactory.setDatabase(biz.getDatabase());
                 }
+                /**
+                 * 填充额外属性
+                 */
                 extraProperties(biz, shadowConnectionFactory);
 
                 //初始化

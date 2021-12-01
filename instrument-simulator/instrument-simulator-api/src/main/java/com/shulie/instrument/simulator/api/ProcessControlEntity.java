@@ -90,7 +90,7 @@ public final class ProcessControlEntity {
     }
 
     public static ProcessControlEntity fromAdvice(Advice advice) {
-        return advice.getProcessControlEntity() == null ? NONE : advice.getProcessControlEntity();
+        return (advice == null || advice.getProcessControlEntity() == null) ? NONE : advice.getProcessControlEntity();
     }
 
     /**

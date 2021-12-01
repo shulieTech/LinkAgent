@@ -13,6 +13,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.6</jdk.version>
+        <!--suppress UnresolvedMavenProperty -->
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>

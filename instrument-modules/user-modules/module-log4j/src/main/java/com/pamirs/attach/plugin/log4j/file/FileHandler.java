@@ -12,30 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.rabbitmq.common;
-
-import com.rabbitmq.client.Channel;
+package com.pamirs.attach.plugin.log4j.file;
 
 /**
- * @author jirenhe | jirenhe@shulie.io
- * @since 2021/09/13 4:59 下午
+ * @Auther: vernon
+ * @Date: 2020/12/15 14:26
+ * @Description:
  */
-public class ConsumeResult {
+public interface FileHandler {
+    Object callBack();
 
-    private final Channel shadowChannel;
 
-    private final String tag;
 
-    public ConsumeResult(Channel shadowChannel, String tag) {
-        this.shadowChannel = shadowChannel;
-        this.tag = tag;
-    }
-
-    public Channel getShadowChannel() {
-        return shadowChannel;
-    }
-
-    public String getTag() {
-        return tag;
-    }
 }
+
+

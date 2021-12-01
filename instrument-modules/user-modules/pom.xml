@@ -74,6 +74,7 @@
         <module>module-caffeine</module>
         <module>module-proxool</module>
         <module>module-logback</module>
+        <module>module-log4j</module>
         <module>module-apache-kafka-stream</module>
         <module>module-akka</module>
         <module>module-feign</module>

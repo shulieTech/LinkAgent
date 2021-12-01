@@ -14,6 +14,19 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector.ConsumerType;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollingSelector;
@@ -32,7 +45,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.clients.consumer.OffsetCommitCallback;
-import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.PartitionInfo;
@@ -41,11 +53,6 @@ import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.security.JaasContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -77,7 +84,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     }
 
     public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup,
-        long maxLagMillSecond, PollConsumerSelector consumerSelector,  long timeout) {
+        long maxLagMillSecond, PollConsumerSelector consumerSelector, long timeout) {
         this.bizConsumer = consumer;
         this.allowMaxLag = maxLagMillSecond;
         this.currentPollTime = timeout;
@@ -463,7 +470,8 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         if (channelBuilder.getClass().getName().equals("org.apache.kafka.common.network.SaslChannelBuilder")) {
             String clientSaslMechanism = Reflect.on(channelBuilder).get("clientSaslMechanism");
             config.put(SaslConfigs.SASL_MECHANISM, clientSaslMechanism);
-            config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, Reflect.on(channelBuilder).get("securityProtocol"));
+            config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
+                Reflect.on(channelBuilder).get("securityProtocol").toString());
             if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
                 Map jaasContexts = ReflectUtil.reflectSlience(channelBuilder, "jaasContexts");
                 if (jaasContexts == null) {

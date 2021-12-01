@@ -15,23 +15,26 @@
  *
  */
 
-package com.shulie.instrument.module.config.fetcher.config.spi;
+package com.pamirs.pradar.spi;
+
+
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 
 /**
  * @author jiangjibo
  * @date 2021/11/10 11:14 上午
  * @description: 影子库密码提供
  */
-public interface ShadowDatabasePasswordProvider {
+public interface ShadowDataSourceServiceProvider {
+
+    String spi_key = "passwordProvider";
 
     /**
      * 获取影子库密码
      *
-     * @param url
-     * @param userName
-     * @param accessKey
+     * @param config
      * @return
      */
-    String getShadowDatabasePassword(String url, String userName, String accessKey);
+    boolean processShadowDatabaseConfig(ShadowDatabaseConfig config);
 
 }

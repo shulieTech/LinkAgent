@@ -39,14 +39,12 @@ import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
-import com.shulie.instrument.module.config.fetcher.config.spi.ShadowDatabasePasswordProvider;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.Service;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -176,7 +174,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private AtomicBoolean whiteListPullSwitch = new AtomicBoolean(Boolean.TRUE);
     private AtomicBoolean shadowConfigPullSwitch = new AtomicBoolean(Boolean.TRUE);
     protected SwitcherManager switcherManager;
-    private List<ShadowDatabasePasswordProvider> shadowDatabasePasswordProviders;
 
     public ApplicationConfigHttpResolver(SwitcherManager switcherManager, int interval, TimeUnit timeUnit) {
         super("application-config-fetch-scheduled", interval, timeUnit);
@@ -1225,14 +1222,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
              */
             Map<String, ShadowDatabaseConfig> map = new HashMap<String, ShadowDatabaseConfig>();
             for (ShadowDatabaseConfig shadowDatabaseConfig : configs) {
-                if(shadowDatabaseConfig.getDsType() == 3){
-                    boolean processed = processShadowDatabasePasswordBySpi(shadowDatabaseConfig);
-                    if(!processed){
-                        logger.error("SIMULATOR: get shadow database password by spi failed. shadow database url={}, username={}, raw password={}",
-                                shadowDatabaseConfig.getShadowUrl(), shadowDatabaseConfig.getShadowUsername(), shadowDatabaseConfig.getShadowPassword());
-                        return false;
-                    }
-                }
                 /**
                  * 如果是 jndi，则不需要加用户名
                  */
@@ -1613,27 +1602,4 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         return config;
     }
 
-    /**
-     * 通过spi处理影子库密码
-     *
-     * @param config
-     * @return
-     */
-    private boolean processShadowDatabasePasswordBySpi(ShadowDatabaseConfig config){
-        if(this.shadowDatabasePasswordProviders == null){
-            this.shadowDatabasePasswordProviders = new ArrayList<ShadowDatabasePasswordProvider>();
-            Iterator<ShadowDatabasePasswordProvider> iterator = Service.providers(ShadowDatabasePasswordProvider.class);
-            while(iterator.hasNext()){
-                this.shadowDatabasePasswordProviders.add(iterator.next());
-            }
-        }
-        for (ShadowDatabasePasswordProvider provider : this.shadowDatabasePasswordProviders) {
-            String password = provider.getShadowDatabasePassword(config.getShadowUrl(), config.getShadowUsername(), config.getShadowPassword());
-            if(password != null){
-                config.setShadowPassword(password);
-                return true;
-            }
-        }
-        return false;
-    }
 }

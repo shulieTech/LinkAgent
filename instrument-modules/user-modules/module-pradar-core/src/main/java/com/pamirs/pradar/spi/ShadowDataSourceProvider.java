@@ -15,19 +15,23 @@
  *
  */
 
-package com.pamirs.attach.plugin.zto.spi;
+package com.pamirs.pradar.spi;
 
-import com.shulie.instrument.module.config.fetcher.config.spi.ShadowDatabasePasswordProvider;
 
-/**
- * @author jiangjibo
- * @date 2021/11/10 2:11 下午
- * @description: 中通影子库密码获取
- */
-public class ZtoJdbcShadowDatabasePasswordProvider implements ShadowDatabasePasswordProvider {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    @Override
-    public String getShadowDatabasePassword(String url, String userName, String accessKey) {
-        return null;
-    }
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
+public @interface ShadowDataSourceProvider {
+
+    /**
+     * spi组件名称
+     *
+     * @return
+     */
+    String value() default "";
+
 }

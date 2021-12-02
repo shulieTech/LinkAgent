@@ -514,14 +514,12 @@ public class CoreConfig {
      */
     public Map<String, String> getHttpMustHeaders() {
         Map<String, String> headerMap = new HashMap<String, String>();
-        // 根据envCode判断是新版请求头还是老版请求头
-        if (StringUtils.isBlank(getEnvCode())) {
-            headerMap.put("userAppKey", getTenantAppKey());
-        } else {
-            headerMap.put("tenantAppKey", getTenantAppKey());
-            headerMap.put("userId", getUserId());
-            headerMap.put("envCode", getEnvCode());
-        }
+        // 新探针兼容老版本的控制台，所以userAppKey和tenantAppKey都传
+        headerMap.put("userAppKey", getTenantAppKey());
+        headerMap.put("tenantAppKey", getTenantAppKey());
+        headerMap.put("userId", getUserId());
+        headerMap.put("envCode", getEnvCode());
+
         return headerMap;
     }
 

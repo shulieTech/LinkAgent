@@ -32,6 +32,18 @@ public class ShadowDataSourceSPIManager {
         }
     }
 
+    public static boolean addServiceProvider(ShadowDataSourceServiceProvider provider) {
+        if (!provider.getClass().isAnnotationPresent(ShadowDataSourceProvider.class)) {
+            logger.warn("service provider {} not annotated by annotation {}", provider.getClass().getName(), ShadowDataSourceProvider.class.getName());
+            return false;
+        }
+        String name = provider.getClass().getAnnotation(ShadowDataSourceProvider.class).value();
+        if (!serviceProviders.containsKey(name)) {
+            serviceProviders.put(name, provider);
+        }
+        return true;
+    }
+
     public static boolean refreshAllShadowDatabaseConfigs() {
         boolean result = true;
         for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {

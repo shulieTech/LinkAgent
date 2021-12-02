@@ -85,6 +85,7 @@
         <module>module-zuul</module>
         <module>module-apache-cxf</module>
         <module>module-apache-axis</module>
+        <module>module-jersey</module>
     </modules>
 
     <build>

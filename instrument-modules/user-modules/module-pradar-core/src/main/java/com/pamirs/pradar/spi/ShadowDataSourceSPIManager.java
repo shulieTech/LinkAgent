@@ -6,6 +6,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
@@ -18,6 +19,8 @@ import java.util.ServiceLoader;
 public class ShadowDataSourceSPIManager {
 
     private static Logger logger = LoggerFactory.getLogger(ShadowDataSourceSPIManager.class);
+
+    private static final String splitter = "##";
 
     private static Map<String, ShadowDataSourceServiceProvider> serviceProviders;
 
@@ -47,13 +50,39 @@ public class ShadowDataSourceSPIManager {
     public static boolean refreshAllShadowDatabaseConfigs() {
         boolean result = true;
         for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {
+            if (config.getProperties() != null && config.getProperties().containsKey(ShadowDataSourceServiceProvider.spi_key)) {
+                continue;
+            }
             result = result && refreshShadowDatabaseConfig(config);
         }
         return result;
     }
 
     public static boolean refreshShadowDatabaseConfig(ShadowDatabaseConfig config) {
-        String providerName = config.getProperty(ShadowDataSourceServiceProvider.spi_key);
+        String userName = config.getShadowUsername();
+        String pwd = config.getShadowPassword();
+        String providerName = null;
+        if (userName.startsWith("${")) {
+            Map.Entry<String, String> userValue = extractConfigValue(userName);
+            if (userValue == null) {
+                return false;
+            }
+            providerName = userValue.getKey();
+            config.setShadowUsername(userValue.getValue());
+
+        }
+        if (pwd.startsWith("${")) {
+            Map.Entry<String, String> pwdValue = extractConfigValue(pwd);
+            if (pwdValue == null) {
+                return false;
+            }
+            if (providerName != null && !providerName.equals(pwdValue.getKey())) {
+                logger.warn("shadow data source config processed by spi not with same plugin {}, {}", providerName, pwdValue.getKey());
+                return false;
+            }
+            config.setShadowPassword(pwdValue.getValue());
+        }
+
         if (providerName == null || !serviceProviders.containsKey(providerName)) {
             logger.warn("not ShadowDatabaseConfigServiceProvider plugin named with {}", providerName);
             return false;
@@ -61,9 +90,24 @@ public class ShadowDataSourceSPIManager {
         boolean result = serviceProviders.get(providerName).processShadowDatabaseConfig(config);
         if (result) {
             // 成功的话移除标记
-            config.getProperties().remove(ShadowDataSourceServiceProvider.spi_key);
+            Map<String, String> properties = config.getProperties();
+            if (properties == null) {
+                properties = new HashMap<String, String>();
+                config.setProperties(properties);
+            }
+            properties.put(ShadowDataSourceServiceProvider.spi_key, providerName);
         }
         return result;
+    }
+
+    private static Map.Entry<String, String> extractConfigValue(String config) {
+        String innerConfig = config.substring(2, config.length() - 1);
+        if (!innerConfig.contains(splitter)) {
+            logger.warn("shadow data source config value {} is not formatted", config);
+            return null;
+        }
+        String[] split = innerConfig.split(splitter, 2);
+        return new AbstractMap.SimpleEntry<String, String>(split[0], "${" + split[1] + "}");
     }
 
 

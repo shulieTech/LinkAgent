@@ -89,7 +89,7 @@ public class ShadowDataSourceSPIManager {
         }
         boolean result = serviceProviders.get(providerName).processShadowDatabaseConfig(config);
         if (result) {
-            // 成功的话移除标记
+            // 成功的话添加标记
             Map<String, String> properties = config.getProperties();
             if (properties == null) {
                 properties = new HashMap<String, String>();

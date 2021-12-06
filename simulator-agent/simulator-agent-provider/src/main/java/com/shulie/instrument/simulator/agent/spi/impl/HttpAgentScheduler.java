@@ -25,7 +25,6 @@ import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
-import com.shulie.instrument.simulator.agent.spi.impl.model.UpgradeBatchConfig;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.SimulatorStatus;
 import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
@@ -55,9 +54,6 @@ public class HttpAgentScheduler implements AgentScheduler {
 
     @Resource
     private ExternalAPI externalAPI;
-
-    private UpgradeBatchConfig upgradeBatchConfig = new UpgradeBatchConfig();
-
 
     /**
      * agent 配置
@@ -397,7 +393,7 @@ public class HttpAgentScheduler implements AgentScheduler {
     private CommandPacket getStartCommandPacket(){
         HeartRequest heartRequest = new HeartRequest();
         heartRequest.setCommandResult(Collections.EMPTY_LIST);
-        heartRequest.setCurUpgradeBatch(upgradeBatchConfig.getCurUpgradeBatch());
+        heartRequest.setCurUpgradeBatch(HeartCommandConstants.getCurUpgradeBatch());
         List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
         if (null == commandPacketList || commandPacketList.isEmpty()){
             return null;
@@ -405,7 +401,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         if (commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY) == null){
             logger.error("版本批次号获取失败，无法在线升级操作!");
         } else {
-            upgradeBatchConfig.setCurUpgradeBatch((String) commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
+            HeartCommandConstants.setCurUpgradeBatch((String) commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
         }
         return commandPacketList.get(0);
     }
@@ -426,7 +422,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             heartRequest.setTaskExceed(true);
         }
         heartRequest.setCommandResult(preCommandExecuteResponseList);
-        heartRequest.setCurUpgradeBatch(upgradeBatchConfig.getCurUpgradeBatch());
+        heartRequest.setCurUpgradeBatch(HeartCommandConstants.getCurUpgradeBatch());
         List<CommandPacket> newCommandPacketList = externalAPI.sendHeart(heartRequest);
         if (newCommandPacketList != null){
             //所有已经存在的任务，是成功或者进行中的，不要再下发

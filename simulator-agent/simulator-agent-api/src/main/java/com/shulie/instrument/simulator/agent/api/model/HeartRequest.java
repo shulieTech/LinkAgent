@@ -77,7 +77,7 @@ public class HeartRequest {
     private int uninstallStatus = 0;
 
     /**
-     * 休眠状态，0:为休眠，1:已休眠
+     * 休眠状态，0:未休眠，1:已休眠
      */
     private int dormantStatus = 0;
 
@@ -93,7 +93,7 @@ public class HeartRequest {
 
 
     /**
-     * 开源标志
+     * 标志
      */
     private String flag = "shulieEnterprise";
 

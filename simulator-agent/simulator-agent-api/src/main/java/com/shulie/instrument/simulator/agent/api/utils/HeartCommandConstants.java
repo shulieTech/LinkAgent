@@ -22,6 +22,13 @@ package com.shulie.instrument.simulator.agent.api.utils;
  * @date 2021/11/24 15:04
  */
 public class HeartCommandConstants {
+
+    /**
+     * 当前在用的版本批次号
+     * 默认为-1，初始值需要通过心跳接口获取后设置
+     */
+    private static String curUpgradeBatch = HeartCommandConstants.UN_INIT_UPGRADE_BATCH;
+
     /**
      * 在线升级的指令，只有这个指令由当前agent操作
      */
@@ -96,4 +103,11 @@ public class HeartCommandConstants {
     public static final String PASSWD_KEY = "passwd";
     public static final String USERNAME_KEY = "username";
 
+    public static String getCurUpgradeBatch() {
+        return curUpgradeBatch;
+    }
+
+    public static void setCurUpgradeBatch(String curUpgradeBatch) {
+        HeartCommandConstants.curUpgradeBatch = curUpgradeBatch;
+    }
 }

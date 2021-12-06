@@ -70,7 +70,12 @@ public class AppenderRegisterAttachInterceptor extends AroundInterceptor {
                     Appender ptAppender = Cache.AppenderCache.computeIfAbsent(appender, new Function<Appender, Appender>() {
                         @Override
                         public Appender apply(Appender appender) {
-                            Appender result = ShadowAppenderCreatorFacade.createShadowAppenderCreator(appender, shadowLogPath);
+                            Appender result = ShadowAppenderCreatorFacade.createShadowAppenderCreator(appender,
+                                shadowLogPath);
+                            if (result == null) {
+                                logger.warn("can not create appender for {}", appender.getClass().getName());
+                                return null;
+                            }
                             result.start();
                             return result;
                         }

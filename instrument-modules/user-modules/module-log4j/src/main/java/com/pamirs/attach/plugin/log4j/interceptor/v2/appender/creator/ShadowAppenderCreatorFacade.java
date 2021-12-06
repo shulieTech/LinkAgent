@@ -30,6 +30,9 @@ public class ShadowAppenderCreatorFacade {
 
     public static <T extends Appender> T createShadowAppenderCreator(T appender, String bizShadowLogPath) {
         AppenderCreatorBuilder<T> appenderCreatorBuilder = AppenderCreatorBuilders.match(appender.getClass());
+        if (appenderCreatorBuilder == null) {
+            return null;
+        }
         ShadowAppenderCreator<T> shadowAppenderCreator = appenderCreatorBuilder.build();
         return shadowAppenderCreator.creatorPtAppender(appender, bizShadowLogPath);
     }
@@ -62,7 +65,8 @@ public class ShadowAppenderCreatorFacade {
 
         ROLLING_RANDOM_ACCESS_FILE(RollingRandomAccessFileAppender.class) {
 
-            private final RollingRandomAccessFileShadowAppenderCreator instance = new RollingRandomAccessFileShadowAppenderCreator();
+            private final RollingRandomAccessFileShadowAppenderCreator instance
+                = new RollingRandomAccessFileShadowAppenderCreator();
 
             @Override
             public ShadowAppenderCreator<?> build() {

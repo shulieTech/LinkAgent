@@ -45,7 +45,7 @@ public class HeartCommandConstants {
     /**
      * -1表示使用本地包，无需下载远程包
      */
-    public static final String PATH_TYPE_LOCAL_VALUE = "-1";
+    public static final int PATH_TYPE_LOCAL_VALUE = -1;
 
     /**
      * 升级批次号key
@@ -59,7 +59,8 @@ public class HeartCommandConstants {
 
     public static final String MODULE_ID_VALUE_PRADAR_REGISTER = "pradar-register";
 
-    public static final String MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER = "pradar-config-fetcher";
+//    public static final String MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER = "pradar-config-fetcher";
+    public static final String MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER = "command-execute-module";
 
 
     public static final String MODULE_METHOD_KEY = "moduleMethod";
@@ -81,5 +82,18 @@ public class HeartCommandConstants {
     public static final String COMMAND_ID_KEY = "commandId";
 
     public static final String TASK_ID_KEY = "taskId";
+
+
+    public static final String ACCESSKEYID_KEY = "accessKeyId";
+    public static final String ACCESSKEYSECRET_KEY = "accessKeySecret";
+    public static final String ENDPOINT_KEY = "endpoint";
+    public static final String BUCKETNAME_KEY = "bucketName";
+    public static final String SALT_KEY = "salt";
+
+    public static final String BASEPATH_KEY = "basePath";
+    public static final String FTPHOST_KEY = "ftpHost";
+    public static final String FTPPORT_KEY = "ftpPort";
+    public static final String PASSWD_KEY = "passwd";
+    public static final String USERNAME_KEY = "username";
 
 }

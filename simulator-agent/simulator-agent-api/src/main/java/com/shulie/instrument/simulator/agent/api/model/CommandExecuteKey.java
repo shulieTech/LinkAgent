@@ -47,7 +47,7 @@ public class CommandExecuteKey {
 
     @Override
     public String toString(){
-        return "commandId:"+commandId + ",taskId"+ taskId;
+        return commandId + ":" + taskId;
     }
 
     @Override

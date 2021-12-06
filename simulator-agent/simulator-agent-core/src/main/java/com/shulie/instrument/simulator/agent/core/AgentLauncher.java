@@ -14,15 +14,16 @@
  */
 package com.shulie.instrument.simulator.agent.core;
 
+import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
+import com.shulie.instrument.simulator.agent.core.download.FtpOperationClient;
+import com.shulie.instrument.simulator.agent.core.download.OssOperationClient;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
-import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
-import com.shulie.instrument.simulator.agent.core.util.PidUtils;
-import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
+import com.shulie.instrument.simulator.agent.core.util.*;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
@@ -40,6 +41,7 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -187,6 +189,7 @@ public class AgentLauncher {
         }
     }
 
+
     /**
      * 启动agent，返回 agent 访问地址
      *
@@ -200,12 +203,61 @@ public class AgentLauncher {
             if (HeartCommandConstants.startCommandId != startCommand.getPacket().getId() ){
                 throw new IllegalArgumentException("startCommand commandId is wrong " + startCommand.getPacket().getId());
             }
-
-            if (!HeartCommandConstants.PATH_TYPE_LOCAL_VALUE.equals(startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY))){
-                //TODO
-//                OssOperationClient ossOperationClient
-//                FtpOperationClient ftpOperationClient
+            //TODO 安装卸载的代码 暂时去掉，和在线升级的功能类似
+            /**
+            if (!startCommand.getPacket().isUseLocal()) {
+                File file = new File(agentConfig.getSimulatorHome());
+                File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp",
+                        agentConfig.getUserAppKey());
+                if (file.exists()) {
+                    FileUtils.delete(file);
+                }
+                f.renameTo(file);
             }
+            if (!new File(agentConfig.getAgentJarPath()).exists()) {
+                if (startCommand.getPacket().isUseLocal()) {
+                    logger.warn("AGENT: launch on agent failed. agent jar file is not found. ");
+                    AgentStatus.uninstall();
+                    return;
+                } else {
+                    logger.error("AGENT: launch on agent err. agent jar file is not found. ");
+                    throw new RuntimeException("AGENT: launch on agent err. agent jar file is not found.");
+                }
+            } **/
+            //拉取升级包的代码
+            if (HeartCommandConstants.PATH_TYPE_LOCAL_VALUE != (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)){
+                int path = (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY);
+                String salt = (String) startCommand.getPacket().getExtra(HeartCommandConstants.SALT_KEY);
+                Map<String, Object> context = JSON.parseObject((String) startCommand.getPacket().getExtras().get("context"), Map.class);
+                String upgradeBatch = (String) startCommand.getPacket().getExtra(HeartCommandConstants.UPGRADE_BATCH_KEY);
+                //清除残留的旧包
+                UpgradeFileUtils.clearOldUpgradeFileTempFile(upgradeBatch);
+                //下载
+                switch (path){
+                    case 0://oss
+                        String accessKeyIdSource = (String) context.get(HeartCommandConstants.ACCESSKEYID_KEY);
+                        String accessKeySecretSource = (String) context.get(HeartCommandConstants.ACCESSKEYSECRET_KEY);
+                        String endpoint = (String) context.get(HeartCommandConstants.ENDPOINT_KEY);
+                        String bucketName = (String) context.get(HeartCommandConstants.BUCKETNAME_KEY);
+                        String accessKeyId = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeyIdSource);
+                        String accessKeySecret = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeySecretSource);
+                        OssOperationClient.download(endpoint, accessKeyId, accessKeySecret,UpgradeFileUtils.getUpgradeFileTempSaveDir(), bucketName, UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
+                        break;
+                    case 1://ftp
+                        String basePath = (String) context.get(HeartCommandConstants.BASEPATH_KEY);
+                        String ftpHost = (String) context.get(HeartCommandConstants.FTPHOST_KEY);
+                        Integer ftpPort = (Integer) context.get(HeartCommandConstants.FTPPORT_KEY);
+                        String passwd = (String)context.get(HeartCommandConstants.PASSWD_KEY);
+                        String username = (String) context.get(HeartCommandConstants.USERNAME_KEY);
+                        String s = SecureUtil.aes(salt.getBytes()).decryptStr(passwd);
+                        FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
+                        break;
+                }
+                //解压
+                UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);
+            }
+
+
 
             if (!isRunning.compareAndSet(false, true)) {
                 return;
@@ -305,7 +357,7 @@ public class AgentLauncher {
                 logger.error("", e);
             }
             isRunning.set(false);
-            AgentStatus.uninstall();
+            AgentStatus.installFailed(throwable.getMessage());
             logger.error("AGENT: agent startup failed.", throwable);
             throw throwable;
         }
@@ -352,6 +404,9 @@ public class AgentLauncher {
             commandExecuteResponse.setSuccess(response.isSuccess());
             commandExecuteResponse.setResult(response.getResult());
             commandExecuteResponse.setMsg(response.getMessage());
+            if ("taskExceed".equals(response.getMessage())){
+                commandExecuteResponse.setTaskExceed(true);
+            }
             return commandExecuteResponse;
         } catch (Throwable e) {
             logger.error("AGENT: commandModule failed.", e);

@@ -19,7 +19,8 @@ package com.shulie.instrument.simulator.agent.core.download;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
-import com.aliyun.oss.model.GetObjectRequest;
+import com.aliyun.oss.model.DownloadFileRequest;
+import com.aliyun.oss.model.DownloadFileResult;
 
 import java.io.File;
 
@@ -29,18 +30,24 @@ import java.io.File;
  */
 public class OssOperationClient {
 
-    private OSS ossClient;
-    public OssOperationClient(String endpoint, String accessKeyId, String accessKeySecret){
-        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+    private static OSS getOssClient(String endpoint, String accessKeyId, String accessKeySecret){
+        return new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
     }
 
-    public void download(String targetFileName, String bucketName, String objectName) {
+    public static void download(String endpoint, String accessKeyId, String accessKeySecret,
+                          String targetFilePath,String bucketName, String objectName) {
+        OSS ossClient = null;
         try {
-            ossClient.getObject(new GetObjectRequest(bucketName, objectName), new File(targetFileName));
+            ossClient = getOssClient(endpoint, accessKeyId, accessKeySecret);
+            DownloadFileRequest downloadFileRequest = new DownloadFileRequest(bucketName, objectName);
+            downloadFileRequest.setDownloadFile(targetFilePath + File.separator + objectName);
+            DownloadFileResult downloadFileResult = ossClient.downloadFile(downloadFileRequest);
         }catch (Throwable e){
             throw new IllegalStateException("下载oss远程simulator包异常:" + e.getMessage());
         } finally {
-            ossClient.shutdown();
+            if (ossClient != null){
+                ossClient.shutdown();
+            }
         }
     }
 

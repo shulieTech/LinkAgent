@@ -35,6 +35,9 @@ public class CommandExecuteResponse {
 
     private String extrasString = null;
 
+    private boolean taskExceed = false;
+
+
     /**
      *     结果产生的时间
      */
@@ -99,5 +102,13 @@ public class CommandExecuteResponse {
 
     public void setExtrasString(String extrasString) {
         this.extrasString = extrasString;
+    }
+
+    public boolean isTaskExceed() {
+        return taskExceed;
+    }
+
+    public void setTaskExceed(boolean taskExceed) {
+        this.taskExceed = taskExceed;
     }
 }

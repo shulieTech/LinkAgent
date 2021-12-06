@@ -14,32 +14,24 @@
  */
 package com.shulie.instrument.module.config.fetcher;
 
-import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
 import com.shulie.instrument.module.config.fetcher.config.event.model.*;
 import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ZookeeperOptions;
-import com.shulie.instrument.module.config.fetcher.utils.CommandTaskStatus;
-import com.shulie.instrument.module.config.fetcher.utils.FtpUtils;
-import com.shulie.instrument.module.config.fetcher.utils.OssUtil;
-import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
-import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -62,223 +54,6 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     private ConfigManager configManager;
 
 
-    private final String checkStorageCommandId = "100100";
-
-
-    private final String commandId_key = "commandId";
-    private final String taskId_key = "taskId";
-    private volatile ConcurrentHashMap<String, Future<CommandResponse<Object>>> taskKeySet = new ConcurrentHashMap<String, Future<CommandResponse<Object>>>(16, 1);
-
-
-    private String generateTaskKey(String commandId, String taskId){
-        return commandId + ":" + taskId;
-    }
-
-    public final ExecutorService commandExecutorService = new ThreadPoolExecutor(1, 3,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>(10), new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setName("command-executor-" + t.getId());
-            return t;
-        }
-    });
-
-
-
-
-
-
-    @Command("getCommandResult")
-    public CommandResponse<Object> getCommandResult(Map<String, String> args){
-        CommandResponse commandResponse = new CommandResponse();
-        commandResponse.setSuccess(true);
-
-        ConcurrentHashMap<String, Future<CommandResponse<Object>>> temp = taskKeySet;
-        if (temp.isEmpty()){
-            commandResponse.setMessage("当前没有任务可供查询");
-            commandResponse.setResult(Collections.EMPTY_MAP);
-            return commandResponse;
-        }
-        List<String> successList = new ArrayList<String>();
-        Map<String, String> failedMap = new HashMap<String, String>();
-        Set<String> removeList = new HashSet<String>();
-        for (Map.Entry<String, Future<CommandResponse<Object>>> entry : temp.entrySet()){
-            Future<CommandResponse<Object>> future = entry.getValue();
-            if (future.isDone()){
-                try {
-                    CommandResponse<Object> c = future.get();
-                    if (CommandTaskStatus.FINISHED.name().equals(c.getCommandStatus())){
-                        successList.add(entry.getKey());
-                        removeList.add(entry.getKey());
-                    }
-                    if (CommandTaskStatus.FAILED.name().equals(c.getCommandStatus())){
-                        failedMap.put(entry.getKey(), c.getMessage());
-                        removeList.add(entry.getKey());
-                    }
-                } catch (InterruptedException e) {
-                    exceptionHandler(future, failedMap, removeList, e.getMessage(), entry.getKey());
-                } catch (ExecutionException e) {
-                    exceptionHandler(future, failedMap, removeList, e.getMessage(), entry.getKey());
-                }
-            }
-        }
-        Map<String, Object> map = new HashMap<String, Object>(2, 1);
-        map.put("success", successList);
-        map.put("failed", failedMap);
-        commandResponse.setResult(map);
-        commandResponse.setCommandStatus(CommandTaskStatus.FINISHED.name());
-        for (String rk : removeList){
-            taskKeySet.remove(rk);
-        }
-        return commandResponse;
-    }
-
-
-    private void exceptionHandler(Future  future, Map<String, String> failedMap, Set<String> removeList, String errMsg, String key){
-        failedMap.put(key, errMsg);
-        removeList.add(key);
-        if (future != null){
-            future.cancel(true);
-        }
-    }
-
-    /**
-     *
-     * @param args
-     * @return
-     */
-    @Command("doCommand")
-    public CommandResponse<Object> doCommand(Map<String, String> args) {
-        String commandId = args.get(commandId_key);
-        String taskId = args.get(taskId_key);
-        String sync = args.get("sync");
-        CommandResponse<Object> commandResponse = new CommandResponse();
-        if (StringUtils.isBlank(commandId) || StringUtils.isBlank(taskId) || StringUtils.isBlank(sync)){
-            commandResponse.setSuccess(true);
-            commandResponse.setMessage("任务缺少必要参数，commandId, taskId, sync!");
-            commandResponse.setResult("false");
-            return commandResponse;
-        }
-        String taskKey = generateTaskKey(commandId, taskId);
-        try {
-            if (taskKeySet.get(taskKey) != null){
-                return replayExistsCommandTask(commandResponse, taskKey);
-            }
-            synchronized (taskKeySet){
-                if (taskKeySet.get(taskKey) != null){
-                    return replayExistsCommandTask(commandResponse, taskKey);
-                } else {
-                    if (Boolean.valueOf(sync)){
-                        CommandTask commandTask = new CommandTask(args);
-                        return commandTask.call();
-                    } else {
-                        CommandTask commandTask = new CommandTask(args);
-                        Future<CommandResponse<Object>> commandTaskfuture = null;
-                        try {
-                            commandTaskfuture = commandExecutorService.submit(commandTask);
-                            taskKeySet.put(taskKey, commandTaskfuture);
-                            commandResponse.setSuccess(true);
-                            commandResponse.setMessage("提交的为异步任务，当前正在运行，请发起查询请求获取结果!");
-                            commandResponse.setCommandStatus(CommandTaskStatus.INEXECUTE.name());
-                            return commandResponse;
-                        }catch (Throwable e){
-                            if (commandTaskfuture != null){
-                                commandTaskfuture.cancel(true);
-                            }
-                            commandResponse.setSuccess(true);
-                            commandResponse.setMessage(e.getMessage());
-                            commandResponse.setCommandStatus(CommandTaskStatus.FAILED.name());
-                            return commandResponse;
-                        }
-                    }
-                }
-            }
-        }catch (Throwable e){
-            commandResponse.setSuccess(true);
-            commandResponse.setCommandStatus(CommandTaskStatus.FAILED.name());
-            commandResponse.setMessage(e.getMessage());
-            return commandResponse;
-        }
-    }
-
-    private CommandResponse<Object> replayExistsCommandTask(CommandResponse<Object> commandResponse, String taskKey) throws ExecutionException, InterruptedException {
-        commandResponse.setSuccess(true);
-        commandResponse.setMessage("当前任务有正在运行的,请勿提交相同任务!");
-        commandResponse.setCommandStatus(CommandTaskStatus.INEXECUTE.name());
-        return commandResponse;
-    }
-
-    private class CommandTask implements Callable <CommandResponse<Object>>{
-
-        private final Map<String, String> commandArgs;
-        public CommandTask(Map<String, String> map){
-            commandArgs = map;
-        }
-
-        @Override
-        public CommandResponse<Object> call() throws Exception {
-            //校验oss、ftp地址是否可用
-            if (checkStorageCommandId.equals(commandArgs.get(commandId_key))){
-                CommandResponse<Object> commandResponse = new CommandResponse<Object>();
-                commandResponse.setSuccess(true);
-                return checkStorage(commandResponse, commandArgs.get("extrasString"));
-            }
-            return null;
-        }
-    }
-
-
-
-
-
-
-    private CommandResponse checkStorage(CommandResponse commandResponse, String extrasString){
-        try {
-            Map<String, Object> map = JSON.parseObject(extrasString, Map.class);
-            String salt = (String) map.get("salt");
-            String context = (String) map.get("context");
-            Integer pathType = (Integer) map.get("pathType");
-            if (StringUtils.isBlank(salt) || StringUtils.isBlank(context) || null == pathType){
-                throw new IllegalArgumentException("ftp参数不完整");
-            }
-            Map<String, Object> storageMap = JSON.parseObject(context, Map.class);
-            switch (pathType){
-                case 1:
-                    String basePath = (String) storageMap.get("basePath");
-                    String ftpHost = (String) storageMap.get("ftpHost");
-                    Integer ftpPort = (Integer) storageMap.get("ftpPort");
-                    String passwd = (String)storageMap.get("passwd");
-                    String username = (String) storageMap.get("username");
-                    String s = SecureUtil.aes(salt.getBytes()).decryptStr(passwd);
-                    FtpUtils.checkFtp(ftpHost, Integer.valueOf(ftpPort), username, s, basePath);
-                    commandResponse.setCommandStatus(CommandTaskStatus.FINISHED.name());
-                    break;
-                case 0:
-                    String accessKeyIdTemp = (String) storageMap.get("accessKeyId");
-                    String accessKeySecretTemp = (String) storageMap.get("accessKeySecret");
-                    String endpoint = (String) storageMap.get("endpoint");
-                    String bucketName = (String) storageMap.get("bucketName");
-                    String accessKeyId = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeyIdTemp);
-                    String accessKeySecret = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeySecretTemp);
-                    OssUtil.checkOss(endpoint, accessKeyId, accessKeySecret, bucketName);
-                    commandResponse.setCommandStatus(CommandTaskStatus.FINISHED.name());
-                    break;
-                default:
-                    commandResponse.setCommandStatus(CommandTaskStatus.FAILED.name());
-                    commandResponse.setMessage("unknown pathType:" + pathType);
-            }
-            return commandResponse;
-        }catch (Throwable e){
-            commandResponse.setCommandStatus(CommandTaskStatus.FAILED.name());
-            commandResponse.setResult(false);
-            commandResponse.setMessage("checkStorage 异常" + e.getMessage());
-            return commandResponse;
-        }
-
-
-    }
 
     private ZookeeperOptions buildZookeeperOptions() {
         ZookeeperOptions zookeeperOptions = new ZookeeperOptions();

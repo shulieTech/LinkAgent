@@ -1658,4 +1658,5 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         return config;
     }
+
 }

@@ -73,9 +73,12 @@ public class AppenderRegisterAttachInterceptor extends AroundInterceptor {
                             Appender result = ShadowAppenderCreatorFacade.createShadowAppenderCreator(appender,
                                 shadowLogPath);
                             if (result == null) {
-                                logger.warn("can not create appender for {}", appender.getClass().getName());
+                                logger.warn("[log4j] can not shadow create appender for {}, name : {}",
+                                    appender.getClass().getName(), appender.getName());
                                 return null;
                             }
+                            logger.warn("[log4j] create shadow appender for {} successful! shadow appender : {}",
+                                appender.getName(), result.getName());
                             result.start();
                             return result;
                         }

@@ -23,10 +23,6 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.FileAppender;
-import org.apache.logging.log4j.core.appender.RollingFileAppender;
-import org.apache.logging.log4j.core.appender.RollingRandomAccessFileAppender;
-import org.apache.logging.log4j.core.appender.mom.kafka.KafkaAppender;
 import org.apache.logging.log4j.core.config.AppenderControl;
 
 /**
@@ -60,10 +56,10 @@ public class AppenderRouterInterceptor extends CutoffInterceptorAdaptor {
         if (appender == null) {
             return CutOffResult.passed();
         }
-        if (isFileAppender(appender)) {
+        if (AppenderTypes.isFileAppender(appender)) {
             return fileRoute(logEvent, appender);
         }
-        if (isRemoteAppender(appender)) { //需要传播压测标的appender，目前只有kafka
+        if (AppenderTypes.isRemoteAppender(appender)) {
             return testPropagate(logEvent, appender);
         }
         return CutOffResult.passed();
@@ -72,15 +68,6 @@ public class AppenderRouterInterceptor extends CutoffInterceptorAdaptor {
     public CutOffResult testPropagate(LogEvent logEvent, Appender appender) {
         Pradar.setClusterTest(isClusterTest(logEvent));
         return CutOffResult.passed();
-    }
-
-    public boolean isRemoteAppender(Appender appender) {
-        return appender instanceof KafkaAppender;
-    }
-
-    public boolean isFileAppender(Appender appender) {
-        return appender instanceof FileAppender || appender instanceof RollingFileAppender
-            || appender instanceof RollingRandomAccessFileAppender;
     }
 
     public CutOffResult fileRoute(LogEvent logEvent, Appender appender) {

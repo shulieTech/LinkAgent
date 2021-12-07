@@ -15,6 +15,7 @@
     <properties>
         <!--suppress UnresolvedMavenProperty -->
         <build.time>${timestamp}</build.time>
+        <!--suppress UnresolvedMavenProperty -->
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
     </properties>
 

@@ -17,6 +17,7 @@ package com.pamirs.pradar.pressurement.agent.shared.service;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.adapter.JobAdapter;
 import com.pamirs.pradar.internal.config.*;
+import com.pamirs.pradar.spi.ShadowDataSourceSPIManager;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -284,6 +285,7 @@ public final class GlobalConfig {
     public void setShadowDatabaseConfigs(Map<String, ShadowDatabaseConfig> map) {
         clearShadowDatasourceConfigs();
         this.shadowDatabaseConfigs.putAll(map);
+        ShadowDataSourceSPIManager.refreshAllShadowDatabaseConfigs();
     }
 
     public void clearShadowDatasourceConfigs() {

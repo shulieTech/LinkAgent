@@ -140,7 +140,6 @@ public class ConsumerHolder {
                         return null;
                     }
                 }
-
             }
         }
         return consumerProxy;

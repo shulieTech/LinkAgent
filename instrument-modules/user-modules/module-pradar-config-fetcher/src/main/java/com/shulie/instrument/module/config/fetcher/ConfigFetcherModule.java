@@ -14,14 +14,18 @@
  */
 package com.shulie.instrument.module.config.fetcher;
 
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
+import com.shulie.instrument.module.config.fetcher.config.SimulatorDetail;
 import com.shulie.instrument.module.config.fetcher.config.event.model.*;
 import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ZookeeperOptions;
+import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
@@ -30,8 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -54,6 +58,20 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     private ConfigManager configManager;
 
 
+    /**
+     * 获取simulator配置的接口，目前只获取静默开关状态
+     * @param args
+     * @return
+     */
+    @Command("getSimulatorDetail")
+    public CommandResponse<Object> getSimulatorDetail(Map<String, String> args){
+        SimulatorDetail simulatorDetail = new SimulatorDetail();
+        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() == true ? 1 : 0);
+        CommandResponse<Object> commandResponse = new CommandResponse<Object>();
+        commandResponse.setSuccess(true);
+        commandResponse.setResult(simulatorDetail);
+        return commandResponse;
+    }
 
     private ZookeeperOptions buildZookeeperOptions() {
         ZookeeperOptions zookeeperOptions = new ZookeeperOptions();

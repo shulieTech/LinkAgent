@@ -45,6 +45,7 @@ public class HeartCommandConstants {
     public static final long startCommandId = 200000;
 
     public static final long getSimulatorStatusCommandId = -10001;
+    public static final long getSimulatorDetailsCommandId = -10002;
 
 
     public static final String PATH_TYPE_KEY = "pathType";
@@ -65,14 +66,15 @@ public class HeartCommandConstants {
     public static final String MODULE_ID_KEY = "moduleId";
 
     public static final String MODULE_ID_VALUE_PRADAR_REGISTER = "pradar-register";
+    public static final String MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER = "pradar-config-fetcher";
 
-//    public static final String MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER = "pradar-config-fetcher";
-    public static final String MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER = "command-execute-module";
+    public static final String MODULE_ID_VALUE_COMMAND_EXECUTE_MODULE= "command-execute-module";
 
 
     public static final String MODULE_METHOD_KEY = "moduleMethod";
 
     public static final String MODULE_METHOD_VALUE_PRADAR_REGISTER = "getSimulatorStatus";
+    public static final String MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER = "getSimulatorDetail";
 
     public static final String MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_DO_COMAAND = "doCommand";
 

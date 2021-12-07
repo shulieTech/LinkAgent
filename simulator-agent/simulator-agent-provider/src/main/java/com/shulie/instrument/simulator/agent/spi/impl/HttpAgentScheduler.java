@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.spi.impl;
 
+import com.alibaba.fastjson.JSONObject;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
@@ -374,7 +375,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         commandPacket.setSync(true);
         commandPacket.setUuid("-2");
         Map<String, Object> extras = new HashMap<String, Object>();
-        extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
+        extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_COMMAND_EXECUTE_MODULE);
         extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_GET_COMMAND_RESULT);
         extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, String.valueOf(commandPacket.isSync()));
         extras.put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
@@ -410,8 +411,7 @@ public class HttpAgentScheduler implements AgentScheduler {
      * 上报心跳，获取指令
      * @return
      */
-    private List<CommandPacket> getCommandPacketByHeart(){
-        HeartRequest heartRequest = new HeartRequest();
+    private List<CommandPacket> getCommandPacketByHeart(HeartRequest heartRequest){
         //查询一次上次执行任务的执行结果
         CommandExecuteResponse preCommandExecuteResultsResponse = getCommandExecuteResponses();
         List<CommandExecuteResponse> preCommandExecuteResponseList = new ArrayList<CommandExecuteResponse>();
@@ -482,32 +482,16 @@ public class HttpAgentScheduler implements AgentScheduler {
     }
 
 
-
     private void executeCommand(){
         try {
-            //获取simulator状态数据
-            if (SimulatorStatus.isUnInstall()){
-                CommandPacket commandPacket = new CommandPacket();
-                commandPacket.setId(HeartCommandConstants.getSimulatorStatusCommandId);
-                commandPacket.setSync(true);
-                commandPacket.setUuid("-1");
-                Map<String, Object> extras = new HashMap<String, Object>();
-                extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_REGISTER);
-                extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_REGISTER);
-                extras.put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
-                extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
-                extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, "true");
-                commandPacket.setExtras(extras);
-                CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
-                if (commandExecuteResponse.isSuccess()){
-                    SimulatorStatus.setAgentStatus((String)commandExecuteResponse.getResult(), commandExecuteResponse.getMsg());
-                }
-            }
-            List<CommandPacket> heartCommandPackets = getCommandPacketByHeart();
+            HeartRequest heartRequest = new HeartRequest();
+            getSimulatorStatus();
+            getSimulatorDetails(heartRequest);
+            List<CommandPacket> heartCommandPackets = getCommandPacketByHeart(heartRequest);
             boolean asyncTaskResult = true;
             if (null != heartCommandPackets && !heartCommandPackets.isEmpty() && HeartCommandUtils.futureMapSize() < 30){
                 for (final CommandPacket commandPacket : heartCommandPackets){
-                    commandPacket.getExtras().put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
+                    commandPacket.getExtras().put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_COMMAND_EXECUTE_MODULE);
                     commandPacket.getExtras().put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER_DO_COMAAND);
                     commandPacket.getExtras().put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, String.valueOf(commandPacket.isSync()));
                     commandPacket.getExtras().put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
@@ -644,4 +628,53 @@ public class HttpAgentScheduler implements AgentScheduler {
             return result;
         }
     }
+
+
+    /**
+     * 获取simulator状态数据
+     * @throws Throwable
+     */
+    private void getSimulatorStatus() throws Throwable {
+        if (SimulatorStatus.isUnInstall()){
+            CommandPacket commandPacket = new CommandPacket();
+            commandPacket.setId(HeartCommandConstants.getSimulatorStatusCommandId);
+            commandPacket.setSync(true);
+            commandPacket.setUuid("-1");
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_REGISTER);
+            extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_REGISTER);
+            extras.put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
+            extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
+            extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, "true");
+            commandPacket.setExtras(extras);
+            CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
+            if (commandExecuteResponse.isSuccess()){
+                SimulatorStatus.setAgentStatus((String)commandExecuteResponse.getResult(), commandExecuteResponse.getMsg());
+            }
+        }
+    }
+
+    /**
+     * 获取simulator一些明细数据
+     * @throws Throwable
+     */
+    private void getSimulatorDetails(HeartRequest heartRequest) throws Throwable {
+            CommandPacket commandPacket = new CommandPacket();
+            commandPacket.setId(HeartCommandConstants.getSimulatorDetailsCommandId);
+            commandPacket.setSync(true);
+            commandPacket.setUuid("-1");
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put(HeartCommandConstants.MODULE_ID_KEY, HeartCommandConstants.MODULE_ID_VALUE_PRADAR_CONFIG_FETCHER);
+            extras.put(HeartCommandConstants.MODULE_METHOD_KEY, HeartCommandConstants.MODULE_METHOD_VALUE_PRADAR_CONFIG_FETCHER);
+            extras.put(HeartCommandConstants.COMMAND_ID_KEY, commandPacket.getId());
+            extras.put(HeartCommandConstants.TASK_ID_KEY, commandPacket.getUuid());
+            extras.put(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY, "true");
+            commandPacket.setExtras(extras);
+            CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
+            if (commandExecuteResponse.isSuccess()){
+                JSONObject jsonObject = (JSONObject) commandExecuteResponse.getResult();
+                heartRequest.setDormantStatus(jsonObject.getInteger("isSilent"));
+            }
+    }
+
 }

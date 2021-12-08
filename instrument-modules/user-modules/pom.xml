@@ -61,7 +61,7 @@
         <module>module-redis-redisson</module>
         <module>module-resin</module>
         <module>module-saturn</module>
-        <!--        <module>module-shadow-job</module>-->
+        <module>module-shadow-job</module>
         <module>module-spring-cache</module>
         <module>module-undertow</module>
         <module>module-xmemcached</module>
@@ -74,6 +74,7 @@
         <module>module-caffeine</module>
         <module>module-proxool</module>
         <module>module-logback</module>
+        <module>module-log4j</module>
         <module>module-apache-kafka-stream</module>
         <module>module-akka</module>
         <module>module-feign</module>
@@ -82,6 +83,9 @@
                 <module>module-dynamic-resource</module>
         -->
         <module>module-zuul</module>
+        <module>module-apache-cxf</module>
+        <module>module-apache-axis</module>
+        <module>module-jersey</module>
     </modules>
 
     <build>

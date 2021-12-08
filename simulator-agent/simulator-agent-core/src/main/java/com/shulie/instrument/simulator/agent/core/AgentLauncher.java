@@ -15,7 +15,22 @@
 package com.shulie.instrument.simulator.agent.core;
 
 import cn.hutool.crypto.SecureUtil;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.instrument.Instrumentation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.alibaba.fastjson.JSON;
+
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
@@ -25,6 +40,14 @@ import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
 import com.shulie.instrument.simulator.agent.core.util.*;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
+import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
+import com.shulie.instrument.simulator.agent.core.util.PidUtils;
+import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
+import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.ReloadModuleCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import com.sun.tools.attach.VirtualMachine;
@@ -43,6 +66,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 
 /**
  * Agent启动器
@@ -74,18 +98,18 @@ public class AgentLauncher {
     /**
      * 是否是运行中状态
      */
-    private AtomicBoolean isRunning = new AtomicBoolean(false);
+    private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
-    private Instrumentation instrumentation;
-    private ClassLoader parent;
-    private boolean usePremain;
+    private final Instrumentation instrumentation;
+    private final ClassLoader parent;
+    private final boolean usePremain;
 
     private int startMode = START_MODE_ATTACH;
 
     private FrameworkClassLoader frameworkClassLoader;
 
     public AgentLauncher(final AgentConfig agentConfig, final Instrumentation instrumentation,
-                         final ClassLoader parent) {
+        final ClassLoader parent) {
         this.agentConfig = agentConfig;
         this.instrumentation = instrumentation;
         this.parent = parent;
@@ -128,11 +152,11 @@ public class AgentLauncher {
      * @param config
      */
     private void start0(final String descriptor,
-                        final String agentJarPath,
-                        final String config) throws Throwable {
+        final String agentJarPath,
+        final String config) throws Throwable {
         if (logger.isDebugEnabled()) {
             logger.debug("AGENT: prepare to attach agent: descriptor={}, agentJarPath={}, config={}", descriptor,
-                    agentJarPath, config);
+                agentJarPath, config);
         }
         //针对docker pid小于等于5的使用premain方式
         //如果是 main 方法执行， 强制使用 premain 模式
@@ -208,7 +232,7 @@ public class AgentLauncher {
             if (!startCommand.getPacket().isUseLocal()) {
                 File file = new File(agentConfig.getSimulatorHome());
                 File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp",
-                        agentConfig.getUserAppKey());
+                    agentConfig.getHttpMustHeaders());
                 if (file.exists()) {
                     FileUtils.delete(file);
                 }
@@ -291,10 +315,22 @@ public class AgentLauncher {
             }
             builder.append(";zkConnectionTimeout=").append(this.agentConfig.getZkConnectionTimeout());
             builder.append(";zkSessionTimeout=").append(this.agentConfig.getZkSessionTimeout());
-            builder.append(";agentVersion=").append(this.agentConfig.getAgentVersion());
-            builder.append(";troWebUrl=").append(this.agentConfig.getTroWebUrl());
-            builder.append(";userAppKey=").append(this.agentConfig.getUserAppKey());
-            builder.append(";userId=").append(this.agentConfig.getUserId());
+            if (StringUtils.isNotBlank(this.agentConfig.getAgentVersion())) {
+                builder.append(";agentVersion=").append(this.agentConfig.getAgentVersion());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getTroWebUrl())) {
+                builder.append(";troWebUrl=").append(this.agentConfig.getTroWebUrl());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getTenantAppKey())) {
+                builder.append(";tenantAppKey=").append(this.agentConfig.getTenantAppKey());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getUserId())) {
+                builder.append(";userId=").append(this.agentConfig.getUserId());
+            }
+            if (StringUtils.isNotBlank(this.agentConfig.getEnvCode())) {
+                builder.append(";envCode=").append(this.agentConfig.getEnvCode());
+            }
+
             /**
              * 指定simulator配置文件的获取地址
              */
@@ -322,21 +358,21 @@ public class AgentLauncher {
             }
             if (StringUtils.isBlank(content)) {
                 logger.error("AGENT: launch on agent err. can't get a empty result from result file:{}",
-                        this.agentConfig.getAgentResultFilePath());
+                    this.agentConfig.getAgentResultFilePath());
                 AgentStatus.uninstall();
                 throw new RuntimeException(
-                        "AGENT: launch on agent err. can't get a empty result from result file:" + this.agentConfig
-                                .getAgentResultFilePath());
+                    "AGENT: launch on agent err. can't get a empty result from result file:" + this.agentConfig
+                        .getAgentResultFilePath());
             }
             String[] result = StringUtils.split(content, ';');
 
             if (ArrayUtils.isEmpty(result) || result.length < 3) {
                 logger.error("AGENT: launch on agent err. can't get a correct result from result file [{}] : {}",
-                        content, this.agentConfig.getAgentResultFilePath());
+                    content, this.agentConfig.getAgentResultFilePath());
                 AgentStatus.uninstall();
                 throw new RuntimeException(
-                        "AGENT: launch on agent err. can't get a correct result from result file [" + content + "] :"
-                                + this.agentConfig.getAgentResultFilePath());
+                    "AGENT: launch on agent err. can't get a correct result from result file [" + content + "] :"
+                        + this.agentConfig.getAgentResultFilePath());
             }
             AgentStatus.installed(result[2]);
             this.baseUrl = "http://" + result[0] + ":" + result[1] + "/simulator";
@@ -346,11 +382,11 @@ public class AgentLauncher {
         } catch (Throwable throwable) {
             try {
                 if (throwable instanceof NoClassDefFoundError) {
-                    NoClassDefFoundError e = (NoClassDefFoundError) throwable;
+                    NoClassDefFoundError e = (NoClassDefFoundError)throwable;
                     if (e.getMessage().contains("com/sun/tools/attach/VirtualMachine")) {
                         logger.error(
-                                "add java start params : -Djdk.attach.allowAttachSelf=true "
-                                        + "-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar to fix this error");
+                            "add java start params : -Djdk.attach.allowAttachSelf=true "
+                                + "-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar to fix this error");
                     }
                 }
             } catch (Throwable e) {
@@ -386,7 +422,7 @@ public class AgentLauncher {
                     + "&commandId=" + commandId + "&taskId=" + taskId;
 
 
-            HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl, agentConfig.getUserAppKey(), heartCommand.getPacket().getExtrasString());
+            HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl,new HashMap<String, String>(1), heartCommand.getPacket().getExtrasString());
 
             if (content == null) {
                 commandExecuteResponse.setSuccess(false);
@@ -431,16 +467,16 @@ public class AgentLauncher {
         }
         try {
             String loadUrl = baseUrl + File.separator + "management" + File.separator + "load??useApi=true&path="
-                    + moduleId;
-            String content = HttpUtils.doGet(loadUrl, agentConfig.getUserAppKey());
+                + moduleId;
+            String content = HttpUtils.doGet(loadUrl, agentConfig.getHttpMustHeaders());
             /**
              * 如果返回为空则视为已经停止
              */
             if (content == null) {
                 AgentStatus.setError(
-                        "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
+                    "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
                 throw new RuntimeException(
-                        "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
+                    "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
             }
 
             Response response = JSON.parseObject(content, Response.class);
@@ -452,9 +488,9 @@ public class AgentLauncher {
             }
 
             AgentStatus.setError(
-                    "AGENT: load module failed. load module got a error response from agent. " + response.getMessage());
+                "AGENT: load module failed. load module got a error response from agent. " + response.getMessage());
             throw new RuntimeException(
-                    "AGENT: load module failed. load module got a error response from agent. " + response.getMessage());
+                "AGENT: load module failed. load module got a error response from agent. " + response.getMessage());
         } catch (Throwable e) {
             String errorMessage = ThrowableUtils.toString(e, 1000);
             AgentStatus.setError("AGENT: agent shutdown failed. " + errorMessage);
@@ -470,16 +506,16 @@ public class AgentLauncher {
         }
         try {
             String loadUrl = baseUrl + File.separator + "management" + File.separator + "unload??useApi=true&moduleId="
-                    + moduleId;
-            String content = HttpUtils.doGet(loadUrl, agentConfig.getUserAppKey());
+                + moduleId;
+            String content = HttpUtils.doGet(loadUrl, agentConfig.getHttpMustHeaders());
             /**
              * 如果返回为空则视为已经停止
              */
             if (content == null) {
                 AgentStatus.setError(
-                        "AGENT: unload module err. got empty content from unload api url, moduleId=" + moduleId);
+                    "AGENT: unload module err. got empty content from unload api url, moduleId=" + moduleId);
                 throw new RuntimeException(
-                        "AGENT: unload module err. got empty content from unload api url, moduleId=" + moduleId);
+                    "AGENT: unload module err. got empty content from unload api url, moduleId=" + moduleId);
             }
 
             Response response = JSON.parseObject(content, Response.class);
@@ -491,11 +527,11 @@ public class AgentLauncher {
             }
 
             AgentStatus.setError(
-                    "AGENT: unload moudule failed. unload moudule got a error response from agent. " + response
-                            .getMessage());
+                "AGENT: unload moudule failed. unload moudule got a error response from agent. " + response
+                    .getMessage());
             throw new RuntimeException(
-                    "AGENT: unload moudule failed. unload moudule got a error response from agent. " + response
-                            .getMessage());
+                "AGENT: unload moudule failed. unload moudule got a error response from agent. " + response
+                    .getMessage());
         } catch (Throwable e) {
             String errorMessage = ThrowableUtils.toString(e, 1000);
             AgentStatus.setError("AGENT: unload module failed. " + errorMessage);
@@ -511,16 +547,16 @@ public class AgentLauncher {
         }
         try {
             String loadUrl = baseUrl + File.separator + "management" + File.separator + "reload??useApi=true&moduleId="
-                    + moduleId;
-            String content = HttpUtils.doGet(loadUrl, agentConfig.getUserAppKey());
+                + moduleId;
+            String content = HttpUtils.doGet(loadUrl, agentConfig.getHttpMustHeaders());
             /**
              * 如果返回为空则视为已经停止
              */
             if (content == null) {
                 AgentStatus.setError(
-                        "AGENT: reload module err. got empty content from reload api url, moduleId=" + moduleId);
+                    "AGENT: reload module err. got empty content from reload api url, moduleId=" + moduleId);
                 throw new RuntimeException(
-                        "AGENT: reload module err. got empty content from reload api url, moduleId=" + moduleId);
+                    "AGENT: reload module err. got empty content from reload api url, moduleId=" + moduleId);
             }
 
             Response response = JSON.parseObject(content, Response.class);
@@ -531,11 +567,11 @@ public class AgentLauncher {
                 return;
             }
             AgentStatus.setError(
-                    "AGENT: reload module failed. reload module got a error response from agent. moduleId=" + moduleId
-                            + ", loadUrl=" + loadUrl + " " + response.getMessage());
+                "AGENT: reload module failed. reload module got a error response from agent. moduleId=" + moduleId
+                    + ", loadUrl=" + loadUrl + " " + response.getMessage());
             throw new RuntimeException(
-                    "AGENT: reload module failed. reload module got a error response from agent. moduleId=" + moduleId
-                            + ", loadUrl=" + loadUrl + " " + response.getMessage());
+                "AGENT: reload module failed. reload module got a error response from agent. moduleId=" + moduleId
+                    + ", loadUrl=" + loadUrl + " " + response.getMessage());
         } catch (Throwable e) {
             String errorMessage = ThrowableUtils.toString(e, 1000);
             AgentStatus.setError("AGENT: reload module failed. " + errorMessage);
@@ -549,7 +585,7 @@ public class AgentLauncher {
             return false;
         }
         String heartbeatResult = HttpUtils.doGet(baseUrl + File.separator + "heartbeat?useApi=true",
-                agentConfig.getUserAppKey());
+            agentConfig.getHttpMustHeaders());
         if (heartbeatResult == null) {
             if (logger.isInfoEnabled()) {
                 logger.info("shutdown agent successful.");
@@ -592,7 +628,7 @@ public class AgentLauncher {
              * 如果已经检测不到，则说明已经被关闭了
              */
             String heartbeatResult = HttpUtils.doGet(baseUrl + File.separator + "heartbeat?useApi=true",
-                    agentConfig.getUserAppKey());
+                agentConfig.getHttpMustHeaders());
             if (heartbeatResult == null) {
                 shutdownWithPremain();
                 if (logger.isInfoEnabled()) {
@@ -603,7 +639,7 @@ public class AgentLauncher {
 
             AgentStatus.uninstalling();
             String shutdownUrl = baseUrl + File.separator + "control" + File.separator + "shutdown?useApi=true";
-            String content = HttpUtils.doGet(shutdownUrl, agentConfig.getUserAppKey());
+            String content = HttpUtils.doGet(shutdownUrl, agentConfig.getHttpMustHeaders());
 
             /**
              * 如果返回为空则视为已经停止
@@ -624,7 +660,7 @@ public class AgentLauncher {
                      * 如果没有响应，则说明关闭成功了
                      */
                     heartbeatResult = HttpUtils.doGet(baseUrl + File.separator + "heartbeat?useApi=true",
-                            agentConfig.getUserAppKey());
+                        agentConfig.getHttpMustHeaders());
                     if (heartbeatResult == null) {
                         shutdownWithPremain();
                         if (logger.isInfoEnabled()) {
@@ -641,11 +677,12 @@ public class AgentLauncher {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
+                        // ignore
                     }
                 }
             }
             throw new RuntimeException(
-                    "AGENT: got a error response from agent. shutdown agent failed.  " + response.getMessage());
+                "AGENT: got a error response from agent. shutdown agent failed.  " + response.getMessage());
         } catch (Throwable e) {
             isRunning.set(true);
             AgentStatus.installed(AgentStatus.getSimulatorVersion());
@@ -664,6 +701,7 @@ public class AgentLauncher {
                 try {
                     reader.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
         }
@@ -671,9 +709,9 @@ public class AgentLauncher {
 
     // 加载Agent
     private void attachAgent(final VirtualMachineDescriptor virtualMachineDescriptor,
-                             final String targetJvmPid,
-                             final String agentJarPath,
-                             final String config) throws Throwable {
+        final String targetJvmPid,
+        final String agentJarPath,
+        final String config) throws Throwable {
 
         VirtualMachine vmObj = null;
         try {
@@ -682,11 +720,11 @@ public class AgentLauncher {
             } else {
                 if (!isDigits(targetJvmPid)) {
                     logger.error(
-                            "AGENT: illegal args[0], can't found a vm instance with {} by name. and it is also not a "
-                                    + "valid digits. agentJarPath={}, config={}",
-                            targetJvmPid, agentJarPath, config);
+                        "AGENT: illegal args[0], can't found a vm instance with {} by name. and it is also not a "
+                            + "valid digits. agentJarPath={}, config={}",
+                        targetJvmPid, agentJarPath, config);
                     throw new IllegalArgumentException("illegal args[0], can't found a vm instance with " + targetJvmPid
-                            + " by name. and it is also not a valid digits.");
+                        + " by name. and it is also not a valid digits.");
                 }
                 vmObj = VirtualMachine.attach(targetJvmPid);
             }
@@ -694,18 +732,18 @@ public class AgentLauncher {
                 try {
                     vmObj.loadAgent(agentJarPath, config);
                     logger.info("AGENT: attached to agent success. descriptor={}, agentJarPath={}, config={}",
-                            targetJvmPid, agentJarPath, config);
+                        targetJvmPid, agentJarPath, config);
                 } catch (Throwable e) {
                     logger.error(
-                            "AGENT: attach failed. can't found attach target agent.  descriptor={}, agentJarPath={}, "
-                                    + "config={}",
-                            targetJvmPid, agentJarPath, config);
+                        "AGENT: attach failed. can't found attach target agent.  descriptor={}, agentJarPath={}, "
+                            + "config={}",
+                        targetJvmPid, agentJarPath, config);
                     throw e;
                 }
             } else {
                 logger.error(
-                        "AGENT: attach failed. can't found attach target agent.  descriptor={}, agentJarPath={}, config={}",
-                        targetJvmPid, agentJarPath, config);
+                    "AGENT: attach failed. can't found attach target agent.  descriptor={}, agentJarPath={}, config={}",
+                    targetJvmPid, agentJarPath, config);
             }
         } finally {
             if (null != vmObj) {
@@ -727,12 +765,12 @@ public class AgentLauncher {
      * @throws InvocationTargetException
      */
     private void startWithPremain(String agentJarPath, String config)
-            throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
-            InvocationTargetException {
-        this.frameworkClassLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()},
-                parent);
+        throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+        InvocationTargetException {
+        this.frameworkClassLoader = new FrameworkClassLoader(new URL[] {new File(agentJarPath).toURI().toURL()},
+            parent);
         Class classOfAgentLauncher = frameworkClassLoader.loadClass(
-                "com.shulie.instrument.simulator.agent.AgentLauncher");
+            "com.shulie.instrument.simulator.agent.AgentLauncher");
         Method premainMethod = classOfAgentLauncher.getDeclaredMethod("premain", String.class, Instrumentation.class);
         premainMethod.setAccessible(true);
         premainMethod.invoke(null, config, instrumentation);

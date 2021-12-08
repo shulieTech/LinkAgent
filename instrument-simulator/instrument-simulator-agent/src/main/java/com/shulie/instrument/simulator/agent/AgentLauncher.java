@@ -76,7 +76,8 @@ public class AgentLauncher {
     private static final Pattern SIMULATOR_HOME_PATTERN = Pattern.compile("(?i)^[/\\\\]([a-z])[/\\\\]");
 
     private static final String CLASS_OF_CORE_CONFIGURE = "com.shulie.instrument.simulator.core.CoreConfigure";
-    private static final String CLASS_OF_PROXY_CORE_SERVER = "com.shulie.instrument.simulator.core.server.ProxyCoreServer";
+    private static final String CLASS_OF_PROXY_CORE_SERVER
+        = "com.shulie.instrument.simulator.core.server.ProxyCoreServer";
 
     // ----------------------------------------------- 以下代码用于配置解析 -----------------------------------------------
 
@@ -111,14 +112,17 @@ public class AgentLauncher {
     private static final String KEY_AGENT_VERSION = "agentVersion";
     private static final String DEFAULT_AGENT_VERSION = "1.0.0.1";
 
-    private static final String KEY_USER_APP_KEY = "userAppKey";
-    private static final String DEFAULT_USER_APP_KEY = "";
+    private static final String KEY_TENANT_APP_KEY = "tenantAppKey";
+    private static final String DEFAULT_TENANT_APP_KEY = "";
 
     private static final String KEY_USER_ID = "userId";
     private static final String DEFAULT_USER_ID = "";
 
     private static final String KEY_TRO_WEB_URL = "troWebUrl";
     private static final String DEFAULT_TRO_WEB_URL = "";
+
+    private static final String KEY_ENV_CODE = "envCode";
+    private static final String DEFAULT_ENV_CODE = "";
 
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
@@ -190,10 +194,11 @@ public class AgentLauncher {
      */
     public static void premain(String featureString, Instrumentation inst) {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: agent starting with agent mode. args=" + (featureString == null ? "" : featureString));
+            LOGGER.info(
+                "SIMULATOR: agent starting with agent mode. args=" + (featureString == null ? "" : featureString));
         }
         LAUNCH_MODE = LAUNCH_MODE_AGENT;
-        Long startTime = System.nanoTime();
+        long startTime = System.nanoTime();
         try {
             final Map<String, String> featureMap = toFeatureMap(featureString);
             String appName = featureMap.get(KEY_APP_NAME);
@@ -206,7 +211,8 @@ public class AgentLauncher {
             e.printStackTrace();
             LOGGER.error("SIMULATOR: premain execute error!", e);
         } finally {
-            LOGGER.info("simulator server start successful. cost:" + ((System.nanoTime() - startTime) / 1000000000) + "s");
+            LOGGER.info(
+                "simulator server start successful. cost:" + ((System.nanoTime() - startTime) / 1000000000) + "s");
         }
     }
 
@@ -220,7 +226,8 @@ public class AgentLauncher {
      */
     public static void agentmain(String featureString, Instrumentation inst) {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("SIMULATOR: agent starting with attach mode. args=" + (featureString == null ? "" : featureString));
+            LOGGER.info(
+                "SIMULATOR: agent starting with attach mode. args=" + (featureString == null ? "" : featureString));
         }
         try {
             LAUNCH_MODE = LAUNCH_MODE_ATTACH;
@@ -336,7 +343,8 @@ public class AgentLauncher {
             for (File file : bootstrapFiles) {
                 if (file.isHidden()) {
                     LOGGER.warn(
-                        "prepare to append bootstrap file " + file.getAbsolutePath() + " but found a hidden file. skip it.");
+                        "prepare to append bootstrap file " + file.getAbsolutePath()
+                            + " but found a hidden file. skip it.");
                     continue;
                 }
                 if (!file.isFile()) {
@@ -374,9 +382,11 @@ public class AgentLauncher {
                 final Class<?> classOfConfigure = simulatorClassLoader.loadClass(CLASS_OF_CORE_CONFIGURE);
 
                 // 反序列化成CoreConfigure类实例
-                final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", Class.class, String.class,
+                final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", Class.class,
+                        String.class,
                         String.class, String.class, Instrumentation.class)
-                    .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, agentConfigFilePath, inst);
+                    .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, agentConfigFilePath,
+                        inst);
 
                 // CoreServer类定义
                 final Class<?> classOfProxyServer = simulatorClassLoader.loadClass(CLASS_OF_PROXY_CORE_SERVER);
@@ -409,7 +419,8 @@ public class AgentLauncher {
                 InetSocketAddress inetSocketAddress = (InetSocketAddress)classOfProxyServer
                     .getMethod("getLocal")
                     .invoke(objectOfProxyServer);
-                String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure).toString();
+                String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure)
+                    .toString();
                 return new InstallInfo(inetSocketAddress, version);
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
@@ -536,8 +547,8 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_AGENT_VERSION, DEFAULT_AGENT_VERSION);
     }
 
-    private static String getUserAppKey(Map<String, String> featureMap) {
-        return getDefault(featureMap, KEY_USER_APP_KEY, DEFAULT_USER_APP_KEY);
+    private static String getTenantAppKey(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_TENANT_APP_KEY, DEFAULT_TENANT_APP_KEY);
     }
 
     private static String getUserId(Map<String, String> featureMap) {
@@ -546,6 +557,10 @@ public class AgentLauncher {
 
     private static String getTroWebUrl(Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_TRO_WEB_URL, DEFAULT_TRO_WEB_URL);
+    }
+
+    private static String getEnvCode(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_ENV_CODE, DEFAULT_ENV_CODE);
     }
 
     private static String getAppName(final Map<String, String> featureMap) {
@@ -595,9 +610,10 @@ public class AgentLauncher {
         final StringBuilder builder = new StringBuilder(
             format(
                 ";app_name=%s;agentId=%s;config=%s;system_module=%s;mode=%s;simulator_home=%s;user_module=%s;"
-                    + "classloader_jars=%s;provider=%s;module_repository_mode=%s;module_repository_addr=%s;log_path=%s;"
-                    + "log_level=%s;zk_servers=%s;register_path=%s;zk_connection_timeout=%s;zk_session_timeout=%s;"
-                    + "agent_version=%s;user.app.key=%s;pradar.user.id=%s;tro.web.url=%s",
+                    + "classloader_jars=%s;provider=%s;module_repository_mode=%s;"
+                    + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
+                    + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
+                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
                 getSimulatorConfigPath(simulatorHome),
@@ -628,12 +644,14 @@ public class AgentLauncher {
                 getZkSessionTimeout(featureMap),
                 // AGENT VERSION
                 getAgentVersion(featureMap),
-                //User APP KEY
-                getUserAppKey(featureMap),
+                //Tenant APP KEY
+                getTenantAppKey(featureMap),
                 //USE ID
                 getUserId(featureMap),
                 //TRO WEB
-                getTroWebUrl(featureMap)
+                getTroWebUrl(featureMap),
+                // CURRENT ENV
+                getEnvCode(featureMap)
             )
         );
 

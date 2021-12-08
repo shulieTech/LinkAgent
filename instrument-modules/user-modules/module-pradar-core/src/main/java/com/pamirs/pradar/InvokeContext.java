@@ -178,8 +178,7 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
      * @return
      */
     static InvokeContext buildEmptyInvokeContext() {
-        InvokeContext invokeContext = new InvokeContext("empty", "", "", "", "");
-        return invokeContext;
+        return new InvokeContext("empty", "", "", "", "");
     }
 
     /**
@@ -214,7 +213,7 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
         StringBuilder builder = new StringBuilder();
         for (byte b : bytes) {
             int temp = b & 255;
-            if (temp < 16 && temp >= 0) {
+            if (temp < 16) {
                 builder.append("0").append(Integer.toHexString(temp));
             } else {
                 builder.append(Integer.toHexString(temp));

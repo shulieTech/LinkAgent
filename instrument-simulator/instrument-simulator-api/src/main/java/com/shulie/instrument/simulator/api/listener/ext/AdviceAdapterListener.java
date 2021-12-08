@@ -14,6 +14,8 @@
  */
 package com.shulie.instrument.simulator.api.listener.ext;
 
+import com.shulie.instrument.simulator.api.ProcessControlEntity;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.event.*;
 import com.shulie.instrument.simulator.api.listener.EventListener;
@@ -51,10 +53,10 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
     };
 
     @Override
-    final public void onEvent(final Event event) throws Throwable {
+    final public ProcessControlEntity onEvent(final Event event) throws Throwable {
         final OpStack opStack = opStackRef.get();
         try {
-            switchEvent(opStack, event);
+            return switchEvent(opStack, event);
         } finally {
             // 如果执行到TOP的最后一个事件，则需要主动清理占用的资源
             if (opStack.isEmpty()) {
@@ -72,7 +74,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
 
     // 执行事件
-    private void switchEvent(final OpStack opStack,
+    private ProcessControlEntity switchEvent(final OpStack opStack,
                              final Event event) throws Throwable {
 
         switch (event.getType()) {
@@ -108,7 +110,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
 
                 opStack.pushForBegin(advice);
                 adviceListener.before(advice);
-                break;
+                return ProcessControlEntity.fromAdvice(advice);
             }
 
             /**
@@ -122,7 +124,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                 if (advice != null) {
                     advice.destroy();
                 }
-                break;
+                return ProcessControlEntity.fromAdvice(advice);
             }
 
             case RETURN: {
@@ -136,8 +138,8 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                         adviceListener.after(advice);
                     }
                     wrapAdvice.destroy();
+                    return ProcessControlEntity.fromAdvice(wrapAdvice);
                 }
-                break;
             }
             case THROWS: {
                 final ThrowsEvent tEvent = (ThrowsEvent) event;
@@ -150,15 +152,15 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                         adviceListener.after(advice);
                     }
                     wrapAdvice.destroy();
+                    return ProcessControlEntity.fromAdvice(wrapAdvice);
                 }
-                break;
             }
 
             case CALL_BEFORE: {
                 final CallBeforeEvent cbEvent = (CallBeforeEvent) event;
                 final Advice advice = opStack.peekByExpectInvokeId(cbEvent.getInvokeId());
                 if (null == advice) {
-                    return;
+                    return ProcessControlEntity.none();
                 }
                 final CallTarget target;
                 advice.setCallTarget(target = new CallTarget(
@@ -176,19 +178,19 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                         target.callJavaMethodName,
                         target.callJavaMethodDesc
                 );
-                break;
+                return ProcessControlEntity.fromAdvice(advice);
             }
 
             case CALL_RETURN: {
                 final CallReturnEvent crEvent = (CallReturnEvent) event;
                 final Advice advice = opStack.peekByExpectInvokeId(crEvent.getInvokeId());
                 if (null == advice) {
-                    return;
+                    return ProcessControlEntity.none();
                 }
                 final CallTarget target = (CallTarget) advice.getCallTarget();
                 if (null == target) {
                     // 这里做一个容灾保护，防止在callBefore()中发生什么异常导致beforeCall()之前失败
-                    return;
+                    return ProcessControlEntity.none();
                 }
                 try {
                     adviceListener.afterCallReturning(
@@ -209,19 +211,19 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                             null
                     );
                 }
-                break;
+                return ProcessControlEntity.fromAdvice(advice);
             }
 
             case CALL_THROWS: {
                 final CallThrowsEvent ctEvent = (CallThrowsEvent) event;
                 final Advice advice = opStack.peekByExpectInvokeId(ctEvent.getInvokeId());
                 if (null == advice) {
-                    return;
+                    return ProcessControlEntity.none();
                 }
                 final CallTarget target = (CallTarget) advice.getCallTarget();
                 if (null == target) {
                     // 这里做一个容灾保护，防止在callBefore()中发生什么异常导致beforeCall()之前失败
-                    return;
+                    return ProcessControlEntity.none();
                 }
                 try {
                     adviceListener.afterCallThrowing(
@@ -243,22 +245,23 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                             ctEvent.getThrowException()
                     );
                 }
-                break;
+                return ProcessControlEntity.fromAdvice(advice);
             }
 
             case LINE: {
                 final LineEvent lEvent = (LineEvent) event;
                 final Advice advice = opStack.peekByExpectInvokeId(lEvent.getInvokeId());
                 if (null == advice) {
-                    return;
+                    return ProcessControlEntity.none();
                 }
                 adviceListener.beforeLine(advice, lEvent.getLineNumber());
-                break;
+                return ProcessControlEntity.fromAdvice(advice);
             }
 
             default:
                 //ignore
         }//switch
+        return ProcessControlEntity.none();
     }
 
     @Override

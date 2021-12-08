@@ -85,7 +85,8 @@ public class CoreLauncher {
         this(agentHome, -1L, null, null, null, null);
     }
 
-    public CoreLauncher(String agentHome, long attachId, String attachName, String tagName, Instrumentation instrumentation, ClassLoader classLoader) {
+    public CoreLauncher(String agentHome, long attachId, String attachName, String tagName,
+        Instrumentation instrumentation, ClassLoader classLoader) {
         this.coreConfig = new CoreConfig(agentHome);
         this.instrumentation = instrumentation;
         this.classLoader = classLoader;
@@ -110,12 +111,13 @@ public class CoreLauncher {
         initConfigUtils(agentConfig);
     }
 
-    private void initConfigUtils(AgentConfig agentConfig){
-        ConfigUtils.setUserAppKey(agentConfig.getUserAppKey());
+    private void initConfigUtils(AgentConfig agentConfig) {
+        ConfigUtils.setTenantAppKey(agentConfig.getTenantAppKey());
         ConfigUtils.setAgentId(agentConfig.getAgentId());
+        ConfigUtils.setUserId(agentConfig.getUserId());
+        ConfigUtils.setEnvCode(agentConfig.getEnvCode());
         ConfigUtils.setAppName(agentConfig.getAppName());
     }
-
 
     /**
      * 初始化 Agent Loader
@@ -168,12 +170,14 @@ public class CoreLauncher {
         }
     }
 
-    private static Field[] getFieldsWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
+    private static Field[] getFieldsWithAnnotation(final Class<?> cls,
+        final Class<? extends Annotation> annotationCls) {
         final List<Field> annotatedFieldsList = getFieldsListWithAnnotation(cls, annotationCls);
         return annotatedFieldsList.toArray(new Field[0]);
     }
 
-    private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
+    private static List<Field> getFieldsListWithAnnotation(final Class<?> cls,
+        final Class<? extends Annotation> annotationCls) {
         final List<Field> allFields = getAllFieldsList(cls);
         final List<Field> annotatedFields = new ArrayList<Field>();
         for (final Field field : allFields) {
@@ -211,7 +215,8 @@ public class CoreLauncher {
                     ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
                     applicationUploader.checkAndGenerateApp();
 
-                    Register register = RegisterFactory.getRegister(agentConfig.getProperty("register.name", "zookeeper"));
+                    Register register = RegisterFactory.getRegister(
+                        agentConfig.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
                     register.start();
@@ -241,13 +246,13 @@ public class CoreLauncher {
                         public CommandExecuteResponse execute(Command command) throws Throwable {
                             CommandExecuteResponse commandExecuteResponse = null;
                             if (command instanceof StartCommand) {
-                                launcher.startup(((StartCommand) command));
+                                launcher.startup(((StartCommand)command));
                             } else if (command instanceof StopCommand) {
-                                launcher.shutdown((StopCommand) command);
+                                launcher.shutdown((StopCommand)command);
                             } else if (command instanceof LoadModuleCommand) {
-                                launcher.loadModule(((LoadModuleCommand) command));
+                                launcher.loadModule(((LoadModuleCommand)command));
                             } else if (command instanceof UnloadModuleCommand) {
-                                launcher.unloadModule(((UnloadModuleCommand) command));
+                                launcher.unloadModule(((UnloadModuleCommand)command));
                             } else if (command instanceof ReloadModuleCommand) {
                                 launcher.reloadModule(((ReloadModuleCommand) command));
                             } else if (command instanceof HeartCommand){
@@ -271,19 +276,18 @@ public class CoreLauncher {
                     agentScheduler.init(schedulerArgs);
                     agentScheduler.start();
 
-
                 } catch (AgentDownloadException e) {
                     LOGGER.error("SIMULATOR: download agent occur exception. ", e);
                     if (delay > 0) {
                         startService.schedule(this, 10, TimeUnit.SECONDS);
-                    }else{
+                    } else {
                         throw e;
                     }
                 } catch (Throwable t) {
                     LOGGER.error("SIMULATOR: agent start occur exception. ", t);
                     if (delay > 0) {
                         startService.schedule(this, 10, TimeUnit.SECONDS);
-                    }else{
+                    } else {
                         throw new RuntimeException(t);
                     }
                 }
@@ -291,7 +295,7 @@ public class CoreLauncher {
         };
         if (delay <= 0) {
             runnable.run();
-        }else{
+        } else {
             this.startService.schedule(runnable, delay, unit);
         }
         if (LOGGER.isInfoEnabled()) {
@@ -300,7 +304,8 @@ public class CoreLauncher {
             } else {
                 LOGGER.warn("SIMULATOR: current can't found tag name. may be agent file is incomplete.");
             }
-            LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay, unit.toString());
+            LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay,
+                unit.toString());
         }
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
@@ -317,10 +322,12 @@ public class CoreLauncher {
     private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {
         RegisterOptions registerOptions = new RegisterOptions();
         registerOptions.setAppName(agentConfig.getAppName());
-        registerOptions.setRegisterBasePath(agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
+        registerOptions.setRegisterBasePath(
+            agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
         registerOptions.setRegisterName(agentConfig.getProperty("simulator.hearbeat.register.name", "zookeeper"));
         registerOptions.setZkServers(agentConfig.getProperty("simulator.zk.servers", "localhost:2181"));
-        registerOptions.setConnectionTimeoutMillis(agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));
+        registerOptions.setConnectionTimeoutMillis(
+            agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));
         registerOptions.setSessionTimeoutMillis(agentConfig.getIntProperty("simulator.zk.session.timeout.ms", 60000));
         return registerOptions;
     }

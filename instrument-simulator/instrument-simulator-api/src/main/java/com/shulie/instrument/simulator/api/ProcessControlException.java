@@ -104,4 +104,7 @@ public final class ProcessControlException extends Exception {
         return null;
     }
 
+    public ProcessControlEntity toEntity() {
+        return new ProcessControlEntity(this.isIgnoreProcessEvent, this.state, this.result);
+    }
 }

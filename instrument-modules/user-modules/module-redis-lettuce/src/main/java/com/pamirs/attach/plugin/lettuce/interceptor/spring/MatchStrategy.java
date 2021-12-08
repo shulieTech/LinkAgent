@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -42,7 +42,11 @@ public class MatchStrategy {
                 return null;
             }
 
-            List<String> nodes = (List<String>) obj;
+            Key keyNode = (Key) obj;
+
+
+            List<String> nodes = new ArrayList<String>();
+            nodes.add(keyNode.host.concat(":") + keyNode.port);
 
             if (GlobalConfig.getInstance().getShadowRedisConfigs().size() > 0 && obj != null) {
 
@@ -88,15 +92,10 @@ public class MatchStrategy {
                 return null;
             }
             List<Key> keys = (List<Key>) obj;
-            StringBuilder builder = new StringBuilder();
-            for (Key k : keys) {
-                builder.append(k.host.concat(":").concat(String.valueOf(k.port)))
-                        .append(",");
-            }
-
-            builder.deleteCharAt(builder.length() - 1);
             List<String> nodes = new ArrayList<String>();
-            nodes.add(builder.toString());
+            for (Key k : keys) {
+                nodes.add(k.host.concat(":") + k.port);
+            }
 
             if (GlobalConfig.getInstance().getShadowRedisConfigs().size() > 0 && obj != null) {
 

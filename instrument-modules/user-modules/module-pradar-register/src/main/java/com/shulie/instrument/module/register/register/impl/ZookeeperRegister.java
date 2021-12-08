@@ -77,33 +77,13 @@ public class ZookeeperRegister implements Register {
     private ScheduledFuture scanJarFuture;
     private ScheduledFuture syncStatusFuture;
 
-    /**
-     * 获取agentId
-     *
-     * @return
-     */
-    public String getAgentId() {
-        String agentId = simulatorConfig.getAgentId();
-        if (StringUtils.isBlank(agentId)) {
-            return new StringBuilder(PradarCoreUtils.getLocalAddress()).append("-").append(RuntimeUtils.getPid())
-                .toString();
-        } else {
-            Properties properties = new Properties();
-            properties.setProperty("pid", String.valueOf(RuntimeUtils.getPid()));
-            properties.setProperty("hostname", PradarCoreUtils.getHostName());
-            properties.setProperty("ip", PradarCoreUtils.getLocalAddress());
-            PropertyPlaceholderHelper propertyPlaceholderHelper = new PropertyPlaceholderHelper("${", "}");
-            return propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
-        }
-    }
-
     private byte[] getHeartbeatDatas() {
         Map<String, String> map = new HashMap<String, String>();
         map.put("address", PradarCoreUtils.getLocalAddress());
         map.put("host", PradarCoreUtils.getHostName());
         map.put("name", RuntimeUtils.getName());
         map.put("pid", String.valueOf(RuntimeUtils.getPid()));
-        map.put("agentId", getAgentId());
+        map.put("agentId", Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
         map.put("agentVersion", simulatorConfig.getAgentVersion());
         map.put("simulatorVersion", simulatorConfig.getSimulatorVersion());
         map.put("md5", md5);
@@ -136,8 +116,12 @@ public class ZookeeperRegister implements Register {
             }
         }
         map.put("agentStatus", SimulatorStatus.getStatus());
-        map.put("errorMsg", "模块加载异常，请查看模块加载详情");
-
+        if (SimulatorStatus.isInstallFailed()){
+            map.put("errorMsg", "模块加载异常，请查看模块加载详情");
+        }
+        // 放入当前环境及用户信息
+        map.put("tenantAppKey", Pradar.PRADAR_TENANT_KEY);
+        map.put("envCode", Pradar.PRADAR_ENV_CODE);
         map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
         map.put("moduleLoadDetail",
             JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
@@ -403,7 +387,7 @@ public class ZookeeperRegister implements Register {
         this.md5 = registerOptions.getMd5();
         this.simulatorConfig = registerOptions.getSimulatorConfig();
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to init register zookeeper node. {}", getAgentId());
+            LOGGER.info("[pradar-register] prepare to init register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         String registerBasePath = null;
         if (StringUtils.endsWith(basePath, "/")) {
@@ -425,7 +409,7 @@ public class ZookeeperRegister implements Register {
             LOGGER.error("[pradar-register] ZookeeperRegister init error.", e);
             throw new PradarException(e);
         }
-        String client = Pradar.AGENT_ID;
+        String client = Pradar.AGENT_ID_CONTAIN_USER_INFO;
         try {
             this.zkClient.ensureDirectoryExists(registerBasePath);
         } catch (Throwable e) {
@@ -449,7 +433,7 @@ public class ZookeeperRegister implements Register {
             }
         });
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] init register zookeeper node successful. {}", getAgentId());
+            LOGGER.info("[pradar-register] init register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
     }
 
@@ -464,7 +448,7 @@ public class ZookeeperRegister implements Register {
             return;
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to register zookeeper node. {}", getAgentId());
+            LOGGER.info("[pradar-register] prepare to register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         try {
             this.jars = loadAllJars();
@@ -475,7 +459,7 @@ public class ZookeeperRegister implements Register {
             this.heartbeatNode.start();
             this.heartbeatNode.setData(getHeartbeatDatas());
             if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("[pradar-register] register zookeeper node successful. {}", getAgentId());
+                LOGGER.info("[pradar-register] register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
             }
         } catch (Throwable e) {
             LOGGER.error("[pradar-register] register node to zk for heartbeat node err: {}!", heartbeatPath, e);
@@ -513,7 +497,7 @@ public class ZookeeperRegister implements Register {
         }, 5, TimeUnit.SECONDS);
         isStarted.compareAndSet(false, true);
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] start to register zookeeper node successful. {}", getAgentId());
+            LOGGER.info("[pradar-register] start to register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
     }
 
@@ -561,7 +545,7 @@ public class ZookeeperRegister implements Register {
             return;
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to stop register zookeeper node. {}", getAgentId());
+            LOGGER.info("[pradar-register] prepare to stop register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         if (scanJarFuture != null && !scanJarFuture.isCancelled() && !scanJarFuture.isDone()) {
             scanJarFuture.cancel(true);
@@ -585,14 +569,14 @@ public class ZookeeperRegister implements Register {
             LOGGER.error("[register] stop zkClient failed!", e);
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] stop register zookeeper node successful. {}", getAgentId());
+            LOGGER.info("[pradar-register] stop register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
     }
 
     @Override
     public void refresh() {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to refresh register zookeeper node. {}", getAgentId());
+            LOGGER.info("[pradar-register] prepare to refresh register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         if (isStarted.get()) {
             try {
@@ -615,7 +599,7 @@ public class ZookeeperRegister implements Register {
             }, 0, TimeUnit.SECONDS);
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] refresh register zookeeper node successful. {}", getAgentId());
+            LOGGER.info("[pradar-register] refresh register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
 
     }

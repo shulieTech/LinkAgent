@@ -14,6 +14,20 @@
  */
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
+
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
@@ -126,7 +140,7 @@ public class ZookeeperRegister implements Register {
         map.put("name", name);
         map.put("pid", pid);
         if (agentId == null) {
-            agentId = getAgentId();
+            agentId = getAgentId(false);
         }
         map.put("agentId", agentId);
         String agentStatus = AgentStatus.getAgentStatus();
@@ -141,6 +155,12 @@ public class ZookeeperRegister implements Register {
         //设置jdk版本
         String java_version = System.getProperty("java.version");
         map.put("jdk", java_version == null ? "" : java_version);
+
+        // 放入当前环境及用户信息
+        map.put("tenantAppKey", agentConfig.getTenantAppKey());
+        map.put("envCode", agentConfig.getEnvCode());
+        map.put("userId", agentConfig.getUserId());
+
         //设置agent配置文件参数
         //        map.put("agentFileConfigs", JSON.toJSONString(agentConfig.getAgentFileConfigs()));
         //参数比较
@@ -196,9 +216,10 @@ public class ZookeeperRegister implements Register {
         Map<String, String> agentFileConfigs = agentConfig.getAgentFileConfigs();
         Map<String, Object> agentConfigFromUrl =
             ConfigUtils.getFixedAgentConfigFromUrl(agentConfig.getTroWebUrl(), agentConfig.getAppName()
-                , agentConfig.getAgentVersion(), agentConfig.getUserAppKey());
-        if (agentConfigFromUrl == null || agentConfigFromUrl.get("success") == null || !Boolean.valueOf(
-            agentConfigFromUrl.get("success").toString())) {
+                , agentConfig.getAgentVersion(), agentConfig.getHttpMustHeaders());
+        if (agentConfigFromUrl == null
+            || agentConfigFromUrl.get("success") == null
+            || !Boolean.parseBoolean(agentConfigFromUrl.get("success").toString())) {
             result.put("status", "false");
             result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
             return result;
@@ -230,22 +251,30 @@ public class ZookeeperRegister implements Register {
     /**
      * 获取agentId
      *
-     * @return
+     * @param needUserInfo 是否需要用户信息
+     * @return String字符串
      */
-    public String getAgentId() {
+    public String getAgentId(boolean needUserInfo) {
         String agentId = agentConfig.getAgentId();
         if (StringUtils.isBlank(agentId)) {
-            StringBuilder builder = new StringBuilder();
-            builder.append(AddressUtils.getLocalAddress()).append('-').append(PidUtils.getPid());
-            return builder.toString();
+            agentId = AddressUtils.getLocalAddress() + '-' + PidUtils.getPid();
         } else {
             Properties properties = new Properties();
             properties.setProperty("pid", String.valueOf(PidUtils.getPid()));
             properties.setProperty("hostname", AddressUtils.getHostName());
             properties.setProperty("ip", AddressUtils.getLocalAddress());
             PropertyPlaceholderHelper propertyPlaceholderHelper = new PropertyPlaceholderHelper("${", "}");
-            return propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
+            agentId = propertyPlaceholderHelper.replacePlaceholders(agentId, properties);
         }
+
+        // 新版探针兼容老版本的控制台，当envCode没有时不需要再agentId后加上租户信息
+        if (needUserInfo && !StringUtils.isBlank(agentConfig.getEnvCode())) {
+            // agentId中加上tenantAppKey、userId和currentEnv
+            agentId += "&" + agentConfig.getEnvCode()
+                + ":" + (StringUtils.isBlank(agentConfig.getUserId()) ? "" : agentConfig.getUserId())
+                + ":" + (StringUtils.isBlank(agentConfig.getTenantAppKey()) ? "" : agentConfig.getTenantAppKey());
+        }
+        return agentId;
     }
 
     @Override
@@ -282,7 +311,7 @@ public class ZookeeperRegister implements Register {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
-        String client = getAgentId();
+        String client = getAgentId(true);
         try {
             this.zkClient.ensureDirectoryExists(registerBasePath);
         } catch (Exception e) {

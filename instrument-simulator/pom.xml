@@ -5,7 +5,7 @@
 
     <groupId>io.shulie.instrument.simulator</groupId>
     <artifactId>simulator</artifactId>
-    <version>5.1.0</version>
+    <version>5.2.0</version>
     <packaging>pom</packaging>
 
     <name>simulator ${project.version}</name>
@@ -13,11 +13,12 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.6</jdk.version>
+        <!--suppress UnresolvedMavenProperty -->
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
-        <simulator.major.version>5.1.1</simulator.major.version>
-        <simulator.minor.version>3</simulator.minor.version>
+        <simulator.major.version>5.2.0</simulator.major.version>
+        <simulator.minor.version>0</simulator.minor.version>
     </properties>
 
     <profiles>
@@ -261,6 +262,7 @@
                 <artifactId>javax.servlet-api</artifactId>
                 <version>3.1.0</version>
             </dependency>
+
             <dependency>
                 <groupId>javax.annotation</groupId>
                 <artifactId>javax.annotation-api</artifactId>
@@ -316,6 +318,11 @@
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-server</artifactId>
                 <version>9.4.44.v20210927</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>javax.servlet-api</artifactId>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.jetty</groupId>

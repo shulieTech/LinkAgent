@@ -14,10 +14,10 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * @author angju
@@ -44,7 +44,8 @@ public class SimulatorDynamicConfig {
     private static final String CLUSTER_TEST_TRACE_SAMPLING_INTERVAL_KEY = "trace.ct.samplingInterval";
     private static final String SWITCH_SAVE_BUSINESS_TRACE_KEY = "pradar.switch.save.business.trace";
     private static final String BUS_REQUEST_RESPONSE_DATA_ALLOW_TRACE = "pradar.bus.request.response.data.allow.trace";
-    private static final String SHADOW_REQUEST_RESPONSE_DATA_ALLOW_TRACE = "pradar.shadow.request.response.data.allow.trace";
+    private static final String SHADOW_REQUEST_RESPONSE_DATA_ALLOW_TRACE
+        = "pradar.shadow.request.response.data.allow.trace";
 
     /**
      * trace 业务流量采样率
@@ -103,7 +104,6 @@ public class SimulatorDynamicConfig {
         this.shadowRequestResponseDataAllowTrace = getShadowRequestResponseDataAllowTrace(config);
     }
 
-
     public boolean isShadowRequestResponseDataAllowTrace() {
         return shadowRequestResponseDataAllowTrace;
     }
@@ -140,7 +140,9 @@ public class SimulatorDynamicConfig {
      * @return
      */
     public int getPradarTraceLogVersion(int defaultVersion) {
-        return pradarTraceLogVersion == null ? defaultVersion : pradarTraceLogVersion;
+        // 兼容不同版本共存, 配置文件中的优先级最高
+        //return pradarTraceLogVersion == null ? defaultVersion : pradarTraceLogVersion;
+        return defaultVersion;
     }
 
     /**
@@ -171,9 +173,10 @@ public class SimulatorDynamicConfig {
      * @return
      */
     public int getPradarMonitorLogVersion(int defaultVersion) {
-        return pradarMonitorLogVersion == null ? defaultVersion : pradarMonitorLogVersion;
+        // 兼容不同版本共存, 配置文件中的优先级最高
+        //return pradarMonitorLogVersion == null ? defaultVersion : pradarMonitorLogVersion;
+        return defaultVersion;
     }
-
 
     public Integer getPradarErrorLogVersion(Map<String, String> config) {
         try {
@@ -192,7 +195,9 @@ public class SimulatorDynamicConfig {
     }
 
     public int getPradarErrorLogVersion(int defaultVersion) {
-        return pradarErrorLogVersion == null ? defaultVersion : pradarErrorLogVersion;
+        // 兼容不同版本共存, 配置文件中的优先级最高
+        //return pradarErrorLogVersion == null ? defaultVersion : pradarErrorLogVersion;
+        return defaultVersion;
     }
 
     /**
@@ -318,7 +323,6 @@ public class SimulatorDynamicConfig {
         return s == null ? System.getProperty(key) : s;
     }
 
-
     /**
      * 是否允许采集业务的请求体、响应体
      *
@@ -339,7 +343,6 @@ public class SimulatorDynamicConfig {
             return false;
         }
     }
-
 
     /**
      * 是否允许采集压测的请求体、响应体

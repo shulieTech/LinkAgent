@@ -54,4 +54,8 @@ public class SimulatorStatus {
     public static String getErrorMsg() {
         return errorMsg;
     }
+
+    public static boolean isInstallFailed(){
+        return INSTALL_FAILED_STATUS.equals(current_status);
+    }
 }

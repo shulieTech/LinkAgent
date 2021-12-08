@@ -14,6 +14,11 @@
  */
 package com.pamirs.attach.plugin.command;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
+import javax.annotation.Resource;
+
 import com.pamirs.attach.plugin.command.handler.DispatcherCommandHandler;
 import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -28,10 +33,6 @@ import io.shulie.takin.channel.router.zk.ZkClientConfig;
 import io.shulie.takin.channel.type.CustomCommand;
 import org.kohsuke.MetaInfServices;
 
-import javax.annotation.Resource;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
 /**
  * 命令管道插件，负责与控制台之前的命令下发与执行
  *
@@ -39,7 +40,8 @@ import java.util.concurrent.ThreadFactory;
  * @since 2021/1/5 11:26
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = CommandChannelConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "命令下发模块,负责与控制台下发命令集成")
+@ModuleInfo(id = CommandChannelConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",
+    description = "命令下发模块,负责与控制台下发命令集成")
 public class CommandChannelPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private ClientChannel channel;
     @Resource
@@ -55,21 +57,22 @@ public class CommandChannelPlugin extends ModuleLifecycleAdapter implements Exte
         config.setZkServers(simulatorConfig.getZkServers());
         // 实例化客户端通道
         channel = new DefaultClientChannel()
-                .setChannelProtocol(new JsonChannelProtocol())
-                .setScheduledExecutorService(Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r, "Command-Channel-Heartbeat");
-                        t.setDaemon(true);
-                        return t;
-                    }
-                }))
-                .registerUserAppKey(simulatorConfig.getProperty(Pradar.USER_APP_KEY))
-                .registerHandler(new CustomCommand("DEFAULT_CHANNEL"),
-                        new DispatcherCommandHandler(commandInvoker))
-                .build(config);
+            .setChannelProtocol(new JsonChannelProtocol())
+            .setScheduledExecutorService(Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "Command-Channel-Heartbeat");
+                    t.setDaemon(true);
+                    return t;
+                }
+            }))
+            .registerTenantAndEnv(simulatorConfig.getProperty(Pradar.TENANT_APP_KEY),
+                simulatorConfig.getProperty(Pradar.ENV_CODE))
+            .registerHandler(new CustomCommand("DEFAULT_CHANNEL"),
+                new DispatcherCommandHandler(commandInvoker))
+            .build(config);
         // 注册监听AgendId 客户端唯一标识
-        channel.register(Pradar.getAgentId());
+        channel.register(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
         return true;
     }
 

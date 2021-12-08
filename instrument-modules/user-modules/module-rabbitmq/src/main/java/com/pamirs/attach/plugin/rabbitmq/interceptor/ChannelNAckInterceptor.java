@@ -51,9 +51,6 @@ public class ChannelNAckInterceptor extends CutoffInterceptorAdaptor {
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
-        if (ConfigCache.isWorkWithSpring()) {
-            return CutOffResult.passed();
-        }
         if (Pradar.isClusterTest()) {
             Channel target = (Channel)advice.getTarget();
             Channel ptChannel = ChannelHolder.isShadowChannel(target) ? target : ChannelHolder.getShadowChannel(

@@ -14,11 +14,21 @@
  */
 package com.shulie.instrument.simulator.core.manager.impl;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.shulie.instrument.simulator.api.ModuleException;
+import com.shulie.instrument.simulator.api.ProcessControlEntity;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.event.Event;
 import com.shulie.instrument.simulator.api.event.EventType;
-import com.shulie.instrument.simulator.api.listener.*;
+import com.shulie.instrument.simulator.api.listener.Destroyed;
+import com.shulie.instrument.simulator.api.listener.EventListener;
+import com.shulie.instrument.simulator.api.listener.InitializingBean;
+import com.shulie.instrument.simulator.api.listener.Interruptable;
+import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceAdapterListener;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -26,16 +36,10 @@ import com.shulie.instrument.simulator.api.util.ObjectIdUtils;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.classloader.BizClassLoaderHolder;
 import com.shulie.instrument.simulator.core.extension.ExtensionAdviceWrapContainer;
-import com.shulie.instrument.simulator.core.extension.GlobalAdviceWrapBuilders;
 import com.shulie.instrument.simulator.core.util.ReflectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 延迟加载的事件监听器代理
@@ -77,29 +81,31 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
     }
 
     @Override
-    public void onEvent(Event event) throws Throwable {
+    public ProcessControlEntity onEvent(Event event) throws Throwable {
         if (listeners == null || StringUtils.isBlank(listeners.getClassName())) {
-            return;
+            return null;
         }
         if (!isRunning.get()) {
-            return;
+            return null;
         }
 
         ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
         EventListenerWrapper listener = getEventListenerWrapper(bizClassLoader);
         if (listener == null) {
             logger.error("SIMULATOR: event listener onEvent failed, cause by event listener init failed.");
+            return ProcessControlEntity.none();
         } else {
             listener.setBizClassLoader(bizClassLoader);
             if (!listenerCostEnabled) {
-                listener.onEvent(event);
+                return listener.onEvent(event);
             } else {
                 long start = System.nanoTime();
                 try {
-                    listener.onEvent(event);
+                    return listener.onEvent(event);
                 } finally {
                     long end = System.nanoTime();
-                    logger.info("{} execute {} cost {} ns", listeners.getClassName(), EventType.name(event.getType()), (end - start));
+                    logger.info("{} execute {} cost {} ns", listeners.getClassName(), EventType.name(event.getType()),
+                        (end - start));
                 }
             }
         }
@@ -186,24 +192,27 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
                     try {
                         coreModule.injectResource(listener);
                     } catch (ModuleException e) {
-                        logger.warn("SIMULATOR: can't inject resource into event listener. by module={} listener:{}", coreModule.getModuleId(), listeners, e);
+                        logger.warn("SIMULATOR: can't inject resource into event listener. by module={} listener:{}",
+                            coreModule.getModuleId(), listeners, e);
                     }
                     if (listener instanceof InitializingBean) {
-                        ((InitializingBean) listener).init();
+                        ((InitializingBean)listener).init();
                     }
                     EventListener eventListener = null;
                     if (listener instanceof EventListener) {
-                        eventListener = (EventListener) listener;
+                        eventListener = (EventListener)listener;
 
                         if (listeners.getScopeName() != null && listeners.getEventListenerCallback() != null) {
-                            eventListener = listeners.getEventListenerCallback().onCall(eventListener, listeners.getScopeName(), listeners.getExecutionPolicy());
+                            eventListener = listeners.getEventListenerCallback().onCall(eventListener,
+                                listeners.getScopeName(), listeners.getExecutionPolicy());
                         }
                         eventListener.setBizClassLoader(bizClassLoader);
                     } else if (listener instanceof AdviceListener) {
-                        AdviceListener adviceListener = (AdviceListener) listener;
+                        AdviceListener adviceListener = (AdviceListener)listener;
                         adviceListener = new ExtensionAdviceWrapContainer(adviceListener);
                         if (listeners.getScopeName() != null && listeners.getAdviceListenerCallback() != null) {
-                            adviceListener = listeners.getAdviceListenerCallback().onCall(adviceListener, listeners.getScopeName(), listeners.getExecutionPolicy());
+                            adviceListener = listeners.getAdviceListenerCallback().onCall(adviceListener,
+                                listeners.getScopeName(), listeners.getExecutionPolicy());
                         }
                         adviceListener.setBizClassLoader(bizClassLoader);
                         eventListener = new AdviceAdapterListener(adviceListener);
@@ -225,7 +234,8 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
                     }
                 }
             } catch (Throwable e) {
-                logger.error("SIMULATOR: event listener onEvent failed, cause by event listener init failed:{}.", listeners.getClassName(), e);
+                logger.error("SIMULATOR: event listener onEvent failed, cause by event listener init failed:{}.",
+                    listeners.getClassName(), e);
                 return null;
             }
         }
@@ -253,10 +263,12 @@ public class LazyEventListenerProxy extends EventListener implements Interruptab
             }
             return this.isInterrupt;
         } catch (ClassNotFoundException e) {
-            logger.error("SIMULATOR: can't found class {} by ModuleClassLoader:{}.", listeners.getClassName(), coreModule.getClassLoaderFactory().getDefaultClassLoader(), e);
+            logger.error("SIMULATOR: can't found class {} by ModuleClassLoader:{}.", listeners.getClassName(),
+                coreModule.getClassLoaderFactory().getDefaultClassLoader(), e);
             return false;
         } catch (Throwable e) {
-            logger.error("SIMULATOR: can't found class {} by ModuleClassLoader:{}.", listeners.getClassName(), coreModule.getClassLoaderFactory().getDefaultClassLoader(), e);
+            logger.error("SIMULATOR: can't found class {} by ModuleClassLoader:{}.", listeners.getClassName(),
+                coreModule.getClassLoaderFactory().getDefaultClassLoader(), e);
             return false;
         }
     }

@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>system-modules</artifactId>
-        <version>5.1.0</version>
+        <version>5.2.0</version>
     </parent>
     <artifactId>instrument-simulator-memory-module</artifactId>
     <name>instrument-simulator-memory-module ${simulator.major.version}</name>

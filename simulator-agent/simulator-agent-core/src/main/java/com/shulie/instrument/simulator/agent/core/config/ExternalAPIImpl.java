@@ -42,8 +42,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ExternalAPIImpl implements ExternalAPI {
     private final static Logger logger = LoggerFactory.getLogger(ExternalAPIImpl.class);
 
-    private AgentConfig agentConfig;
-    private AtomicBoolean isWarnAlready;
+    private final AgentConfig agentConfig;
+    private final AtomicBoolean isWarnAlready;
 
     private final static String COMMAND_URL = "api/agent/application/node/probe/operate";
 
@@ -77,7 +77,7 @@ public class ExternalAPIImpl implements ExternalAPI {
                 builder.append("?appName=").append(agentConfig.getAppName()).append("&agentId=").append(
                     agentConfig.getAgentId());
             }
-            return DownloadUtils.download(builder.toString(), targetPath, agentConfig.getUserAppKey());
+            return DownloadUtils.download(builder.toString(), targetPath, agentConfig.getHttpMustHeaders());
         }
         return null;
     }
@@ -97,7 +97,7 @@ public class ExternalAPIImpl implements ExternalAPI {
         if (StringUtils.isNotBlank(errorMsg)) {
             body.put("errorMsg", errorMsg);
         }
-        HttpUtils.doPost(url, agentConfig.getUserAppKey(), JSON.toJSONString(body));
+        HttpUtils.doPost(url, agentConfig.getHttpMustHeaders(), JSON.toJSONString(body));
     }
 
     @Override
@@ -122,7 +122,7 @@ public class ExternalAPIImpl implements ExternalAPI {
             url += "?appName=" + agentConfig.getAppName() + "&agentId=" + agentConfig.getAgentId();
         }
 
-        String resp = ConfigUtils.doConfig(url, agentConfig.getUserAppKey());
+        String resp = ConfigUtils.doConfig(url, agentConfig.getHttpMustHeaders());
         if (StringUtils.isBlank(resp)) {
             logger.warn("AGENT: fetch agent command got a err response. {}", url);
             return CommandPacket.NO_ACTION_PACKET;
@@ -157,7 +157,7 @@ public class ExternalAPIImpl implements ExternalAPI {
         }
         String agentHeartUrl = joinUrl(webUrl, HEART_URL);
 
-        HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getUserAppKey(), JSON.toJSONString(heartRequest));
+        HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, new HashMap<String, String>(1), JSON.toJSONString(heartRequest));
 
         if (null == resp) {
             logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);

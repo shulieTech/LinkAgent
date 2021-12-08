@@ -74,7 +74,7 @@ abstract class BaseInterceptor extends AdviceListener {
                 double cost = (end - start) / 1000000.0;
                 if (cost > minInterceptorCost) {
                     String name = (this instanceof ScopedInterceptor) ?
-                            ((ScopedInterceptor) this).getUnderWrap().getClass().getName() : getClass().getName();
+                        ((ScopedInterceptor)this).getUnderWrap().getClass().getName() : getClass().getName();
                     TIME_CONSUMING_LOGGER.info("interceptor execute before cost interceptor={}, cost={}ms", name, cost);
                 }
             }
@@ -126,7 +126,7 @@ abstract class BaseInterceptor extends AdviceListener {
                 double cost = (end - start) / 1000000.0;
                 if (cost > minInterceptorCost) {
                     String name = (this instanceof ScopedInterceptor) ?
-                            ((ScopedInterceptor) this).getUnderWrap().getClass().getName() : getClass().getName();
+                        ((ScopedInterceptor)this).getUnderWrap().getClass().getName() : getClass().getName();
                     TIME_CONSUMING_LOGGER.info("interceptor execute after cost interceptor={}, cost={}ms", name, cost);
                 }
             }
@@ -154,8 +154,9 @@ abstract class BaseInterceptor extends AdviceListener {
                 double cost = (end - start) / 1000000.0;
                 if (cost > minInterceptorCost) {
                     String name = (this instanceof ScopedInterceptor) ?
-                            ((ScopedInterceptor) this).getUnderWrap().getClass().getName() : getClass().getName();
-                    TIME_CONSUMING_LOGGER.info("interceptor execute exception cost interceptor={}, cost={}ms", name, cost);
+                        ((ScopedInterceptor)this).getUnderWrap().getClass().getName() : getClass().getName();
+                    TIME_CONSUMING_LOGGER.info("interceptor execute exception cost interceptor={}, cost={}ms", name,
+                        cost);
                 }
             }
         }

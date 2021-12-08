@@ -17,6 +17,7 @@ package com.pamirs.pradar.interceptor;
 import com.pamirs.pradar.CutOffResult;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.message.Result;
 
 /**
  * 挡板的拦截器实现, 这里需要注意的是不能使用其他的拦截器实现挡板拦截器，因为档板的返回事件触发是在
@@ -32,7 +33,7 @@ abstract class CutoffInterceptor extends BaseInterceptor {
     public final void before(Advice advice) throws Throwable {
         CutOffResult cutOffResult = cutoff(advice);
         if (cutOffResult.isCutoff()) {
-            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), cutOffResult.getResult());
+            advice.returnImmediately(cutOffResult.getResult());
         }
     }
 

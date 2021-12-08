@@ -12,23 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.log4j.interceptor.v2.appender.creator;
+package com.pamirs.attach.plugin.log4j.interceptor.v1.creator;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.appender.FileAppender;
-import org.apache.logging.log4j.core.appender.RollingFileAppender;
-import org.apache.logging.log4j.core.appender.RollingRandomAccessFileAppender;
+import org.apache.log4j.Appender;
+import org.apache.log4j.DailyRollingFileAppender;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.RollingFileAppender;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/11/08 7:48 下午
  */
-public class ShadowAppenderCreatorFacade {
+public class ShadowAppenderCreatorFacadeV1 {
 
-    private static final Map<Class<? extends Appender>, ShadowAppenderCreator> map = new HashMap<>();
+    private static final Map<Class<? extends Appender>, ShadowAppenderCreatorV1> map = new HashMap<>();
 
     static {
         for (AppenderCreatorBuilders value : AppenderCreatorBuilders.values()) {
@@ -37,7 +37,7 @@ public class ShadowAppenderCreatorFacade {
     }
 
     public static <T extends Appender> T createShadowAppenderCreator(T appender, String bizShadowLogPath) {
-        ShadowAppenderCreator<T> shadowAppenderCreator = map.get(appender.getClass());
+        ShadowAppenderCreatorV1<T> shadowAppenderCreator = map.get(appender.getClass());
         if (shadowAppenderCreator == null) {
             return null;
         }
@@ -45,22 +45,22 @@ public class ShadowAppenderCreatorFacade {
     }
 
     public static void registerShadowAppenderCreator(
-        Class<? extends Appender> appenderClass, ShadowAppenderCreator shadowAppenderCreator) {
+        Class<? extends Appender> appenderClass, ShadowAppenderCreatorV1 shadowAppenderCreator) {
         map.put(appenderClass, shadowAppenderCreator);
     }
 
-    private interface AppenderCreatorBuilder<T extends Appender> {
-        ShadowAppenderCreator<T> build();
+    public interface AppenderCreatorBuilderV1<T extends Appender> {
+        ShadowAppenderCreatorV1<T> build();
     }
 
-    private enum AppenderCreatorBuilders implements AppenderCreatorBuilder {
+    public enum AppenderCreatorBuilders implements AppenderCreatorBuilderV1 {
 
         FILE(FileAppender.class) {
 
             private final FileShadowAppenderCreator instance = new FileShadowAppenderCreator();
 
             @Override
-            public ShadowAppenderCreator<?> build() {
+            public ShadowAppenderCreatorV1<?> build() {
                 return instance;
             }
         },
@@ -70,18 +70,18 @@ public class ShadowAppenderCreatorFacade {
             private final RollingFileShadowAppenderCreator instance = new RollingFileShadowAppenderCreator();
 
             @Override
-            public ShadowAppenderCreator<?> build() {
+            public ShadowAppenderCreatorV1<?> build() {
                 return instance;
             }
         },
 
-        ROLLING_RANDOM_ACCESS_FILE(RollingRandomAccessFileAppender.class) {
+        DAILY_ROLLING_FILE(DailyRollingFileAppender.class) {
 
-            private final RollingRandomAccessFileShadowAppenderCreator instance
-                = new RollingRandomAccessFileShadowAppenderCreator();
+            private final DailyRollingFileShadowAppenderCreator instance
+                = new DailyRollingFileShadowAppenderCreator();
 
             @Override
-            public ShadowAppenderCreator<?> build() {
+            public ShadowAppenderCreatorV1<?> build() {
                 return instance;
             }
         },

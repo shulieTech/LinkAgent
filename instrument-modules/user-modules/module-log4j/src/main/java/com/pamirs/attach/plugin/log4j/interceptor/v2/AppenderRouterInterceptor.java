@@ -14,8 +14,8 @@
  */
 package com.pamirs.attach.plugin.log4j.interceptor.v2;
 
-import com.pamirs.attach.plugin.log4j.Log4jConstants;
 import com.pamirs.attach.plugin.log4j.destroy.Log4jDestroy;
+import com.pamirs.attach.plugin.log4j.message.WithTestFlagMessage;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
@@ -23,9 +23,6 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.FileAppender;
-import org.apache.logging.log4j.core.appender.RollingFileAppender;
-import org.apache.logging.log4j.core.appender.RollingRandomAccessFileAppender;
 import org.apache.logging.log4j.core.config.AppenderControl;
 
 /**
@@ -37,6 +34,7 @@ import org.apache.logging.log4j.core.config.AppenderControl;
 public class AppenderRouterInterceptor extends CutoffInterceptorAdaptor {
     protected boolean isBusinessLogOpen;
     protected String bizShadowLogPath;
+    private final String TEST_FLAG_MESSAGE_CLASS_NAME = WithTestFlagMessage.class.getName();
 
     public AppenderRouterInterceptor(boolean isBusinessLogOpen, String bizShadowLogPath) {
         this.isBusinessLogOpen = isBusinessLogOpen;
@@ -58,10 +56,21 @@ public class AppenderRouterInterceptor extends CutoffInterceptorAdaptor {
         if (appender == null) {
             return CutOffResult.passed();
         }
-        if (!(appender instanceof FileAppender) && !(appender instanceof RollingFileAppender)
-            && !(appender instanceof RollingRandomAccessFileAppender)) {
-            return CutOffResult.passed();
+        if (AppenderTypes.isFileAppender(appender)) {
+            return fileRoute(logEvent, appender);
         }
+        if (AppenderTypes.isRemoteAppender(appender)) {
+            return testPropagate(logEvent, appender);
+        }
+        return CutOffResult.passed();
+    }
+
+    public CutOffResult testPropagate(LogEvent logEvent, Appender appender) {
+        Pradar.setClusterTest(isClusterTest(logEvent));
+        return CutOffResult.passed();
+    }
+
+    public CutOffResult fileRoute(LogEvent logEvent, Appender appender) {
         String name = appender.getName();
         if (isClusterTest(logEvent)) {
             return name.startsWith(Pradar.CLUSTER_TEST_PREFIX) ? CutOffResult.passed() : CutOffResult.cutoff(null);
@@ -71,9 +80,8 @@ public class AppenderRouterInterceptor extends CutoffInterceptorAdaptor {
     }
 
     private boolean isClusterTest(LogEvent logEvent) {
-        if (Pradar.isClusterTest()) {
-            return true;
-        }
-        return logEvent.getContextData().containsKey(Log4jConstants.TEST_MARK);
+        //注意：这里不要判断Pradar.isClusterTest()，因为testPropagate方法有可能已经污染了当前线程，按WithTestFlagMessage为准
+        //由于类加载器的关系 instanceof WithTestFlagMessage 不安全
+        return TEST_FLAG_MESSAGE_CLASS_NAME.equals(logEvent.getMessage().getClass().getName());
     }
 }

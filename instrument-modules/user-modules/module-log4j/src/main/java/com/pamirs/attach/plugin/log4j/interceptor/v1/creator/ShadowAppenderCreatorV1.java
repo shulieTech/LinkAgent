@@ -12,18 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.log4j.file;
+package com.pamirs.attach.plugin.log4j.interceptor.v1.creator;
+
+import org.apache.log4j.Appender;
 
 /**
- * @Auther: vernon
- * @Date: 2020/12/15 14:26
- * @Description:
+ * @author jirenhe | jirenhe@shulie.io
+ * @since 2021/11/05 11:50 上午
  */
-public interface FileHandler {
-    Object callBack();
+public interface ShadowAppenderCreatorV1<T extends Appender> {
 
-
-
+    T creatorPtAppender(T appender, String bizShadowLogPath);
 }
-
-

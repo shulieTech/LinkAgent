@@ -14,16 +14,13 @@
  */
 package com.pamirs.attach.plugin.log4j.interceptor.v2.async;
 
-import java.util.Collections;
-import java.util.List;
-
-import com.pamirs.attach.plugin.log4j.Log4jConstants;
 import com.pamirs.attach.plugin.log4j.destroy.Log4jDestroy;
+import com.pamirs.attach.plugin.log4j.message.WithTestFlagMessage;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.apache.logging.log4j.core.config.Property;
+import org.apache.logging.log4j.message.Message;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -32,20 +29,16 @@ import org.apache.logging.log4j.core.config.Property;
 @Destroyable(Log4jDestroy.class)
 public class AsyncTestMarkSetInterceptor extends ParametersWrapperInterceptorAdaptor {
 
-    private final static Property TEST_FLAG_PROPERTY = Property.createProperty(Log4jConstants.TEST_MARK, "1");
-
     @Override
     protected Object[] getParameter0(Advice advice) throws Throwable {
         if (!Pradar.isClusterTest()) {
             return advice.getParameterArray();
         }
         Object[] args = advice.getParameterArray();
-        if (args[5] == null) {
-            args[5] = Collections.singletonList(TEST_FLAG_PROPERTY);
-        } else {
-            List<Property> properties = (List<Property>)args[5];
-            properties.add(TEST_FLAG_PROPERTY);
+        if (!(args[3] instanceof Message)) {
+            return args;
         }
+        args[3] = new WithTestFlagMessage((Message)args[3]);
         return args;
     }
 }

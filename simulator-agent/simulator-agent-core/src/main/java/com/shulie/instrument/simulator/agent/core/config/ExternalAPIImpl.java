@@ -157,7 +157,7 @@ public class ExternalAPIImpl implements ExternalAPI {
         }
         String agentHeartUrl = joinUrl(webUrl, HEART_URL);
 
-        HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, new HashMap<String, String>(1), JSON.toJSONString(heartRequest));
+        HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(), JSON.toJSONString(heartRequest));
 
         if (null == resp) {
             logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);

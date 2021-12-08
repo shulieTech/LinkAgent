@@ -15,22 +15,7 @@
 package com.shulie.instrument.simulator.agent.core;
 
 import cn.hutool.crypto.SecureUtil;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.instrument.Instrumentation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
-
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
@@ -38,16 +23,11 @@ import com.shulie.instrument.simulator.agent.core.download.FtpOperationClient;
 import com.shulie.instrument.simulator.agent.core.download.OssOperationClient;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
-import com.shulie.instrument.simulator.agent.core.util.*;
-import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
-import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.ReloadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
+import com.shulie.instrument.simulator.agent.core.util.UpgradeFileUtils;
+import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import com.sun.tools.attach.VirtualMachine;
@@ -422,7 +402,7 @@ public class AgentLauncher {
                     + "&commandId=" + commandId + "&taskId=" + taskId;
 
 
-            HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl,new HashMap<String, String>(1), heartCommand.getPacket().getExtrasString());
+            HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl,agentConfig.getHttpMustHeaders(), heartCommand.getPacket().getExtrasString());
 
             if (content == null) {
                 commandExecuteResponse.setSuccess(false);

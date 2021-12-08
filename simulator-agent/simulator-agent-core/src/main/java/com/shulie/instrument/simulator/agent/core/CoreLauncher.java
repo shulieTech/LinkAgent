@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
-import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.core.classloader.ProviderClassLoader;
 import com.shulie.instrument.simulator.agent.core.config.AgentConfigImpl;
 import com.shulie.instrument.simulator.agent.core.config.CoreConfig;
@@ -288,16 +287,17 @@ public class CoreLauncher {
             LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay,
                 unit.toString());
         }
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    launcher.shutdown(new StopCommand<CommandPacket>(null));
-                } catch (Throwable e) {
-                    LOGGER.error("SIMULATOR: execute shutdown hook error.", e);
-                }
-            }
-        }));
+        //有这个勾子的话，kill pid杀死应用，会卸载所有的模块，这时流量是还在的，就会漏数
+//        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                try {
+//                    launcher.shutdown(new StopCommand<CommandPacket>(null));
+//                } catch (Throwable e) {
+//                    LOGGER.error("SIMULATOR: execute shutdown hook error.", e);
+//                }
+//            }
+//        }));
     }
 
     private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {

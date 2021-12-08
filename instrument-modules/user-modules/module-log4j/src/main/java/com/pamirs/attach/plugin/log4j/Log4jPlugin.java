@@ -112,14 +112,16 @@ public class Log4jPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     private void addV2AsyncPradarMark() {
 
-        enhanceTemplate.enhance(this, "org.apache.logging.log4j.core.impl.DefaultLogEventFactory",
+        enhanceTemplate.enhance(this, "org.apache.logging.log4j.spi.AbstractLogger",
             new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {
-                    target.getDeclaredMethod("createEvent",
-                            "java.lang.String", "org.apache.logging.log4j.Marker", "java.lang.String",
-                            "org.apache.logging.log4j.Level", "org.apache.logging.log4j.message.Message",
-                            "java.util.List", "java.lang.Throwable").
+                    target.getDeclaredMethod("logMessageSafely",
+                            "java.lang.String",
+                            "org.apache.logging.log4j.Level",
+                            "org.apache.logging.log4j.Marker",
+                            "org.apache.logging.log4j.message.Message",
+                            "java.lang.Throwable").
                         addInterceptor(Listeners.of(AsyncTestMarkSetInterceptor.class));
                 }
             });

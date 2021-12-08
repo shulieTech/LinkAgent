@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.log4j.interceptor.v2.appender.creator;
 
 import java.nio.file.attribute.PosixFilePermissions;
 
+import com.pamirs.attach.plugin.log4j.policy.TriggeringPolicies;
 import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.logging.log4j.core.appender.RollingRandomAccessFileAppender;
@@ -42,9 +43,8 @@ public class RollingRandomAccessFileShadowAppenderCreator implements ShadowAppen
         if (advertisement != null) {
             builder.withAdvertise(true);
         }
-        builder.withStrategy(manager.getRolloverStrategy())
-            .withPolicy(manager.getTriggeringPolicy())
-            .withFilePattern(appender.getFilePattern());
+        builder.withPolicy(TriggeringPolicies.copy(manager.getTriggeringPolicy()))
+            .withFilePattern(bizShadowLogPath + appender.getFilePattern());
         builder.withAppend(true)
             .withFileName(ptFileName)
             .withAdvertiseURI(Reflect.on(manager).get("advertiseURI"))

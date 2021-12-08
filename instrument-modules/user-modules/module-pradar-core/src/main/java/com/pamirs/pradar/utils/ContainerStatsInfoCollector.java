@@ -149,7 +149,12 @@ public class ContainerStatsInfoCollector {
         }
         // 网卡
         if (networkSpeed == 0) {
-            this.networkSpeed = Integer.parseInt(FileUtil.readFile(String.format("/sys/class/net/%s/speed", eth)).get(0));
+            List<String> strings = FileUtil.readFile(String.format("/sys/class/net/%s/speed", eth));
+            if(strings.isEmpty()){
+                // 如果读取带宽速率文件失败, 则默认1000Mbs
+                strings.add("1000");
+            }
+            this.networkSpeed = Integer.parseInt(strings.get(0));
         }
 
         // 用户赫兹

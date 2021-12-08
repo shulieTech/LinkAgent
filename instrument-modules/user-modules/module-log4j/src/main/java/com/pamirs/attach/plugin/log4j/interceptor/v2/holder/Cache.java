@@ -35,14 +35,8 @@ public class Cache {
     //已经配置过的LoggerConfig
     static private final Set<LoggerConfig> configedLoggerConfigs = new HashSet<LoggerConfig>();
 
-    static private ConcurrentWeakHashMap fileManagerCache = new ConcurrentWeakHashMap();
-
-    static private ConcurrentWeakHashMap docCache = new ConcurrentWeakHashMap();
-
     public static void release() {
         shadowAppenders.clear();
-        fileManagerCache.clear();
-        docCache.clear();
         configedLoggerConfigs.clear();
         AppenderCache.NULL_APPENDER = null;
     }
@@ -86,30 +80,5 @@ public class Cache {
 
     public interface Consumer<T> {
         void accept(T t);
-    }
-
-    public static class FileManagerCache {
-        public static Object get(Object t) {
-            if (t == null) {
-                return null;
-            }
-            return fileManagerCache.get(t);
-        }
-
-        public static void put(Object var1, Object var2) {
-            fileManagerCache.put(var1, var2);
-        }
-
-    }
-
-    public static class DocumentCache {
-        public static Object get(Object t) {
-            return docCache.get(t);
-        }
-
-        public static void put(Object var1, Object var2) {
-            docCache.put(var1, var2);
-        }
-
     }
 }

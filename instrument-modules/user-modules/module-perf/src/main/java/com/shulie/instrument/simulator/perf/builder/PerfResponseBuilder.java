@@ -43,7 +43,7 @@ public class PerfResponseBuilder {
 
     public static PerfResponse build(List<ThreadInfo> threadInfoList, GcInfo gcInfo, MemoryInfo memoryInfo) {
         PerfResponse response = new PerfResponse();
-        response.setAgentId(Pradar.getAgentId());
+        response.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
         response.setAppIp(PradarCoreUtils.getLocalAddress());
         response.setAppName(AppNameUtils.appName());
         response.setProcessId(RuntimeUtils.getPid());

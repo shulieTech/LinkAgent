@@ -14,8 +14,15 @@
  */
 package com.shulie.instrument.simulator.core.util;
 
-
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -27,11 +34,11 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
+
 public abstract class HttpUtils {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
-
-    private static final String userAppKey = userAppKey();
 
     public static String doGet(String url) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
@@ -46,16 +53,26 @@ public abstract class HttpUtils {
             SocketAddress address = new InetSocketAddress(host, port);
             socket = new Socket();
             socket.connect(address, 1000);
-            BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
-            String request = "GET " + url + " HTTP/1.1\r\n"
-                    + "Host: " + host + ":" + port + "\r\n"
-                    + "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
-                    + "Accept-Charset: GBK,utf-8;q=0.7,*;q=0.3\r\n"
-                    + "Accept-Language: zh-CN,zh;q=0.8\r\n"
-                    + "Connection: close\r\n"
-                    + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
-                    + "\r\n";
-            bufferedWriter.write(request);
+            BufferedWriter bufferedWriter = new BufferedWriter(
+                new OutputStreamWriter(socket.getOutputStream(), UTF_8));
+
+            StringBuilder request = new StringBuilder("GET ").append(url).append(" HTTP/1.1\r\n")
+                .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                .append("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n")
+                .append("Accept-Charset: GBK,utf-8;q=0.7,*;q=0.3\r\n")
+                .append("Accept-Language: zh-CN,zh;q=0.8\r\n")
+                .append("Connection: close\r\n");
+            Map<String, String> mustHeaders = getHttpMustHeaders();
+            if (!mustHeaders.isEmpty()) {
+                for (Map.Entry<String, String> entry : mustHeaders.entrySet()) {
+                    if (!StringUtils.isBlank(entry.getValue())) {
+                        request.append(entry.getKey()).append(": ").append(entry.getValue()).append("\r\n");
+                    }
+                }
+            }
+            request.append("\r\n");
+
+            bufferedWriter.write(request.toString());
             bufferedWriter.flush();
             input = socket.getInputStream();
 
@@ -102,18 +119,28 @@ public abstract class HttpUtils {
         Socket socket = null;
         try {
             SocketAddress address = new InetSocketAddress(host, port);
-            String request = "GET " + url + " HTTP/1.1\r\n"
-                    + "Host: " + host + ":" + port + "\r\n"
-                    + "Connection: Keep-Alive\r\n"
-                    + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
-                    + "\r\n";
+
+            StringBuilder request = new StringBuilder("GET ").append(url).append(" HTTP/1.1\r\n")
+                .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                .append("Connection: Keep-Alive\r\n");
+
+            Map<String, String> mustHeaders = getHttpMustHeaders();
+            if (!mustHeaders.isEmpty()) {
+                for (Map.Entry<String, String> entry : mustHeaders.entrySet()) {
+                    if (!StringUtils.isBlank(entry.getValue())) {
+                        request.append(entry.getKey()).append(": ").append(entry.getValue()).append("\r\n");
+                    }
+                }
+            }
+            request.append("\r\n");
+
             socket = new Socket();
             // 设置建立连接超时时间 1s
             socket.connect(address, 1000);
             // 设置读取数据超时时间 5s
             socket.setSoTimeout(5000);
             output = socket.getOutputStream();
-            output.write(request.getBytes(UTF_8));
+            output.write(request.toString().getBytes(UTF_8));
             output.flush();
             input = socket.getInputStream();
             String status = readLine(input);
@@ -131,12 +158,10 @@ public abstract class HttpUtils {
 
             // JDK 1.6 Socket没有实现Closeable接口
             if (socket != null) {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (final IOException ioe) {
-                        // ignore
-                    }
+                try {
+                    socket.close();
+                } catch (final IOException ioe) {
+                    // ignore
                 }
             }
 
@@ -154,7 +179,6 @@ public abstract class HttpUtils {
     }
 
     public static String doPost(String host, int port, String url, String body) {
-        String userAppKey = userAppKey();
         InputStream input = null;
         OutputStream output = null;
         Socket socket = null;
@@ -165,16 +189,26 @@ public abstract class HttpUtils {
             socket.setSoTimeout(5000); // 设置读取数据超时时间 5s
             output = socket.getOutputStream();
 
-            String request =
-                    "POST " + url + " HTTP/1.1\r\nHost: " + host + ":" + port
-                            + "\r\nConnection: Keep-Alive\r\n"
-                            + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n");
-            if (body != null && !body.isEmpty()) {
-                request = request + "Content-Length: " + body.getBytes().length + "\r\n";
-                request = request + "Content-Type: application/json\r\n";
+            StringBuilder request = new StringBuilder("POST ").append(url).append(" HTTP/1.1\r\n")
+                .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                .append("Connection: Keep-Alive\r\n");
+
+            Map<String, String> mustHeaders = getHttpMustHeaders();
+            if (!mustHeaders.isEmpty()) {
+                for (Map.Entry<String, String> entry : mustHeaders.entrySet()) {
+                    if (!StringUtils.isBlank(entry.getValue())) {
+                        request.append(entry.getKey()).append(": ").append(entry.getValue()).append("\r\n");
+                    }
+                }
             }
-            request = request + "\r\n";
-            output.write(request.getBytes(UTF_8));
+
+            if (body != null && !body.isEmpty()) {
+                request.append("Content-Length: ").append(body.getBytes().length).append("\r\n")
+                    .append("Content-Type: application/json\r\n");
+            }
+
+            request.append("\r\n");
+            output.write(request.toString().getBytes(UTF_8));
 
             if (body != null && !body.isEmpty()) {
                 output.write(body.getBytes(UTF_8));
@@ -188,8 +222,7 @@ public abstract class HttpUtils {
             }
             Map<String, List<String>> headers = readHeaders(input);
             input = wrapperInput(headers, input);
-            String result = toString(input);
-            return result;
+            return toString(input);
         } catch (IOException e) {
             return null;
         } finally {
@@ -198,12 +231,10 @@ public abstract class HttpUtils {
 
             // JDK 1.6 Socket没有实现Closeable接口
             if (socket != null) {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (final IOException ioe) {
-                        // ignore
-                    }
+                try {
+                    socket.close();
+                } catch (final IOException ioe) {
+                    // ignore
                 }
             }
 
@@ -284,7 +315,7 @@ public abstract class HttpUtils {
     }
 
     public static Map<String, List<String>> readHeaders(InputStream input)
-            throws IOException {
+        throws IOException {
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
@@ -303,7 +334,7 @@ public abstract class HttpUtils {
     }
 
     public static void exhaustInputStream(InputStream inStream)
-            throws IOException {
+        throws IOException {
         byte buffer[] = new byte[1024];
         while (inStream.read(buffer) >= 0) {
         }
@@ -319,7 +350,8 @@ public abstract class HttpUtils {
         }
     }
 
-    private static Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?",
+        Pattern.CASE_INSENSITIVE);
 
     private static HostPort getHostPortUrlFromUrl(String url) {
         String domain = url;
@@ -351,19 +383,37 @@ public abstract class HttpUtils {
         @Override
         public String toString() {
             return "HostPort{" +
-                    "host='" + host + '\'' +
-                    ", port=" + port +
-                    ", url='" + url + '\'' +
-                    '}';
+                "host='" + host + '\'' +
+                ", port=" + port +
+                ", url='" + url + '\'' +
+                '}';
         }
     }
 
-    private static String userAppKey() {
-        String key = System.getProperty("user.app.key");
-        if (key == null || key.isEmpty()) {
+    private final static String TENANT_APP_KEY_STR = "tenant.app.key";
+
+    private final static String PRADAR_USER_ID_STR = "pradar.user.id";
+
+    private final static String PRADAR_ENV_CODE_STR = "pradar.env.code";
+
+    private static String getProperty(String key) {
+        String val = System.getProperty(key);
+        if (val == null || val.isEmpty()) {
             return null;
         } else {
-            return key;
+            return val;
         }
+    }
+
+    private static Map<String, String> getHttpMustHeaders() {
+        Map<String, String> headers = new HashMap();
+        String envCode = getProperty(PRADAR_ENV_CODE_STR);
+        // 新探针兼容老版本控制台，所以userAppKey和tenantAppKey都传
+        headers.put("userAppKey", getProperty(TENANT_APP_KEY_STR));
+        headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR));
+        headers.put("userId", getProperty(PRADAR_USER_ID_STR));
+        headers.put("envCode", envCode);
+
+        return headers;
     }
 }

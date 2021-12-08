@@ -14,6 +14,11 @@
  */
 package com.shulie.instrument.simulator.core.logback;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
+
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.CoreConstants;
 import ch.qos.logback.core.FileAppender;
@@ -25,11 +30,7 @@ import ch.qos.logback.core.rolling.helper.CompressionMode;
 import ch.qos.logback.core.rolling.helper.FileNamePattern;
 import ch.qos.logback.core.util.ContextUtil;
 import com.shulie.instrument.simulator.core.util.CustomerReflectUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 
 import static ch.qos.logback.core.CoreConstants.CODES_URL;
 import static ch.qos.logback.core.CoreConstants.MORE_INFO_PREFIX;
@@ -43,10 +44,10 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     TriggeringPolicy<E> triggeringPolicy;
     RollingPolicy rollingPolicy;
 
-    static private String RFA_NO_TP_URL = CODES_URL + "#rfa_no_tp";
-    static private String RFA_NO_RP_URL = CODES_URL + "#rfa_no_rp";
-    static private String COLLISION_URL = CODES_URL + "#rfa_collision";
-    static private String RFA_LATE_FILE_URL = CODES_URL + "#rfa_file_after";
+    static private final String RFA_NO_TP_URL = CODES_URL + "#rfa_no_tp";
+    static private final String RFA_NO_RP_URL = CODES_URL + "#rfa_no_rp";
+    static private final String COLLISION_URL = CODES_URL + "#rfa_collision";
+    static private final String RFA_LATE_FILE_URL = CODES_URL + "#rfa_file_after";
 
     @Override
     public void start() {
@@ -103,8 +104,8 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
 
     private boolean checkForFileAndPatternCollisions() {
         if (triggeringPolicy instanceof RollingPolicyBase) {
-            final RollingPolicyBase base = (RollingPolicyBase) triggeringPolicy;
-//            final FileNamePattern fileNamePattern = base.fileNamePattern;
+            final RollingPolicyBase base = (RollingPolicyBase)triggeringPolicy;
+            //            final FileNamePattern fileNamePattern = base.fileNamePattern;
             final FileNamePattern fileNamePattern = CustomerReflectUtils.getFileNamePattern(base);
             // no use checking if either fileName or fileNamePattern are null
             if (fileNamePattern != null && fileName != null) {
@@ -118,12 +119,11 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     private boolean checkForCollisionsInPreviousRollingFileAppenders() {
         boolean collisionResult = false;
         if (triggeringPolicy instanceof RollingPolicyBase) {
-            final RollingPolicyBase base = (RollingPolicyBase) triggeringPolicy;
-//            final FileNamePattern fileNamePattern = base.fileNamePattern;
+            final RollingPolicyBase base = (RollingPolicyBase)triggeringPolicy;
+            //            final FileNamePattern fileNamePattern = base.fileNamePattern;
             final FileNamePattern fileNamePattern = CustomerReflectUtils.getFileNamePattern(base);
             boolean collisionsDetected = innerCheckForFileNamePatternCollisionInPreviousRFA(fileNamePattern);
-            if (collisionsDetected)
-                collisionResult = true;
+            if (collisionsDetected) {collisionResult = true;}
         }
         return collisionResult;
     }
@@ -131,7 +131,8 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     private boolean innerCheckForFileNamePatternCollisionInPreviousRFA(FileNamePattern fileNamePattern) {
         boolean collisionsDetected = false;
         @SuppressWarnings("unchecked")
-        Map<String, FileNamePattern> map = (Map<String, FileNamePattern>) context.getObject(CoreConstants.RFA_FILENAME_PATTERN_COLLISION_MAP);
+        Map<String, FileNamePattern> map = (Map<String, FileNamePattern>)context.getObject(
+            CoreConstants.RFA_FILENAME_PATTERN_COLLISION_MAP);
         if (map == null) {
             return collisionsDetected;
         }
@@ -151,14 +152,11 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     public void stop() {
         super.stop();
 
-        if (rollingPolicy != null)
-            rollingPolicy.stop();
-        if (triggeringPolicy != null)
-            triggeringPolicy.stop();
+        if (rollingPolicy != null) {rollingPolicy.stop();}
+        if (triggeringPolicy != null) {triggeringPolicy.stop();}
 
         Map<String, FileNamePattern> map = ContextUtil.getFilenamePatternCollisionMap(context);
-        if (map != null && getName() != null)
-            map.remove(getName());
+        if (map != null && getName() != null) {map.remove(getName());}
 
     }
 
@@ -239,48 +237,57 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
         super.subAppend(event);
     }
 
-
     private volatile Field messageFiled = null;
-//    private volatile Field formattedMessageFiled = null;
+
+    private volatile Field formattedMessageFiled = null;
 
     /**
      * 拼消息
+     *
      * @param event
      * @return
      */
-    private E eventMsgHandler(E event){
-        if (event instanceof LoggingEvent){
+    private E eventMsgHandler(E event) {
+        if (event instanceof LoggingEvent) {
             try {
-                if (messageFiled == null){
+                if (messageFiled == null) {
                     messageFiled = event.getClass().getDeclaredField("message");
                     messageFiled.setAccessible(true);
                 }
-            }catch (NoSuchFieldException e){
+                if (formattedMessageFiled == null) {
+                    formattedMessageFiled = event.getClass().getDeclaredField("formattedMessage");
+                    formattedMessageFiled.setAccessible(true);
+                }
+            } catch (NoSuchFieldException e) {
                 //ignore
             }
-//            try {
-//                if (formattedMessageFiled == null){
-//                    formattedMessageFiled = event.getClass().getDeclaredField("formattedMessage");
-//                    formattedMessageFiled.setAccessible(true);
-//                }
-//            }catch (NoSuchFieldException e){
-//                //ignore
-//            }
+            //            try {
+            //                if (formattedMessageFiled == null){
+            //                    formattedMessageFiled = event.getClass().getDeclaredField("formattedMessage");
+            //                    formattedMessageFiled.setAccessible(true);
+            //                }
+            //            }catch (NoSuchFieldException e){
+            //                //ignore
+            //            }
 
             String errorMsg = ((LoggingEvent)event).getMessage();
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("127.0.0.1").append("|");
             stringBuilder.append(0).append("|");
             stringBuilder.append(System.currentTimeMillis()).append("|");
-            stringBuilder.append(System.getProperty("user.app.key")).append("|");
+            if (StringUtils.isNotBlank(System.getProperty("pradar.env.code"))) {
+                stringBuilder.append(System.getProperty("tenant.app.key")).append("|");
+                stringBuilder.append(System.getProperty("pradar.env.code")).append("|");
+                stringBuilder.append(System.getProperty("pradar.user.id")).append("|");
+            }
             stringBuilder.append(System.getProperty("agentId")).append("|");
             stringBuilder.append(System.getProperty("app_name")).append("|");
             stringBuilder.append(errorMsg);
             try {
                 messageFiled.set(event, stringBuilder.toString());
-//                formattedMessageFiled.set(event, stringBuilder.toString());
-            }catch (Exception e){}
-//            ((LoggingEvent)event).setMessage(errorMsg);
+                formattedMessageFiled.set(event, stringBuilder.toString());
+            } catch (Exception e) {}
+            //            ((LoggingEvent)event).setMessage(errorMsg);
         }
         return event;
     }
@@ -304,7 +311,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     public void setRollingPolicy(RollingPolicy policy) {
         rollingPolicy = policy;
         if (rollingPolicy instanceof TriggeringPolicy) {
-            triggeringPolicy = (TriggeringPolicy<E>) policy;
+            triggeringPolicy = (TriggeringPolicy<E>)policy;
         }
 
     }
@@ -312,7 +319,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     public void setTriggeringPolicy(TriggeringPolicy<E> policy) {
         triggeringPolicy = policy;
         if (policy instanceof RollingPolicy) {
-            rollingPolicy = (RollingPolicy) policy;
+            rollingPolicy = (RollingPolicy)policy;
         }
     }
 }

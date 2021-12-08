@@ -112,12 +112,13 @@ public class CoreConfig {
 
     public CoreConfig(String agentHome) {
         //暂时无动态参数，不开启
-//        initFetchConfigTask();
+        //        initFetchConfigTask();
         this.agentHome = agentHome;
         this.configFilePath = agentHome + File.separator + CONFIG_PATH_NAME;
         this.providerFilePath = agentHome + File.separator + PROVIDER_PATH_NAME;
         this.simulatorHome = agentHome + File.separator + AGENT_PATH_NAME;
-        this.simulatorJarPath = this.simulatorHome + File.separator + "simulator" + File.separator + "instrument-simulator-agent.jar";
+        this.simulatorJarPath = this.simulatorHome + File.separator + "simulator" + File.separator
+            + "instrument-simulator-agent.jar";
         this.logConfigFilePath = this.configFilePath + File.separator + "simulator-agent-logback.xml";
         File configFile = new File(configFilePath, "agent.properties");
         Properties properties = new Properties();
@@ -150,6 +151,7 @@ public class CoreConfig {
                 try {
                     configIn.close();
                 } catch (IOException e) {
+                    //ignore
                 }
             }
         }
@@ -181,9 +183,10 @@ public class CoreConfig {
             public void run() {
                 try {
                     Map<String, Object> dynamicConfigs = ConfigUtils.getDynamicAgentConfigFromUrl(getTroWebUrl(),
-                        getAppName(), "", getUserAppKey());
-                    if (dynamicConfigs == null || dynamicConfigs.get("success") == null || !Boolean.valueOf(
-                        dynamicConfigs.get("success").toString())) {
+                        getAppName(), "", getHttpMustHeaders());
+                    if (dynamicConfigs == null
+                        || dynamicConfigs.get("success") == null
+                        || !Boolean.parseBoolean(dynamicConfigs.get("success").toString())) {
                         logger.error("getDynamicAgentConfigFromUrl failed");
                         return;
                     }
@@ -194,7 +197,7 @@ public class CoreConfig {
                     //                        }
                     //                    }
                 } catch (Throwable e) {
-                    logger.error("CoreConfig getRunnableTask error {}", e);
+                    logger.error("CoreConfig getRunnableTask error ", e);
                 }
             }
         };
@@ -436,7 +439,7 @@ public class CoreConfig {
     public String getAgentId() {
         String agentId = internalGetAgentId();
         if (StringUtils.isBlank(agentId)) {
-            return new StringBuilder(AddressUtils.getLocalAddress()).append("-").append(PidUtils.getPid()).toString();
+            return AddressUtils.getLocalAddress() + "-" + PidUtils.getPid();
         } else {
             Properties properties = new Properties();
             properties.setProperty("pid", String.valueOf(PidUtils.getPid()));
@@ -461,37 +464,63 @@ public class CoreConfig {
         return value;
     }
 
-    public String getUserAppKey() {
-        String value = System.getProperty("user.app.key");
+    public String getTenantAppKey() {
+        // 兼容老版本，如果有user.app.key，则优先使用user.app.key
+        String value = getProperty("user.app.key");
         if (StringUtils.isBlank(value)) {
-            value = getProperty("user.app.key", null);
+            value = getProperty("tenant.app.key");
+        }
+        return value;
+    }
+
+    /**
+     * 获取配置信息 优先级：启动参数 > 配置文件 > 环境变量
+     *
+     * @param key 配置key
+     * @return value
+     */
+    private String getProperty(String key) {
+        String value = System.getProperty(key, null);
+        if (StringUtils.isBlank(value)) {
+            value = getProperty(key, null);
         }
         if (StringUtils.isBlank(value)) {
-            value = System.getenv("user.app.key");
+            value = System.getenv(key);
         }
         return value;
     }
 
     public String getTroWebUrl() {
-        String value = System.getProperty("tro.web.url");
-        if (StringUtils.isBlank(value)) {
-            value = getProperty("tro.web.url", null);
-        }
-        if (StringUtils.isBlank(value)) {
-            value = System.getenv("tro.web.url");
-        }
-        return value;
+        return getProperty("tro.web.url");
     }
 
     public String getUserId() {
-        String value = System.getProperty("pradar.user.id");
-        if (StringUtils.isBlank(value)) {
-            value = getProperty("pradar.user.id", null);
-        }
-        if (StringUtils.isBlank(value)) {
-            value = System.getenv("pradar.user.id");
-        }
-        return value;
+        return getProperty("pradar.user.id");
+    }
+
+    /**
+     * 获取当前环境
+     *
+     * @return 当前环境
+     */
+    public String getEnvCode() {
+        return getProperty("pradar.env.code");
+    }
+
+    /**
+     * 获取发起http请求中必须包含的head
+     *
+     * @return map集合
+     */
+    public Map<String, String> getHttpMustHeaders() {
+        Map<String, String> headerMap = new HashMap<String, String>();
+        // 新探针兼容老版本的控制台，所以userAppKey和tenantAppKey都传
+        headerMap.put("userAppKey", getTenantAppKey());
+        headerMap.put("tenantAppKey", getTenantAppKey());
+        headerMap.put("userId", getUserId());
+        headerMap.put("envCode", getEnvCode());
+
+        return headerMap;
     }
 
     /**

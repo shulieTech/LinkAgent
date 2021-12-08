@@ -14,12 +14,11 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
-
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -31,26 +30,37 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public abstract class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 
-    public static String doGet(String url, String userAppKey) {
+    public static String doGet(String url, Map<String, String> headers) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
-        return doGet(hostPort.host, hostPort.port, userAppKey, hostPort.url);
+        return doGet(hostPort.host, hostPort.port, headers, hostPort.url);
     }
 
-    public static String doGet(String host, int port, String userAppKey, String url) {
+    public static String doGet(String host, int port, Map<String, String> headers, String url) {
         InputStream input = null;
         OutputStream output = null;
         Socket socket = null;
-        String request = "GET " + url + " HTTP/1.1\r\n"
-                + "Host: " + host + ":" + port + "\r\n"
-                + "Connection: Keep-Alive\r\n"
-                + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n")
-                + "\r\n";
+        StringBuilder request = new StringBuilder("GET ").append(url).append(" HTTP/1.1\r\n")
+            .append("Host: ").append(host).append(":").append(port).append("\r\n")
+            .append("Connection: Keep-Alive\r\n");
+
+        if (!headers.isEmpty()) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                if (!StringUtils.isBlank(entry.getValue())) {
+                    request.append(entry.getKey()).append(": ").append(entry.getValue()).append("\r\n");
+                }
+            }
+        }
+        request.append("\r\n");
+
         try {
             SocketAddress address = new InetSocketAddress(host, port);
             socket = new Socket();
@@ -59,15 +69,15 @@ public abstract class HttpUtils {
             // 设置读取数据超时时间 5s
             socket.setSoTimeout(10000);
             output = socket.getOutputStream();
-            output.write(request.getBytes(UTF_8));
+            output.write(request.toString().getBytes(UTF_8));
             output.flush();
             input = socket.getInputStream();
             String status = readLine(input);
             if (status == null || !status.contains("200")) {
                 return null;
             }
-            Map<String, List<String>> headers = readHeaders(input);
-            input = wrapperInput(headers, input);
+            Map<String, List<String>> inputHeaders = readHeaders(input);
+            input = wrapperInput(inputHeaders, input);
             return toString(input);
         } catch (IOException e) {
             logger.warn("do http request fail!: url=" + url + "; reqeust:" + request, e);
@@ -78,31 +88,38 @@ public abstract class HttpUtils {
 
             // JDK 1.6 Socket没有实现Closeable接口
             if (socket != null) {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (final IOException ioe) {
-                        // ignore
-                    }
+                try {
+                    socket.close();
+                } catch (final IOException ioe) {
+                    // ignore
                 }
             }
 
         }
     }
 
-    public static HttpResult doPost(String url, String userAppKey, String body) {
+    public static HttpResult doPost(String url, Map<String, String> headers, String body) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
-        return doPost(hostPort.host, hostPort.port, hostPort.url, userAppKey, body);
+        return doPost(hostPort.host, hostPort.port, hostPort.url, headers, body);
     }
 
-    public static HttpResult doPost(String host, int port, String url, String userAppKey, String body) {
+    public static HttpResult doPost(String host, int port, String url, Map<String, String> headers, String body) {
         InputStream input = null;
         OutputStream output = null;
         Socket socket = null;
-        String request =
-                "POST " + url + " HTTP/1.1\r\nHost: " + host + ":" + port
-                        + "\r\nConnection: Keep-Alive\r\n"
-                        + (userAppKey == null ? "" : "UserAppKey: " + userAppKey + "\r\n");
+
+        StringBuilder request = new StringBuilder("POST ").append(url).append(" HTTP/1.1\r\n")
+            .append("Host: ").append(host).append(":").append(port).append("\r\n")
+            .append("Connection: Keep-Alive\r\n");
+
+        if (!headers.isEmpty()) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                if (!StringUtils.isBlank(entry.getValue())) {
+                    request.append(entry.getKey()).append(": ").append(entry.getValue()).append("\r\n");
+                }
+            }
+        }
+
         try {
             SocketAddress address = new InetSocketAddress(host, port);
             socket = new Socket();
@@ -111,11 +128,11 @@ public abstract class HttpUtils {
             output = socket.getOutputStream();
 
             if (body != null && !body.isEmpty()) {
-                request = request + "Content-Length: " + body.getBytes().length + "\r\n";
-                request = request + "Content-Type: application/json\r\n";
+                request.append("Content-Length: ").append(body.getBytes().length).append("\r\n")
+                    .append("Content-Type: application/json\r\n");
             }
-            request = request + "\r\n";
-            output.write(request.getBytes(UTF_8));
+            request.append("\r\n");
+            output.write(request.toString().getBytes(UTF_8));
 
             if (body != null && !body.isEmpty()) {
                 output.write(body.getBytes(UTF_8));
@@ -127,11 +144,12 @@ public abstract class HttpUtils {
             String[] statusArr = StringUtils.split(statusStr, ' ');
             int status = 500;
             try {
-                status = Integer.valueOf(statusArr[1]);
+                status = Integer.parseInt(statusArr[1]);
             } catch (Throwable e) {
+                // ignore
             }
-            Map<String, List<String>> headers = readHeaders(input);
-            input = wrapperInput(headers, input);
+            Map<String, List<String>> inputHeaders = readHeaders(input);
+            input = wrapperInput(inputHeaders, input);
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (IOException e) {
@@ -143,12 +161,10 @@ public abstract class HttpUtils {
 
             // JDK 1.6 Socket没有实现Closeable接口
             if (socket != null) {
-                if (socket != null) {
-                    try {
-                        socket.close();
-                    } catch (final IOException ioe) {
-                        // ignore
-                    }
+                try {
+                    socket.close();
+                } catch (final IOException ioe) {
+                    // ignore
                 }
             }
 
@@ -229,7 +245,7 @@ public abstract class HttpUtils {
     }
 
     public static Map<String, List<String>> readHeaders(InputStream input)
-            throws IOException {
+        throws IOException {
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
@@ -248,7 +264,7 @@ public abstract class HttpUtils {
     }
 
     public static void exhaustInputStream(InputStream inStream)
-            throws IOException {
+        throws IOException {
         byte buffer[] = new byte[1024];
         while (inStream.read(buffer) >= 0) {
         }
@@ -264,7 +280,8 @@ public abstract class HttpUtils {
         }
     }
 
-    private static Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?",
+        Pattern.CASE_INSENSITIVE);
 
     private static HostPort getHostPortUrlFromUrl(String url) {
         String domain = url;
@@ -296,10 +313,10 @@ public abstract class HttpUtils {
         @Override
         public String toString() {
             return "HostPort{" +
-                    "host='" + host + '\'' +
-                    ", port=" + port +
-                    ", url='" + url + '\'' +
-                    '}';
+                "host='" + host + '\'' +
+                ", port=" + port +
+                ", url='" + url + '\'' +
+                '}';
         }
     }
 

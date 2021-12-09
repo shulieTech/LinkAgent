@@ -52,7 +52,11 @@ public class JedisSentinelShadowServerInterceptor extends CutoffInterceptorAdapt
         }
         Object target = advice.getTarget();
         try {
-            JedisSentinelPool pool = (JedisSentinelPool) JedisSentinelFactory.getFactory().getClient(target);
+            final Object object = JedisSentinelFactory.getFactory().getClient(target);
+            if(!(object instanceof JedisSentinelPool)){
+                return CutOffResult.PASSED;
+            }
+            JedisSentinelPool pool = (JedisSentinelPool) object;
             Jedis client = pool.getResource();
             return CutOffResult.cutoff(Reflect.on(client)
                     .call(advice.getBehavior().getName()

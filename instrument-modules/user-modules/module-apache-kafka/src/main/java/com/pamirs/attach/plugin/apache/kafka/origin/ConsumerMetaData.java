@@ -60,7 +60,7 @@ public class ConsumerMetaData {
         Set<String> topics = consumer.subscription();
         try {
             Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
-            String groupId = ReflectUtil.reflectSlience(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            Object groupId = ReflectUtil.reflectSlience(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
             if (groupId == null) {
                 groupId = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
                 if (groupId == null) {
@@ -68,7 +68,13 @@ public class ConsumerMetaData {
                 }
             }
             String bootstrapServers = KafkaUtils.getBootstrapServers(consumer);
-            return new ConsumerMetaData(topics, groupId, bootstrapServers);
+            String groupIdStr = "";
+            if(groupId instanceof String){
+                groupIdStr = (String)groupId;
+            }else {
+                groupIdStr = ReflectUtil.reflectSlience(groupId, "value");
+            }
+            return new ConsumerMetaData(topics, groupIdStr, bootstrapServers);
         } catch (ReflectException e) {
             throw new PressureMeasureError(e);
         }

@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.spi.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
@@ -306,9 +307,12 @@ public class HttpAgentScheduler implements AgentScheduler {
         CommandPacket commandPacket = getLatestCommandPacket();
         if (commandPacket == null) {
             installLocalOrRemote();
+        } else {
+            logger.error("命令未清除,无法安装探针,命令详情:" + JSON.toJSONString(commandPacket));
         }
 
-        startScheduler();
+
+    startScheduler();
     }
 
     private List<CommandExecuteResponse> handleCommandExecuteResponse(CommandExecuteResponse commandExecuteResponse){

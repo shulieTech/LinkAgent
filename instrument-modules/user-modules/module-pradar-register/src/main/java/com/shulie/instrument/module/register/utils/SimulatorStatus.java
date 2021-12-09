@@ -39,7 +39,7 @@ public class SimulatorStatus {
     }
 
     public static void installed(){
-        current_status = "INSTALLED";
+        current_status = INSTALLED_STATUS;
     }
 
     public static String getStatus() {

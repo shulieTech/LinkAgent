@@ -412,6 +412,16 @@ public class AgentLauncher {
                 return commandExecuteResponse;
             }
 
+            if (content.getStatus() != 200){
+                commandExecuteResponse.setSuccess(false);
+                commandExecuteResponse.setResult(null);
+                commandExecuteResponse.setMsg(content.getResult());
+                commandExecuteResponse.setExecuteStatus("failed");
+                return commandExecuteResponse;
+            }
+
+
+
             Response response = JSON.parseObject(content.getResult(), Response.class);
 
             if (logger.isInfoEnabled()) {

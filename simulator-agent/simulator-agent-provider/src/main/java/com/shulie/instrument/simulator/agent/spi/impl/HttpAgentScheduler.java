@@ -488,6 +488,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             getSimulatorStatus();
             getSimulatorDetails(heartRequest);
             List<CommandPacket> heartCommandPackets = getCommandPacketByHeart(heartRequest);
+
             boolean asyncTaskResult = true;
             if (null != heartCommandPackets && !heartCommandPackets.isEmpty() && HeartCommandUtils.futureMapSize() < 30){
                 for (final CommandPacket commandPacket : heartCommandPackets){
@@ -501,7 +502,7 @@ public class HttpAgentScheduler implements AgentScheduler {
                         CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
                         HeartCommandUtils.putCommandExecuteResponse(commandPacket.getId(), commandPacket.getUuid(), commandExecuteResponse);
                         //同步失败则直接跳出，所有任务不执行
-                        if (!commandExecuteResponse.isSuccess() || "1".equals(commandExecuteResponse.getExecuteStatus())){
+                        if (!commandExecuteResponse.isSuccess() || "failed".equals(commandExecuteResponse.getExecuteStatus())){
                             asyncTaskResult = false;
                             break;
                         } else if (HeartCommandConstants.startCommandId == commandPacket.getId()){

@@ -36,6 +36,7 @@ public class ShadowDataSourceSPIManager {
     }
 
     public static boolean addServiceProvider(ShadowDataSourceServiceProvider provider) {
+        logger.info("add shadow datasource service provider named :{}", provider.getClass().getName());
         if (!provider.getClass().isAnnotationPresent(ShadowDataSourceProvider.class)) {
             logger.warn("service provider {} not annotated by annotation {}", provider.getClass().getName(), ShadowDataSourceProvider.class.getName());
             return false;

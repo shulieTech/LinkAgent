@@ -146,10 +146,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
             }
             initTopicField(producerRecord);
             setTopic(producerRecord, topic);
-            if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
-                if (isHeadReadOnly(producerRecord)) {
-                    return;
-                }
+            if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
                 HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
                 headerProcessor.setHeader(producerRecord, PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
             }
@@ -182,10 +179,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
         final ProducerRecord producerRecord = (ProducerRecord)args[0];
-        if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
-            if (isHeadReadOnly(producerRecord)) {
-                return null;
-            }
+        if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
             return new ContextTransfer() {
                 @Override
                 public void transfer(String key, String value) {

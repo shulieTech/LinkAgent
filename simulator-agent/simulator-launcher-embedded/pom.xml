@@ -51,6 +51,7 @@
             </build>
             <properties>
                 <jdk.version>1.9</jdk.version>
+                <!--suppress UnresolvedMavenProperty -->
                 <jdk.home>${env.JAVA_9_HOME}</jdk.home>
             </properties>
         </profile>
@@ -81,6 +82,7 @@
                     <debug>true</debug>
                     <optimize>true</optimize>
                     <compilerVersion>${jdk.version}</compilerVersion>
+                    <!--suppress UnresolvedMavenProperty -->
                     <executable>${jdk.home}/bin/javac</executable>
                 </configuration>
             </plugin>

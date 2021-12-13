@@ -20,9 +20,9 @@ public class ShadowDataSourceSPIManager {
 
     private static final String splitter = "##";
 
-    private static Map<String, ShadowDataSourceServiceProvider> serviceProviders;
+    private static Map<String, ShadowDataSourceServiceProvider> serviceProviders = new HashMap<String, ShadowDataSourceServiceProvider>();
 
-    static {
+    /*static {
         serviceProviders = new HashMap<String, ShadowDataSourceServiceProvider>();
         for (ShadowDataSourceServiceProvider provider : ServiceLoader.load(ShadowDataSourceServiceProvider.class)) {
             if (!provider.getClass().isAnnotationPresent(ShadowDataSourceProvider.class)) {
@@ -31,7 +31,7 @@ public class ShadowDataSourceSPIManager {
             }
             serviceProviders.put(provider.getClass().getAnnotation(ShadowDataSourceProvider.class).value(), provider);
         }
-    }
+    }*/
 
     public static boolean addServiceProvider(ShadowDataSourceServiceProvider provider) {
         if (!provider.getClass().isAnnotationPresent(ShadowDataSourceProvider.class)) {
@@ -120,7 +120,7 @@ public class ShadowDataSourceSPIManager {
             return null;
         }
         String[] split = innerConfig.split(splitter, 2);
-        return new AbstractMap.SimpleEntry<String, String>(split[0], "${" + split[1] + "}");
+        return new AbstractMap.SimpleEntry<String, String>(split[0],  split[1] );
     }
 
 

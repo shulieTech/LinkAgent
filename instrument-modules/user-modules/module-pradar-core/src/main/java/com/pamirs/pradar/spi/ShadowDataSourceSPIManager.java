@@ -3,13 +3,11 @@ package com.pamirs.pradar.spi;
 
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ServiceLoader;
+import java.util.*;
 
 /**
  * @author jiangjibo
@@ -22,9 +20,9 @@ public class ShadowDataSourceSPIManager {
 
     private static final String splitter = "##";
 
-    private static Map<String, ShadowDataSourceServiceProvider> serviceProviders;
+    private static Map<String, ShadowDataSourceServiceProvider> serviceProviders = new HashMap<String, ShadowDataSourceServiceProvider>();
 
-    static {
+    /*static {
         serviceProviders = new HashMap<String, ShadowDataSourceServiceProvider>();
         for (ShadowDataSourceServiceProvider provider : ServiceLoader.load(ShadowDataSourceServiceProvider.class)) {
             if (!provider.getClass().isAnnotationPresent(ShadowDataSourceProvider.class)) {
@@ -33,7 +31,7 @@ public class ShadowDataSourceSPIManager {
             }
             serviceProviders.put(provider.getClass().getAnnotation(ShadowDataSourceProvider.class).value(), provider);
         }
-    }
+    }*/
 
     public static boolean addServiceProvider(ShadowDataSourceServiceProvider provider) {
         logger.info("add shadow datasource service provider named :{}", provider.getClass().getName());
@@ -42,52 +40,64 @@ public class ShadowDataSourceSPIManager {
             return false;
         }
         String name = provider.getClass().getAnnotation(ShadowDataSourceProvider.class).value();
-        if (!serviceProviders.containsKey(name)) {
-            serviceProviders.put(name, provider);
+        if (serviceProviders.containsKey(name)) {
+            return true;
         }
+        logger.info("add shadow datasource service provider :{}", provider.getClass().getName());
+        serviceProviders.put(name, provider);
         return true;
     }
 
-    public static boolean refreshAllShadowDatabaseConfigs() {
-        boolean result = true;
-        for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {
-            if (config.getProperties() != null && config.getProperties().containsKey(ShadowDataSourceServiceProvider.spi_key)) {
+    public static Map<String, ShadowDatabaseConfig> refreshAllShadowDatabaseConfigs(Map<String, ShadowDatabaseConfig> datasourceConfigs) {
+
+        Map<String, ShadowDatabaseConfig> newConfig = new HashMap<String, ShadowDatabaseConfig>();
+
+        for (Map.Entry<String, ShadowDatabaseConfig> entry : datasourceConfigs.entrySet()) {
+            ShadowDatabaseConfig config = entry.getValue();
+            if (!config.getShadowUsername().startsWith("$") && !config.getShadowPassword().startsWith("$")) {
+                newConfig.put(entry.getKey(), entry.getValue());
                 continue;
             }
-            result = result && refreshShadowDatabaseConfig(config);
+            logger.info("start process shadow datasource config :{}", entry.getKey());
+            boolean result = refreshShadowDatabaseConfig(config);
+            if (result) {
+                String key = DbUrlUtils.getKey(config.getUrl(), config.getUsername());
+                logger.info("success process shadow datasource config, url:{}, shadow userName{}, shadow password length :{}",
+                        config.getShadowUrl(), config.getShadowUsername(), config.getShadowPassword().length());
+                newConfig.put(key, config);
+            }else{
+                logger.error("failed process shadow datasource config, shadow userName:{}", config.getShadowUsername());
+            }
         }
-        return result;
+
+        return newConfig;
+
     }
 
     public static boolean refreshShadowDatabaseConfig(ShadowDatabaseConfig config) {
         String userName = config.getShadowUsername();
         String pwd = config.getShadowPassword();
-        String providerName = null;
-        if (userName.startsWith("${")) {
-            Map.Entry<String, String> userValue = extractConfigValue(userName);
-            if (userValue == null) {
-                return false;
-            }
-            providerName = userValue.getKey();
-            config.setShadowUsername(userValue.getValue());
+        Map.Entry<String, String> userValue = extractConfigValue(userName);
 
+        String providerName = userValue.getKey();
+        config.setShadowUsername(userValue.getValue());
+
+        Map.Entry<String, String> pwdValue = extractConfigValue(pwd);
+
+        if (providerName != null && !providerName.equals(pwdValue.getKey())) {
+            logger.warn("shadow data source config processed by spi not with same plugin {}, {}", providerName, pwdValue.getKey());
+            return false;
         }
-        if (pwd.startsWith("${")) {
-            Map.Entry<String, String> pwdValue = extractConfigValue(pwd);
-            if (pwdValue == null) {
-                return false;
-            }
-            if (providerName != null && !providerName.equals(pwdValue.getKey())) {
-                logger.warn("shadow data source config processed by spi not with same plugin {}, {}", providerName, pwdValue.getKey());
-                return false;
-            }
-            config.setShadowPassword(pwdValue.getValue());
-        }
+        config.setShadowPassword(pwdValue.getValue());
 
         if (providerName == null || !serviceProviders.containsKey(providerName)) {
             logger.warn("not ShadowDatabaseConfigServiceProvider plugin named with {}", providerName);
             return false;
         }
+
+        logger.info("process shadow datasource with spi, username:{}, password:{}, providerName:{}",
+                config.getShadowUsername(), config.getShadowPassword(), providerName);
+
         boolean result = serviceProviders.get(providerName).processShadowDatabaseConfig(config);
         if (result) {
             // 成功的话添加标记
@@ -97,6 +107,9 @@ public class ShadowDataSourceSPIManager {
                 config.setProperties(properties);
             }
             properties.put(ShadowDataSourceServiceProvider.spi_key, providerName);
+        } else {
+            logger.error("failed process shadow datasource by service provider {}, shadow url:{}, shadow userName:{}, shadow password:{}",
+                    providerName, config.getShadowUrl(), config.getShadowUsername(), config.getShadowPassword());
         }
         return result;
     }
@@ -108,7 +121,7 @@ public class ShadowDataSourceSPIManager {
             return null;
         }
         String[] split = innerConfig.split(splitter, 2);
-        return new AbstractMap.SimpleEntry<String, String>(split[0], "${" + split[1] + "}");
+        return new AbstractMap.SimpleEntry<String, String>(split[0],  split[1] );
     }
 
 

@@ -407,16 +407,16 @@ public class ShadowDatabaseConfig {
         if (shadowUrl != null ? !shadowUrl.equals(that.shadowUrl) : that.shadowUrl != null) {return false;}
         if (shadowDriverClassName != null ? !shadowDriverClassName.equals(that.shadowDriverClassName)
             : that.shadowDriverClassName != null) {return false;}
-        if (shadowUsername != null ? !shadowUsername.equals(that.shadowUsername) : that.shadowUsername != null) {
-            return false;
-        }
-        if (shadowPassword != null ? !shadowPassword.equals(that.shadowPassword) : that.shadowPassword != null) {
-            return false;
-        }
+
         if (shadowSchema != null ? !shadowSchema.equals(that.shadowSchema) : that.shadowSchema != null) {return false;}
         if (businessShadowTables != null ? !businessShadowTables.equals(that.businessShadowTables)
-            : that.businessShadowTables != null) {return false;}
-        return properties != null ? properties.equals(that.properties) : that.properties == null;
+                : that.businessShadowTables != null) {return false;}
+
+        // shadow username 和 password 会被替换
+        if(properties != null && properties.get("extra") != null && that.properties != null && properties.get("extra").equals(this.getProperty("extra"))){
+            return true;
+        }
+        return false;
     }
 
     @Override

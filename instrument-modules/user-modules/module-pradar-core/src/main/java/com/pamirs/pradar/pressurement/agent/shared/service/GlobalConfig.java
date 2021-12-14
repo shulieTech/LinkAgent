@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -282,10 +282,13 @@ public final class GlobalConfig {
         return shadowDatabaseConfigs == null || shadowDatabaseConfigs.isEmpty();
     }
 
-    public void setShadowDatabaseConfigs(Map<String, ShadowDatabaseConfig> map) {
+    public void setShadowDatabaseConfigs(Map<String, ShadowDatabaseConfig> map, boolean refresh) {
         clearShadowDatasourceConfigs();
-        this.shadowDatabaseConfigs.putAll(map);
-        ShadowDataSourceSPIManager.refreshAllShadowDatabaseConfigs();
+        if (refresh) {
+            this.shadowDatabaseConfigs.putAll(ShadowDataSourceSPIManager.refreshAllShadowDatabaseConfigs(map));
+        } else {
+            this.shadowDatabaseConfigs.putAll(map);
+        }
     }
 
     public void clearShadowDatasourceConfigs() {
@@ -418,8 +421,8 @@ public final class GlobalConfig {
         this.simulatorDynamicConfig = simulatorDynamicConfig;
     }
 
-    public boolean allowTraceRequestResponse(){
-        return  (Pradar.isClusterTest() &&
+    public boolean allowTraceRequestResponse() {
+        return (Pradar.isClusterTest() &&
                 GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
                 || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig().isBusRequestResponseDataAllowTrace());
     }

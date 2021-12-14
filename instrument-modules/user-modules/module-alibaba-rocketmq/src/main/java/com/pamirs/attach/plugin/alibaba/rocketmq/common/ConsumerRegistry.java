@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.alibaba.rocketmq.common;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,12 +51,6 @@ import com.shulie.instrument.simulator.message.DestroyHook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/26 10:56 下午
@@ -64,15 +59,20 @@ public class ConsumerRegistry {
     private final static Logger logger = LoggerFactory.getLogger(ConsumerRegistry.class);
     private final static Object EMPTY = new Object();
 
-    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*business consumer*/, DefaultMQPushConsumer/*shadow consumer*/> caches = new ConcurrentWeakHashMap<DefaultMQPushConsumer, DefaultMQPushConsumer>(new DestroyHook<DefaultMQPushConsumer, DefaultMQPushConsumer>() {
-        @Override
-        public void destroy(DefaultMQPushConsumer businessConsumer, DefaultMQPushConsumer defaultMQPushConsumer) {
-            removeListener(businessConsumer);
-            defaultMQPushConsumer.shutdown();
-        }
-    });
-    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
-    private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners = new ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener>();
+    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*business consumer*/, DefaultMQPushConsumer/*shadow
+    consumer*/>
+        caches = new ConcurrentWeakHashMap<DefaultMQPushConsumer, DefaultMQPushConsumer>(
+        new DestroyHook<DefaultMQPushConsumer, DefaultMQPushConsumer>() {
+            @Override
+            public void destroy(DefaultMQPushConsumer businessConsumer, DefaultMQPushConsumer defaultMQPushConsumer) {
+                removeListener(businessConsumer);
+                defaultMQPushConsumer.shutdown();
+            }
+        });
+    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers
+        = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
+    private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners
+        = new ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener>();
     private static Set<DefaultMQPushConsumer/*shadow consumer*/> businessConsumerHookedSet
         = new HashSet<DefaultMQPushConsumer>();
 
@@ -82,7 +82,8 @@ public class ConsumerRegistry {
                 removeListener(entry.getKey());
                 entry.getValue().shutdown();
             } catch (Throwable e) {
-                logger.error("Alibaba-RocketMQ: shutdown rocketmq consumer err! {}", entry.getValue().getDefaultMQPushConsumerImpl().getSubscriptionInner().toString());
+                logger.error("Alibaba-RocketMQ: shutdown rocketmq consumer err! {}",
+                    entry.getValue().getDefaultMQPushConsumerImpl().getSubscriptionInner().toString());
             }
         }
         caches.clear();
@@ -159,12 +160,14 @@ public class ConsumerRegistry {
                 shadowConsumer.start();
             } catch (Throwable e) {
                 ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.MQ)
-                        .setErrorCode("MQ-0001")
-                        .setMessage("Alibaba-RocketMQ消费端启动失败！")
-                        .setDetail("subscription:" + shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner() + "||" + e.getMessage())
-                        .report();
-                logger.error("Alibaba-RocketMQ: start shadow DefaultMQPushConsumer err! subscription:{}", shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner(), e);
+                    .setErrorType(ErrorTypeEnum.MQ)
+                    .setErrorCode("MQ-0001")
+                    .setMessage("Alibaba-RocketMQ消费端启动失败！")
+                    .setDetail("subscription:" + shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner() + "||"
+                        + e.getMessage())
+                    .report();
+                logger.error("Alibaba-RocketMQ: start shadow DefaultMQPushConsumer err! subscription:{}",
+                    shadowConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner(), e);
                 caches.remove(businessConsumer);
                 return false;
             }
@@ -176,7 +179,6 @@ public class ConsumerRegistry {
         }
         return true;
     }
-
 
     static Set<DefaultMQPushConsumer> bizConsumerHook = new HashSet<DefaultMQPushConsumer>();
 
@@ -217,7 +219,8 @@ public class ConsumerRegistry {
         if (instanceName != null && !instanceName.equals("DEFAULT")) {
             defaultMQPushConsumer.setInstanceName(Pradar.CLUSTER_TEST_PREFIX + instanceName);
         } else {
-            defaultMQPushConsumer.setInstanceName(Pradar.addClusterTestPrefix(businessConsumer.getConsumerGroup() + instanceName));
+            defaultMQPushConsumer.setInstanceName(
+                Pradar.addClusterTestPrefix(businessConsumer.getConsumerGroup() + instanceName));
         }
         try {
             defaultMQPushConsumer.setAdjustThreadPoolNumsThreshold(businessConsumer.getAdjustThreadPoolNumsThreshold());
@@ -283,13 +286,13 @@ public class ConsumerRegistry {
              */
             if (messageListener instanceof MessageListenerConcurrently) {
                 try {
-                    defaultMQPushConsumer.registerMessageListener((MessageListenerConcurrently) messageListener);
+                    defaultMQPushConsumer.registerMessageListener((MessageListenerConcurrently)messageListener);
                 } catch (NoSuchMethodError e) {
                     defaultMQPushConsumer.registerMessageListener(messageListener);
                 }
             } else if (messageListener instanceof MessageListenerOrderly) {
                 try {
-                    defaultMQPushConsumer.registerMessageListener((MessageListenerOrderly) messageListener);
+                    defaultMQPushConsumer.registerMessageListener((MessageListenerOrderly)messageListener);
                 } catch (NoSuchMethodError e) {
                     defaultMQPushConsumer.registerMessageListener(messageListener);
                 }
@@ -317,6 +320,8 @@ public class ConsumerRegistry {
 
                 if (!isPermitInitConsumer(businessConsumer, topic)) {
                     continue;
+                } else {
+                    logger.warn("Alibaba-RocketMQ topic : {} is not in whitelist!", topic);
                 }
 
                 String subString = subscriptionData.getSubString();
@@ -334,29 +339,38 @@ public class ConsumerRegistry {
                 if (filterClassSource != null) {
                     try {
                         defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString, filterClassSource);
+                        logger.info("Alibaba-RocketMQ shadow consumer subscribe topic : {} subString : {} filterClassSource : {}",
+                            Pradar.addClusterTestPrefix(topic), subString, filterClassSource);
                     } catch (MQClientException e) {
                         ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.MQ)
-                                .setErrorCode("MQ-0001")
-                                .setMessage("Alibaba-RocketMQ消费端subscribe失败！")
-                                .setDetail("topic:" + topic + " fullClassName:" + subString + " filterClassSource:" + filterClassSource + "||" + e.getMessage())
-                                .report();
-                        logger.error("Alibaba-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} fullClassName:{} filterClassSource:{}",
-                                topic, subString, filterClassSource, e);
+                            .setErrorType(ErrorTypeEnum.MQ)
+                            .setErrorCode("MQ-0001")
+                            .setMessage("Alibaba-RocketMQ消费端subscribe失败！")
+                            .setDetail(
+                                "topic:" + topic + " fullClassName:" + subString + " filterClassSource:" + filterClassSource
+                                    + "||" + e.getMessage())
+                            .report();
+                        logger.error(
+                            "Alibaba-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} fullClassName:{} "
+                                + "filterClassSource:{}",
+                            topic, subString, filterClassSource, e);
                         return null;
                     }
                 } else {
                     try {
                         defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString);
+                        logger.info("Alibaba-RocketMQ shadow consumer subscribe topic : {} subString : {}",
+                            Pradar.addClusterTestPrefix(topic), subString);
                     } catch (MQClientException e) {
                         ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.MQ)
-                                .setErrorCode("MQ-0001")
-                                .setMessage("Alibaba-RocketMQ消费端subscribe失败！")
-                                .setDetail("topic:" + topic + " subExpression:" + subString + "||" + e.getMessage())
-                                .report();
-                        logger.error("Alibaba-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} subExpression:{}",
-                                topic, subString, e);
+                            .setErrorType(ErrorTypeEnum.MQ)
+                            .setErrorCode("MQ-0001")
+                            .setMessage("Alibaba-RocketMQ消费端subscribe失败！")
+                            .setDetail("topic:" + topic + " subExpression:" + subString + "||" + e.getMessage())
+                            .report();
+                        logger.error(
+                            "Alibaba-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} subExpression:{}",
+                            topic, subString, e);
                         return null;
                     }
                 }
@@ -380,10 +394,7 @@ public class ConsumerRegistry {
     private static boolean isPermitInitConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         String key = topic + "#" + businessConsumer.getConsumerGroup();
-        if (PradarSwitcher.whiteListSwitchOn() && !mqWhiteList.contains(key) && !mqWhiteList.contains(topic)) {
-            return false;
-        }
-        return true;
+        return !PradarSwitcher.whiteListSwitchOn() || mqWhiteList.contains(key) || mqWhiteList.contains(topic);
     }
 
     private static void removeListener(final DefaultMQPushConsumer businessConsumer) {
@@ -409,16 +420,18 @@ public class ConsumerRegistry {
                         }
                     } catch (MQClientException e) {
                         logger.error(e.getMessage());
-                        return EventResult.error("alibaba-rocketmq-plugin-open", "Alibaba-RocketMQ PT Consumer start failed: " + e.getMessage());
+                        return EventResult.error("alibaba-rocketmq-plugin-open",
+                            "Alibaba-RocketMQ PT Consumer start failed: " + e.getMessage());
                     }
                     return EventResult.success("alibaba-rocketmq-plugin-open");
                 } else if (event instanceof ClusterTestSwitchOffEvent || event instanceof SilenceSwitchOnEvent) {
                     return shutdownShadowConsumer(businessConsumer);
                 } else if (event instanceof ShadowConsumerDisableEvent) {
                     String group = businessConsumer.getConsumerGroup();
-                    Set<String> topics = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl().getSubscriptionInner().keySet();
+                    Set<String> topics = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl()
+                        .getSubscriptionInner().keySet();
                     for (String topic : topics) {
-                        List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent) event).getTarget();
+                        List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent)event).getTarget();
                         for (ShadowConsumerDisableInfo disableInfo : disableInfos) {
                             if (topic.equals(disableInfo.getTopic()) && group.equals(disableInfo.getConsumerGroup())) {
                                 return shutdownShadowConsumer(businessConsumer);
@@ -450,7 +463,8 @@ public class ConsumerRegistry {
             }
         } catch (Throwable e) {
             logger.error("", e);
-            return EventResult.error("alibaba-rocketmq-plugin-close", "Alibaba-RocketMQ PT Consumer close failed: " + e.getMessage());
+            return EventResult.error("alibaba-rocketmq-plugin-close",
+                "Alibaba-RocketMQ PT Consumer close failed: " + e.getMessage());
         }
         return EventResult.success("alibaba-rocketmq-plugin-close");
     }

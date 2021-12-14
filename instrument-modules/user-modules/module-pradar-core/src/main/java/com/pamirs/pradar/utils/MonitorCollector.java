@@ -376,15 +376,6 @@ public class MonitorCollector {
     public Map<String, String> getCpuUsageAndIoWaitAndNetwork(HardwareAbstractionLayer hal) {
         long[] prevTicks = hal.getProcessor().getSystemCpuLoadTicks();
         NetworkIF eth = null;
-        for (NetworkIF networkIF : hal.getNetworkIFs()) {
-            if ("eth0".equals(networkIF.getDisplayName())) {
-                eth = networkIF;
-                break;
-            }
-        }
-        long speed = eth.getSpeed();
-        long bytesRecv = eth.getBytesRecv();
-        long bytesSent = eth.getBytesSent();
         long sleep = 450;
         Util.sleep(sleep);
         long[] ticks = hal.getProcessor().getSystemCpuLoadTicks();
@@ -420,16 +411,6 @@ public class MonitorCollector {
         } else {
             result.put(IO_WAIT_KEY, decimalFormatThreadLocal.get().format(ioWait));
         }
-
-        // 如果拿不到网卡,默认10000Mbs, 如果控制台配置了host网卡, 会矫正数据
-        if (speed == 0) {
-            speed = 10000 * 1024 * 1024;
-        }
-        result.put(NETWORK_BANDWIDTH_KEY, speed / 1024 / 1024 + "");
-        long bytes = eth.getBytesRecv() - bytesRecv + eth.getBytesSent() - bytesSent;
-        double networkUsage = Double.parseDouble(
-            new DecimalFormat("0.0000000").format(100 * bytes / (speed / 8.0) / sleep * 1000));
-        result.put(NETWORK_BANDWIDTH_RATE_KEY, networkUsage + "");
 
         return result;
     }

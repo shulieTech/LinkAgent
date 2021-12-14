@@ -428,7 +428,7 @@ public class SqlParser {
     public static void main(String[] args) throws SQLException {
         //        String sql = "insert into \"C##PYT_TEST\".M_USER(id,name,age) values(?,?,?)";
         //        System.out.println(parseAndReplaceSchema(sql, "aaa", "oracle"));
-        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>());
+        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>(), false);
         ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
         shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
         shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");

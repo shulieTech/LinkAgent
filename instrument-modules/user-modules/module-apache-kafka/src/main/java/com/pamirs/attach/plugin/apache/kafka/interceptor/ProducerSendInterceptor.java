@@ -14,6 +14,9 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
+import java.lang.reflect.Field;
+import java.util.Map;
+
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
@@ -38,9 +41,8 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-
-import java.lang.reflect.Field;
-import java.util.Map;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 
 /**
  * send方法增强类
@@ -113,7 +115,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         ClusterTestUtils.validateClusterTest();
         try {
-            final Callback callback = (Callback) advice.getParameterArray()[1];
+            final Callback callback = (Callback)advice.getParameterArray()[1];
             final Map<String, String> context = Pradar.getInvokeContextMap();
             if (callback != null) {
                 advice.changeParameter(1, new Callback() {
@@ -136,7 +138,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
             LOGGER.warn("SIMULATOR: kafka send message wrap callback failed.", e);
         }
 
-        ProducerRecord producerRecord = (ProducerRecord) args[0];
+        ProducerRecord producerRecord = (ProducerRecord)args[0];
         if (null != producerRecord && Pradar.isClusterTest()) {
             String topic = producerRecord.topic();
             if (!Pradar.isClusterTestPrefix(topic)) {
@@ -144,7 +146,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
             }
             initTopicField(producerRecord);
             setTopic(producerRecord, topic);
-            if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
+            if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
                 HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
                 headerProcessor.setHeader(producerRecord, PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
             }
@@ -176,8 +178,8 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
-        final ProducerRecord producerRecord = (ProducerRecord) args[0];
-        if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {
+        final ProducerRecord producerRecord = (ProducerRecord)args[0];
+        if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
             return new ContextTransfer() {
                 @Override
                 public void transfer(String key, String value) {
@@ -194,7 +196,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Object target = advice.getTarget();
         String remoteAddress = getRemoteAddress(target);
-        final ProducerRecord producerRecord = (ProducerRecord) args[0];
+        final ProducerRecord producerRecord = (ProducerRecord)args[0];
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setService(producerRecord.topic());
         spanRecord.setMethod("MQSend");
@@ -206,7 +208,7 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
         Object result = advice.getReturnObj();
-        final ProducerRecord producerRecord = (ProducerRecord) args[0];
+        final ProducerRecord producerRecord = (ProducerRecord)args[0];
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setRequest(producerRecord);
         spanRecord.setResponse(result);
@@ -218,11 +220,24 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
         Throwable throwable = advice.getThrowable();
-        final ProducerRecord producerRecord = (ProducerRecord) args[0];
+        final ProducerRecord producerRecord = (ProducerRecord)args[0];
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setRequest(producerRecord);
         spanRecord.setResponse(throwable);
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         return spanRecord;
+    }
+
+    private static Field readOnlyField = null;
+
+    private boolean isHeadReadOnly(ProducerRecord producerRecord) {
+        Headers headers = producerRecord.headers();
+        if (headers instanceof RecordHeaders) {
+            if (readOnlyField == null) {
+                readOnlyField = Reflect.on(headers).field0("isReadOnly");
+            }
+            return Reflect.on(headers).get(readOnlyField);
+        }
+        return false;
     }
 }

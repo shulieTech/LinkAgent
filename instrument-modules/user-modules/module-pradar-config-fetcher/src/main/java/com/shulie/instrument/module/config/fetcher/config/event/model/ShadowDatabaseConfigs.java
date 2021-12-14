@@ -92,8 +92,8 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
             return Boolean.FALSE;
         }
 
-        applicationConfig.setShadowDatabaseConfigs(newValue);
-        GlobalConfig.getInstance().setShadowDatabaseConfigs(newValue);
+        GlobalConfig.getInstance().setShadowDatabaseConfigs(newValue, true);
+        applicationConfig.setShadowDatabaseConfigs(GlobalConfig.getInstance().getShadowDatasourceConfigs());
 
         ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = new ShadowDataSourceConfigModifyEvent(needCloseDataSource);
         EventRouter.router().publish(shadowDataSourceConfigModifyEvent);

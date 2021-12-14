@@ -14,6 +14,8 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.util;
 
+import java.util.Map;
+
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -39,7 +41,7 @@ public class KafkaUtils {
         if (StringUtils.isEmpty(remoteAddress)) {
             if (remoteAddressFieldAccessor instanceof KafkaConsumer) {
                 try {
-                    remoteAddress = KafkaUtils.getBootstrapServers((KafkaConsumer)remoteAddressFieldAccessor);
+                    remoteAddress = KafkaUtils.getBootstrapServers((KafkaConsumer<?, ?>)remoteAddressFieldAccessor);
                     manager.setDynamicField(remoteAddressFieldAccessor, KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS,
                         remoteAddress);
                     return remoteAddress;
@@ -53,7 +55,7 @@ public class KafkaUtils {
         }
     }
 
-    public static String getBootstrapServers(KafkaConsumer consumer) {
+    public static String getBootstrapServers(KafkaConsumer<?, ?> consumer) {
         Object metadata = Reflect.on(consumer).get("metadata");
 
         Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
@@ -63,7 +65,14 @@ public class KafkaUtils {
         } else {
             Object cache = ReflectUtil.reflectSlience(metadata, "cache");
             if (cache != null) {
-                nodes = Reflect.on(cache).get("nodes");
+                Object tmpNodes = Reflect.on(cache).get("nodes");
+                if (tmpNodes instanceof Iterable) {
+                    nodes = (Iterable<Node>)tmpNodes;
+                } else if (tmpNodes instanceof Map) {
+                    nodes = ((Map<?, Node>)tmpNodes).values();
+                } else {
+                    throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
+                }
             } else {
                 throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
             }
@@ -73,7 +82,6 @@ public class KafkaUtils {
             sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
                 .toString()).append(",");
         }
-        String bootstrapServers = sb.substring(0, sb.length() - 1);
-        return bootstrapServers;
+        return sb.substring(0, sb.length() - 1);
     }
 }

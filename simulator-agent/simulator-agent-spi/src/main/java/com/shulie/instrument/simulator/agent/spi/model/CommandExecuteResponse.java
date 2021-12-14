@@ -37,14 +37,18 @@ public class CommandExecuteResponse {
 
     private boolean taskExceed = false;
 
-
     /**
-     *     结果产生的时间
+     *
      */
-    private long startTime = System.currentTimeMillis();
+    private int waitTimes = 0;
 
-    public long getStartTime() {
-        return startTime;
+
+    public int getWaitTimes() {
+        return waitTimes;
+    }
+
+    public void setWaitTimesAdd() {
+        waitTimes = waitTimes + 1;
     }
 
     public String getTaskId() {

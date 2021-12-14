@@ -326,35 +326,44 @@ public class HttpAgentScheduler implements AgentScheduler {
                 }
                 else if (null != commandExecuteResponse.getResult()){
                     Map<String, Object> map = (Map<String, Object>) commandExecuteResponse.getResult();
-                    if (!map.isEmpty()){
-                        List<String> successList = (List<String>) map.get("success");
-                        List<String> inExecuteList = (List<String>) map.get("inExecute");
-                        Map<String, String> failedMap = (Map<String, String>) map.get("failed");
+                    List<String> successList = (List<String>) map.get("success");
+                    List<String> inExecuteList = (List<String>) map.get("inExecute");
+                    Map<String, String> failedMap = (Map<String, String>) map.get("failed");
 
-                        for (Map.Entry<CommandExecuteKey, CommandExecuteResponse> entry : HeartCommandUtils.getFutureMap().entrySet()){
-                            CommandExecuteResponse response = entry.getValue();
-                            if (successList.contains(entry.getKey().toString())){
-                                response.setExecuteStatus("finished");
-                                response.setMsg(null);
-                                response.setSuccess(true);
+                    for (Map.Entry<CommandExecuteKey, CommandExecuteResponse> entry : HeartCommandUtils.getFutureMap().entrySet()){
+                        CommandExecuteResponse response = entry.getValue();
+                        if (null != successList && successList.contains(entry.getKey().toString())){
+                            response.setExecuteStatus("finished");
+                            response.setMsg(null);
+                            response.setSuccess(true);
+                            commandExecuteResponseList.add(response);
+                        }
+                        else if (null != failedMap && failedMap.containsKey(entry.getKey().toString())){
+                            response.setSuccess(true);
+                            response.setExecuteStatus("failed");
+                            response.setMsg(failedMap.get(entry.getKey().toString()));
+                            commandExecuteResponseList.add(response);
+                        } else {//要么是执行中，要么是已经失败了的
+                            if (inExecuteList == null
+                                    || !inExecuteList.contains(entry.getKey().toString())){
+                                response.setSuccess(entry.getValue().isSuccess());
+                                response.setExecuteStatus(entry.getValue().getExecuteStatus());
+                                response.setMsg(entry.getValue().getMsg());
+                                commandExecuteResponseList.add(response);
+                            } else if (entry.getValue().getWaitTimes() * schedulerArgs.getInterval() > 60 * 30){
+                                response.setSuccess(entry.getValue().isSuccess());
+                                response.setExecuteStatus("failed");
+                                response.setMsg(entry.getValue().getMsg());
                                 commandExecuteResponseList.add(response);
                             }
-                            else if (failedMap.containsKey(entry.getKey().toString())){
-                                response.setSuccess(true);
-                                response.setExecuteStatus("failed");
-                                response.setMsg(failedMap.get(entry.getKey().toString()));
-                                commandExecuteResponseList.add(response);
-                            } else {//要么是执行中，要么是unknown
-                                if (!inExecuteList.contains(entry.getKey().toString())){
-                                    response.setSuccess(true);
-                                    response.setExecuteStatus("failed");
-                                    response.setMsg(failedMap.get(entry.getKey().toString()));
-                                    commandExecuteResponseList.add(response);
-                                }
+                            else {
+                                logger.error("无任何结果，执行命令生命周期+1，当前已等待 {} s", entry.getValue().getWaitTimes() * schedulerArgs.getInterval());
+                                entry.getValue().setWaitTimesAdd();
                             }
                         }
-
                     }
+
+
                 }
             } catch (Throwable throwable) {
                 logger.error("getCommandExecuteResponses error", throwable);
@@ -421,6 +430,11 @@ public class HttpAgentScheduler implements AgentScheduler {
         List<CommandExecuteResponse> preCommandExecuteResponseList = new ArrayList<CommandExecuteResponse>();
         if (preCommandExecuteResultsResponse != null){
             preCommandExecuteResponseList = handleCommandExecuteResponse(preCommandExecuteResultsResponse);
+            if (preCommandExecuteResponseList.size() > 0){
+                for (CommandExecuteResponse commandExecuteResponse : preCommandExecuteResponseList){
+                    logger.info("上报执行任务结果:{}", JSON.toJSONString(commandExecuteResponse));
+                }
+            }
         }
         if (HeartCommandUtils.futureMapSize() > 30 ||(preCommandExecuteResultsResponse != null && preCommandExecuteResultsResponse.isTaskExceed())){
             heartRequest.setTaskExceed(true);

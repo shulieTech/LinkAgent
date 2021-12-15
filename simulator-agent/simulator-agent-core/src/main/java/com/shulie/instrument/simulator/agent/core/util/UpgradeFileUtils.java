@@ -52,6 +52,24 @@ public class UpgradeFileUtils {
         ossTempSimulatorFile = null;
     }
 
+    public static void checkLocal(){
+        String saveTempDir = getUpgradeFileTempSaveDir();
+        //判断agent目录是否存在，存在则做移动agent_upgradeBatch_时间戳
+        String agentBasePath = saveTempDir.replace("core", "");
+        File file = new File(agentBasePath + "agent/simulator");
+        File localFile = new File(agentBasePath + "agent/simulator_-1");
+        if (file.exists()){
+            if (localFile.exists()){
+                deleteFolder(file);
+                localFile.renameTo(file);
+            }
+        } else if (localFile.exists()){
+            localFile.renameTo(file);
+        } else {
+            throw new RuntimeException("本地simulator包不存在，无法启动探针!");
+        }
+    }
+
     public static void unzipUpgradeFile(String upgradeBatch){
         String saveFileName = getUpgradeFileTempFileName(upgradeBatch);
         String saveTempDir = getUpgradeFileTempSaveDir();
@@ -59,11 +77,13 @@ public class UpgradeFileUtils {
         String agentBasePath = saveTempDir.replace("core", "");
         File file = new File(agentBasePath + "agent/simulator");
         if (file.exists()){
-            File temp = new File(file.getAbsolutePath() + "_" + upgradeBatch);
-            if (temp.exists()){
-                temp.delete();
+            //保留最开始的本地版本，回滚可用
+            File localSimulatorFile = new File(file.getAbsolutePath() + "_-1" );
+            if (!localSimulatorFile.exists()){
+                file.renameTo(localSimulatorFile);
+            } else {
+                file.delete();
             }
-            file.renameTo(temp);
         }
         File agentDir = new File(agentBasePath + "agent");
         if (!agentDir.exists()){
@@ -72,4 +92,31 @@ public class UpgradeFileUtils {
         ZipUtils.unZip(saveTempDir + File.separator + saveFileName,
                 agentDir.getAbsolutePath() + "/simulator");
     }
+
+    /**
+     * 删除文件夹
+     * @param folder
+     * @throws Exception
+     */
+    private static void deleteFolder(File folder) {
+        if (!folder.exists()) {
+            return;
+        }
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    //递归直到目录下没有文件
+                    deleteFolder(file);
+                } else {
+                    //删除
+                    file.delete();
+                }
+            }
+        }
+        //删除
+        folder.delete();
+
+    }
+
 }

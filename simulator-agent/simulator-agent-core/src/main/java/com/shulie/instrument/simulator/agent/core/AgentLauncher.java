@@ -259,6 +259,9 @@ public class AgentLauncher {
                 }
                 //解压
                 UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);
+            } else {
+                //需要判断是否有本地版本
+                UpgradeFileUtils.checkLocal();
             }
 
 

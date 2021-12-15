@@ -70,6 +70,6 @@ public class UpgradeFileUtils {
             agentDir.mkdir();
         }
         ZipUtils.unZip(saveTempDir + File.separator + saveFileName,
-                agentDir.getAbsolutePath());
+                agentDir.getAbsolutePath() + "/simulator");
     }
 }

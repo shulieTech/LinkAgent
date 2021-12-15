@@ -399,7 +399,7 @@ public class AgentLauncher {
         try {
             String loadUrl = baseUrl + File.separator + moduleId + File.separator + moduleMethod + "?useApi=true&path="
                     + moduleId + "&extrasString=" + heartCommand.getPacket().getExtrasString() + "&sync=" + sync
-                    + "&commandId=" + commandId + "&taskId=" + taskId;
+                    + "&commandId=" + commandId + "&taskId=" + taskId  + "&troWebUrl=" + agentConfig.getTroWebUrl();
 
 
             HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl,agentConfig.getHttpMustHeaders(), heartCommand.getPacket().getExtrasString());

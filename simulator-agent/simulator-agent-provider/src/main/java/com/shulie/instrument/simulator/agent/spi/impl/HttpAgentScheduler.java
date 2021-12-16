@@ -353,11 +353,17 @@ public class HttpAgentScheduler implements AgentScheduler {
                             } else if (entry.getValue().getWaitTimes() * schedulerArgs.getInterval() > 60 * 30){
                                 response.setSuccess(entry.getValue().isSuccess());
                                 response.setExecuteStatus("failed");
-                                response.setMsg(entry.getValue().getMsg());
+                                if (schedulerArgs.getInterval() > 60 * 30) {
+                                    response.setMsg(entry.getValue().getMsg());
+                                } else {
+                                    response.setMsg("任务执行超时未有结果");
+                                }
                                 commandExecuteResponseList.add(response);
                             }
                             else {
-                                logger.error("无任何结果，执行命令生命周期+1，当前已等待 {} s", entry.getValue().getWaitTimes() * schedulerArgs.getInterval());
+                                logger.error("无任何结果，执行命令生命周期+1，当前已等待 {} s ",
+                                        entry.getValue().getWaitTimes() * schedulerArgs.getInterval());
+                                logger.error("taskId is ,", entry.getKey().toString());
                                 entry.getValue().setWaitTimesAdd();
                             }
                         }
@@ -410,6 +416,9 @@ public class HttpAgentScheduler implements AgentScheduler {
         heartRequest.setCurUpgradeBatch(HeartCommandConstants.getCurUpgradeBatch());
         List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
         if (null == commandPacketList || commandPacketList.isEmpty()){
+            if (heartRequest.getDependencyInfo() == null){
+                logger.error("模块版本信息为空，检查module.properties是否存在");
+            }
             return null;
         }
         if (commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY) == null){
@@ -491,7 +500,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         //TODO
         while ((startCommandPacket = getStartCommandPacket()) == null){
             try {
-                logger.warn("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");
+                logger.error("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");
                 Thread.sleep(500 );
             } catch (InterruptedException ignore) {
             }
@@ -669,6 +678,8 @@ public class HttpAgentScheduler implements AgentScheduler {
             CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
             if (commandExecuteResponse.isSuccess()){
                 SimulatorStatus.setAgentStatus((String)commandExecuteResponse.getResult(), commandExecuteResponse.getMsg());
+            } else {
+                logger.error("获取simulator异常",commandExecuteResponse.getMsg());
             }
         }
     }

@@ -49,6 +49,7 @@ AGENT_VERSION=$(cat ..//simulator-agent-core/target/classes/com/shulie/instrumen
 cp ../simulator-launcher-standalone/target/simulator-launcher-standalone-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-standalone.jar
 cp ../simulator-launcher-instrument/target/simulator-launcher-instrument-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-instrument.jar
 cp ../simulator-launcher-embedded/target/simulator-launcher-embedded-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-embedded.jar
+cp ../simulator-launcher-lite/target/simulator-launcher-lite-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-lite.jar
 cp ../simulator-agent-core/target/simulator-agent-core-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/core/simulator-agent-core.jar
 cp ../simulator-bootstrap-extras/target/lib/* ${AGENT_TARGET_DIR}/bootstrap/
 

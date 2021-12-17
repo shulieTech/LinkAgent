@@ -70,6 +70,9 @@ public class ConsumerRegistry {
                 defaultMQPushConsumer.shutdown();
             }
         });
+    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> hooks
+        = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
+
     private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers
         = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
     private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners
@@ -91,6 +94,7 @@ public class ConsumerRegistry {
         shadowConsumers.clear();
         listeners.clear();
         businessConsumerHookedSet.clear();
+        hooks.clear();
     }
 
     public static DefaultMQPushConsumer getConsumer(Object target) {
@@ -181,19 +185,12 @@ public class ConsumerRegistry {
         return true;
     }
 
-    static Set<DefaultMQPushConsumer> bizConsumerHook = new HashSet<DefaultMQPushConsumer>();
-
     private static void registerBizConsumerHook(DefaultMQPushConsumer businessConsumer) {
-        if (bizConsumerHook.contains(businessConsumer)) {
-            return;
-        }
-        synchronized (ConsumerRegistry.class) {
-            if (bizConsumerHook.contains(businessConsumer)) {
-                return;
-            }
+        Object old = hooks.putIfAbsent(businessConsumer, EMPTY);
+        if(old == null) {
             businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-            logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer, businessConsumer.hashCode());
-            bizConsumerHook.add(businessConsumer);
+            logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer,
+                businessConsumer.hashCode());
         }
     }
 
@@ -332,7 +329,8 @@ public class ConsumerRegistry {
         }
 
         defaultMQPushConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-        logger.info("register shadow consumer hook to consumer : {} hashCode : {}", defaultMQPushConsumer, defaultMQPushConsumer.hashCode());
+        logger.info("register shadow consumer hook to consumer : {} hashCode : {}", defaultMQPushConsumer,
+            defaultMQPushConsumer.hashCode());
 
         for (Map.Entry<String, SubscriptionData> entry : topicsInWhiteList.entrySet()) {
             SubscriptionData subscriptionData = entry.getValue();

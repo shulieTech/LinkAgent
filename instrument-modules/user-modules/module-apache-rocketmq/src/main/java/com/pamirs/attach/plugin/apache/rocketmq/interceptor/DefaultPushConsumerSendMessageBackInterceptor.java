@@ -14,69 +14,45 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
-import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.common.message.MessageExt;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/30 4:20 下午
  */
 @Destroyable(MqDestroy.class)
-public class DefaultPushConsumerSendMessageBackInterceptor extends CutoffInterceptorAdaptor {
-    protected final static Logger logger = LoggerFactory.getLogger(DefaultPushConsumerSendMessageBackInterceptor.class);
+public class DefaultPushConsumerSendMessageBackInterceptor extends AbstractUseShadowConsumerReplaceInterceptor {
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
+    protected CutOffResult execute(DefaultMQPushConsumer consumer, Advice advice) {
         Object[] args = advice.getParameterArray();
-        Object target = advice.getTarget();
-        /**
-         * 主要负责Consumer 注册，每一批的消息消费都会经过此方法
-         * 如果是已经注册过的，则忽略
-         */
-        DefaultMQPushConsumer defaultMQPushConsumer = (DefaultMQPushConsumer) target;
-        if (ConsumerRegistry.hasRegistered(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        /**
-         * 如果影子消费者，也忽略
-         */
-        if (ConsumerRegistry.isShadowConsumer(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
         if (args.length == 2) {
-            DefaultMQPushConsumer consumer = ConsumerRegistry.getConsumer((DefaultMQPushConsumer) target);
             try {
-                consumer.sendMessageBack((MessageExt) args[0], (Integer) args[1]);
+                consumer.sendMessageBack((MessageExt)args[0], (Integer)args[1]);
                 return CutOffResult.cutoff(null);
             } catch (Throwable e) {
                 logger.error("Apache-RocketMQ: sendMessageBack err, msg: {}, delayLevel: {}", args[0], args[1], e);
                 throw new PressureMeasureError(e);
             }
         } else if (args.length == 3) {
-            DefaultMQPushConsumer consumer = ConsumerRegistry.getConsumer((DefaultMQPushConsumer) target);
             try {
-                consumer.sendMessageBack((MessageExt) args[0], (Integer) args[1], (String) args[2]);
+                consumer.sendMessageBack((MessageExt)args[0], (Integer)args[1], (String)args[2]);
                 return CutOffResult.cutoff(null);
             } catch (Throwable e) {
-                logger.error("Apache-RocketMQ: sendMessageBack err, msg: {}, delayLevel: {}, brokerName: {}", args[0], args[1], args[2], e);
+                logger.error("Apache-RocketMQ: sendMessageBack err, msg: {}, delayLevel: {}, brokerName: {}", args[0],
+                    args[1], args[2], e);
                 throw new PressureMeasureError(e);
             }
         } else {
             logger.error("Apache-RocketMQ: unsupported sendMessageBack method,args length: {}, args: {}", args.length, args);
-            throw new PressureMeasureError("Apache-RocketMQ: unsupported sendMessageBack method,args length: " + args.length + ", args: " + args);
+            throw new PressureMeasureError(
+                "Apache-RocketMQ: unsupported sendMessageBack method,args length: " + args.length + ", args: " + args);
         }
-
-
     }
 }

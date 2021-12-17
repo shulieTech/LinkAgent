@@ -14,57 +14,33 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
-import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/30 3:53 下午
  */
 @Destroyable(MqDestroy.class)
-public class DefaultPushConsumerViewMessageInterceptor extends CutoffInterceptorAdaptor {
-    protected final static Logger logger = LoggerFactory.getLogger(DefaultPushConsumerViewMessageInterceptor.class);
+public class DefaultPushConsumerViewMessageInterceptor extends AbstractUseShadowConsumerReplaceInterceptor {
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
+    protected CutOffResult execute(DefaultMQPushConsumer consumer, Advice advice) {
         Object[] args = advice.getParameterArray();
-        Object target = advice.getTarget();
-        /**
-         * 主要负责Consumer 注册，每一批的消息消费都会经过此方法
-         * 如果是已经注册过的，则忽略
-         */
-        DefaultMQPushConsumer defaultMQPushConsumer = (DefaultMQPushConsumer) target;
-        if (ConsumerRegistry.hasRegistered(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        /**
-         * 如果影子消费者，也忽略
-         */
-        if (ConsumerRegistry.isShadowConsumer(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        DefaultMQPushConsumer businessConsumer = (DefaultMQPushConsumer) target;
-        DefaultMQPushConsumer consumer = ConsumerRegistry.getConsumer(businessConsumer);
         if (args.length == 1) {
             try {
-                return CutOffResult.cutoff(consumer.viewMessage((String) args[0]));
+                return CutOffResult.cutoff(consumer.viewMessage((String)args[0]));
             } catch (Throwable e) {
                 logger.error("Apache-RocketMQ: viewMessage err, msgId: {}", args[0], e);
                 throw new PressureMeasureError(e);
             }
         } else if (args.length == 2) {
             try {
-                return CutOffResult.cutoff(consumer.viewMessage((String) args[0], (String) args[1]));
+                return CutOffResult.cutoff(consumer.viewMessage((String)args[0], (String)args[1]));
             } catch (Throwable e) {
                 logger.error("Apache-RocketMQ: viewMessage err, topic: {}, msgId: {}", args[0], args[1], e);
                 throw new PressureMeasureError(e);

@@ -107,7 +107,7 @@ public class FtpOperationClient{
 
             // 第一种方式下载文件(推荐)
             File localFile = new File(localPath + File.separatorChar + fileName);
-            localFile.deleteOnExit();
+            localFile.delete();
             os = new FileOutputStream(localFile);
             boolean r = ftpClient.retrieveFile(fileName, os);
             return r;

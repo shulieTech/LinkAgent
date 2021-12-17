@@ -511,9 +511,33 @@ public class HttpAgentScheduler implements AgentScheduler {
 
     private void executeCommand(){
         try {
+
+            /**
+             * 获取最新的命令包
+             */
+            final CommandPacket c = getLatestCommandPacket();
+            if (c != null) {
+                try {
+                    Result result = executeCommandPacket(c);
+                    if (result != null) {
+                        executeCommandId = c.getId();
+                        reportCommandExecuteResult(c.getId(), result.isSuccess, result.errorMsg);
+                    }
+                } catch (Throwable throwable) {
+                    logger.error("execute command failed. command={}", c, throwable);
+                    reportCommandExecuteResult(c.getId(), false,
+                            HttpAgentScheduler.toString(throwable));
+                }
+            }
+
+
             HeartRequest heartRequest = new HeartRequest();
             getSimulatorStatus();
             getSimulatorDetails(heartRequest);
+            //设置为卸载
+            if (c != null && c.getOperateType() == CommandPacket.OPERATE_TYPE_UNINSTALL){
+                heartRequest.setUninstallStatus(1);
+            }
             List<CommandPacket> heartCommandPackets = getCommandPacketByHeart(heartRequest);
 
             boolean asyncTaskResult = true;
@@ -553,29 +577,9 @@ public class HttpAgentScheduler implements AgentScheduler {
                 }
             }
 
-            //目前只有一个启动的任务，未成功无法启动任何操作
-            if (!asyncTaskResult){
-                return;
-            }
 
-            /**
-             * 获取最新的命令包
-             */
-            final CommandPacket commandPacket = getLatestCommandPacket();
-            if (commandPacket == null) {
-                return;
-            }
-            try {
-                Result result = executeCommandPacket(commandPacket);
-                if (result != null) {
-                    executeCommandId = commandPacket.getId();
-                    reportCommandExecuteResult(commandPacket.getId(), result.isSuccess, result.errorMsg);
-                }
-            } catch (Throwable throwable) {
-                logger.error("execute command failed. command={}", commandPacket, throwable);
-                reportCommandExecuteResult(commandPacket.getId(), false,
-                        HttpAgentScheduler.toString(throwable));
-            }
+
+
         } catch (Throwable t) {
             logger.error("execute scheduler failed. ", t);
         } finally {

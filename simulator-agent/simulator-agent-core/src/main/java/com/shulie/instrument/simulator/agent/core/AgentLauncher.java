@@ -254,7 +254,7 @@ public class AgentLauncher {
                         String passwd = (String)context.get(HeartCommandConstants.PASSWD_KEY);
                         String username = (String) context.get(HeartCommandConstants.USERNAME_KEY);
                         String s = SecureUtil.aes(salt.getBytes()).decryptStr(passwd);
-                        FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
+                        FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + File.separator + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
                         break;
                 }
                 //解压

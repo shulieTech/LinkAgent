@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.agent.instrument;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.instrument.Instrumentation;
@@ -26,6 +27,9 @@ import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.JarFile;
+
+import com.alibaba.ttl.threadpool.agent.TtlAgent;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io         入口类
@@ -204,6 +208,11 @@ public class InstrumentLauncher {
         System.out.println("pid: " + pid);
         final String processName = RuntimeMXBeanUtils.getName();
         try {
+
+            // 加载ttl
+            ttlJarToSystemClassLoader(inst);
+            TtlAgent.premain(featureString, inst);
+
             /**
              * 如果是 jdk9及以上则采用外置进程方式attach 进程
              * 如果是 jdk9以下则使用内部方式attach 进程
@@ -212,6 +221,13 @@ public class InstrumentLauncher {
         } catch (Throwable e) {
             System.err.println("SIMULATOR: start Agent failed. \n" + getStackTraceAsString(e));
         }
+    }
+
+    private static void ttlJarToSystemClassLoader(Instrumentation instrumentation) throws IOException {
+        System.out.println("开始加载TTL到systemClassLoader中");
+        JarFile jarFile = new JarFile(DEFAULT_AGENT_HOME + File.separator + "bootstrap" + File.separator
+            + "transmittable-thread-local-2.12.1.jar");
+        instrumentation.appendToSystemClassLoaderSearch(jarFile);
     }
 
     private static String getStackTraceAsString(Throwable throwable) {

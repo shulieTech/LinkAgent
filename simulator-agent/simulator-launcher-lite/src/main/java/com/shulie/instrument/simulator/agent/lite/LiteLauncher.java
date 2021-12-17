@@ -52,12 +52,11 @@ public class LiteLauncher {
 
     public static void main(String[] args) throws IOException {
         String agentLauncherPath
-            = "/Users/ocean_wll/IdeaProjects/LinkAgent/deploy/simulator-agent/simulator-launcher-instrument-5.2"
-            + ".0-jar-with-dependencies.jar";
+            = "/Users/ocean_wll/IdeaProjects/LinkAgent/deploy/simulator-agent/simulator-launcher-instrument.jar";
         System.out.println(new File(agentLauncherPath).exists());
         VirtualMachine vm = null;
         try {
-            vm = VirtualMachine.attach("64779");
+            vm = VirtualMachine.attach("84816");
             vm.loadAgent(agentLauncherPath, ";simulator.delay=10");
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());

@@ -112,7 +112,7 @@
 
     <logger name="com.shulie.instrument.module.config.fetcher.config" level="warn" additivity="false"/>
 
-    <logger name="ROCKET_MQ_TMP_LOGGER" level="warn" additivity="false">
+    <logger name="ROCKET_MQ_TMP_LOGGER" level="info" additivity="false">
         <appender-ref ref="TMP_MQ_APPENDER"/>
     </logger>
 

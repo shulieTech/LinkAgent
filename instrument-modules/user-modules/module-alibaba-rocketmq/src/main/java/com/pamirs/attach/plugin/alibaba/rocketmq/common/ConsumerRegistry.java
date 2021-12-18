@@ -186,18 +186,11 @@ public class ConsumerRegistry {
     }
 
     private static void registerBizConsumerHook(DefaultMQPushConsumer businessConsumer) {
-        Object old = hooks.get(businessConsumer);
+        Object old = hooks.putIfAbsent(businessConsumer, EMPTY);
         if(old == null) {
-            synchronized (businessConsumer) {
-                old = hooks.putIfAbsent(businessConsumer, EMPTY);
-                if (old == null) {
-                    businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-                    logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer,
-                            businessConsumer.hashCode());
-                }else{
-                    logger.info("has registered consumer hook : {} hashCode : {}", businessConsumer, businessConsumer.hashCode());
-                }
-            }
+            businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
+            logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer,
+                    businessConsumer.hashCode());
         }
     }
 

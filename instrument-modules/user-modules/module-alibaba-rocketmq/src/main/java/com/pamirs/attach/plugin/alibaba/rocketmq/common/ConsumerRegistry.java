@@ -188,9 +188,13 @@ public class ConsumerRegistry {
     private static void registerBizConsumerHook(DefaultMQPushConsumer businessConsumer) {
         Object old = hooks.putIfAbsent(businessConsumer, EMPTY);
         if(old == null) {
-            businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-            logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer,
-                    businessConsumer.hashCode());
+            try {
+                businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
+                logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer,
+                        businessConsumer.hashCode());
+            } catch (Throwable e) {
+                hooks.remove(businessConsumer);
+            }
         }
     }
 

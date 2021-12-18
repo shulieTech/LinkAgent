@@ -29,6 +29,7 @@ import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerIntercept
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerSendInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.PullConsumerInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.TransactionCheckInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -140,6 +141,65 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod enhanceMethod = target.getDeclaredMethods("checkTransactionState*");
                 enhanceMethod.addInterceptor(Listeners.of(TransactionCheckInterceptor.class));
+            }
+        });
+
+        //TODO 临时打日志
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullMessage");
+                enhanceMethod.addInterceptor(Listeners.of(PullMessageInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.consumer.PullCallback", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("onSuccess");
+                enhanceMethod.addInterceptor(Listeners.of(PullCallbackOnSuccessInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("putMessage");
+                enhanceMethod.addInterceptor(Listeners.of(PutMessageInterceptor.class));
+            }
+        });
+
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                enhanceMethod.addInterceptor(Listeners.of(ConsumeRequestRunInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");
+                enhanceMethod.addInterceptor(Listeners.of(ProcessConsumeResultInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.consumer.store.RemoteBrokerOffsetStore", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("updateOffset");
+                enhanceMethod.addInterceptor(Listeners.of(UpdateOffsetInterceptor.class));
+            }
+        });
+
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.PullAPIWrapper", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullKernelImpl");
+                enhanceMethod.addInterceptor(Listeners.of(PullKernelImplInterceptor.class));
             }
         });
 

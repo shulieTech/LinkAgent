@@ -30,6 +30,10 @@ import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerSendInter
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.PullConsumerInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.TransactionCheckInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile.*;
+import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.MQClientAPIImplInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.ProcessQueueInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.PullMessageInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.RebalanceImplInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -149,6 +153,14 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullMessage");
+                enhanceMethod.addInterceptor(Listeners.of(com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile.PullMessageInterceptor .class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.PullMessageService",  new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullMessage");
                 enhanceMethod.addInterceptor(Listeners.of(PullMessageInterceptor.class));
             }
         });
@@ -188,9 +200,33 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
         this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.consumer.store.RemoteBrokerOffsetStore", new EnhanceCallback() {
             @Override
+            public void doEnhance(InstrumentClass target){
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("updateOffset");
+                    enhanceMethod.addInterceptor(Listeners.of(UpdateOffsetInterceptor.class));
+                }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.RebalanceImpl",  new EnhanceCallback() {
+            @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("updateOffset");
-                enhanceMethod.addInterceptor(Listeners.of(UpdateOffsetInterceptor.class));
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("updateProcessQueueTableInRebalance");
+                enhanceMethod.addInterceptor(Listeners.of(RebalanceImplInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.MQClientAPIImpl",  new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("processPullResponse");
+                enhanceMethod.addInterceptor(Listeners.of(MQClientAPIImplInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue",  new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod enhanceMethod = target.getDeclaredMethods("setDroped");
+                enhanceMethod.addInterceptor(Listeners.of(ProcessQueueInterceptor.class));
             }
         });
 

@@ -19,7 +19,7 @@ public class PullMessageInterceptor extends AroundInterceptor {
     public void doBefore(Advice advice) {
         PullRequest pullRequest = (PullRequest)advice.getParameterArray()[0];
         logger.info("pull request with : topic : {} queue : {} LastConsumeTimestamp : {}",
-            pullRequest.getMessageQueue().getTopic(),
+            pullRequest.getMessageQueue().getBrokerName() + "-" + pullRequest.getMessageQueue().getTopic(),
             pullRequest.getMessageQueue().getQueueId(),
             pullRequest.getProcessQueue().getLastConsumeTimestamp());
     }

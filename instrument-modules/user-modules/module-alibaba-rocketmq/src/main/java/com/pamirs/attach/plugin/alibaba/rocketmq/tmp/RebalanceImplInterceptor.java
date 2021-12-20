@@ -22,7 +22,7 @@ public class RebalanceImplInterceptor extends AroundInterceptor {
         Set<MessageQueue> mqSet = (Set<MessageQueue>)advice.getParameterArray()[1];
         StringBuilder sb = new StringBuilder("Rebalance allocate queues is : ");
         for (MessageQueue messageQueue : mqSet) {
-            sb.append("[ topic : ").append(messageQueue.getTopic())
+            sb.append("[ topic : ").append(messageQueue.getBrokerName()).append("-").append(messageQueue.getQueueId())
                 .append(" queueId : ").append(messageQueue.getQueueId()).append("]");
         }
         logger.info(sb.toString());

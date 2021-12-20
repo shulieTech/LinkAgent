@@ -18,6 +18,7 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile;
 
 import com.alibaba.rocketmq.common.message.MessageQueue;
+
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
@@ -32,30 +33,35 @@ public class UpdateOffsetInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) {
-        MessageQueue messageQueue = (MessageQueue) advice.getParameterArray()[0];
+        MessageQueue messageQueue = (MessageQueue)advice.getParameterArray()[0];
         String topic = messageQueue.getTopic();
         int queueId = messageQueue.getQueueId();
-        logger.error("执行UpdateOffsetInterceptor before, topic is " + topic + " queueId is " + queueId
-                );
-
+        logger.error(
+            "执行UpdateOffsetInterceptor before, topic is " + messageQueue.getBrokerName() + "-" + topic + " queueId is "
+                + queueId
+        );
 
     }
 
     @Override
     public void doAfter(Advice advice) {
-        MessageQueue messageQueue = (MessageQueue) advice.getParameterArray()[0];
+        MessageQueue messageQueue = (MessageQueue)advice.getParameterArray()[0];
         String topic = messageQueue.getTopic();
         int queueId = messageQueue.getQueueId();
-        logger.error("执行UpdateOffsetInterceptor after, topic is " + topic + " queueId is " + queueId
+        logger.error(
+            "执行UpdateOffsetInterceptor after, topic is " + messageQueue.getBrokerName() + "-" + topic + " queueId is "
+                + queueId
         );
     }
 
     @Override
     public void doException(Advice advice) {
-        MessageQueue messageQueue = (MessageQueue) advice.getParameterArray()[0];
+        MessageQueue messageQueue = (MessageQueue)advice.getParameterArray()[0];
         String topic = messageQueue.getTopic();
         int queueId = messageQueue.getQueueId();
-        logger.error("执行UpdateOffsetInterceptor before, topic is " + topic + " queueId is " + queueId
-         + " error is " + advice.getThrowable().getMessage());
+        logger.error(
+            "执行UpdateOffsetInterceptor before, topic is " + messageQueue.getBrokerName() + "-" + topic + " queueId is "
+                + queueId
+                + " error is " + advice.getThrowable().getMessage());
     }
 }

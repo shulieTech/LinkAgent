@@ -18,6 +18,7 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile;
 
 import com.alibaba.rocketmq.client.impl.consumer.PullRequest;
+
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
@@ -29,33 +30,32 @@ import org.slf4j.LoggerFactory;
  */
 public class PullMessageInterceptor extends AroundInterceptor {
 
-
     private Logger logger = LoggerFactory.getLogger("ROCKET_MQ_TMP_LOGGER");
-
-
-
 
     @Override
     public void doBefore(Advice advice) {
-        PullRequest pullRequest = (PullRequest) advice.getParameterArray()[0];
-        logger.error("执行pullMessage before, topic is " + pullRequest.getMessageQueue().getTopic()
-                + " queueId is " + pullRequest.getMessageQueue().getQueueId()
-                );
+        PullRequest pullRequest = (PullRequest)advice.getParameterArray()[0];
+        logger.error("执行pullMessage before, topic is " + pullRequest.getMessageQueue().getBrokerName() + "-"
+            + pullRequest.getMessageQueue().getTopic()
+            + " queueId is " + pullRequest.getMessageQueue().getQueueId()
+        );
     }
 
     @Override
     public void doAfter(Advice advice) {
-        PullRequest pullRequest = (PullRequest) advice.getParameterArray()[0];
-        logger.error("执行pullMessage after, topic is " + pullRequest.getMessageQueue().getTopic()
-                + " queueId is " + pullRequest.getMessageQueue().getQueueId()
+        PullRequest pullRequest = (PullRequest)advice.getParameterArray()[0];
+        logger.error("执行pullMessage after, topic is " + pullRequest.getMessageQueue().getBrokerName() + "-"
+            + pullRequest.getMessageQueue().getTopic()
+            + " queueId is " + pullRequest.getMessageQueue().getQueueId()
         );
     }
 
     @Override
     public void doException(Advice advice) {
-        PullRequest pullRequest = (PullRequest) advice.getParameterArray()[0];
-        logger.error("执行pullMessage error, topic is " + pullRequest.getMessageQueue().getTopic()
-                + " queueId is " + pullRequest.getMessageQueue().getQueueId() + " error is " + advice.getThrowable().getMessage()
+        PullRequest pullRequest = (PullRequest)advice.getParameterArray()[0];
+        logger.error("执行pullMessage error, topic is " + pullRequest.getMessageQueue().getBrokerName() + "-"
+            + pullRequest.getMessageQueue().getTopic()
+            + " queueId is " + pullRequest.getMessageQueue().getQueueId() + " error is " + advice.getThrowable().getMessage()
         );
     }
 

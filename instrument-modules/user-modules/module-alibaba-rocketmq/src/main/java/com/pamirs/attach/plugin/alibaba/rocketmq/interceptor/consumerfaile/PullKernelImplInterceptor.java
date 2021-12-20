@@ -18,6 +18,7 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile;
 
 import com.alibaba.rocketmq.common.message.MessageQueue;
+
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
@@ -32,23 +33,24 @@ public class PullKernelImplInterceptor extends ResultInterceptorAdaptor {
 
     @Override
     public void doBefore(Advice advice) {
-        MessageQueue messageQueue = (MessageQueue) advice.getParameterArray()[0];
-        logger.error("执行PullKernelImpl before, topic is " + messageQueue.getTopic() + " queueId is " + messageQueue.getQueueId());
+        MessageQueue messageQueue = (MessageQueue)advice.getParameterArray()[0];
+        logger.error("执行PullKernelImpl before, topic is " + messageQueue.getBrokerName() + "-" + messageQueue.getTopic()
+            + " queueId is " + messageQueue.getQueueId());
     }
 
     @Override
     public Object getResult0(Advice advice) {
-        MessageQueue messageQueue = (MessageQueue) advice.getParameterArray()[0];
+        MessageQueue messageQueue = (MessageQueue)advice.getParameterArray()[0];
         logger.error("执行PullKernelImpl after, topic is " +
-                messageQueue.getTopic() + " queueId is " + messageQueue.getQueueId());
+            messageQueue.getTopic() + " queueId is " + messageQueue.getBrokerName() + "-" + messageQueue.getQueueId());
         return advice.getReturnObj();
     }
 
     @Override
     public void doException(Advice advice) {
-        MessageQueue messageQueue = (MessageQueue) advice.getParameterArray()[0];
-        logger.error("执行PullKernelImpl before, topic is " + messageQueue.getTopic() +
-                " queueId is " + messageQueue.getQueueId() + " error is " + advice.getThrowable().getMessage());
+        MessageQueue messageQueue = (MessageQueue)advice.getParameterArray()[0];
+        logger.error("执行PullKernelImpl before, topic is " + messageQueue.getBrokerName() + "-" + messageQueue.getTopic() +
+            " queueId is " + messageQueue.getQueueId() + " error is " + advice.getThrowable().getMessage());
 
     }
 }

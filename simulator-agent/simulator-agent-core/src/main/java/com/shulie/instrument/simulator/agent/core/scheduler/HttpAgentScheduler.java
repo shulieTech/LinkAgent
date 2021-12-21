@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.shulie.instrument.simulator.agent.spi.impl;
+package com.shulie.instrument.simulator.agent.core.scheduler;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -22,6 +22,7 @@ import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
+import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
@@ -375,6 +376,12 @@ public class HttpAgentScheduler implements AgentScheduler {
                 logger.error("getCommandExecuteResponses error", throwable);
                 return commandExecuteResponseList;
             }
+        } else {//说明请求直接失败了
+            for (Map.Entry<CommandExecuteKey, CommandExecuteResponse> entry : HeartCommandUtils.getFutureMap().entrySet()){
+                if (!entry.getValue().isSuccess() || "failed".equals(entry.getValue().getExecuteStatus())){
+                    commandExecuteResponseList.add(entry.getValue());
+                }
+            }
         }
 
         return commandExecuteResponseList;
@@ -595,7 +602,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         this.scheduledExecutorService.schedule(new Runnable() {
             @Override
             public void run() {
-                while (!isShutdown) {
+                while (!isShutdown && AgentStatus.doInstall()) {
                     executeCommand();
                 }
             }

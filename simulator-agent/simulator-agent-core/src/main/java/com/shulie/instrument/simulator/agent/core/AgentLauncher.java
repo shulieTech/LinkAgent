@@ -399,6 +399,9 @@ public class AgentLauncher {
         if (logger.isInfoEnabled()) {
             logger.info("prepare to load module from path={}.", moduleId);
         }
+        if (baseUrl == null){
+            throw new IllegalArgumentException("agent还未安装成功，未完成本地服务启动!");
+        }
         try {
             String loadUrl = baseUrl + File.separator + moduleId + File.separator + moduleMethod + "?useApi=true&path="
                     + moduleId + "&extrasString=" + heartCommand.getPacket().getExtrasString() + "&sync=" + sync

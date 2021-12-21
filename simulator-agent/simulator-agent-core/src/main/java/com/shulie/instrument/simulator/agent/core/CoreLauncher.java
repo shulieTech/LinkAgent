@@ -23,6 +23,7 @@ import com.shulie.instrument.simulator.agent.core.exception.AgentDownloadExcepti
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterFactory;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
+import com.shulie.instrument.simulator.agent.core.scheduler.HttpAgentScheduler;
 import com.shulie.instrument.simulator.agent.core.uploader.ApplicationUploader;
 import com.shulie.instrument.simulator.agent.core.uploader.HttpApplicationUploader;
 import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
@@ -34,7 +35,6 @@ import com.shulie.instrument.simulator.agent.spi.command.Command;
 import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
-import com.shulie.instrument.simulator.agent.spi.impl.HttpAgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.reflect.FieldUtils;

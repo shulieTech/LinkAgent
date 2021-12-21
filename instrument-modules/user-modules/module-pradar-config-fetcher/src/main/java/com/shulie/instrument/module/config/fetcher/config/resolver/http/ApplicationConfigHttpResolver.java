@@ -18,16 +18,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Type;
-import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -47,11 +43,8 @@ import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
 import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
@@ -62,11 +55,9 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.agent.shared.service.ShadowDatabaseConfigParser;
 import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
 import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
-import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.pamirs.pradar.pressurement.mock.ForwardStrategy;
 import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
@@ -76,7 +67,6 @@ import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -464,80 +454,82 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * 拉取mq影子消费者
      */
     private boolean fetchMqShadowConsumer(String troControlWebUrl, ApplicationConfig applicationConfig) {
-        try {
+        // takin lite 不需要影子消费者
 
-            StringBuilder url = new StringBuilder(troControlWebUrl)
-                .append(TRO_SHADOW_MQ_CONSUMER_URL).append("?appName=").append(AppNameUtils.appName());
-            final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
-            if (!httpResult.isSuccess()) {
-                logger.warn("SIMULATOR: [FetchConfig] get shadow consumer config error. status: {}, result: {}",
-                    httpResult.getStatus(), httpResult.getResult());
-                return Boolean.FALSE;
-            }
-
-            if (StringUtils.isBlank(httpResult.getResult())) {
-                logger.error("[pradar] get shadow consumer config from server with empty response.");
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0009")
-                    .setMessage("获取影子消费者配置失败")
-                    .setDetail("获取影子消费者配置失败,接口返回值为空")
-                    .report();
-                return Boolean.FALSE;
-            }
-
-            JSONObject dataMap = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean)dataMap.get("success");
-            if (!success) {
-                logger.error("[pradar] get shadow consumer config from server with a fault response.");
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子MQ配置失败")
-                    .setDetail("获取影子MQ配置失败,接口返回查询状态success为false")
-                    .report();
-                return false;
-            }
-
-            JSONArray mapList = dataMap.getJSONArray(DATA);
-            if (mapList == null || mapList.isEmpty()) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("SIMULATOR: [FetchConfig] get shadow consumer config size is null. ");
-                }
-                return Boolean.TRUE;
-            }
-
-            for (int i = 0; i < mapList.size(); i++) {
-                JSONObject stringObjectMap = (JSONObject)mapList.get(i);
-                Map<String, List<String>> topicGroups = (Map<String, List<String>>)stringObjectMap.get("topicGroups");
-                Set<Entry<String, List<String>>> entries = topicGroups.entrySet();
-                Set<String> mqList = applicationConfig.getMqList();
-                if (mqList == null) {
-                    mqList = new HashSet<String>();
-                    applicationConfig.setMqList(mqList);
-                }
-
-                for (Entry<String, List<String>> entry : entries) {
-                    String key = entry.getKey();
-                    List<String> values = entry.getValue();
-                    for (int j = 0; j < values.size(); j++) {
-                        String value = key + "#" + values.get(j);
-                        mqList.add(value);
-                    }
-                }
-            }
-            return true;
-
-        } catch (Throwable e) {
-            logger.error("[pradar] Report Error Shadow mq consumer failed.", e);
-            ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0009")
-                .setMessage("获取影子消费者配置失败")
-                .setDetail("获取影子消费者配置失败,配置处理异常:" + e.getMessage())
-                .report();
-            return false;
-        }
+        //try {
+        //    StringBuilder url = new StringBuilder(troControlWebUrl)
+        //        .append(TRO_SHADOW_MQ_CONSUMER_URL).append("?appName=").append(AppNameUtils.appName());
+        //    final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
+        //    if (!httpResult.isSuccess()) {
+        //        logger.warn("SIMULATOR: [FetchConfig] get shadow consumer config error. status: {}, result: {}",
+        //            httpResult.getStatus(), httpResult.getResult());
+        //        return Boolean.FALSE;
+        //    }
+        //
+        //    if (StringUtils.isBlank(httpResult.getResult())) {
+        //        logger.error("[pradar] get shadow consumer config from server with empty response.");
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0009")
+        //            .setMessage("获取影子消费者配置失败")
+        //            .setDetail("获取影子消费者配置失败,接口返回值为空")
+        //            .report();
+        //        return Boolean.FALSE;
+        //    }
+        //
+        //    JSONObject dataMap = JSON.parseObject(httpResult.getResult());
+        //    Boolean success = (Boolean)dataMap.get("success");
+        //    if (!success) {
+        //        logger.error("[pradar] get shadow consumer config from server with a fault response.");
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子MQ配置失败")
+        //            .setDetail("获取影子MQ配置失败,接口返回查询状态success为false")
+        //            .report();
+        //        return false;
+        //    }
+        //
+        //    JSONArray mapList = dataMap.getJSONArray(DATA);
+        //    if (mapList == null || mapList.isEmpty()) {
+        //        if (logger.isDebugEnabled()) {
+        //            logger.debug("SIMULATOR: [FetchConfig] get shadow consumer config size is null. ");
+        //        }
+        //        return Boolean.TRUE;
+        //    }
+        //
+        //    for (int i = 0; i < mapList.size(); i++) {
+        //        JSONObject stringObjectMap = (JSONObject)mapList.get(i);
+        //        Map<String, List<String>> topicGroups = (Map<String, List<String>>)stringObjectMap.get("topicGroups");
+        //        Set<Entry<String, List<String>>> entries = topicGroups.entrySet();
+        //        Set<String> mqList = applicationConfig.getMqList();
+        //        if (mqList == null) {
+        //            mqList = new HashSet<String>();
+        //            applicationConfig.setMqList(mqList);
+        //        }
+        //
+        //        for (Entry<String, List<String>> entry : entries) {
+        //            String key = entry.getKey();
+        //            List<String> values = entry.getValue();
+        //            for (int j = 0; j < values.size(); j++) {
+        //                String value = key + "#" + values.get(j);
+        //                mqList.add(value);
+        //            }
+        //        }
+        //    }
+        //    return true;
+        //
+        //} catch (Throwable e) {
+        //    logger.error("[pradar] Report Error Shadow mq consumer failed.", e);
+        //    ErrorReporter.buildError()
+        //        .setErrorType(ErrorTypeEnum.AgentError)
+        //        .setErrorCode("agent-0009")
+        //        .setMessage("获取影子消费者配置失败")
+        //        .setDetail("获取影子消费者配置失败,配置处理异常:" + e.getMessage())
+        //        .report();
+        //    return false;
+        //}
+        return true;
     }
 
     @Override
@@ -689,154 +681,155 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     }
 
     private void getShadowEsServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
-        String appName = AppNameUtils.appName();
-        String accessUrl = String.format("%s%s?appName=%s", troControlWebUrl, ES_SHADOW_SERVER_URL, appName);
-        try {
-            String response = System.getProperty("shadow.es.config");
-            if (StringUtils.isBlank(response)) {
-                HttpUtils.HttpResult httpResult = HttpUtils.doGet(accessUrl);
-                if (!httpResult.isSuccess()) {
-                    GlobalConfig.getInstance().setShadowEsServer(Boolean.FALSE);
-                    return;
-                }
-                response = httpResult.getResult();
-            }
-            Map<String, ShadowEsServerConfig> shadowEsConfigMap = new HashMap<String, ShadowEsServerConfig>();
-            JSONObject res = JSON.parseObject(response);
-            Boolean success = (Boolean)res.get("success");
-            if (!success) {
-                logger.error("[pradar] get es shadow config from server with a fault response. url={}, result={}",
-                    accessUrl, response);
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.RedisServer)
-                    .setErrorCode("agent-0001")
-                    .setMessage("get es shadow config error.")
-                    .setDetail("获取影子es配置失败,接口返回查询状态success为false")
-                    .report();
-                return;
-            }
-            JSONArray datas = res.getJSONArray(DATA);
-            if (datas == null || datas.size() == 0) {
-                GlobalConfig.getInstance().setShadowEsServer(Boolean.FALSE);
-                return;
-            }
-            for (Object object : datas) {
-                JSONObject data = (JSONObject)object;
-                if (0 != Long.parseLong(data.get("status").toString())) {
-                    continue;
-                }
-                String config = (String)data.get("config");
-                JSONObject configMap = JSON.parseObject(config);
-                String businessNodes = (String)configMap.get("businessNodes");
-                String performanceTestNodes = (String)configMap.get("performanceTestNodes");
-                Object biz_cluster_name = configMap.get("businessClusterName");
-
-                Object pt_cluster_name = configMap.get("performanceClusterName");
-                ShadowEsServerConfig shadowEsServerConfig = new ShadowEsServerConfig(
-                    Arrays.asList(businessNodes.split(","))
-                    , Arrays.asList(performanceTestNodes.split(","))
-                    , biz_cluster_name == null ? null : (String)biz_cluster_name
-                    , pt_cluster_name == null ? null : (String)pt_cluster_name
-                );
-                shadowEsConfigMap.put(shadowEsServerConfig.identifyKey(), shadowEsServerConfig);
-            }
-            applicationConfig.setShadowEsServerConfigs(shadowEsConfigMap);
-            GlobalConfig.getInstance().setShadowEsServer(Boolean.TRUE);
-        } catch (Throwable e) {
-            logger.error("fetch es server config error. url={}", accessUrl, e);
-        }
+        //String appName = AppNameUtils.appName();
+        //String accessUrl = String.format("%s%s?appName=%s", troControlWebUrl, ES_SHADOW_SERVER_URL, appName);
+        //try {
+        //    String response = System.getProperty("shadow.es.config");
+        //    if (StringUtils.isBlank(response)) {
+        //        HttpUtils.HttpResult httpResult = HttpUtils.doGet(accessUrl);
+        //        if (!httpResult.isSuccess()) {
+        //            GlobalConfig.getInstance().setShadowEsServer(Boolean.FALSE);
+        //            return;
+        //        }
+        //        response = httpResult.getResult();
+        //    }
+        //    Map<String, ShadowEsServerConfig> shadowEsConfigMap = new HashMap<String, ShadowEsServerConfig>();
+        //    JSONObject res = JSON.parseObject(response);
+        //    Boolean success = (Boolean)res.get("success");
+        //    if (!success) {
+        //        logger.error("[pradar] get es shadow config from server with a fault response. url={}, result={}",
+        //            accessUrl, response);
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.RedisServer)
+        //            .setErrorCode("agent-0001")
+        //            .setMessage("get es shadow config error.")
+        //            .setDetail("获取影子es配置失败,接口返回查询状态success为false")
+        //            .report();
+        //        return;
+        //    }
+        //    JSONArray datas = res.getJSONArray(DATA);
+        //    if (datas == null || datas.size() == 0) {
+        //        GlobalConfig.getInstance().setShadowEsServer(Boolean.FALSE);
+        //        return;
+        //    }
+        //    for (Object object : datas) {
+        //        JSONObject data = (JSONObject)object;
+        //        if (0 != Long.parseLong(data.get("status").toString())) {
+        //            continue;
+        //        }
+        //        String config = (String)data.get("config");
+        //        JSONObject configMap = JSON.parseObject(config);
+        //        String businessNodes = (String)configMap.get("businessNodes");
+        //        String performanceTestNodes = (String)configMap.get("performanceTestNodes");
+        //        Object biz_cluster_name = configMap.get("businessClusterName");
+        //
+        //        Object pt_cluster_name = configMap.get("performanceClusterName");
+        //        ShadowEsServerConfig shadowEsServerConfig = new ShadowEsServerConfig(
+        //            Arrays.asList(businessNodes.split(","))
+        //            , Arrays.asList(performanceTestNodes.split(","))
+        //            , biz_cluster_name == null ? null : (String)biz_cluster_name
+        //            , pt_cluster_name == null ? null : (String)pt_cluster_name
+        //        );
+        //        shadowEsConfigMap.put(shadowEsServerConfig.identifyKey(), shadowEsServerConfig);
+        //    }
+        //    applicationConfig.setShadowEsServerConfigs(shadowEsConfigMap);
+        //    GlobalConfig.getInstance().setShadowEsServer(Boolean.TRUE);
+        //} catch (Throwable e) {
+        //    logger.error("fetch es server config error. url={}", accessUrl, e);
+        //}
 
     }
 
     private void getShadowRedisServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
-        String appName = AppNameUtils.appName();
-        StringBuilder builder = new StringBuilder(troControlWebUrl)
-            .append(REDIS_SHADOW_SERVER_URL)
-            .append("?appName=")
-            .append(appName);
-        try {
-            HttpUtils.HttpResult httpResult = HttpUtils.doGet(builder.toString());
-            if (!httpResult.isSuccess()) {
-                logger.warn(
-                    "SIMULATOR: [FetchConfig] get shadow redis server config error. url={}, status={}, result={}",
-                    builder.toString(), httpResult.getStatus(), httpResult.getResult());
-                return;
-            }
-
-            //没有配置默认为影子表
-            Map<String, ShadowRedisConfig> shadowRedisConfigMap = new HashMap<String, ShadowRedisConfig>();
-            //解析装入内存
-            JSONObject result = JSON.parseObject(httpResult.getResult());
-
-            Boolean success = result.getBoolean("success");
-            if (!success) {
-                logger.error("SIMULATOR: get redis shadow config from server with a fault response. url={}, result={}",
-                    builder.toString(), httpResult.getResult());
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.RedisServer)
-                    .setErrorCode("agent-0001")
-                    .setMessage("get redis shadow config error.")
-                    .setDetail("获取影子redis配置失败,接口返回查询状态success为false")
-                    .report();
-                return;
-            }
-
-            Type type = new TypeReference<List<Map>>() {
-            }.getType();
-            List<Map> datas = result.getObject(DATA, type);
-
-            if (datas == null || datas.size() == 0) {
-                GlobalConfig.getInstance().setShadowDbRedisServer(false);
-                return;
-            }
-            for (Map data : datas) {
-                if (data.get("dataSourceBusiness") == null
-                    || data.get("dataSourceBusinessPerformanceTest") == null) {
-                    continue;
-                }
-                Map business = (Map)data.get("dataSourceBusiness");
-                StringBuilder keyBuilder = new StringBuilder();
-                if (notEmpty(business.get("master"))) {
-                    String businessMaster = (String)business.get("master");
-                    keyBuilder.append(businessMaster)
-                        .append(",");
-                }
-                String nodes = (String)business.get("nodes");
-                keyBuilder.append(nodes);
-
-                Map dataSourceBusinessPerformanceTest = (Map)data.get("dataSourceBusinessPerformanceTest");
-                ShadowRedisConfig config = new ShadowRedisConfig();
-                if (notEmpty(dataSourceBusinessPerformanceTest.get("master"))) {
-                    String pressureMaster = String.valueOf(dataSourceBusinessPerformanceTest.get("master"));
-                    config.setMaster(pressureMaster);
-                }
-                String pressureNodes = String.valueOf(dataSourceBusinessPerformanceTest.get("nodes"));
-                config.setNodes(pressureNodes);
-                String passwd = String.valueOf(dataSourceBusinessPerformanceTest.get("password"));
-                if (notEmpty(passwd)) {
-                    config.setPassword(passwd);
-                }
-                String database = String.valueOf(dataSourceBusinessPerformanceTest.get("database"));
-                if (notEmpty(data) && NumberUtils.isDigits(database)) {
-                    config.setDatabase(Integer.valueOf(database));
-                }
-                String client = String.valueOf(dataSourceBusinessPerformanceTest.get("client"));
-                if (notEmpty(client)) {
-                    config.setClient(client);
-                }
-                String model = String.valueOf(dataSourceBusinessPerformanceTest.get("model"));
-                if (notEmpty(model)) {
-                    config.setModel(model);
-                }
-                shadowRedisConfigMap.put(keyBuilder.toString(), config);
-            }
-            applicationConfig.setShadowRedisConfigs(shadowRedisConfigMap);
-            GlobalConfig.getInstance().setShadowDbRedisServer(true);
-
-        } catch (Throwable e) {
-            logger.error("fetch redis server config error. url={}", builder.toString()
-                , e);
-        }
+        //String appName = AppNameUtils.appName();
+        //StringBuilder builder = new StringBuilder(troControlWebUrl)
+        //    .append(REDIS_SHADOW_SERVER_URL)
+        //    .append("?appName=")
+        //    .append(appName);
+        //try {
+        //    HttpUtils.HttpResult httpResult = HttpUtils.doGet(builder.toString());
+        //    if (!httpResult.isSuccess()) {
+        //        logger.warn(
+        //            "SIMULATOR: [FetchConfig] get shadow redis server config error. url={}, status={}, result={}",
+        //            builder.toString(), httpResult.getStatus(), httpResult.getResult());
+        //        return;
+        //    }
+        //
+        //    //没有配置默认为影子表
+        //    Map<String, ShadowRedisConfig> shadowRedisConfigMap = new HashMap<String, ShadowRedisConfig>();
+        //    //解析装入内存
+        //    JSONObject result = JSON.parseObject(httpResult.getResult());
+        //
+        //    Boolean success = result.getBoolean("success");
+        //    if (!success) {
+        //        logger.error("SIMULATOR: get redis shadow config from server with a fault response. url={},
+        //        result={}",
+        //            builder.toString(), httpResult.getResult());
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.RedisServer)
+        //            .setErrorCode("agent-0001")
+        //            .setMessage("get redis shadow config error.")
+        //            .setDetail("获取影子redis配置失败,接口返回查询状态success为false")
+        //            .report();
+        //        return;
+        //    }
+        //
+        //    Type type = new TypeReference<List<Map>>() {
+        //    }.getType();
+        //    List<Map> datas = result.getObject(DATA, type);
+        //
+        //    if (datas == null || datas.size() == 0) {
+        //        GlobalConfig.getInstance().setShadowDbRedisServer(false);
+        //        return;
+        //    }
+        //    for (Map data : datas) {
+        //        if (data.get("dataSourceBusiness") == null
+        //            || data.get("dataSourceBusinessPerformanceTest") == null) {
+        //            continue;
+        //        }
+        //        Map business = (Map)data.get("dataSourceBusiness");
+        //        StringBuilder keyBuilder = new StringBuilder();
+        //        if (notEmpty(business.get("master"))) {
+        //            String businessMaster = (String)business.get("master");
+        //            keyBuilder.append(businessMaster)
+        //                .append(",");
+        //        }
+        //        String nodes = (String)business.get("nodes");
+        //        keyBuilder.append(nodes);
+        //
+        //        Map dataSourceBusinessPerformanceTest = (Map)data.get("dataSourceBusinessPerformanceTest");
+        //        ShadowRedisConfig config = new ShadowRedisConfig();
+        //        if (notEmpty(dataSourceBusinessPerformanceTest.get("master"))) {
+        //            String pressureMaster = String.valueOf(dataSourceBusinessPerformanceTest.get("master"));
+        //            config.setMaster(pressureMaster);
+        //        }
+        //        String pressureNodes = String.valueOf(dataSourceBusinessPerformanceTest.get("nodes"));
+        //        config.setNodes(pressureNodes);
+        //        String passwd = String.valueOf(dataSourceBusinessPerformanceTest.get("password"));
+        //        if (notEmpty(passwd)) {
+        //            config.setPassword(passwd);
+        //        }
+        //        String database = String.valueOf(dataSourceBusinessPerformanceTest.get("database"));
+        //        if (notEmpty(data) && NumberUtils.isDigits(database)) {
+        //            config.setDatabase(Integer.valueOf(database));
+        //        }
+        //        String client = String.valueOf(dataSourceBusinessPerformanceTest.get("client"));
+        //        if (notEmpty(client)) {
+        //            config.setClient(client);
+        //        }
+        //        String model = String.valueOf(dataSourceBusinessPerformanceTest.get("model"));
+        //        if (notEmpty(model)) {
+        //            config.setModel(model);
+        //        }
+        //        shadowRedisConfigMap.put(keyBuilder.toString(), config);
+        //    }
+        //    applicationConfig.setShadowRedisConfigs(shadowRedisConfigMap);
+        //    GlobalConfig.getInstance().setShadowDbRedisServer(true);
+        //
+        //} catch (Throwable e) {
+        //    logger.error("fetch redis server config error. url={}", builder.toString()
+        //        , e);
+        //}
 
     }
 
@@ -1097,94 +1090,97 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troControlWebUrl
      */
     private boolean getShadowJobConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
-        StringBuilder url = new StringBuilder(troControlWebUrl)
-            .append(TRO_SHADOW_JOB_URL).append("?appName=").append(AppNameUtils.appName());
-        try {
-            Set<ShadowJob> shadowJobs = new HashSet<ShadowJob>();
-            HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
-            if (!httpResult.isSuccess()) {
-                logger.error(
-                    "SIMULATOR: [FetchConfig] get shadow job config from server with error response. url={}, "
-                        + "status={}, result={}"
-                    , url, httpResult.getStatus(), httpResult.getResult());
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子job配置失败")
-                    .setDetail("获取影子job配置失败,接口返回值为空")
-                    .report();
-                return false;
-            }
+        // takin lite 不需要影子job
 
-            Map map = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean)map.get("success");
-            if (!success) {
-                logger.error(
-                    "SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={},"
-                        + " status={}, result={}"
-                    , url, httpResult.getStatus(), httpResult.getResult());
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子job配置失败")
-                    .setDetail("获取影子job配置失败,接口返回查询状态success为false")
-                    .report();
-                return false;
-            }
-            List<Map> data = (List<Map>)map.get(DATA);
-            if (null != data && !data.isEmpty()) {
-                for (Map datum : data) {
-                    ShadowJob shaDowJob = new ShadowJob();
-                    shaDowJob.setId(Long.valueOf(datum.get("id").toString()));
-                    shaDowJob.setActive(Integer.valueOf(NumberFormat.getInstance().format(datum.get("active"))));
-                    shaDowJob.setClassName((String)datum.get("name"));
-                    shaDowJob.setStatus(NumberFormat.getInstance().format(datum.get("status")));
-                    Map<String, Object> configCode = JSON.parseObject(String.valueOf(datum.get("configCode")));
-                    shaDowJob.setCron(configCode.get("cron") == null ? null : configCode.get("cron").toString());
-                    shaDowJob.setFixedDelay(configCode.get("fixedDelay") == null ? null
-                        : Long.parseLong(configCode.get("fixedDelay").toString()));
-                    shaDowJob.setFixedRate(configCode.get("fixedRate") == null ? null
-                        : Long.parseLong(configCode.get("fixedRate").toString()));
-                    shaDowJob.setInitialDelay(configCode.get("initialDelay") == null ? null
-                        : Long.parseLong(configCode.get("initialDelay").toString()));
-                    if (null != configCode.get("listener")) {
-                        shaDowJob.setListenerName(
-                            configCode.get("listener") == null ? null : configCode.get("listener").toString());
-                    }
-
-                    String jobType = configCode.get("jobType") == null ? null : configCode.get("jobType").toString();
-                    if (null != jobType) {
-                        shaDowJob.setJobType(jobType);
-                    }
-                    String jobDataType = configCode.get("jobDataType") == null ? null : configCode.get("jobDataType")
-                        .toString();
-                    if (null != jobDataType) {
-                        shaDowJob.setJobDataType(jobDataType);
-                    }
-
-                    String beanName = configCode.get("beanName") == null ? null : configCode.get("beanName").toString();
-                    if (null != beanName) {
-                        if (null == shaDowJob.getExtendParam()) {
-                            shaDowJob.setExtendParam(new HashMap<String, Object>());
-                        }
-                        shaDowJob.getExtendParam().put("beanName", beanName);
-                    }
-
-                    shadowJobs.add(shaDowJob);
-                }
-            }
-            GlobalConfig.getInstance().clearErrorRegisteredJobs();
-            applicationConfig.setShadowJobs(shadowJobs);
-        } catch (Throwable e) {
-            logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
-            ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取影子job配置失败")
-                .setDetail("获取影子job配置失败,配置处理异常：" + e.getMessage())
-                .report();
-            return false;
-        }
+        //StringBuilder url = new StringBuilder(troControlWebUrl)
+        //    .append(TRO_SHADOW_JOB_URL).append("?appName=").append(AppNameUtils.appName());
+        //try {
+        //    Set<ShadowJob> shadowJobs = new HashSet<ShadowJob>();
+        //    HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
+        //    if (!httpResult.isSuccess()) {
+        //        logger.error(
+        //            "SIMULATOR: [FetchConfig] get shadow job config from server with error response. url={}, "
+        //                + "status={}, result={}"
+        //            , url, httpResult.getStatus(), httpResult.getResult());
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子job配置失败")
+        //            .setDetail("获取影子job配置失败,接口返回值为空")
+        //            .report();
+        //        return false;
+        //    }
+        //
+        //    Map map = JSON.parseObject(httpResult.getResult());
+        //    Boolean success = (Boolean)map.get("success");
+        //    if (!success) {
+        //        logger.error(
+        //            "SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={},"
+        //                + " status={}, result={}"
+        //            , url, httpResult.getStatus(), httpResult.getResult());
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子job配置失败")
+        //            .setDetail("获取影子job配置失败,接口返回查询状态success为false")
+        //            .report();
+        //        return false;
+        //    }
+        //    List<Map> data = (List<Map>)map.get(DATA);
+        //    if (null != data && !data.isEmpty()) {
+        //        for (Map datum : data) {
+        //            ShadowJob shaDowJob = new ShadowJob();
+        //            shaDowJob.setId(Long.valueOf(datum.get("id").toString()));
+        //            shaDowJob.setActive(Integer.valueOf(NumberFormat.getInstance().format(datum.get("active"))));
+        //            shaDowJob.setClassName((String)datum.get("name"));
+        //            shaDowJob.setStatus(NumberFormat.getInstance().format(datum.get("status")));
+        //            Map<String, Object> configCode = JSON.parseObject(String.valueOf(datum.get("configCode")));
+        //            shaDowJob.setCron(configCode.get("cron") == null ? null : configCode.get("cron").toString());
+        //            shaDowJob.setFixedDelay(configCode.get("fixedDelay") == null ? null
+        //                : Long.parseLong(configCode.get("fixedDelay").toString()));
+        //            shaDowJob.setFixedRate(configCode.get("fixedRate") == null ? null
+        //                : Long.parseLong(configCode.get("fixedRate").toString()));
+        //            shaDowJob.setInitialDelay(configCode.get("initialDelay") == null ? null
+        //                : Long.parseLong(configCode.get("initialDelay").toString()));
+        //            if (null != configCode.get("listener")) {
+        //                shaDowJob.setListenerName(
+        //                    configCode.get("listener") == null ? null : configCode.get("listener").toString());
+        //            }
+        //
+        //            String jobType = configCode.get("jobType") == null ? null : configCode.get("jobType").toString();
+        //            if (null != jobType) {
+        //                shaDowJob.setJobType(jobType);
+        //            }
+        //            String jobDataType = configCode.get("jobDataType") == null ? null : configCode.get("jobDataType")
+        //                .toString();
+        //            if (null != jobDataType) {
+        //                shaDowJob.setJobDataType(jobDataType);
+        //            }
+        //
+        //            String beanName = configCode.get("beanName") == null ? null : configCode.get("beanName")
+        //            .toString();
+        //            if (null != beanName) {
+        //                if (null == shaDowJob.getExtendParam()) {
+        //                    shaDowJob.setExtendParam(new HashMap<String, Object>());
+        //                }
+        //                shaDowJob.getExtendParam().put("beanName", beanName);
+        //            }
+        //
+        //            shadowJobs.add(shaDowJob);
+        //        }
+        //    }
+        //    GlobalConfig.getInstance().clearErrorRegisteredJobs();
+        //    applicationConfig.setShadowJobs(shadowJobs);
+        //} catch (Throwable e) {
+        //    logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
+        //    ErrorReporter.buildError()
+        //        .setErrorType(ErrorTypeEnum.AgentError)
+        //        .setErrorCode("agent-0004")
+        //        .setMessage("获取影子job配置失败")
+        //        .setDetail("获取影子job配置失败,配置处理异常：" + e.getMessage())
+        //        .report();
+        //    return false;
+        //}
         return true;
     }
 
@@ -1194,106 +1190,110 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troWebUrl
      */
     private boolean getPressureTable4AccessSimple(String troWebUrl, ApplicationConfig applicationConfig) {
-        final String getShadowDatasourceUrl = troWebUrl + SHADOW_DB_TABLE_URL + "?appName=" + AppNameUtils.appName();
-        try {
-            HttpUtils.HttpResult httpResult = HttpUtils.doGet(getShadowDatasourceUrl);
-            if (!httpResult.isSuccess()) {
-                logger.warn("SIMULATOR: [FetchConfig] get datasource config error. url={}, status={}, result={}"
-                    , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,status: " + httpResult.getStatus() + ", result: " + httpResult.getResult())
-                    .report();
-                return false;
-            }
-            Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean)resultMap.get("success");
-            if (!success) {
-                logger.warn(
-                    "SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, "
-                        + "status={}, result={}"
-                    , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
-                String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值为false,错误信息:" + error)
-                    .report();
-                return false;
-            }
 
-            if (!resultMap.containsKey("data")) {
-                logger.error(
-                    "SIMULATOR: get shadow db config with a err response. can't found attributes data from response. "
-                        + "url={}, status={}, result={}"
-                    , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值异常，无data属性")
-                    .report();
-                return false;
-            }
-            List<Map<String, Object>> dataMapList = null;
-            try {
-                dataMapList = (List<Map<String, Object>>)resultMap.get("data");
-            } catch (Throwable e) {
-                logger.error(
-                    "SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from "
-                        + "response. url={}",
-                    getShadowDatasourceUrl, e);
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
-                    .report();
-                return false;
-            }
-            /**
-             * 如果拉取到的影子库配置为空不做强制校验，因为有一些应用是没有数据库访问的
-             */
-            if (dataMapList == null) {
-                dataMapList = new ArrayList<Map<String, Object>>();
-            }
+        // takin lite不需要影子库表
 
-            List<ShadowDatabaseConfig> configs = ShadowDatabaseConfigParser.getInstance().parse(dataMapList);
-            /**
-             * 转换成map
-             * key: url | username
-             * value: ShadowDatabaseConfig
-             */
-            Map<String, ShadowDatabaseConfig> map = new HashMap<String, ShadowDatabaseConfig>();
-            for (ShadowDatabaseConfig shadowDatabaseConfig : configs) {
-                /**
-                 * 如果是 jndi，则不需要加用户名
-                 */
-                if (StringUtils.startsWith(shadowDatabaseConfig.getUrl(), "jndi:")) {
-                    String url = StringUtils.substring(shadowDatabaseConfig.getUrl(), 5);
-                    shadowDatabaseConfig.setUrl(url);
-                    map.put(DbUrlUtils.getKey(shadowDatabaseConfig.getUrl(), null), shadowDatabaseConfig);
-                } else {
-                    map.put(DbUrlUtils.getKey(shadowDatabaseConfig.getUrl(), shadowDatabaseConfig.getUsername()),
-                        shadowDatabaseConfig);
-                }
-            }
-            applicationConfig.setShadowDatabaseConfigs(map);
-
-        } catch (Throwable e) {
-            logger.error("SIMULATOR: get shadow db config with a err response. got a unknow err. url={}",
-                getShadowDatasourceUrl, e);
-            ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取影子数据源配置失败")
-                .setDetail("获取影子数据源配置失败,配置处理异常:" + e.getMessage())
-                .report();
-            return false;
-        }
+        //final String getShadowDatasourceUrl = troWebUrl + SHADOW_DB_TABLE_URL + "?appName=" + AppNameUtils.appName();
+        //try {
+        //    HttpUtils.HttpResult httpResult = HttpUtils.doGet(getShadowDatasourceUrl);
+        //    if (!httpResult.isSuccess()) {
+        //        logger.warn("SIMULATOR: [FetchConfig] get datasource config error. url={}, status={}, result={}"
+        //            , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子数据源配置失败")
+        //            .setDetail("获取影子数据源配置失败,status: " + httpResult.getStatus() + ", result: " + httpResult
+        //            .getResult())
+        //            .report();
+        //        return false;
+        //    }
+        //    Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
+        //    Boolean success = (Boolean)resultMap.get("success");
+        //    if (!success) {
+        //        logger.warn(
+        //            "SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, "
+        //                + "status={}, result={}"
+        //            , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
+        //        String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子数据源配置失败")
+        //            .setDetail("获取影子数据源配置失败,接口返回值为false,错误信息:" + error)
+        //            .report();
+        //        return false;
+        //    }
+        //
+        //    if (!resultMap.containsKey("data")) {
+        //        logger.error(
+        //            "SIMULATOR: get shadow db config with a err response. can't found attributes data from response. "
+        //                + "url={}, status={}, result={}"
+        //            , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子数据源配置失败")
+        //            .setDetail("获取影子数据源配置失败,接口返回值异常，无data属性")
+        //            .report();
+        //        return false;
+        //    }
+        //    List<Map<String, Object>> dataMapList = null;
+        //    try {
+        //        dataMapList = (List<Map<String, Object>>)resultMap.get("data");
+        //    } catch (Throwable e) {
+        //        logger.error(
+        //            "SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from "
+        //                + "response. url={}",
+        //            getShadowDatasourceUrl, e);
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0004")
+        //            .setMessage("获取影子数据源配置失败")
+        //            .setDetail("获取影子数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
+        //            .report();
+        //        return false;
+        //    }
+        //    /**
+        //     * 如果拉取到的影子库配置为空不做强制校验，因为有一些应用是没有数据库访问的
+        //     */
+        //    if (dataMapList == null) {
+        //        dataMapList = new ArrayList<Map<String, Object>>();
+        //    }
+        //
+        //    List<ShadowDatabaseConfig> configs = ShadowDatabaseConfigParser.getInstance().parse(dataMapList);
+        //    /**
+        //     * 转换成map
+        //     * key: url | username
+        //     * value: ShadowDatabaseConfig
+        //     */
+        //    Map<String, ShadowDatabaseConfig> map = new HashMap<String, ShadowDatabaseConfig>();
+        //    for (ShadowDatabaseConfig shadowDatabaseConfig : configs) {
+        //        /**
+        //         * 如果是 jndi，则不需要加用户名
+        //         */
+        //        if (StringUtils.startsWith(shadowDatabaseConfig.getUrl(), "jndi:")) {
+        //            String url = StringUtils.substring(shadowDatabaseConfig.getUrl(), 5);
+        //            shadowDatabaseConfig.setUrl(url);
+        //            map.put(DbUrlUtils.getKey(shadowDatabaseConfig.getUrl(), null), shadowDatabaseConfig);
+        //        } else {
+        //            map.put(DbUrlUtils.getKey(shadowDatabaseConfig.getUrl(), shadowDatabaseConfig.getUsername()),
+        //                shadowDatabaseConfig);
+        //        }
+        //    }
+        //    applicationConfig.setShadowDatabaseConfigs(map);
+        //
+        //} catch (Throwable e) {
+        //    logger.error("SIMULATOR: get shadow db config with a err response. got a unknow err. url={}",
+        //        getShadowDatasourceUrl, e);
+        //    ErrorReporter.buildError()
+        //        .setErrorType(ErrorTypeEnum.AgentError)
+        //        .setErrorCode("agent-0004")
+        //        .setMessage("获取影子数据源配置失败")
+        //        .setDetail("获取影子数据源配置失败,配置处理异常:" + e.getMessage())
+        //        .report();
+        //    return false;
+        //}
         return true;
     }
 
@@ -1306,7 +1306,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             .append("?appName=")
             .append(AppNameUtils.appName());
         try {
-            return loadList(url, applicationConfig);
+            // takin lite不需要白名单，所以注释掉
+            //return loadList(url, applicationConfig);
+            return true;
         } catch (Throwable e) {
             logger.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
             ErrorReporter.buildError()
@@ -1537,100 +1539,101 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troWebUrl
      */
     private boolean getHbaseShadowConfig(String troWebUrl, ApplicationConfig applicationConfig) {
-        final String url = troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName();
-        try {
-            HttpUtils.HttpResult result = HttpUtils.doGet(url);
-
-            if (!result.isSuccess()) {
-                logger.error("pull shadow hbase config error {}, url={}", result.getResult(),
-                    troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName());
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值为null")
-                    .report();
-                return false;
-            }
-            Map<String, Object> resultMap = JSONObject.parseObject(result.getResult());
-            Boolean success = (Boolean)resultMap.get("success");
-            if (!success) {
-                String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子Hbase数据源配置失败")
-                    .setDetail("获取影子Hbase数据源配置失败,接口返回值为false,错误信息:" + error)
-                    .report();
-                return false;
-            }
-
-            if (!resultMap.containsKey("data")) {
-                logger.error(
-                    "[pradar] get shadow hbase config with a err response. can't found attributes data from response."
-                        + " url={}",
-                    url);
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子Hbase数据源配置失败")
-                    .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，无data属性")
-                    .report();
-                return false;
-            }
-            List<Map<String, Object>> dataMapList = null;
-            try {
-                dataMapList = (List<Map<String, Object>>)resultMap.get("data");
-            } catch (Exception e) {
-                logger.error(
-                    "[pradar] get shadow hbase config with a err response. can't convert attributes data to map from "
-                        + "response. url={}",
-                    url, e);
-                ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子Hbase数据源配置失败")
-                    .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
-                    .report();
-                return false;
-            }
-
-            if (dataMapList != null) {
-                Map<String, ShadowHbaseConfig> shadowHbaseConfigMap = new HashMap<String, ShadowHbaseConfig>();
-
-                for (Map<String, Object> map : dataMapList) {
-                    Map<String, Object> configMap = JSONObject.parseObject((String)map.get("config"));
-                    if (configMap != null) {
-                        Map<String, Object> business = (Map<String, Object>)configMap.get("dataSourceBusiness");
-                        Map<String, Object> performance = (Map<String, Object>)configMap.get(
-                            "dataSourcePerformanceTest");
-                        if (performance != null && business != null) {
-                            ShadowHbaseConfig bconfig = convertConfig(business);
-                            ShadowHbaseConfig pconfig = convertConfig(performance);
-                            shadowHbaseConfigMap.put(bconfig.toKey(), pconfig);
-                        }
-                    }
-                }
-                if (shadowHbaseConfigMap.size() > 0) {
-                    GlobalConfig.getInstance().setShadowHbaseServer(true);
-                    ;
-                }
-
-                applicationConfig.setShadowHbaseConfigs(shadowHbaseConfigMap);
-            } else {
-                logger.warn("获取hbase数据源配置为空：{}", result.getResult());
-            }
-
-        } catch (Throwable e) {
-            logger.error("[pradar] get shadow hbase config with a err response. got a unknow err. url={}", url, e);
-            ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0010")
-                .setMessage("获取影子Hbase数据源配置失败")
-                .setDetail("获取影子Hbase数据源配置失败,配置处理异常:" + e.getMessage())
-                .report();
-            return false;
-        }
+        // takin lite 不需要影子hbase
+        //final String url = troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName();
+        //try {
+        //    HttpUtils.HttpResult result = HttpUtils.doGet(url);
+        //
+        //    if (!result.isSuccess()) {
+        //        logger.error("pull shadow hbase config error {}, url={}", result.getResult(),
+        //            troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName());
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0010")
+        //            .setMessage("获取影子数据源配置失败")
+        //            .setDetail("获取影子数据源配置失败,接口返回值为null")
+        //            .report();
+        //        return false;
+        //    }
+        //    Map<String, Object> resultMap = JSONObject.parseObject(result.getResult());
+        //    Boolean success = (Boolean)resultMap.get("success");
+        //    if (!success) {
+        //        String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0010")
+        //            .setMessage("获取影子Hbase数据源配置失败")
+        //            .setDetail("获取影子Hbase数据源配置失败,接口返回值为false,错误信息:" + error)
+        //            .report();
+        //        return false;
+        //    }
+        //
+        //    if (!resultMap.containsKey("data")) {
+        //        logger.error(
+        //            "[pradar] get shadow hbase config with a err response. can't found attributes data from response."
+        //                + " url={}",
+        //            url);
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0010")
+        //            .setMessage("获取影子Hbase数据源配置失败")
+        //            .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，无data属性")
+        //            .report();
+        //        return false;
+        //    }
+        //    List<Map<String, Object>> dataMapList = null;
+        //    try {
+        //        dataMapList = (List<Map<String, Object>>)resultMap.get("data");
+        //    } catch (Exception e) {
+        //        logger.error(
+        //            "[pradar] get shadow hbase config with a err response. can't convert attributes data to map from "
+        //                + "response. url={}",
+        //            url, e);
+        //        ErrorReporter.buildError()
+        //            .setErrorType(ErrorTypeEnum.AgentError)
+        //            .setErrorCode("agent-0010")
+        //            .setMessage("获取影子Hbase数据源配置失败")
+        //            .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
+        //            .report();
+        //        return false;
+        //    }
+        //
+        //    if (dataMapList != null) {
+        //        Map<String, ShadowHbaseConfig> shadowHbaseConfigMap = new HashMap<String, ShadowHbaseConfig>();
+        //
+        //        for (Map<String, Object> map : dataMapList) {
+        //            Map<String, Object> configMap = JSONObject.parseObject((String)map.get("config"));
+        //            if (configMap != null) {
+        //                Map<String, Object> business = (Map<String, Object>)configMap.get("dataSourceBusiness");
+        //                Map<String, Object> performance = (Map<String, Object>)configMap.get(
+        //                    "dataSourcePerformanceTest");
+        //                if (performance != null && business != null) {
+        //                    ShadowHbaseConfig bconfig = convertConfig(business);
+        //                    ShadowHbaseConfig pconfig = convertConfig(performance);
+        //                    shadowHbaseConfigMap.put(bconfig.toKey(), pconfig);
+        //                }
+        //            }
+        //        }
+        //        if (shadowHbaseConfigMap.size() > 0) {
+        //            GlobalConfig.getInstance().setShadowHbaseServer(true);
+        //            ;
+        //        }
+        //
+        //        applicationConfig.setShadowHbaseConfigs(shadowHbaseConfigMap);
+        //    } else {
+        //        logger.warn("获取hbase数据源配置为空：{}", result.getResult());
+        //    }
+        //
+        //} catch (Throwable e) {
+        //    logger.error("[pradar] get shadow hbase config with a err response. got a unknow err. url={}", url, e);
+        //    ErrorReporter.buildError()
+        //        .setErrorType(ErrorTypeEnum.AgentError)
+        //        .setErrorCode("agent-0010")
+        //        .setMessage("获取影子Hbase数据源配置失败")
+        //        .setDetail("获取影子Hbase数据源配置失败,配置处理异常:" + e.getMessage())
+        //        .report();
+        //    return false;
+        //}
         return true;
     }
 

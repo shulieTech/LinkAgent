@@ -14,19 +14,20 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.common;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import com.pamirs.attach.plugin.apache.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.*;
+import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.ShadowConsumerDisableEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.SilenceSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
@@ -69,8 +70,6 @@ public class ConsumerRegistry {
         = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
     private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners
         = new ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener>();
-    private static Set<DefaultMQPushConsumer/*shadow consumer*/> businessConsumerHookedSet
-        = new HashSet<DefaultMQPushConsumer>();
 
     public static void destroy() {
         for (Map.Entry<DefaultMQPushConsumer, DefaultMQPushConsumer> entry : caches.entrySet()) {
@@ -85,7 +84,6 @@ public class ConsumerRegistry {
         caches.clear();
         shadowConsumers.clear();
         listeners.clear();
-        businessConsumerHookedSet.clear();
     }
 
     public static DefaultMQPushConsumer getConsumer(Object target) {
@@ -138,15 +136,6 @@ public class ConsumerRegistry {
      * @return 返回注册是否成功, 如果
      */
     public static boolean registerConsumer(DefaultMQPushConsumer businessConsumer) {
-
-        if (!businessConsumerHookedSet.contains(businessConsumer)) {
-            synchronized (ConsumerRegistry.class) {
-                if (!businessConsumerHookedSet.contains(businessConsumer)) {
-                    businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-                    businessConsumerHookedSet.add(businessConsumer);
-                }
-            }
-        }
 
         DefaultMQPushConsumer shadowConsumer = caches.get(businessConsumer);
         if (shadowConsumer != null) {
@@ -254,8 +243,6 @@ public class ConsumerRegistry {
                 defaultMQPushConsumer.registerMessageListener((MessageListenerOrderly)messageListener);
             }
         }
-
-        defaultMQPushConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
 
         ConcurrentMap<String, SubscriptionData> map = businessConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner();
 
@@ -365,7 +352,7 @@ public class ConsumerRegistry {
                     String group = businessConsumer.getConsumerGroup();
                     Set<String> topics = rebalance.getSubscriptionInner().keySet();
                     for (String topic : topics) {
-                        List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent) event).getTarget();
+                        List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent)event).getTarget();
                         for (ShadowConsumerDisableInfo disableInfo : disableInfos) {
                             if (topic.equals(disableInfo.getTopic()) && group.equals(disableInfo.getConsumerGroup())) {
                                 return shutdownShadowConsumer(businessConsumer);
@@ -397,7 +384,8 @@ public class ConsumerRegistry {
             }
         } catch (Throwable e) {
             logger.error("", e);
-            return EventResult.error("apache-rocketmq-plugin-close", "Apache-RocketMQ PT Consumer close failed: " + e.getMessage());
+            return EventResult.error("apache-rocketmq-plugin-close",
+                "Apache-RocketMQ PT Consumer close failed: " + e.getMessage());
         }
         return EventResult.success("apache-rocketmq-plugin-close");
     }

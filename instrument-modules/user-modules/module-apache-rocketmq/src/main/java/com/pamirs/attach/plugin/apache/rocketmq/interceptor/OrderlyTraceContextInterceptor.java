@@ -1,19 +1,18 @@
-package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
+package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
 import java.lang.reflect.Field;
 
-import com.alibaba.rocketmq.client.hook.ConsumeMessageContext;
-import com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
-import com.alibaba.rocketmq.common.message.MessageQueue;
-
-import com.pamirs.attach.plugin.alibaba.rocketmq.common.OrderlyTraceContexts;
-import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
+import com.pamirs.attach.plugin.apache.rocketmq.common.OrderlyTraceContexts;
+import com.pamirs.attach.plugin.apache.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.apache.rocketmq.client.hook.ConsumeMessageContext;
+import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
+import org.apache.rocketmq.common.message.MessageQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

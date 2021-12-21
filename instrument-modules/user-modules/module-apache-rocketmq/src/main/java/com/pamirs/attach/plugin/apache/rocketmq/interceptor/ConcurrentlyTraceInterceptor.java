@@ -1,46 +1,57 @@
-package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
+package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
-import com.alibaba.rocketmq.client.hook.ConsumeMessageContext;
-import com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
-import com.alibaba.rocketmq.common.message.MessageQueue;
-
-import com.pamirs.attach.plugin.alibaba.rocketmq.common.OrderlyTraceContexts;
-import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
+import com.pamirs.attach.plugin.apache.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.apache.rocketmq.client.hook.ConsumeMessageContext;
+import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
- * @since 2021/12/21 2:24 PM
+ * @since 2021/12/20 5:28 PM
  */
-public class OrderlyTraceContextInterceptor extends AroundInterceptor {
+public class ConcurrentlyTraceInterceptor extends AroundInterceptor {
 
     private static Field messageQueueField;
+
+    private static Field msgsField;
 
     private static Field defaultMQPushConsumerImplField;
 
     private static Field this$0Field;
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(OrderlyTraceContextInterceptor.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(ConcurrentlyTraceInterceptor.class);
+    private final static ThreadLocal<ConsumeMessageContext> contextThreadLocal = new ThreadLocal<ConsumeMessageContext>();
+
+    private final PushConsumeMessageHookImpl hook = PushConsumeMessageHookImpl.getInstance();
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
         try {
             MessageQueue messageQueue = getMessageQueue(advice.getTarget());
+            List<MessageExt> messageExts = getMessages(advice.getTarget());
             String consumeGroup = getConsumeGroup(advice.getTarget());
+            if (messageExts == null || messageExts.isEmpty()) {
+                return;
+            }
             ConsumeMessageContext consumeMessageContext = new ConsumeMessageContext();
             consumeMessageContext.setConsumerGroup(consumeGroup);
             consumeMessageContext.setMq(messageQueue);
+            consumeMessageContext.setMsgList(messageExts);
             consumeMessageContext.setSuccess(false);
-            OrderlyTraceContexts.set(consumeMessageContext);
+            hook.consumeMessageBefore(consumeMessageContext);
+            contextThreadLocal.set(consumeMessageContext);
         } catch (PradarException e) {
             LOGGER.error("", e);
             if (Pradar.isClusterTest()) {
@@ -62,14 +73,13 @@ public class OrderlyTraceContextInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {
         try {
-            ConsumeMessageContext consumeMessageContext = OrderlyTraceContexts.get();
-            if (consumeMessageContext == null || consumeMessageContext.getMsgList() == null) {
+            ConsumeMessageContext consumeMessageContext = contextThreadLocal.get();
+            if (consumeMessageContext == null) {
                 return;
             }
             consumeMessageContext.setSuccess(true);
-            consumeMessageContext.setStatus("SUCCESS");
-            //兜底，以免after没有执行（consumeMessageContext.getMsgList() != null 说明before 已经执行了）
-            PushConsumeMessageHookImpl.getInstance().consumeMessageAfter(consumeMessageContext);
+            consumeMessageContext.setStatus("CONSUME_SUCCESS");
+            hook.consumeMessageAfter(consumeMessageContext);
         } catch (PradarException e) {
             LOGGER.error("", e);
             if (Pradar.isClusterTest()) {
@@ -86,7 +96,7 @@ public class OrderlyTraceContextInterceptor extends AroundInterceptor {
                 throw new PressureMeasureError(e);
             }
         } finally {
-            OrderlyTraceContexts.remove();
+            contextThreadLocal.remove();
         }
     }
 
@@ -106,12 +116,22 @@ public class OrderlyTraceContextInterceptor extends AroundInterceptor {
         return messageQueueField;
     }
 
+    private List<MessageExt> getMessages(Object target) {
+        return Reflect.on(target).get(getMessagesField(target));
+    }
+
+    private Field getMessagesField(Object target) {
+        if (msgsField == null) {
+            msgsField = Reflect.on(target).field0("msgs");
+        }
+        return msgsField;
+    }
+
     private String getConsumeGroup(Object target) {
         Field consumeMessageServiceField = getThis$0Field(target);
         Object consumeMessageService = Reflect.on(target).get(consumeMessageServiceField);
         Field defaultMQPushConsumerImplField = getDefaultMQPushConsumerImplField(consumeMessageService);
-        DefaultMQPushConsumerImpl defaultMQPushConsumer = Reflect.on(consumeMessageService).get(
-            defaultMQPushConsumerImplField);
+        DefaultMQPushConsumerImpl defaultMQPushConsumer = Reflect.on(consumeMessageService).get(defaultMQPushConsumerImplField);
         return defaultMQPushConsumer.groupName();
     }
 

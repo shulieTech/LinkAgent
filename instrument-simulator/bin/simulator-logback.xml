@@ -72,20 +72,6 @@
         </encoder>
     </appender>
 
-    <appender name="TMP_MQ_APPENDER" class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${SIMULATOR_LOG_PATH}/rocket.log</file>
-        <rollingPolicy class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${SIMULATOR_LOG_PATH}/rocket.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>  <!-- 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB -->
-            <maxHistory>3</maxHistory>  <!-- 保存30天 -->
-            <totalSizeCap>1GB</totalSizeCap>  <!-- 总日志大小 -->
-        </rollingPolicy>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %msg%n</pattern>
-            <charset>UTF-8</charset>
-        </encoder>
-    </appender>
-
     <appender name="ASYNC-TIME-CONSUMING-APPENDER" class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="TIME-CONSUMING-APPENDER" />
     </appender>
@@ -111,10 +97,6 @@
     </logger>
 
     <logger name="com.shulie.instrument.module.config.fetcher.config" level="warn" additivity="false"/>
-
-    <logger name="ROCKET_MQ_TMP_LOGGER" level="info" additivity="false">
-        <appender-ref ref="TMP_MQ_APPENDER"/>
-    </logger>
 
     <root level="${SIMULATOR_LOG_LEVEL}">
         <appender-ref ref="ASYNC-SIMULATOR-FILE-APPENDER"/>

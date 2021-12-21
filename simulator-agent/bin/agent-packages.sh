@@ -42,6 +42,7 @@ fi
 
 cp *.properties ${AGENT_TARGET_DIR}/config/
 cp simulator-agent-logback.xml ${AGENT_TARGET_DIR}/config/simulator-agent-logback.xml
+cp ignore.config ${AGENT_TARGET_DIR}/config/ignore.config
 
 # reset the target dir
 AGENT_VERSION=$(cat ..//simulator-agent-core/target/classes/com/shulie/instrument/simulator/agent/version)

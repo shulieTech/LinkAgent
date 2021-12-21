@@ -15,15 +15,20 @@
 
 package com.shulie.instrument.simulator.agent.lite;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.shulie.instrument.simulator.agent.lite.util.JpsCommand;
+import com.shulie.instrument.simulator.agent.lite.util.JpsCommand.JpsResult;
 import com.shulie.instrument.simulator.agent.lite.util.RuntimeMXBeanUtils;
 import com.sun.tools.attach.VirtualMachine;
 
@@ -35,6 +40,16 @@ import com.sun.tools.attach.VirtualMachine;
 public class LiteLauncher {
 
     /**
+     * 对象锁
+     */
+    private static final Object LOCK = new Object();
+
+    /**
+     * simulator 延迟加载时间
+     */
+    private static final Integer SIMULATOR_DELAY = 5 * 60;
+
+    /**
      * agentHome地址
      */
     private static final String DEFAULT_AGENT_HOME
@@ -44,50 +59,73 @@ public class LiteLauncher {
     /**
      * PID文件目录
      */
-    private static final String DIRECTORY_PATH = DEFAULT_AGENT_HOME + File.separator + "pids";
+    private static final String PIDS_DIRECTORY_PATH = DEFAULT_AGENT_HOME + File.separator + "pids";
+
+    /**
+     * simulator-launcher-instrument.jar 包地址
+     */
+    private static final String SIMULATOR_BEGIN_JAR_PATH = DEFAULT_AGENT_HOME + File.separator
+        + "simulator-launcher-instrument.jar";
+
+    /**
+     * ignore.config 文件地址
+     */
+    private static final String IGNORE_CONFIG_PATH = DEFAULT_AGENT_HOME + File.separator + "config" + File.separator
+        + "ignore.config";
 
     /**
      * 定时任务线程池
      */
-    private static final ScheduledThreadPoolExecutor poolExecutor = new ScheduledThreadPoolExecutor(1);
+    private static final ScheduledThreadPoolExecutor poolExecutor = new ScheduledThreadPoolExecutor(1,
+        runnable -> new Thread(runnable, "Takin-Lite-Scan-Server"));
+
+    /**
+     * agent启动参数配置
+     */
+    private static final String AGENT_START_PARAM = ";simulator.delay=%s";
+
+    ///**
+    // * 启动agent
+    // *
+    // * @param args 参数
+    // */
+    //public static void main(String[] args) throws IOException {
+    //    String agentLauncherPath
+    //        = "/Users/ocean_wll/IdeaProjects/LinkAgent/deploy/simulator-agent/simulator-launcher-instrument.jar";
+    //    System.out.println(new File(agentLauncherPath).exists());
+    //    VirtualMachine vm = null;
+    //    try {
+    //        vm = VirtualMachine.attach("2679");
+    //        vm.loadAgent(agentLauncherPath, ";simulator.delay=10");
+    //    } catch (Exception e) {
+    //        System.out.println(e.getLocalizedMessage());
+    //    } finally {
+    //        if (vm != null) {
+    //            vm.detach();
+    //        }
+    //    }
+    //}
 
     public static void main(String[] args) throws IOException {
-        String agentLauncherPath
-            = "/Users/ocean_wll/IdeaProjects/LinkAgent/deploy/simulator-agent/simulator-launcher-instrument.jar";
-        System.out.println(new File(agentLauncherPath).exists());
-        VirtualMachine vm = null;
-        try {
-            vm = VirtualMachine.attach("2679");
-            vm.loadAgent(agentLauncherPath, ";simulator.delay=10");
-        } catch (Exception e) {
-            System.out.println(e.getLocalizedMessage());
-        } finally {
-            if (vm != null) {
-                vm.detach();
-            }
-        }
-    }
-
-    public static void main11(String[] args) throws IOException {
-        //首次执行延迟10S，之后1S执行一次
+        System.out.println("启动 simulator-launcher-lite");
+        //首次执行延迟1分钟，之后1分钟执行一次
         poolExecutor.scheduleAtFixedRate(() -> {
             try {
                 // 获取attach的Pid列表
-                List<String> pidList = JpsCommand.getPidList();
-                if (pidList.size() > 0) {
-                    // TODO ocean_wll 这块需要修改一下，不应该引用 simulator-agent-core 包
-                    String agentPath = DEFAULT_AGENT_HOME + File.separator + "core" + File.separator
-                        + "simulator-agent-core.jar";
-
+                List<JpsResult> systemProcessList = JpsCommand.getSystemProcessList();
+                if (systemProcessList.size() > 0) {
+                    List<String> pidList = getAttachPidList(systemProcessList);
+                    System.out.println("attach pid list: " + pidList);
                     //生产需要attach的PID列表和生产对应的PID文件
-                    attachAgent(getAttachPidList(pidList), agentPath);
+                    attachAgent(pidList, SIMULATOR_BEGIN_JAR_PATH);
                     deletePidFiles(pidList);
                 }
             } catch (Throwable t) {
                 t.printStackTrace(System.err);
             }
 
-        }, 10, 1, TimeUnit.SECONDS);
+        }, 60, 1, TimeUnit.MINUTES);
+        System.out.println("simulator-launcher-lite 启动成功");
     }
 
     /**
@@ -104,10 +142,11 @@ public class LiteLauncher {
             try {
                 vm = VirtualMachine.attach(str);
                 if (vm != null) {
-                    vm.loadAgent(agentJarPath);
+                    vm.loadAgent(agentJarPath, String.format(AGENT_START_PARAM, SIMULATOR_DELAY));
                 }
                 System.out.println(str + "进程 attach成功");
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                deletePidFiles(Collections.singletonList(str));
                 System.out.println(str + "进程 attach失败");
             } finally {
                 if (null != vm) {
@@ -120,32 +159,66 @@ public class LiteLauncher {
     /**
      * 获得需要attach的进程列表,并生成对应的PID文件
      *
-     * @param pidList 进程列表
+     * @param systemProcessList 进程列表
      */
-    private static List<String> getAttachPidList(List<String> pidList) {
-        File directory = new File(DIRECTORY_PATH);
+    private static List<String> getAttachPidList(List<JpsResult> systemProcessList) {
+        // 读取文件获取需要跳过的应用名
+        List<String> ignoreApps = ignoreAppList();
+        File directory = new File(PIDS_DIRECTORY_PATH);
         if (!directory.exists()) {
             //如果目录不存在则进行创建
             directory.mkdirs();
         }
         List<String> attachPidList = new ArrayList<>();
-        for (String str : pidList) {
+        for (JpsResult jpsResult : systemProcessList) {
+            // 过滤数据
+            if (!jpsResult.isLegal()
+                || ignoreApps.contains(jpsResult.getAppName().trim())
+                || jpsResult.getPid().equals(String.valueOf(RuntimeMXBeanUtils.getPid()))) {
+                continue;
+            }
+            System.out.println("need attach pid: " + jpsResult.getPid() + " ,appName: " + jpsResult.getAppName());
             //创建文件
-            String fileName = DEFAULT_AGENT_HOME + File.separator + str;
+            String fileName = PIDS_DIRECTORY_PATH + File.separator + jpsResult.getPid();
             File file = new File(fileName);
             try {
                 if (!file.exists()) {
-                    file.createNewFile();
-                    //如果创建了则代表需要attach
-                    attachPidList.add(str);
+                    synchronized (LOCK) {
+                        if (!file.exists()) {
+                            file.createNewFile();
+                            //如果创建了则代表需要attach
+                            attachPidList.add(jpsResult.getPid());
+                        }
+                    }
                 }
             } catch (IOException e) {
-                // TODO ocean_wll 后续研究下日志怎么记
-                e.printStackTrace();
-                // ignore
+                System.out.println(Arrays.toString(e.getStackTrace()));
             }
         }
         return attachPidList;
+    }
+
+    /**
+     * 读取 ignore.config 文件获取需要忽略的应用名
+     *
+     * @return 需要忽略的应用名
+     */
+    private static List<String> ignoreAppList() {
+        List<String> ignoreAppList = new ArrayList<>();
+        File file = new File(IGNORE_CONFIG_PATH);
+        if (!file.exists()) {
+            return ignoreAppList;
+        }
+        try (FileInputStream fileInputStream = new FileInputStream(file);
+             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fileInputStream));) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                ignoreAppList.add(line.trim());
+            }
+        } catch (Exception e) {
+            System.out.println("read " + IGNORE_CONFIG_PATH + " error。" + Arrays.toString(e.getStackTrace()));
+        }
+        return ignoreAppList;
     }
 
     /**
@@ -154,7 +227,7 @@ public class LiteLauncher {
      * @param pidList
      */
     private static void deletePidFiles(List<String> pidList) {
-        File[] pidFileList = new File(DIRECTORY_PATH).listFiles();
+        File[] pidFileList = new File(PIDS_DIRECTORY_PATH).listFiles();
         if (pidFileList == null || pidFileList.length == 0) {
             return;
         }
@@ -164,7 +237,7 @@ public class LiteLauncher {
         // 如果>0就说明剩下的文件没有进程与之匹配需要删除
         pidNameList.removeAll(pidList);
         if (pidNameList.size() > 0) {
-            pidNameList.forEach(item -> new File(DIRECTORY_PATH + File.separator + item).delete());
+            pidNameList.forEach(item -> new File(PIDS_DIRECTORY_PATH + File.separator + item).delete());
         }
     }
 }

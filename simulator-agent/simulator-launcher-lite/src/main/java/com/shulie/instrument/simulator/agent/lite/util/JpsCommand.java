@@ -36,25 +36,24 @@ public class JpsCommand {
     private final static String JPS_COMMAND = "jps";
 
     /**
-     * 获取pid集合
+     * 获取系统进程集合
      *
      * @throws IOException io异常
      */
-    public static List<String> getPidList() throws IOException {
-        List<String> pidList = new ArrayList<>();
+    public static List<JpsResult> getSystemProcessList() throws IOException {
+        List<JpsResult> pidList = new ArrayList<>();
         Process process = Runtime.getRuntime().exec(JPS_COMMAND);
-
         try (InputStream inputStream = process.getInputStream();
              InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
              BufferedReader reader = new BufferedReader(inputStreamReader)) {
             process.waitFor(3, TimeUnit.SECONDS);
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
                 if (!line.trim().matches("^[0-9]*$")) {
                     String[] pidItem = line.split(" ");
-                    if (!needFilterPid(pidItem[0], pidItem[1])) {
-                        pidList.add(pidItem[0]);
+                    if (pidItem.length == 2) {
+                        JpsResult jpsResult = new JpsResult(pidItem[0], pidItem[1]);
+                        pidList.add(jpsResult);
                     }
                 }
             }
@@ -66,16 +65,45 @@ public class JpsCommand {
     }
 
     /**
-     * 判断是否需要过滤此pid
-     *
-     * @param pid     pid
-     * @param appName 应用名
-     * @return true:需要过滤，false:不需要过滤
+     * jps对象
      */
-    private static Boolean needFilterPid(String pid, String appName) {
-        if (pid == null || pid.trim().length() == 0 || appName == null || appName.trim().length() == 0) {
-            return true;
+    public static class JpsResult {
+        /**
+         * pid
+         */
+        private String pid;
+
+        /**
+         * jar包名
+         */
+        private String appName;
+
+        public JpsResult() {
         }
-        return "Jps".equals(appName) || pid.equals(String.valueOf(RuntimeMXBeanUtils.getPid()));
+
+        public JpsResult(String pid, String appName) {
+            this.pid = pid;
+            this.appName = appName;
+        }
+
+        public String getPid() {
+            return pid;
+        }
+
+        public void setPid(String pid) {
+            this.pid = pid;
+        }
+
+        public String getAppName() {
+            return appName;
+        }
+
+        public void setAppName(String appName) {
+            this.appName = appName;
+        }
+
+        public boolean isLegal() {
+            return pid != null && !"".equals(pid.trim()) && appName != null && !"".equals(appName.trim());
+        }
     }
 }

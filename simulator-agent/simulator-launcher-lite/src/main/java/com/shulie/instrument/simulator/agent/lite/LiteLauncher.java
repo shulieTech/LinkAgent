@@ -24,6 +24,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.shulie.instrument.simulator.agent.lite.util.JpsCommand;
+import com.shulie.instrument.simulator.agent.lite.util.RuntimeMXBeanUtils;
 import com.sun.tools.attach.VirtualMachine;
 
 /**
@@ -56,7 +57,7 @@ public class LiteLauncher {
         System.out.println(new File(agentLauncherPath).exists());
         VirtualMachine vm = null;
         try {
-            vm = VirtualMachine.attach("84816");
+            vm = VirtualMachine.attach("2679");
             vm.loadAgent(agentLauncherPath, ";simulator.delay=10");
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());

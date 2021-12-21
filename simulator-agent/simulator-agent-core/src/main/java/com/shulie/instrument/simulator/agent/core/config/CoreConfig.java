@@ -14,15 +14,20 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -47,6 +52,13 @@ import org.slf4j.LoggerFactory;
  */
 public class CoreConfig {
     private final Logger logger = LoggerFactory.getLogger(CoreConfig.class);
+
+    private static final RuntimeMXBean RUNTIME_MBEAN = ManagementFactory.getRuntimeMXBean();
+    private static final Random RANDOM = new Random();
+    private static int PID = 0;
+    private static String PID_NAME = "";
+
+    private final static String JPS_COMMAND = "jps";
 
     private final static String CONFIG_PATH_NAME = "config";
     private final static String AGENT_PATH_NAME = "agent";
@@ -410,14 +422,87 @@ public class CoreConfig {
      * @return 应用名称
      */
     public String getAppName() {
-        String value = getPropertyInAll("simulator.app.name");
-        if (StringUtils.isBlank(value)) {
-            value = getPropertyInAll("pradar.project.name");
+        //String value = getPropertyInAll("simulator.app.name");
+        //if (StringUtils.isBlank(value)) {
+        //    value = getPropertyInAll("pradar.project.name");
+        //}
+        //if (StringUtils.isBlank(value)) {
+        //    value = getPropertyInAll("app.name");
+        //}
+
+        // takin lite项目应用名改成：进程号-进程名
+        int pid = getPid();
+        return pid + "-" + pidName();
+    }
+
+    /**
+     * 获取pid集合
+     *
+     * @throws IOException io异常
+     */
+    public String pidName() {
+        if (StringUtils.isNotBlank(PID_NAME)) {
+            return PID_NAME;
         }
-        if (StringUtils.isBlank(value)) {
-            value = getPropertyInAll("app.name");
+        PID_NAME = "default";
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(JPS_COMMAND);
+        } catch (IOException e) {
+            //ignore
         }
-        return value != null ? value : "default";
+
+        if (process == null) {
+            return PID_NAME;
+        }
+
+        try (InputStream inputStream = process.getInputStream();
+             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+             BufferedReader reader = new BufferedReader(inputStreamReader)) {
+            process.waitFor(3, TimeUnit.SECONDS);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.trim().matches("^[0-9]*$")) {
+                    String[] pidItem = line.split(" ");
+                    if (String.valueOf(getPid()).equals(pidItem[0])) {
+                        PID_NAME = pidItem[1];
+                        return pidItem[1];
+                    }
+                }
+            }
+            return PID_NAME;
+        } catch (Exception e) {
+            return PID_NAME;
+        }
+    }
+
+    public static int getPid() {
+        if (PID == 0) {
+            PID = getPid0();
+        }
+        return PID;
+    }
+
+    private static int getPid0() {
+        final String name = RUNTIME_MBEAN.getName();
+        final int pidIndex = name.indexOf('@');
+        if (pidIndex == -1) {
+            return getNegativeRandomValue();
+        }
+        String strPid = name.substring(0, pidIndex);
+        try {
+            return Integer.parseInt(strPid);
+        } catch (NumberFormatException e) {
+            return getNegativeRandomValue();
+        }
+    }
+
+    private static int getNegativeRandomValue() {
+        final int abs = Math.abs(RANDOM.nextInt());
+        if (abs == Integer.MIN_VALUE) {
+            return -1;
+        }
+        return abs;
     }
 
     private String getPropertyInAll(String key) {

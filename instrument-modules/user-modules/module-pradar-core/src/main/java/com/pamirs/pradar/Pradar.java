@@ -747,7 +747,9 @@ public final class Pradar {
     public static String getClusterTestPrefix() {
         String prefix = System.getProperty("pradar.cluster.test.prefix");
         if (StringUtils.isBlank(prefix)) {
-            prefix = "PT_";
+            //prefix = "PT_";
+            // takin lite不需要影子库表，直接写入业务的库
+            prefix = "";
         }
         System.out.println("SIMULATOR: cluster test prefix is:" + prefix);
         return prefix;
@@ -761,7 +763,9 @@ public final class Pradar {
     public static String getClusterTestSuffixRod() {
         String prefix = System.getProperty("pradar.cluster.test.suffix.rod");
         if (StringUtils.isBlank(prefix)) {
-            prefix = "-PT";
+            //prefix = "-PT";
+            // takin liten不需要影子库表，直接写入业务的库
+            prefix = "";
         }
         System.out.println("SIMULATOR: cluster test suffix rod is:" + prefix);
         return prefix;

@@ -30,7 +30,6 @@ import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
-import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -148,7 +147,6 @@ public class ConsumerRegistry {
      * @return 返回注册是否成功, 如果
      */
     public static boolean registerConsumer(DefaultMQPushConsumer businessConsumer) {
-        registerBizConsumerHook(businessConsumer);
         DefaultMQPushConsumer shadowConsumer = caches.get(businessConsumer);
         if (shadowConsumer != null) {
             return false;
@@ -183,19 +181,6 @@ public class ConsumerRegistry {
             addListener(businessConsumer);
         }
         return true;
-    }
-
-    private static void registerBizConsumerHook(DefaultMQPushConsumer businessConsumer) {
-        Object old = hooks.putIfAbsent(businessConsumer, EMPTY);
-        if(old == null) {
-            try {
-                businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-                logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer,
-                        businessConsumer.hashCode());
-            } catch (Throwable e) {
-                hooks.remove(businessConsumer);
-            }
-        }
     }
 
     private static String getInstanceName() {
@@ -331,10 +316,6 @@ public class ConsumerRegistry {
                 }
             }
         }
-
-        defaultMQPushConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-        logger.info("register shadow consumer hook to consumer : {} hashCode : {}", defaultMQPushConsumer,
-            defaultMQPushConsumer.hashCode());
 
         for (Map.Entry<String, SubscriptionData> entry : topicsInWhiteList.entrySet()) {
             SubscriptionData subscriptionData = entry.getValue();

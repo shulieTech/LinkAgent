@@ -50,6 +50,14 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
     private final static ConcurrentWeakHashMap<ConsumeMessageContext, MQTraceContext> contexts
         = new ConcurrentWeakHashMap<ConsumeMessageContext, MQTraceContext>();
 
+    public static PushConsumeMessageHookImpl INSTANCE = new PushConsumeMessageHookImpl();
+
+    private PushConsumeMessageHookImpl() {}
+
+    public static PushConsumeMessageHookImpl getInstance() {
+        return INSTANCE;
+    }
+
     @Override
     public String hookName() {
         return "PushConsumeMessageHookImpl";

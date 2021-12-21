@@ -27,13 +27,12 @@ import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumer
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerViewMessageInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerSendInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceAfterInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceBeforeInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceContextInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.PullConsumerInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.ConcurrentlyTraceInterceptor;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.TransactionCheckInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile.*;
-import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.MQClientAPIImplInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.ProcessQueueInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.PullMessageInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.tmp.RebalanceImplInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -47,7 +46,8 @@ import org.kohsuke.MetaInfServices;
  * @author vincent
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "阿里巴巴rocketmq消息中间件")
+@ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",
+    description = "阿里巴巴rocketmq消息中间件")
 public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
@@ -57,66 +57,70 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     private boolean addHookRegisterInterceptor() {
         this.enhanceTemplate.enhance(this,
-                "com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer", new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        final InstrumentMethod createTopicMethod = target.getDeclaredMethods("createTopic");
-                        createTopicMethod.addInterceptor(Listeners.of(DefaultPushConsumerCreateTopicInterceptor.class));
+            "com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod createTopicMethod = target.getDeclaredMethods("createTopic");
+                    createTopicMethod.addInterceptor(Listeners.of(DefaultPushConsumerCreateTopicInterceptor.class));
 
-                        final InstrumentMethod earliestMsgStoreTimeMethod = target.getDeclaredMethods("earliestMsgStore");
-                        earliestMsgStoreTimeMethod.addInterceptor(Listeners.of(DefaultPushConsumerEarliestMsgStoreTimeInterceptor.class));
+                    final InstrumentMethod earliestMsgStoreTimeMethod = target.getDeclaredMethods("earliestMsgStore");
+                    earliestMsgStoreTimeMethod.addInterceptor(
+                        Listeners.of(DefaultPushConsumerEarliestMsgStoreTimeInterceptor.class));
 
-                        final InstrumentMethod searchOffsetMethod = target.getDeclaredMethods("searchOffset");
-                        searchOffsetMethod.addInterceptor(Listeners.of(DefaultPushConsumerSearchOffsetInterceptor.class));
+                    final InstrumentMethod searchOffsetMethod = target.getDeclaredMethods("searchOffset");
+                    searchOffsetMethod.addInterceptor(Listeners.of(DefaultPushConsumerSearchOffsetInterceptor.class));
 
-                        final InstrumentMethod maxOffsetMethod = target.getDeclaredMethods("maxOffset");
-                        maxOffsetMethod.addInterceptor(Listeners.of(DefaultPushConsumerMaxOffsetInterceptor.class));
+                    final InstrumentMethod maxOffsetMethod = target.getDeclaredMethods("maxOffset");
+                    maxOffsetMethod.addInterceptor(Listeners.of(DefaultPushConsumerMaxOffsetInterceptor.class));
 
-                        final InstrumentMethod minOffsetMethod = target.getDeclaredMethods("minOffset");
-                        minOffsetMethod.addInterceptor(Listeners.of(DefaultPushConsumerMinOffsetInterceptor.class));
+                    final InstrumentMethod minOffsetMethod = target.getDeclaredMethods("minOffset");
+                    minOffsetMethod.addInterceptor(Listeners.of(DefaultPushConsumerMinOffsetInterceptor.class));
 
-                        final InstrumentMethod viewMessageMethod = target.getDeclaredMethods("viewMessage");
-                        viewMessageMethod.addInterceptor(Listeners.of(DefaultPushConsumerViewMessageInterceptor.class));
+                    final InstrumentMethod viewMessageMethod = target.getDeclaredMethods("viewMessage");
+                    viewMessageMethod.addInterceptor(Listeners.of(DefaultPushConsumerViewMessageInterceptor.class));
 
-                        final InstrumentMethod queryMessageMethod = target.getDeclaredMethods("queryMessage");
-                        queryMessageMethod.addInterceptor(Listeners.of(DefaultPushConsumerQueryMessageInterceptor.class));
+                    final InstrumentMethod queryMessageMethod = target.getDeclaredMethods("queryMessage");
+                    queryMessageMethod.addInterceptor(Listeners.of(DefaultPushConsumerQueryMessageInterceptor.class));
 
-                        final InstrumentMethod fetchSubscribeMessageQueuesMethod = target.getDeclaredMethods("fetchSubscribeMessageQueues");
-                        fetchSubscribeMessageQueuesMethod.addInterceptor(Listeners.of(DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor.class));
+                    final InstrumentMethod fetchSubscribeMessageQueuesMethod = target.getDeclaredMethods(
+                        "fetchSubscribeMessageQueues");
+                    fetchSubscribeMessageQueuesMethod.addInterceptor(
+                        Listeners.of(DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor.class));
 
-                        final InstrumentMethod sendMessageBackMethod = target.getDeclaredMethods("sendMessageBack");
-                        sendMessageBackMethod.addInterceptor(Listeners.of(DefaultPushConsumerSendMessageBackInterceptor.class));
+                    final InstrumentMethod sendMessageBackMethod = target.getDeclaredMethods("sendMessageBack");
+                    sendMessageBackMethod.addInterceptor(Listeners.of(DefaultPushConsumerSendMessageBackInterceptor.class));
 
-                        final InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
-                        shutdownMethod.addInterceptor(Listeners.of(DefaultPushConsumerShutdownInterceptor.class));
-                    }
-                });
+                    final InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
+                    shutdownMethod.addInterceptor(Listeners.of(DefaultPushConsumerShutdownInterceptor.class));
+                }
+            });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
-                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
-            }
-        });
-
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
+                    hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
+                }
+            });
 
         this.enhanceTemplate.enhance(this,
-                "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl", new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        target.getDeclaredMethod("pullSyncImpl", "com.alibaba.rocketmq.common.message.MessageQueue", "java.lang.String", "long", "int", "boolean", "long")
-                                .addInterceptor(Listeners.of(PullConsumerInterceptor.class));
+            "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    target.getDeclaredMethod("pullSyncImpl", "com.alibaba.rocketmq.common.message.MessageQueue",
+                            "java.lang.String", "long", "int", "boolean", "long")
+                        .addInterceptor(Listeners.of(PullConsumerInterceptor.class));
 
-                    }
-                });
+                }
+            });
 
         this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.producer.DefaultMQProducer", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
 
                 target.getDeclaredMethod("start")
-                        .addInterceptor(Listeners.of(MQProducerInterceptor.class));
+                    .addInterceptor(Listeners.of(MQProducerInterceptor.class));
 
                 //压测代码
                 InstrumentMethod sendMethod = target.getDeclaredMethods("send*");
@@ -125,119 +129,69 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             }
         });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                //压测代码
-                InstrumentMethod method = target.getDeclaredMethods("sendDefaultImpl");
-                method.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    //压测代码
+                    InstrumentMethod method = target.getDeclaredMethods("sendDefaultImpl");
+                    method.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
 
-                InstrumentMethod sendMessageInTransactionMethod = target.getDeclaredMethods("sendMessageInTransaction");
-                sendMessageInTransactionMethod.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
+                    InstrumentMethod sendMessageInTransactionMethod = target.getDeclaredMethods("sendMessageInTransaction");
+                    sendMessageInTransactionMethod.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
 
-                //压测代码 end
-            }
-        });
-
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("checkTransactionState*");
-                enhanceMethod.addInterceptor(Listeners.of(TransactionCheckInterceptor.class));
-            }
-        });
-
-        //TODO 临时打日志
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullMessage");
-                enhanceMethod.addInterceptor(Listeners.of(com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.consumerfaile.PullMessageInterceptor .class));
-            }
-        });
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.PullMessageService",  new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullMessage");
-                enhanceMethod.addInterceptor(Listeners.of(PullMessageInterceptor.class));
-            }
-        });
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.consumer.PullCallback", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("onSuccess");
-                enhanceMethod.addInterceptor(Listeners.of(PullCallbackOnSuccessInterceptor.class));
-            }
-        });
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("putMessage");
-                enhanceMethod.addInterceptor(Listeners.of(PutMessageInterceptor.class));
-            }
-        });
-
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
-                enhanceMethod.addInterceptor(Listeners.of(ConsumeRequestRunInterceptor.class));
-            }
-        });
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");
-                enhanceMethod.addInterceptor(Listeners.of(ProcessConsumeResultInterceptor.class));
-            }
-        });
-
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.consumer.store.RemoteBrokerOffsetStore", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target){
-                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("updateOffset");
-                    enhanceMethod.addInterceptor(Listeners.of(UpdateOffsetInterceptor.class));
+                    //压测代码 end
                 }
-        });
+            });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.RebalanceImpl",  new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("updateProcessQueueTableInRebalance");
-                enhanceMethod.addInterceptor(Listeners.of(RebalanceImplInterceptor.class));
-            }
-        });
+        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("checkTransactionState*");
+                    enhanceMethod.addInterceptor(Listeners.of(TransactionCheckInterceptor.class));
+                }
+            });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.MQClientAPIImpl",  new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("processPullResponse");
-                enhanceMethod.addInterceptor(Listeners.of(MQClientAPIImplInterceptor.class));
-            }
-        });
+        this.enhanceTemplate.enhance(this,
+            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                    enhanceMethod.addInterceptor(Listeners.of(ConcurrentlyTraceInterceptor.class));
+                }
+            });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue",  new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("setDroped");
-                enhanceMethod.addInterceptor(Listeners.of(ProcessQueueInterceptor.class));
-            }
-        });
+        //--for orderly
+        this.enhanceTemplate.enhance(this,
+            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService$ConsumeRequest", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceContextInterceptor.class));
+                }
+            });
 
+        this.enhanceTemplate.enhance(this,
+            "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("takeMessags");
+                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
+                }
+            });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.PullAPIWrapper", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod enhanceMethod = target.getDeclaredMethods("pullKernelImpl");
-                enhanceMethod.addInterceptor(Listeners.of(PullKernelImplInterceptor.class));
-            }
-        });
+        this.enhanceTemplate.enhance(this,
+            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");
+                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceAfterInterceptor.class));
+                }
+            });
+
+        //--for orderly
 
         return true;
     }

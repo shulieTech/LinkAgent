@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
-import com.pamirs.attach.plugin.rabbitmq.utils.RabbitMqUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -31,7 +30,6 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
-import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -93,21 +91,8 @@ public class SpringBlockingQueueConsumerDeliveryInterceptorV2 extends TraceInter
         SpanRecord record = new SpanRecord();
         try {
             Envelope envelope = Reflect.on(deliveryObj).get(envelopeField);
-
-            String exchange = envelope.getExchange();
-            String routingKey = envelope.getRoutingKey();
-
-            if (!StringUtil.isEmpty(exchange)) {
-                record.setService(exchange);
-            } else if (StringUtil.isEmpty(exchange)
-                    && !StringUtil.isEmpty(routingKey)) {
-                record.setService(routingKey);
-            }
-
-
-
-           /* record.setService(envelope.getExchange());
-            record.setMethod(envelope.getRoutingKey());*/
+            record.setService(envelope.getExchange());
+            record.setMethod(envelope.getRoutingKey());
         } catch (ReflectException e) {
         }
         try {

@@ -53,6 +53,7 @@ cp simulator-agent-logback.xml ${AGENT_TARGET_DIR}/config/simulator-agent-logbac
 cp ignore.config ${AGENT_TARGET_DIR}/config/ignore.config
 cp lite-start.sh ${AGENT_TARGET_DIR}/bin/lite-start.sh
 cp lite-stop.sh ${AGENT_TARGET_DIR}/bin/lite-stop.sh
+cp lite-restart.sh ${AGENT_TARGET_DIR}/bin/lite-restart.sh
 
 # reset the target dir
 AGENT_VERSION=$(cat ..//simulator-agent-core/target/classes/com/shulie/instrument/simulator/agent/version)

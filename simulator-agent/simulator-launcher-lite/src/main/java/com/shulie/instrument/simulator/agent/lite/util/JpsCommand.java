@@ -42,7 +42,7 @@ public class JpsCommand {
      * @throws IOException io异常
      */
     public static List<JpsResult> getSystemProcessList() throws IOException {
-        List<JpsResult> pidList = new ArrayList<>();
+        List<JpsResult> systemProcessList = new ArrayList<>();
         Process process = Runtime.getRuntime().exec(JPS_COMMAND);
         try (InputStream inputStream = process.getInputStream();
              InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
@@ -54,14 +54,14 @@ public class JpsCommand {
                     String[] pidItem = line.split(" ");
                     if (pidItem.length == 2) {
                         JpsResult jpsResult = new JpsResult(pidItem[0], pidItem[1]);
-                        pidList.add(jpsResult);
+                        systemProcessList.add(jpsResult);
                     }
                 }
             }
-            return pidList;
+            return systemProcessList;
         } catch (Exception e) {
             LogUtil.error("获取系统进程集合异常, " + Arrays.toString(e.getStackTrace()));
-            return pidList;
+            return systemProcessList;
         }
     }
 

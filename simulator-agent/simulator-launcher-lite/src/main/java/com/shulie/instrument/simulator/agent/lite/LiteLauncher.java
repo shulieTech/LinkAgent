@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.shulie.instrument.simulator.agent.lite.util.JpsCommand;
 import com.shulie.instrument.simulator.agent.lite.util.JpsCommand.JpsResult;
@@ -99,7 +100,7 @@ public class LiteLauncher {
                     LogUtil.info("attach pid list: " + pidList);
                     //生产需要attach的PID列表和生产对应的PID文件
                     attachAgent(pidList);
-                    deletePidFiles(pidList);
+                    deletePidFiles(systemProcessList.stream().map(JpsResult::getPid).collect(Collectors.toList()));
                 }
             } catch (Throwable t) {
                 LogUtil.error("simulator-launcher-lite error: " + Arrays.toString(t.getStackTrace()));

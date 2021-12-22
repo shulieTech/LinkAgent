@@ -72,7 +72,7 @@
         <module>module-hystrix</module>
         <module>module-httpserver</module>
         <module>module-caffeine</module>
-        <module>module-proxool</module>
+        <!--<module>module-proxool</module>-->
         <module>module-logback</module>
         <module>module-log4j</module>
         <module>module-apache-kafka-stream</module>

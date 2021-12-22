@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -25,11 +25,10 @@ import com.shulie.instrument.simulator.core.util.Initializer;
 import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.nio.SelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,19 +130,19 @@ public class JettyCoreServer implements CoreServer {
             throw new IOException("server was not bind yet.");
         }
 
-        ServerConnector scc = null;
+        SelectChannelConnector scc = null;
         final Connector[] connectorArray = httpServer.getConnectors();
         if (null != connectorArray) {
             for (final Connector connector : connectorArray) {
-                if (connector instanceof ServerConnector) {
-                    scc = (ServerConnector) connector;
+                if (connector instanceof SelectChannelConnector) {
+                    scc = (SelectChannelConnector) connector;
                     break;
                 }
             }
         }
 
         if (null == scc) {
-            throw new IllegalStateException("not found ServerConnector");
+            throw new IllegalStateException("not found SelectChannelConnector");
         }
 
         return new InetSocketAddress(
@@ -179,6 +178,7 @@ public class JettyCoreServer implements CoreServer {
 
     private void initHttpServer() {
 
+
         final String serverIp = config.getServerIp();
         final int serverPort = config.getServerPort();
 
@@ -190,17 +190,17 @@ public class JettyCoreServer implements CoreServer {
             ));
         }
 
-        httpServer = new Server(new InetSocketAddress(serverIp, serverPort));
         int maxThreads = Math.max(Runtime.getRuntime().availableProcessors(), 8);
         int minThreads = Math.max(maxThreads / 2, 1);
-        QueuedThreadPool qtp = (QueuedThreadPool) httpServer.getThreadPool();
-        qtp.setMaxThreads(maxThreads);
+        QueuedThreadPool qtp = new QueuedThreadPool(maxThreads);
         qtp.setMinThreads(minThreads);
         /**
          * jetty线程设置为daemon，防止应用启动失败进程无法正常退出
          */
         qtp.setDaemon(true);
         qtp.setName("simulator-jetty-qtp-" + qtp.hashCode());
+        httpServer = new Server(new InetSocketAddress(serverIp, serverPort));
+        httpServer.setThreadPool(qtp);
     }
 
     @Override

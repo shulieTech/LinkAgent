@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
+import com.pamirs.attach.plugin.rabbitmq.utils.RabbitMqUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -25,6 +26,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.springframework.amqp.core.Message;
@@ -73,13 +75,23 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         if (message == null) {
             return null;
         }
-        Channel channel = (Channel)args[0];
+        Channel channel = (Channel) args[0];
         Connection connection = channel.getConnection();
         SpanRecord record = new SpanRecord();
         record.setRemoteIp(connection.getAddress().getHostAddress());
         record.setPort(connection.getPort() + "");
-        record.setService(message.getMessageProperties().getConsumerQueue());
-        record.setMethod(message.getMessageProperties().getReceivedExchange());
+
+        String queue = message.getMessageProperties().getConsumerQueue();
+        String exchange = message.getMessageProperties().getReceivedExchange();
+        if (!StringUtil.isEmpty(queue)) {
+            record.setService(queue);
+        } else if (StringUtil.isEmpty(queue)
+                && !StringUtil.isEmpty(exchange)) {
+            record.setService(exchange);
+        }
+
+     /*   record.setService(message.getMessageProperties().getConsumerQueue());
+        record.setMethod(message.getMessageProperties().getReceivedExchange());*/
         byte[] body = message.getBody();
         record.setRequestSize(body.length);
         record.setRequest(body);

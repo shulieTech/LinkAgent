@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -73,12 +73,13 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @Author: mubai<chengjiacai @ shulie.io>
+ * @Author: mubai<chengjiacai                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               shulie.io>
  * @Date: 2020-03-09 17:44
  * @Description:
  */
@@ -95,15 +96,19 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     private final List<ConsumerMetaDataBuilder> consumerMetaDataBuilders = new ArrayList<ConsumerMetaDataBuilder>();
 
     private final static ScheduledThreadPoolExecutor THREAD_POOL_EXECUTOR = new ScheduledThreadPoolExecutor(
-        Runtime.getRuntime()
-            .availableProcessors(), new ThreadFactory() {
+            Runtime.getRuntime()
+                    .availableProcessors(), new ThreadFactory() {
         private final AtomicInteger threadNumber = new AtomicInteger(1);
 
         @Override
         public Thread newThread(Runnable r) {
             Thread t = new Thread(r, "shadow-consumer-register-" + threadNumber.getAndIncrement());
-            if (t.isDaemon()) {t.setDaemon(false);}
-            if (t.getPriority() != Thread.NORM_PRIORITY) {t.setPriority(Thread.NORM_PRIORITY);}
+            if (t.isDaemon()) {
+                t.setDaemon(false);
+            }
+            if (t.getPriority() != Thread.NORM_PRIORITY) {
+                t.setPriority(Thread.NORM_PRIORITY);
+            }
             return t;
         }
     });
@@ -113,8 +118,8 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         consumerMetaDataBuilders.add(SpringConsumerMetaDataBuilder.getInstance());
         consumerMetaDataBuilders.add(AutorecoveringChannelConsumerMetaDataBuilder.getInstance());
         consumerMetaDataBuilders.add(new AdminApiConsumerMetaDataBuilder(simulatorConfig,
-            simulatorConfig.getBooleanProperty("rabbitmq.admin.api.zk.control", false) ?
-                ZkCacheSupportFactory.create(simulatorConfig) : SimpleLocalCacheSupport.getInstance()));
+                simulatorConfig.getBooleanProperty("rabbitmq.admin.api.zk.control", false) ?
+                        ZkCacheSupportFactory.create(simulatorConfig) : SimpleLocalCacheSupport.getInstance()));
     }
 
     /**
@@ -140,12 +145,22 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        Command command = (Command)args[0];
-        Deliver method = (Deliver)args[1];
+        Command command = (Command) args[0];
+        Deliver method = (Deliver) args[1];
         SpanRecord record = new SpanRecord();
-        record.setService(method.getExchange());
-        record.setMethod(method.getRoutingKey());
-        BasicProperties contentHeader = (BasicProperties)command.getContentHeader();
+        //开源采用#queue
+        String exchange = method.getExchange();
+        String routingKey = method.getRoutingKey();
+        if (!StringUtil.isEmpty(exchange)) {
+            record.setService(exchange);
+        } else if (StringUtil.isEmpty(exchange)
+                && !StringUtil.isEmpty(routingKey)) {
+            record.setService(routingKey);
+        }
+
+      /*  record.setService(method.getExchange());
+        record.setMethod(method.getRoutingKey());*/
+        BasicProperties contentHeader = (BasicProperties) command.getContentHeader();
         Map<String, Object> headers = contentHeader.getHeaders();
         if (headers != null) {
             Map<String, String> rpcContext = new HashMap<String, String>();
@@ -160,7 +175,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         byte[] body = command.getContentBody();
         record.setRequestSize(body.length);
         record.setRequest(body);
-        Channel channel = (Channel)advice.getTarget();
+        Channel channel = (Channel) advice.getTarget();
         Connection connection = channel.getConnection();
         record.setRemoteIp(connection.getAddress().getHostAddress());
         record.setPort(connection.getPort() + "");
@@ -188,17 +203,17 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         String methodName = advice.getBehaviorName();
         if (!PradarSwitcher.isClusterTestEnabled()) {
             logger.warn("PradarSwitcher isClusterTestEnabled false, {} to start shadow {} skip it",
-                advice.getTargetClass().getName(), methodName);
+                    advice.getTargetClass().getName(), methodName);
             return;
         }
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
+        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver) args[1];
         validatePressureMeasurement(m.getConsumerTag());
         try {
-            Command command = (Command)args[0];
-            BasicProperties contentHeader = (BasicProperties)command.getContentHeader();
+            Command command = (Command) args[0];
+            BasicProperties contentHeader = (BasicProperties) command.getContentHeader();
             Map<String, Object> headers = contentHeader.getHeaders();
             if (null != headers && headers.get(PradarService.PRADAR_CLUSTER_TEST_KEY) != null && ClusterTestUtils
-                .isClusterTestRequest(headers.get(PradarService.PRADAR_CLUSTER_TEST_KEY).toString())) {
+                    .isClusterTestRequest(headers.get(PradarService.PRADAR_CLUSTER_TEST_KEY).toString())) {
                 Pradar.setClusterTest(true);
             }
             if (!Pradar.isClusterTest()) {
@@ -220,13 +235,13 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public void afterLast(final Advice advice) {
-        Channel channel = (Channel)advice.getTarget();
+        Channel channel = (Channel) advice.getTarget();
         Connection connection = channel.getConnection();
         Object[] args = advice.getParameterArray();
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
+        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver) args[1];
         String consumerTag = m.getConsumerTag();
         if (Pradar.isClusterTestPrefix(consumerTag) ||
-            ChannelHolder.existsConsumer(consumerTag)) {
+                ChannelHolder.existsConsumer(consumerTag)) {
             return;
         }
         //每个connection只进来一次，一次流量带所有的影子消费者，如果失败异步任务会自动重试
@@ -263,7 +278,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             Map<String, Consumer> _consumers = Reflect.on(channelN).get("_consumers");
             for (Entry<String, Consumer> entry : _consumers.entrySet()) {
                 consumerDetails.add(new ConsumerDetail(connection, entry.getKey(),
-                    channel, entry.getValue(), localIp, localPort));
+                        channel, entry.getValue(), localIp, localPort));
             }
         }
         return consumerDetails;
@@ -287,20 +302,21 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         @Override
         public void run() {
             logger.info("[RabbitMQ] SIMULATOR prepare create shadow consumer {} {} current retry times : {}",
-                consumerDetail.getChannel(), consumerDetail.getConsumerTag(), retryTimes);
+                    consumerDetail.getChannel(), consumerDetail.getConsumerTag(), retryTimes);
             String consumerTag = consumerDetail.getConsumerTag();
             Channel channel = consumerDetail.getChannel();
             try {
                 ConsumerMetaData consumerMetaData = getConsumerMetaData(consumerDetail);
                 if (consumerMetaData == null) {
                     logger.warn("[RabbitMQ] SIMULATOR: can not find consumerMetaData for channel : {}, consumerTag : {}"
-                        , consumerDetail.getChannel(), consumerDetail.getConsumerTag());
+                            , consumerDetail.getChannel(), consumerDetail.getConsumerTag());
                     retry();
                     return;
                 }
 
                 String queue = consumerMetaData.getQueue();
-                if (!GlobalConfig.getInstance().getMqWhiteList().contains("#" + queue)) {
+                if (!GlobalConfig.getInstance().getMqWhiteList().contains(queue + "#")
+                        && !GlobalConfig.getInstance().getMqWhiteList().contains("#" + queue)) {
                     logger.warn("[RabbitMQ] SIMULATOR: {} is not in whitelist. ignore it", queue);
                     //todo need retry？
                     retry();
@@ -309,14 +325,14 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 String ptQueue = consumerMetaData.getPtQueue();
                 String ptConsumerTag = consumerMetaData.getPtConsumerTag();
                 logger.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
-                    queue, ptQueue, consumerTag, ptConsumerTag);
+                        queue, ptQueue, consumerTag, ptConsumerTag);
                 try {
                     String cTag;
                     if (consumerMetaData.isUseOriginChannel()) {
                         //spring 要用业务本身的channel去订阅，spring的永远自动提交
                         cTag = channel.basicConsume(consumerMetaData.getPtQueue(), true, ptConsumerTag,
-                            false, consumerMetaData.isExclusive(),
-                            new HashMap<String, Object>(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
+                                false, consumerMetaData.isExclusive(),
+                                new HashMap<String, Object>(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
                         ChannelHolder.addConsumerTag(channel, consumerTag, cTag, consumerMetaData.getQueue());
                     } else {
                         cTag = consumeShadowQueue(channel, consumerMetaData);
@@ -324,9 +340,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                     if (cTag != null) {
                         if (isInfoEnabled) {
                             logger.info(
-                                "[RabbitMQ] create shadow consumer successful! queue : {} pt_queue : {} tag : {} pt_tag : "
-                                    + "{}",
-                                queue, ptQueue, consumerTag, ptConsumerTag);
+                                    "[RabbitMQ] create shadow consumer successful! queue : {} pt_queue : {} tag : {} pt_tag : "
+                                            + "{}",
+                                    queue, ptQueue, consumerTag, ptConsumerTag);
                         }
                         ChannelHolder.addConsumerTag(channel, consumerTag, cTag, ptQueue);
                     } else {
@@ -344,29 +360,29 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         }
 
         public String consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws
-            IOException {
+                IOException {
             return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
-                consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
-                consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(),
-                new ShadowConsumerProxy(consumerMetaData.getConsumer()));
+                    consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
+                    consumerMetaData.getArguments(), consumerMetaData.getPrefetchCount(),
+                    new ShadowConsumerProxy(consumerMetaData.getConsumer()));
         }
 
         public String consumeShadowQueue(Channel target, String ptQueue, boolean autoAck,
-            String ptConsumerTag,
-            boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
-            Consumer consumer) throws IOException {
+                                         String ptConsumerTag,
+                                         boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
+                                         Consumer consumer) throws IOException {
             synchronized (ChannelHolder.class) {
                 Channel shadowChannel = ChannelHolder.getShadowChannel(target);
                 if (shadowChannel == null) {
                     logger.warn(
-                        "[RabbitMQ] basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}",
-                        ptQueue, ptConsumerTag);
+                            "[RabbitMQ] basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}",
+                            ptQueue, ptConsumerTag);
                     return null;
                 }
                 if (!shadowChannel.isOpen()) {
                     logger.warn(
-                        "[RabbitMQ] basicConsume failed. cause by shadow channel is not closed. queue={}, consumerTag={}",
-                        ptQueue, ptConsumerTag);
+                            "[RabbitMQ] basicConsume failed. cause by shadow channel is not closed. queue={}, consumerTag={}",
+                            ptQueue, ptConsumerTag);
                     return null;
                 }
                 if (prefetchCount > 0) {
@@ -374,7 +390,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 }
                 dynamicFieldManager.setDynamicField(shadowChannel, RabbitmqConstants.IS_AUTO_ACK_FIELD, autoAck);
                 String result = shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments,
-                    consumer);
+                        consumer);
                 final int key = System.identityHashCode(shadowChannel);
                 ConfigCache.putQueue(key, ptQueue);
                 return result;
@@ -391,7 +407,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             long maxTime = 60 * 5L;
             time = Math.min(time, maxTime);
             THREAD_POOL_EXECUTOR.schedule(
-                new ShadowConsumerRegisterRunnable(consumerDetail, nexRetryTimes), time, TimeUnit.SECONDS);
+                    new ShadowConsumerRegisterRunnable(consumerDetail, nexRetryTimes), time, TimeUnit.SECONDS);
         }
     }
 
@@ -449,11 +465,11 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     private void reporterError(Throwable e, String queue, String consumerTag, String cases) {
         ErrorReporter.buildError()
-            .setErrorType(ErrorTypeEnum.MQ)
-            .setErrorCode("MQ-0001")
-            .setMessage("RabbitMQ消费端订阅队列失败！")
-            .setDetail("RabbitMqPushConsumerInterceptor:queue:[" + queue + "]," + cases)
-            .report();
+                .setErrorType(ErrorTypeEnum.MQ)
+                .setErrorCode("MQ-0001")
+                .setMessage("RabbitMQ消费端订阅队列失败！")
+                .setDetail("RabbitMqPushConsumerInterceptor:queue:[" + queue + "]," + cases)
+                .report();
         logger.error("[RabbitMQ] PT Consumer Inject failed queue:[{}] consumerTag:{}, {}", queue, consumerTag, cases, e);
     }
 

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,7 +14,7 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import com.pamirs.attach.plugin.apache.kafka.util.ConfigCache;
+import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
@@ -181,7 +181,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         final DefaultListableBeanFactory defaultListableBeanFactory = PradarSpringUtil.getBeanFactory();
         // 获取bean工厂并转换为DefaultListableBeanFactory
-        final String beanName = toShadowTopicString(topicList) + container.getClass().getSimpleName();
+        final String beanName = toShadowTopicString(topicList) + groupId + container.getClass().getSimpleName();
         int concurrency = 0;
         try {
             concurrency = Reflect.on(container).call(KafkaConstants.REFLECT_METHOD_GET_CONCURRENCY).get();

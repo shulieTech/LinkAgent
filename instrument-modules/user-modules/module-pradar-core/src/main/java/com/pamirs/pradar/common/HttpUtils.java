@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.pamirs.pradar.Throwables;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 
 public abstract class HttpUtils {
@@ -50,8 +51,8 @@ public abstract class HttpUtils {
             SocketAddress address = new InetSocketAddress(host, port);
 
             StringBuilder request = new StringBuilder("GET ").append(url).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append(":").append(port).append("\r\n")
-                .append("Connection: Keep-Alive\r\n");
+                    .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                    .append("Connection: Keep-Alive\r\n");
 
             Map<String, String> mustHeaders = getHttpMustHeaders();
             if (!mustHeaders.isEmpty()) {
@@ -119,8 +120,8 @@ public abstract class HttpUtils {
             output = socket.getOutputStream();
 
             StringBuilder request = new StringBuilder("POST ").append(url).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append(":").append(port).append("\r\n")
-                .append("Connection: Keep-Alive\r\n");
+                    .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                    .append("Connection: Keep-Alive\r\n");
 
             Map<String, String> mustHeaders = getHttpMustHeaders();
             if (!mustHeaders.isEmpty()) {
@@ -133,7 +134,7 @@ public abstract class HttpUtils {
 
             if (body != null && !body.isEmpty()) {
                 request.append("Content-Length: ").append(body.getBytes().length).append("\r\n")
-                    .append("Content-Type: application/json\r\n");
+                        .append("Content-Type: application/json\r\n");
             }
 
             request.append("\r\n");
@@ -247,7 +248,7 @@ public abstract class HttpUtils {
     }
 
     public static Map<String, List<String>> readHeaders(InputStream input)
-        throws IOException {
+            throws IOException {
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
@@ -266,7 +267,7 @@ public abstract class HttpUtils {
     }
 
     public static void exhaustInputStream(InputStream inStream)
-        throws IOException {
+            throws IOException {
         byte buffer[] = new byte[1024];
         while (inStream.read(buffer) >= 0) {
         }
@@ -319,10 +320,10 @@ public abstract class HttpUtils {
         @Override
         public String toString() {
             return "HostPort{" +
-                "host='" + host + '\'' +
-                ", port=" + port +
-                ", url='" + url + '\'' +
-                '}';
+                    "host='" + host + '\'' +
+                    ", port=" + port +
+                    ", url='" + url + '\'' +
+                    '}';
         }
     }
 
@@ -332,8 +333,13 @@ public abstract class HttpUtils {
 
     private final static String PRADAR_ENV_CODE_STR = "pradar.env.code";
 
+    private final static String PRADAR_USER_APP_KEY = "user.app.key";
+
     private static String getProperty(String key) {
         String val = System.getProperty(key);
+        if (StringUtil.isEmpty(val)) {
+            val = System.getenv(key);
+        }
         if (val == null || val.isEmpty()) {
             return null;
         } else {
@@ -341,12 +347,17 @@ public abstract class HttpUtils {
         }
     }
 
+    static private String getProperty(String key, String defaultValue) {
+        String value = getProperty(key);
+        return value == null ? defaultValue : value;
+    }
+
     private static Map<String, String> getHttpMustHeaders() {
         Map<String, String> headers = new HashMap<String, String>();
         String envCode = getProperty(PRADAR_ENV_CODE_STR);
         // 新探针兼容老版本的控制台，所以userAppKey和tenantAppKey都传
-        headers.put("userAppKey", getProperty(TENANT_APP_KEY_STR));
-        headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR));
+        headers.put("userAppKey", getProperty(PRADAR_USER_APP_KEY, getProperty(TENANT_APP_KEY_STR)));
+        headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR, getProperty(PRADAR_USER_APP_KEY)));
         headers.put("userId", getProperty(PRADAR_USER_ID_STR));
         headers.put("envCode", envCode);
         return headers;

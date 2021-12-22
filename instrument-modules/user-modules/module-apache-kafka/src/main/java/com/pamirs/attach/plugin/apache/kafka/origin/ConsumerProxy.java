@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector.ConsumerType;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollingSelector;
@@ -84,7 +85,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     }
 
     public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup,
-        long maxLagMillSecond, PollConsumerSelector consumerSelector, long timeout) {
+                         long maxLagMillSecond, PollConsumerSelector consumerSelector, long timeout) {
         this.bizConsumer = consumer;
         this.allowMaxLag = maxLagMillSecond;
         this.currentPollTime = timeout;
@@ -130,7 +131,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     @Override
     public void subscribe(Pattern pattern, ConsumerRebalanceListener callback) {
         this.bizConsumer.subscribe(pattern, callback);
-        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer)bizConsumer);
+        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer) bizConsumer);
         this.ptConsumer.subscribe(this.topicAndGroup.getShadowTopics());
     }
 
@@ -143,27 +144,32 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     @Override
     public void subscribe(Collection topics, ConsumerRebalanceListener callback) {
         this.bizConsumer.subscribe(topics, callback);
-        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer)bizConsumer);
+        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer) bizConsumer);
         this.ptConsumer.subscribe(this.topicAndGroup.getShadowTopics());
     }
 
     @Override
     public void subscribe(Collection topics) {
         this.bizConsumer.subscribe(topics);
-        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer)bizConsumer);
+        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer) bizConsumer);
         this.ptConsumer.subscribe(this.topicAndGroup.getShadowTopics());
+    }
+
+    /**
+     * 优化原生kafka
+     *
+     * @return
+     */
+    boolean isBiz() {
+        return ConfigCache.isBiz();
     }
 
     @Override
     public ConsumerRecords<K, V> poll(long timeout) {
-        if (lag > allowMaxLag) {
-            log.warn("biz lag : {} over allowMaxLagMillSecond : {}, so priority use biz consumer", lag, allowMaxLag);
+        if (isBiz()) {
             return doBizPoll(timeout);
-        }
-        if (consumerSelector.select() == ConsumerType.SHADOW) {
-            return doShadowPoll(timeout);
         } else {
-            return doBizPoll(timeout);
+            return doShadowPoll(timeout);
         }
     }
 
@@ -449,15 +455,15 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         Object metadata = Reflect.on(consumer).get("metadata");
 
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG
-            , Reflect.on(consumer).get("keyDeserializer").getClass());
+                , Reflect.on(consumer).get("keyDeserializer").getClass());
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG
-            , Reflect.on(consumer).get("valueDeserializer").getClass());
+                , Reflect.on(consumer).get("valueDeserializer").getClass());
         config.put(ConsumerConfig.CLIENT_ID_CONFIG,
-            Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(consumer).get("clientId"))));
+                Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(consumer).get("clientId"))));
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, consumerMetaData.getBootstrapServers());
         config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (this.allowMaxLag * 2 * 3) + "");
         config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
-            (Math.max(this.allowMaxLag * 2, this.currentPollTime * 2) + 5000) + "");
+                (Math.max(this.allowMaxLag * 2, this.currentPollTime * 2) + 5000) + "");
         config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, (this.allowMaxLag * 3) + "");
         putSlience(config, ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, consumer, "requestTimeoutMs");
         putSlience(config, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, consumer, "retryBackoffMs");
@@ -471,19 +477,19 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             String clientSaslMechanism = Reflect.on(channelBuilder).get("clientSaslMechanism");
             config.put(SaslConfigs.SASL_MECHANISM, clientSaslMechanism);
             config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
-                Reflect.on(channelBuilder).get("securityProtocol").toString());
+                    Reflect.on(channelBuilder).get("securityProtocol").toString());
             if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
                 Map jaasContexts = ReflectUtil.reflectSlience(channelBuilder, "jaasContexts");
                 if (jaasContexts == null) {
                     throw new RuntimeException("未支持的kafka版本，无法获取jaasContexts");
                 }
-                JaasContext jaasContext = (JaasContext)jaasContexts.get(clientSaslMechanism);
+                JaasContext jaasContext = (JaasContext) jaasContexts.get(clientSaslMechanism);
                 if (jaasContext != null) {
                     String password = jaasContext.dynamicJaasConfig().value();
                     config.put(SaslConfigs.SASL_JAAS_CONFIG, password);
                 } else {
                     log.warn("business kafka consumer using sasl but jaasContext not found jaasContexts is : {}",
-                        jaasContexts);
+                            jaasContexts);
                 }
             } else {
                 log.warn("business kafka consumer using sasl but clientSaslMechanism is blank");
@@ -515,7 +521,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             Object defaultResetStrategy = ReflectUtil.reflectSlience(subscriptions, "defaultResetStrategy");
             if (defaultResetStrategy != null) {
                 putSlience(config, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                    defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
+                        defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
             }
         }
 
@@ -557,7 +563,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         private final Collection<TopicPartition> ptCollection;
 
         private TopicPartitions(Collection<TopicPartition> bizCollection,
-            Collection<TopicPartition> ptCollection) {
+                                Collection<TopicPartition> ptCollection) {
             this.bizCollection = bizCollection;
             this.ptCollection = ptCollection;
         }

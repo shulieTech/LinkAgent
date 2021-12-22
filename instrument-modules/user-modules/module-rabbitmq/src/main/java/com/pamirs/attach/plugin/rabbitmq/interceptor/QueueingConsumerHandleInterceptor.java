@@ -19,6 +19,7 @@ import java.util.Map;
 
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
+import com.pamirs.attach.plugin.rabbitmq.utils.RabbitMqUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -34,6 +35,7 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -101,8 +103,18 @@ public class QueueingConsumerHandleInterceptor extends ReversedTraceInterceptorA
             if (envelope == null) {//说明是毒药，已经报错了
                 return null;
             }
-            record.setService(envelope.getExchange());
-            record.setMethod(envelope.getRoutingKey());
+
+            String exchange = envelope.getExchange();
+            String routingKey = envelope.getRoutingKey();
+            if (!StringUtil.isEmpty(exchange)) {
+                record.setService(exchange);
+            } else if (StringUtil.isEmpty(exchange)
+                    && !StringUtil.isEmpty(routingKey)) {
+                record.setService(routingKey);
+            }
+
+          /*  record.setService(envelope.getExchange());
+            record.setMethod(envelope.getRoutingKey());*/
         } catch (ReflectException e) {
         }
 

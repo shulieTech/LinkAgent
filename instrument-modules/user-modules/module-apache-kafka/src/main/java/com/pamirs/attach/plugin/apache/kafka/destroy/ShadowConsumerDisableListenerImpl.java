@@ -18,7 +18,7 @@ import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
-import com.pamirs.attach.plugin.apache.kafka.util.ConfigCache;
+import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;

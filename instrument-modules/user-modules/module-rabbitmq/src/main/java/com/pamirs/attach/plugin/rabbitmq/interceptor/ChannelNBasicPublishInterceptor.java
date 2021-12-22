@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,6 +21,7 @@ import java.util.Map;
 
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
+import com.pamirs.attach.plugin.rabbitmq.utils.RabbitMqUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
@@ -36,6 +37,7 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -70,7 +72,7 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
             }
         } catch (Throwable e) {
             if (e instanceof ReflectException) {
-                throw (ReflectException)e;
+                throw (ReflectException) e;
             }
             Reflect.on(target).set(RabbitmqConstants.REFLECT_FIELD_HEADERS, value);
         }
@@ -81,8 +83,8 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
         ClusterTestUtils.validateClusterTest();
         Object[] args = advice.getParameterArray();
         if (Pradar.isClusterTest()) {
-            String exchange = (String)args[0];
-            String routingKey = (String)args[1];
+            String exchange = (String) args[0];
+            String routingKey = (String) args[1];
             if (!StringUtils.isBlank(exchange)) {
                 if (!Pradar.isClusterTestPrefix(exchange)) {
                     exchange = Pradar.addClusterTestPrefix(exchange);
@@ -91,7 +93,7 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
             }
 
             if (PradarSwitcher.isRabbitmqRoutingkeyEnabled()
-                && !StringUtils.isEmpty(routingKey)) {
+                    && !StringUtils.isEmpty(routingKey)) {
                 if (!Pradar.isClusterTestPrefix(routingKey)) {
                     routingKey = Pradar.addClusterTestPrefix(routingKey);
                     args[1] = routingKey;
@@ -106,9 +108,9 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
-        AMQP.BasicProperties properties = (AMQP.BasicProperties)args[4];
+        AMQP.BasicProperties properties = (AMQP.BasicProperties) args[4];
         final Map<String, Object> headers = properties.getHeaders() == null ? new HashMap<String, Object>()
-            : new HashMap<String, Object>(properties.getHeaders());
+                : new HashMap<String, Object>(properties.getHeaders());
         headers.putAll(Pradar.getInvokeContextTransformMap());
 
         if (headers.containsKey(X_ORIGINAL_ROUTINGKEY)) {
@@ -136,17 +138,24 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
             return null;
         }
 
-        String exchange = (String)args[0];
-        String routingKey = (String)args[1];
-        byte[] body = (byte[])args[5];
+        String exchange = (String) args[0];
+        String routingKey = (String) args[1];
+        byte[] body = (byte[]) args[5];
 
         SpanRecord record = new SpanRecord();
-        Channel channel = (Channel)advice.getTarget();
+        Channel channel = (Channel) advice.getTarget();
         Connection connection = channel.getConnection();
         record.setRemoteIp(connection.getAddress().getHostAddress());
         record.setPort(connection.getPort() + "");
-        record.setService(exchange);
-        record.setMethod(routingKey);
+        if (!StringUtil.isEmpty(exchange)) {
+            record.setService(exchange);
+        } else if (StringUtil.isEmpty(exchange)
+                && !StringUtil.isEmpty(routingKey)) {
+            record.setService(routingKey);
+
+        }
+       /* record.setService(exchange);
+        record.setMethod(routingKey);*/
         record.setRequestSize(body.length);
         record.setRequest(body);
 

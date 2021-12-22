@@ -42,9 +42,9 @@ public class InstrumentLauncher {
 
     private final static String SIMULATOR_KEY_DELAY = "simulator.delay";
     private final static String SIMULATOR_KEY_UNIT = "simulator.unit";
+    private final static String SIMULATOR_KEY_LITE = "simulator.lite";
 
     public static void premain(final String agentArgs, final Instrumentation instrumentation) {
-        System.out.println("preMain开始打印启动参数" + agentArgs);
         start(agentArgs, instrumentation);
     }
 
@@ -53,7 +53,6 @@ public class InstrumentLauncher {
     }
 
     public static void agentmain(String agentArgs, Instrumentation inst) {
-        System.out.println("agentMain开始打印启动参数" + agentArgs);
         start(agentArgs, inst);
     }
 
@@ -149,6 +148,20 @@ public class InstrumentLauncher {
     }
 
     /**
+     * 判断是否为布尔类型字符串
+     *
+     * @param str 字符串
+     * @return 返回 true|false
+     */
+    public static boolean isBooleanStr(final String str) {
+        if (isBlank(str)) {
+            return false;
+        }
+        trim(str);
+        return "false".equals(str) || "true".equals(str);
+    }
+
+    /**
      * 获取延时加载的时间间隔
      *
      * @param args         参数
@@ -157,7 +170,7 @@ public class InstrumentLauncher {
      */
     private static Integer getDelay(Map<String, String> args, Integer defaultValue) {
         String property = System.getProperty(SIMULATOR_KEY_DELAY);
-        if (property == null || property.trim().length() == 0) {
+        if (isBlank(property)) {
             property = args.get(SIMULATOR_KEY_DELAY);
         }
         if (isNumeric(property)) {
@@ -175,7 +188,7 @@ public class InstrumentLauncher {
      */
     private static TimeUnit getTimeUnit(Map<String, String> args, TimeUnit defaultValue) {
         String property = System.getProperty(SIMULATOR_KEY_UNIT);
-        if (property == null || property.trim().length() == 0) {
+        if (isBlank(property)) {
             property = args.get(SIMULATOR_KEY_UNIT);
         }
         trim(property);
@@ -188,6 +201,24 @@ public class InstrumentLauncher {
     }
 
     /**
+     * 获取是否是 lite 的标识
+     *
+     * @param args         参数
+     * @param defaultValue 默认值
+     * @return
+     */
+    private static Boolean getIsLite(Map<String, String> args, Boolean defaultValue) {
+        String property = System.getProperty(SIMULATOR_KEY_LITE);
+        if (property == null || property.trim().length() == 0) {
+            property = args.get(SIMULATOR_KEY_LITE);
+        }
+        if (isBooleanStr(property)) {
+            return Boolean.parseBoolean(property);
+        }
+        return defaultValue;
+    }
+
+    /**
      * 启动启动器
      *
      * @param featureString 字符串
@@ -195,9 +226,12 @@ public class InstrumentLauncher {
      */
     public static void start(String featureString, Instrumentation inst) {
         final Map<String, String> args = toFeatureMap(featureString);
+        for (Map.Entry<String, String> entry : args.entrySet()) {
+            System.setProperty(entry.getKey(), entry.getValue());
+        }
         final Integer delay = getDelay(args, null);
         final TimeUnit timeUnit = getTimeUnit(args, null);
-
+        final Boolean isLite = getIsLite(args, false);
         /**
          * 延迟加载，因为使用 instrument 方式增强，不使用独立进程方式，所以
          * 需要防止此 jar 包中可能存在一些与应用相冲突的依赖如 zk 等，需要等待这些资源
@@ -205,14 +239,17 @@ public class InstrumentLauncher {
          * websphere 等 web 容器中
          */
         final long pid = RuntimeMXBeanUtils.getPid();
-        System.out.println("pid: " + pid);
         final String processName = RuntimeMXBeanUtils.getName();
         try {
-
-            // 加载ttl
-            ttlJarToSystemClassLoader(inst);
-            TtlAgent.premain(featureString, inst);
-
+            if (isLite) {
+                // 加载ttl
+                try {
+                    ttlJarToSystemClassLoader(inst);
+                    TtlAgent.premain(featureString, inst);
+                } catch (Throwable throwable) {
+                    System.err.println("ttl jar load failed, " + throwable.getMessage());
+                }
+            }
             /**
              * 如果是 jdk9及以上则采用外置进程方式attach 进程
              * 如果是 jdk9以下则使用内部方式attach 进程
@@ -224,7 +261,6 @@ public class InstrumentLauncher {
     }
 
     private static void ttlJarToSystemClassLoader(Instrumentation instrumentation) throws IOException {
-        System.out.println("开始加载TTL到systemClassLoader中");
         JarFile jarFile = new JarFile(DEFAULT_AGENT_HOME + File.separator + "bootstrap" + File.separator
             + "transmittable-thread-local-2.12.1.jar");
         instrumentation.appendToSystemClassLoaderSearch(jarFile);
@@ -271,17 +307,14 @@ public class InstrumentLauncher {
         Instrumentation inst)
         throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, InstantiationException,
         IllegalAccessException, java.lang.reflect.InvocationTargetException {
-
-        System.out.println("pid: " + pid + " ,processName: " + processName + " ,delay: " + delay + " ,unit: " + unit);
-        System.out.println("DEFAULT_AGENT_HOME: " + DEFAULT_AGENT_HOME);
-
         File file = new File(DEFAULT_AGENT_HOME + File.separator + "core", "simulator-agent-core.jar");
         AgentClassLoader agentClassLoader = new AgentClassLoader(new URL[] {file.toURI().toURL()});
         Class coreLauncherOfClass = agentClassLoader.loadClass(
             "com.shulie.instrument.simulator.agent.core.CoreLauncher");
         Constructor constructor = coreLauncherOfClass.getConstructor(String.class, long.class, String.class,
             String.class, Instrumentation.class, ClassLoader.class);
-        Object coreLauncherOfInstance = constructor.newInstance(DEFAULT_AGENT_HOME, pid, processName, getTagFileName(),
+        Object coreLauncherOfInstance = constructor.newInstance(DEFAULT_AGENT_HOME, pid, processName,
+            getTagFileName(),
             inst, InstrumentLauncher.class.getClassLoader());
 
         if (delay != null) {

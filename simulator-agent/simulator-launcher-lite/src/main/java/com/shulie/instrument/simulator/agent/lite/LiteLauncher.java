@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.shulie.instrument.simulator.agent.lite.util.JpsCommand;
 import com.shulie.instrument.simulator.agent.lite.util.JpsCommand.JpsResult;
+import com.shulie.instrument.simulator.agent.lite.util.LogUtil;
 import com.shulie.instrument.simulator.agent.lite.util.RuntimeMXBeanUtils;
 import com.sun.tools.attach.VirtualMachine;
 
@@ -47,7 +48,7 @@ public class LiteLauncher {
     /**
      * simulator 延迟加载时间
      */
-    private static final Integer SIMULATOR_DELAY = 5 * 60;
+    private static final Integer SIMULATOR_DELAY = 20;
 
     /**
      * agentHome地址
@@ -82,72 +83,51 @@ public class LiteLauncher {
     /**
      * agent启动参数配置
      */
-    private static final String AGENT_START_PARAM = ";simulator.delay=%s";
+    private static final String AGENT_START_PARAM
+        = ";simulator.use.premain=true;simulator.lite=true;simulator.delay=%s";
 
-    ///**
-    // * 启动agent
-    // *
-    // * @param args 参数
-    // */
-    //public static void main(String[] args) throws IOException {
-    //    String agentLauncherPath
-    //        = "/Users/ocean_wll/IdeaProjects/LinkAgent/deploy/simulator-agent/simulator-launcher-instrument.jar";
-    //    System.out.println(new File(agentLauncherPath).exists());
-    //    VirtualMachine vm = null;
-    //    try {
-    //        vm = VirtualMachine.attach("2679");
-    //        vm.loadAgent(agentLauncherPath, ";simulator.delay=10");
-    //    } catch (Exception e) {
-    //        System.out.println(e.getLocalizedMessage());
-    //    } finally {
-    //        if (vm != null) {
-    //            vm.detach();
-    //        }
-    //    }
-    //}
-
-    public static void main(String[] args) throws IOException {
-        System.out.println("启动 simulator-launcher-lite");
+    public static void main(String[] args) {
+        LogUtil.info("simulator-launcher-lite 开始启动");
         //首次执行延迟1分钟，之后1分钟执行一次
         poolExecutor.scheduleAtFixedRate(() -> {
             try {
                 // 获取attach的Pid列表
                 List<JpsResult> systemProcessList = JpsCommand.getSystemProcessList();
+                LogUtil.info("system process list：" + systemProcessList);
                 if (systemProcessList.size() > 0) {
                     List<String> pidList = getAttachPidList(systemProcessList);
-                    System.out.println("attach pid list: " + pidList);
+                    LogUtil.info("attach pid list: " + pidList);
                     //生产需要attach的PID列表和生产对应的PID文件
-                    attachAgent(pidList, SIMULATOR_BEGIN_JAR_PATH);
+                    attachAgent(pidList);
                     deletePidFiles(pidList);
                 }
             } catch (Throwable t) {
-                t.printStackTrace(System.err);
+                LogUtil.error("simulator-launcher-lite error: " + Arrays.toString(t.getStackTrace()));
             }
 
-        }, 60, 1, TimeUnit.MINUTES);
-        System.out.println("simulator-launcher-lite 启动成功");
+        }, 2, 1, TimeUnit.MINUTES);
+        LogUtil.info("simulator-launcher-lite 启动成功");
     }
 
     /**
      * 加载agent
      *
      * @param targetJvmPid 目标进程PID
-     * @param agentJarPath agent路径
      * @throws Exception
      */
-    private static void attachAgent(List<String> targetJvmPid,
-        final String agentJarPath) throws Exception {
+    private static void attachAgent(List<String> targetJvmPid) throws Exception {
         VirtualMachine vm = null;
         for (String str : targetJvmPid) {
             try {
                 vm = VirtualMachine.attach(str);
                 if (vm != null) {
-                    vm.loadAgent(agentJarPath, String.format(AGENT_START_PARAM, SIMULATOR_DELAY));
+                    vm.loadAgent(LiteLauncher.SIMULATOR_BEGIN_JAR_PATH,
+                        String.format(AGENT_START_PARAM, SIMULATOR_DELAY));
                 }
-                System.out.println(str + "进程 attach成功");
+                LogUtil.info("PID: " + str + ", attach success");
             } catch (Throwable e) {
                 deletePidFiles(Collections.singletonList(str));
-                System.out.println(str + "进程 attach失败");
+                LogUtil.info("PID: " + str + ", attach fail, errorMsg: " + Arrays.toString(e.getStackTrace()));
             } finally {
                 if (null != vm) {
                     vm.detach();
@@ -175,9 +155,9 @@ public class LiteLauncher {
             if (!jpsResult.isLegal()
                 || ignoreApps.contains(jpsResult.getAppName().trim())
                 || jpsResult.getPid().equals(String.valueOf(RuntimeMXBeanUtils.getPid()))) {
+                LogUtil.info("ignore: " + jpsResult);
                 continue;
             }
-            System.out.println("need attach pid: " + jpsResult.getPid() + " ,appName: " + jpsResult.getAppName());
             //创建文件
             String fileName = PIDS_DIRECTORY_PATH + File.separator + jpsResult.getPid();
             File file = new File(fileName);
@@ -192,7 +172,7 @@ public class LiteLauncher {
                     }
                 }
             } catch (IOException e) {
-                System.out.println(Arrays.toString(e.getStackTrace()));
+                LogUtil.error(Arrays.toString(e.getStackTrace()));
             }
         }
         return attachPidList;
@@ -216,7 +196,7 @@ public class LiteLauncher {
                 ignoreAppList.add(line.trim());
             }
         } catch (Exception e) {
-            System.out.println("read " + IGNORE_CONFIG_PATH + " error。" + Arrays.toString(e.getStackTrace()));
+            LogUtil.error("read " + IGNORE_CONFIG_PATH + " error。" + Arrays.toString(e.getStackTrace()));
         }
         return ignoreAppList;
     }

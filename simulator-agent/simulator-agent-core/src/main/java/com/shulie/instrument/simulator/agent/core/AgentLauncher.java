@@ -106,7 +106,7 @@ public class AgentLauncher {
                 this.descriptor = System.getProperty("attach.name");
             }
         }
-        this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", true);
+        this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", false);
     }
 
     /**
@@ -144,7 +144,6 @@ public class AgentLauncher {
         //针对docker pid小于等于5的使用premain方式
         //如果是 main 方法执行， 强制使用 premain 模式
         if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
-            System.out.println("agent使用premain方式启动。。。");
             startWithPremain(agentJarPath, config);
             startMode = START_MODE_PREMAIN;
             logger.info("AGENT: simulator with premain mode start successful.");

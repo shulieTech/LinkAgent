@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -59,7 +60,7 @@ public class JpsCommand {
             }
             return pidList;
         } catch (Exception e) {
-            e.printStackTrace();
+            LogUtil.error("获取系统进程集合异常, " + Arrays.toString(e.getStackTrace()));
             return pidList;
         }
     }
@@ -100,6 +101,11 @@ public class JpsCommand {
 
         public void setAppName(String appName) {
             this.appName = appName;
+        }
+
+        @Override
+        public String toString() {
+            return pid + " " + appName;
         }
 
         public boolean isLegal() {

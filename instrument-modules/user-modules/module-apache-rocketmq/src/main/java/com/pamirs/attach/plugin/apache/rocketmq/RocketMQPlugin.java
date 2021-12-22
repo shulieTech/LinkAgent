@@ -116,7 +116,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
         });
 
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest",
+            "org.apache.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest",
             new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {
@@ -127,7 +127,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
         //--for orderly
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService$ConsumeRequest", new EnhanceCallback() {
+            "org.apache.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService$ConsumeRequest", new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {
                     InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
@@ -136,7 +136,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             });
 
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
+            "org.apache.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {
                     InstrumentMethod enhanceMethod = target.getDeclaredMethods("takeMessags");
@@ -145,7 +145,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             });
 
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService", new EnhanceCallback() {
+            "org.apache.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService", new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {
                     InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");

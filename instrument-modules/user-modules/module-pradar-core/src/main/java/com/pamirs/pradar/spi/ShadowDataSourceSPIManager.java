@@ -4,6 +4,7 @@ package com.pamirs.pradar.spi;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +55,9 @@ public class ShadowDataSourceSPIManager {
 
         for (Map.Entry<String, ShadowDatabaseConfig> entry : datasourceConfigs.entrySet()) {
             ShadowDatabaseConfig config = entry.getValue();
-            if (!config.getShadowUsername().startsWith("$") && !config.getShadowPassword().startsWith("$")) {
+            boolean shadowTable = config.getDsType() == 1;
+            boolean emptyConfig = StringUtils.isEmpty(config.getShadowUsername()) || StringUtils.isEmpty(config.getShadowPassword());
+            if(shadowTable || emptyConfig || !config.getShadowUsername().startsWith("$") && !config.getShadowPassword().startsWith("$")){
                 newConfig.put(entry.getKey(), entry.getValue());
                 continue;
             }

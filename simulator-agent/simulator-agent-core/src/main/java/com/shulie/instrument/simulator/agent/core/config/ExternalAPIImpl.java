@@ -164,6 +164,11 @@ public class ExternalAPIImpl implements ExternalAPI {
             return null;
         }
 
+        if (StringUtils.isBlank(resp.getResult())){
+            logger.warn("AGENT: sendHeart got response empty . {}", agentHeartUrl);
+            return null;
+        }
+
         try {
             Type type = new TypeReference<Result<List<CommandPacket>>>() {}.getType();
             Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);

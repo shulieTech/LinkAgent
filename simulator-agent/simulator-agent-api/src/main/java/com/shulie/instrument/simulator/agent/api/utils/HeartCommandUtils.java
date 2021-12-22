@@ -32,7 +32,6 @@ import java.util.concurrent.*;
  */
 public class HeartCommandUtils {
 
-
     /**
      * 是否已经执行成功startCommandId名
      */
@@ -64,7 +63,7 @@ public class HeartCommandUtils {
         File userModulePropertiesFile = new File(userModuleProperties);
         if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
             || !userModulePropertiesFile.exists()){
-            //TODO
+            throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");
         } else {
             List<String> agentModulePropertiesLines = readFile(agentModulePropertiesFile);
             List<String> simulatorModulePropertiesLines = readFile(simulatorModulePropertiesFile);

@@ -567,6 +567,9 @@ public class SqlParser {
                 final Map<TableStat.Name, TableStat> map = visitor.getTables();
                 for (final TableStat.Name name : map.keySet()) {
                     boolean passThisTable = false;
+                    if (Pradar.isLite) {
+                        passThisTable = true;
+                    }
                     String nameTemp = SQLUtils.normalize(name.getName(), dbType);
                     if (nameTemp != null && StringUtils.contains(nameTemp, ".")) {
                         nameTemp = StringUtils.substringAfter(nameTemp, ".");

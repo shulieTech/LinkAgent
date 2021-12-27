@@ -60,6 +60,9 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     @Override
     public File downloadModule(String agentDownloadUrl, String targetPath) {
+        if (agentConfig.isLite()) {
+            return null;
+        }
         if (StringUtils.isNotBlank(agentDownloadUrl)) {
             StringBuilder builder = new StringBuilder(agentDownloadUrl);
             if (StringUtils.indexOf(agentDownloadUrl, '?') != -1) {
@@ -76,6 +79,9 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     @Override
     public void reportCommandResult(long commandId, boolean isSuccess, String errorMsg) {
+        if (agentConfig.isLite()) {
+            return;
+        }
         String webUrl = agentConfig.getTroWebUrl();
         if (StringUtils.isBlank(webUrl)) {
             logger.warn("AGENT: tro.web.url is not assigned.");
@@ -94,6 +100,9 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     @Override
     public CommandPacket getLatestCommandPacket() {
+        if (agentConfig.isLite()) {
+            return null;
+        }
         String webUrl = agentConfig.getTroWebUrl();
         if (StringUtils.isBlank(webUrl)) {
             logger.warn("AGENT: tro.web.url is not assigned.");

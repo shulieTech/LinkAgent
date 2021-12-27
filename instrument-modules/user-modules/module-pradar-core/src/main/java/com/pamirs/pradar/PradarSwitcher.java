@@ -14,18 +14,17 @@
  */
 package com.pamirs.pradar;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * pradar全局开关
@@ -35,7 +34,8 @@ public class PradarSwitcher {
 
     private static ConcurrentMap<String, Boolean> configSwitchers = new ConcurrentHashMap<String, Boolean>();
 
-    private static CopyOnWriteArrayList<PradarSwitcherListener> listeners = new CopyOnWriteArrayList<PradarSwitcherListener>();
+    private static CopyOnWriteArrayList<PradarSwitcherListener> listeners
+        = new CopyOnWriteArrayList<PradarSwitcherListener>();
 
     /**
      * 压测环境还未准备好
@@ -99,7 +99,6 @@ public class PradarSwitcher {
      * 静默开关 -- 控制台
      */
     private static AtomicBoolean silentSwitch = new AtomicBoolean(false);
-
 
     /**
      * 白名单开关 -- 控制台
@@ -243,7 +242,6 @@ public class PradarSwitcher {
         return clusterTestSwitch.get();
     }
 
-
     /**
      * 返回静默模式是否打开
      *
@@ -337,7 +335,6 @@ public class PradarSwitcher {
         return configSyncSwitchOn.get();
     }
 
-
     /**
      * 设置压测环境已经准备完成
      */
@@ -379,6 +376,9 @@ public class PradarSwitcher {
      * @return
      */
     static public boolean isClusterTestReady() {
+        if (Pradar.isLite) {
+            return true;
+        }
         return isClusterTestReady;
     }
 
@@ -543,7 +543,8 @@ public class PradarSwitcher {
     }
 
     public static boolean isKafkaMessageHeadersEnabled() {
-        return GlobalConfig.getInstance().getSimulatorDynamicConfig().getIsKafkaMessageHeaders(isKafkaMessageHeadersEnabled);
+        return GlobalConfig.getInstance().getSimulatorDynamicConfig().getIsKafkaMessageHeaders(
+            isKafkaMessageHeadersEnabled);
     }
 
     public static boolean isRabbitmqRoutingkeyEnabled() {
@@ -558,7 +559,6 @@ public class PradarSwitcher {
     public static boolean isPradarLogDaemonEnabled() {
         return isPradarLogDaemonEnabled && isValid;
     }
-
 
     public synchronized static void invalid() {
         boolean before = isClusterTestEnabled();

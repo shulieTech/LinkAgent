@@ -186,6 +186,11 @@ public class AgentConfigImpl implements AgentConfig {
         return Collections.unmodifiableMap(coreConfig.getAgentFileConfigs());
     }
 
+    @Override
+    public boolean isLite() {
+        return coreConfig.isLite();
+    }
+
     /**
      * 获取 agent版本号
      *

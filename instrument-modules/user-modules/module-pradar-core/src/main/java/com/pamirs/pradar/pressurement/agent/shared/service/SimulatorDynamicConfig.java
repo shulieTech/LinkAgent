@@ -16,6 +16,7 @@ package com.pamirs.pradar.pressurement.agent.shared.service;
 
 import java.util.Map;
 
+import com.pamirs.pradar.Pradar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -263,6 +264,10 @@ public class SimulatorDynamicConfig {
 
     private int getTraceSamplingInterval(Map<String, String> config) {
         try {
+            // 如果是takin lite则采样率返回1
+            if (Pradar.isLite) {
+                return 1;
+            }
             if (config == null) {
                 return DEFAULT_TRACE_SAMPLING_INTERVAL;
             }

@@ -67,6 +67,7 @@ public class CoreConfig {
     private final static String LOG_LEVEL_NAME = "simulator.log.level";
     private final static String MULTI_APP_SWITCH = "simulator.multiapp.switch.on";
     private final static String DEFAULT_LOG_LEVEL = "info";
+    private final static String SIMULATOR_KEY_LITE = "simulator.lite";
 
     private static final String RESULT_FILE_PATH = System.getProperties().getProperty("user.home")
         + File.separator + "%s" + File.separator + ".simulator.token";
@@ -657,5 +658,22 @@ public class CoreConfig {
 
     public Map<String, String> getAgentFileConfigs() {
         return agentFileConfigs;
+    }
+
+    /**
+     * 标记是否是lite版本探针
+     *
+     * @return true/false
+     */
+    public boolean isLite() {
+        String isLite = System.getProperty("simulator.lite");
+        if (StringUtils.isNotBlank(isLite)) {
+            try {
+                return Boolean.parseBoolean(isLite);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return false;
     }
 }

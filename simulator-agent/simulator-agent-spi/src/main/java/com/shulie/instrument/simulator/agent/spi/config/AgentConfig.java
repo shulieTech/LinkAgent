@@ -237,4 +237,11 @@ public interface AgentConfig {
     Map<String, String> getHttpMustHeaders();
 
     Map<String, String> getAgentFileConfigs();
+
+    /**
+     * 标记是否为lite
+     *
+     * @return true/false
+     */
+    boolean isLite();
 }

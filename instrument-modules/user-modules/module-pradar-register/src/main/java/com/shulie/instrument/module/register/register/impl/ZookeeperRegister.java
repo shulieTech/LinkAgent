@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
@@ -49,7 +48,6 @@ import com.pamirs.pradar.ScanJarPomUtils;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.HttpUtils.HttpResult;
 import com.pamirs.pradar.common.IOUtils;
-import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.event.ErrorEvent;
 import com.pamirs.pradar.event.Event;
@@ -401,7 +399,8 @@ public class ZookeeperRegister implements Register {
         this.md5 = registerOptions.getMd5();
         this.simulatorConfig = registerOptions.getSimulatorConfig();
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to init register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] prepare to init register zookeeper node. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         String registerBasePath = null;
         if (StringUtils.endsWith(basePath, "/")) {
@@ -447,7 +446,8 @@ public class ZookeeperRegister implements Register {
             }
         });
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] init register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] init register zookeeper node successful. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
     }
 
@@ -473,7 +473,8 @@ public class ZookeeperRegister implements Register {
             this.heartbeatNode.start();
             this.heartbeatNode.setData(getHeartbeatDatas());
             if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("[pradar-register] register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+                LOGGER.info("[pradar-register] register zookeeper node successful. {}",
+                    Pradar.AGENT_ID_CONTAIN_USER_INFO);
             }
         } catch (Throwable e) {
             LOGGER.error("[pradar-register] register node to zk for heartbeat node err: {}!", heartbeatPath, e);
@@ -511,13 +512,17 @@ public class ZookeeperRegister implements Register {
         }, 5, TimeUnit.SECONDS);
         isStarted.compareAndSet(false, true);
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] start to register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] start to register zookeeper node successful. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
     }
 
     private static final String PUSH_MIDDLEWARE_URL = "/agent/push/application/middleware";
 
     private void pushMiddlewareJarInfo() {
+        if (Pradar.isLite) {
+            return;
+        }
 
         String body = "";
         try {
@@ -559,7 +564,8 @@ public class ZookeeperRegister implements Register {
             return;
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to stop register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] prepare to stop register zookeeper node. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         if (scanJarFuture != null && !scanJarFuture.isCancelled() && !scanJarFuture.isDone()) {
             scanJarFuture.cancel(true);
@@ -583,14 +589,16 @@ public class ZookeeperRegister implements Register {
             LOGGER.error("[register] stop zkClient failed!", e);
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] stop register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] stop register zookeeper node successful. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
     }
 
     @Override
     public void refresh() {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] prepare to refresh register zookeeper node. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] prepare to refresh register zookeeper node. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
         if (isStarted.get()) {
             try {
@@ -613,7 +621,8 @@ public class ZookeeperRegister implements Register {
             }, 0, TimeUnit.SECONDS);
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("[pradar-register] refresh register zookeeper node successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
+            LOGGER.info("[pradar-register] refresh register zookeeper node successful. {}",
+                Pradar.AGENT_ID_CONTAIN_USER_INFO);
         }
 
     }

@@ -191,6 +191,8 @@ public class ConsumerRegistry {
         return instanceName;
     }
 
+    private static Map<DefaultMQPushConsumer, Long> lastWhitelistWarnTimes = new ConcurrentWeakHashMap<DefaultMQPushConsumer, Long>();
+
     /**
      * 构建 DefaultMQPushConsumer
      * 如果后续支持影子 server 模式，则直接修改此方法即可
@@ -212,10 +214,19 @@ public class ConsumerRegistry {
             }
         }
         if (map != null) {
+            Long lastWhitelistWarnTime = lastWhitelistWarnTimes.get(businessConsumer);
+            if(lastWhitelistWarnTime == null){
+                lastWhitelistWarnTime = 0L;
+            }
+            long now = System.currentTimeMillis();
+            long passTime = now - lastWhitelistWarnTime;
             for (Map.Entry<String, SubscriptionData> entry : map.entrySet()) {
                 String topic = entry.getKey();
                 if (!isPermitInitConsumer(businessConsumer, topic)) {
-                    logger.warn("Alibaba-RocketMQ topic : {} is not in whitelist!", topic);
+                    if (passTime > 5000) {
+                        logger.warn("Alibaba-RocketMQ topic : {} is not in whitelist!", topic);
+                        lastWhitelistWarnTimes.put(businessConsumer, now);
+                    }
                     continue;
                 }
                 topicsInWhiteList.put(entry.getKey(), entry.getValue());

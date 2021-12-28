@@ -162,6 +162,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
     private static final String DATA = "data";
     private static final String B_LISTS = "bLists";
+    private static final String NEW_B_LISTS = "newBlists";
+    private static final String BLACK_LISTS = "blacklists";
     private static final String W_LISTS = "wLists";
     private static final String REDIS_KEY = "REDIS_KEY";
     private static final String DUBBO = "dubbo";
@@ -1351,10 +1353,21 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         JSONObject dataMap = JSON.parseObject(httpResult.getResult());
         JSONObject dataObj = dataMap.getJSONObject(DATA);
         JSONArray blackList = dataObj.getJSONArray(B_LISTS);
+        final JSONArray newBlists = dataObj.getJSONArray(NEW_B_LISTS);
         for (int i = 0; i < blackList.size(); i++) {
             JSONObject blackMap = blackList.getJSONObject(i);
             Object keyObj = blackMap.get(REDIS_KEY);
             redisKeyWhiteList.add(String.valueOf(keyObj));
+        }
+        final String appName = AppNameUtils.appName();
+        for (int i = 0; i < newBlists.size(); i++) {
+            final JSONObject jsonObject = newBlists.getJSONObject(i);
+            if(appName.equals(jsonObject.getString("appName"))){
+                final JSONArray jsonArray = jsonObject.getJSONArray(BLACK_LISTS);
+                if(jsonArray != null && !jsonArray.isEmpty()){
+                    redisKeyWhiteList.addAll(Arrays.asList(jsonArray.toArray(new String[0])));
+                }
+            }
         }
         final JSONArray whitelist = dataObj.getJSONArray(W_LISTS);
         for (int i = 0; i < whitelist.size(); i++) {

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -33,8 +33,6 @@ class SimulatorClassLoader extends URLClassLoader {
     private String toString;
     private String path;
 
-    private ClassLoader parentClassLoader;
-
     SimulatorClassLoader(final String simulatorCoreJarFilePath) throws MalformedURLException {
         /**
          * 指定父类加载器为 null，防止类冲突问题
@@ -42,24 +40,11 @@ class SimulatorClassLoader extends URLClassLoader {
         super(new URL[]{new URL("file:" + simulatorCoreJarFilePath)}, null);
         this.path = simulatorCoreJarFilePath;
         this.toString = String.format("SimulatorClassLoader[path=%s;]", path);
-        this.parentClassLoader = getJdkClassLoader();
-    }
-
-    private ClassLoader getJdkClassLoader() {
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader() == null ? getClass().getClassLoader() : ClassLoader.getSystemClassLoader();
-        if (classLoader.getParent() != null) {
-            classLoader = classLoader.getParent();
-        }
-        return classLoader;
     }
 
     @Override
     public URL getResource(String name) {
-        URL url = findResource(name);
-        if (null != url) {
-            return url;
-        }
-        url = parentClassLoader.getResource(name);
+        URL url = super.getResource(name);
         if (null != url) {
             return url;
         }
@@ -68,11 +53,7 @@ class SimulatorClassLoader extends URLClassLoader {
 
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
-        Enumeration<URL> urls = findResources(name);
-        if (null != urls) {
-            return urls;
-        }
-        urls = parentClassLoader.getResources(name);
+        Enumeration<URL> urls = super.getResources(name);
         if (null != urls) {
             return urls;
         }
@@ -81,32 +62,20 @@ class SimulatorClassLoader extends URLClassLoader {
 
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        final Class<?> loadedClass = findLoadedClass(name);
-        if (loadedClass != null) {
-            return loadedClass;
-        }
-
         try {
-            Class<?> aClass = findClass(name);
-            if (resolve) {
-                resolveClass(aClass);
-            }
+            Class<?> aClass = super.loadClass(name, resolve);
             return aClass;
         } catch (Throwable t) {
             try {
-                return parentClassLoader.loadClass(name);
-            } catch (Throwable e) {
-                try {
-                    return getBizClassLoader().loadClass(name);
-                } catch (Throwable ex) {
-                    if (t instanceof ClassNotFoundException) {
-                        throw (ClassNotFoundException) t;
-                    }
-                    if (t instanceof Error) {
-                        throw (Error) t;
-                    }
-                    throw new ClassNotFoundException("class " + name + " not found.", t);
+                return getBizClassLoader().loadClass(name);
+            } catch (Throwable ex) {
+                if (t instanceof ClassNotFoundException) {
+                    throw (ClassNotFoundException) t;
                 }
+                if (t instanceof Error) {
+                    throw (Error) t;
+                }
+                throw new ClassNotFoundException("class " + name + " not found.", t);
             }
         }
     }
@@ -115,7 +84,7 @@ class SimulatorClassLoader extends URLClassLoader {
         ClassLoader classLoader = SimulatorClassLoader.class.getClassLoader();
         if (classLoader == null) {
             classLoader = Thread.currentThread().getContextClassLoader();
-            if (classLoader instanceof SimulatorClassLoader){
+            if (classLoader instanceof SimulatorClassLoader) {
                 classLoader = null;
             }
         }
@@ -176,7 +145,6 @@ class SimulatorClassLoader extends URLClassLoader {
         } catch (Throwable cause) {
             // ignore...
         }
-        parentClassLoader = null;
         path = null;
         toString = null;
     }

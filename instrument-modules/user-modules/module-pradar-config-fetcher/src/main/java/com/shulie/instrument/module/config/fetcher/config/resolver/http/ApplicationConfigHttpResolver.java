@@ -14,44 +14,14 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.ErrorTypeEnum;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
-import com.pamirs.pradar.internal.config.MatchConfig;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
-import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
@@ -59,11 +29,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
-import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.agent.shared.service.ShadowDatabaseConfigParser;
-import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.*;
 import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -74,11 +40,23 @@ import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
+import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.text.NumberFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author shiyajian
@@ -160,10 +138,12 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      */
     public static final String TRO_PLUGIN_CONIFG = "/api/application/plugins/config/queryByAppName";
 
+    private static final String APP_NAME = "appName";
     private static final String DATA = "data";
-    private static final String B_LISTS = "bLists";
+    private static final String B_LISTS = "newBlists";
     private static final String W_LISTS = "wLists";
     private static final String REDIS_KEY = "REDIS_KEY";
+    private static final String REDIS_KEY_NEW = "blacklists";
     private static final String DUBBO = "dubbo";
     private static final String FEIGN = "feign";
     private static final String RPC = "rpc";
@@ -1350,11 +1330,22 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         JSONObject dataMap = JSON.parseObject(httpResult.getResult());
         JSONObject dataObj = dataMap.getJSONObject(DATA);
-        JSONArray blackList = dataObj.getJSONArray(B_LISTS);
-        for (int i = 0; i < blackList.size(); i++) {
-            JSONObject blackMap = blackList.getJSONObject(i);
-            Object keyObj = blackMap.get(REDIS_KEY);
-            redisKeyWhiteList.add(String.valueOf(keyObj));
+//        JSONArray blackList = dataObj.getJSONArray(B_LISTS);
+//        for (int i = 0; i < blackList.size(); i++) {
+//            JSONObject blackMap = blackList.getJSONObject(i);
+//            Object keyObj = blackMap.get(REDIS_KEY);
+//            redisKeyWhiteList.add(String.valueOf(keyObj));
+//        }
+        //按应用分的黑名单
+        List<Object> blackList = (List<Object>) dataObj.get(B_LISTS);
+        if (CollectionUtils.isNotEmpty(blackList)){
+            for (int i = 0; i < blackList.size(); i++) {
+                Map<String, Object> blackMap = (Map<String, Object>) blackList.get(i);
+                if (AppNameUtils.appName().equals(blackMap.get(APP_NAME))){
+                    Object keyObj = blackMap.get(REDIS_KEY_NEW);
+                    redisKeyWhiteList.addAll(((JSONArray) keyObj).toJavaList(String.class));
+                }
+            }
         }
         final JSONArray whitelist = dataObj.getJSONArray(W_LISTS);
         for (int i = 0; i < whitelist.size(); i++) {

@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.agent.core.config;
 
 import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
+import com.shulie.instrument.simulator.agent.core.CoreLauncher;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
@@ -22,6 +23,8 @@ import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.SimulatorStatus;
+
+import java.io.File;
 
 /**
  * @author angju
@@ -34,7 +37,10 @@ public class HeartRequestUtil {
     private static final String pid = String.valueOf(PidUtils.getPid());
 
 
-
+    public static String getUpgradeFileTempSaveDir(){
+        return new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
+                .getParent();
+    }
 
 
     public static void configHeartRequest(HeartRequest heartRequest, AgentConfig agentConfig){
@@ -48,7 +54,11 @@ public class HeartRequestUtil {
         heartRequest.setSimulatorErrorInfo(SimulatorStatus.getAgentStatus());
         heartRequest.setAgentVersion(agentConfig.getAgentVersion());
         if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())){
-            heartRequest.setDependencyInfo(HeartCommandUtils.allModuleVersionDetail);
+            String agentBasePath = getUpgradeFileTempSaveDir().replace("core", "");
+            File localFile = new File(agentBasePath + "agent/simulator_-1");
+            if (!localFile.exists()){
+                heartRequest.setDependencyInfo(HeartCommandUtils.allModuleVersionDetail);
+            }
         } else {
             HeartCommandUtils.allModuleVersionDetail = null;
         }

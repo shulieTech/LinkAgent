@@ -100,6 +100,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl", new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
+
                         target.getDeclaredMethod("pullSyncImpl", "com.alibaba.rocketmq.common.message.MessageQueue", "java.lang.String", "long", "int", "boolean", "long")
                                 .addInterceptor(Listeners.of(PullConsumerInterceptor.class));
 

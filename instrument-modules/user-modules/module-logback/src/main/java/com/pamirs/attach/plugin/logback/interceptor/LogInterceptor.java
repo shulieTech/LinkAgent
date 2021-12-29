@@ -71,14 +71,25 @@ public class LogInterceptor extends CutoffInterceptorAdaptor {
                 if (ptAppenderList == null) {
                     ptAppenderList = new COWArrayList<Object>(new Object[0]);
                     for (Object appender : appenderList) {
+                        String appenderName;
                         try {
-                            Object ptAppender = AppenderHolder.getOrCreatePtAppender(bizClassLoader, appender,
-                                bizShadowLogPath);
-                            if (ptAppender != null) {
-                                ptAppenderList.add(ptAppender);
+                            appenderName = Reflect.on(appender).call("getName").get();
+                        } catch (Exception e) {
+                            log.warn("[logback] can not get appender name", e);
+                            continue;
+                        }
+                        try {
+                            if (Reflect.on(appender).call("isStarted").get()) {
+                                Object ptAppender = AppenderHolder.getOrCreatePtAppender(bizClassLoader, appender,
+                                    bizShadowLogPath);
+                                if (ptAppender != null) {
+                                    ptAppenderList.add(ptAppender);
+                                }
+                            } else {
+                                log.warn("[logback] appender {} is not started! skip create pt appender", appenderName);
                             }
                         } catch (Exception e) {
-                            log.warn("[logback] create pt appender fail!", e);
+                            log.warn("[logback] create pt appender : {} fail!", appenderName, e);
                         }
                     }
                     AppenderHolder.putPtAppenders(appenderAttachable, ptAppenderList);

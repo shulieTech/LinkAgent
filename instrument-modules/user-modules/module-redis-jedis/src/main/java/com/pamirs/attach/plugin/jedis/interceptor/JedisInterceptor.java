@@ -216,7 +216,7 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
         Client client = getClient(target);
         record.setRemoteIp(client.getHost());
         record.setPort(client.getPort());
-        record.setCallbackMsg(client.getDB()+"");
+        //record.setCallbackMsg(client.getDB()+"");
 
         record.setRequest(toArgs(args));
         record.setMiddlewareName(RedisConstants.MIDDLEWARE_NAME);

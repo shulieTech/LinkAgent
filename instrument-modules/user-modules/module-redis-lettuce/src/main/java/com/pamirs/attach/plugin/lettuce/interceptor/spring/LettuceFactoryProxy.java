@@ -19,7 +19,10 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.StringUtil;
-import org.springframework.data.redis.connection.*;
+import org.springframework.data.redis.connection.RedisClusterConfiguration;
+import org.springframework.data.redis.connection.RedisNode;
+import org.springframework.data.redis.connection.RedisSentinelConfiguration;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
 import java.util.*;
@@ -75,9 +78,9 @@ class FactoryInitializer extends MatchStrategy {
             return null;
         }
 
-        RedisConfiguration standaloneConfiguration = biz.getStandaloneConfiguration();
-        RedisConfiguration clusterConfiguration = biz.getClusterConfiguration();
-        RedisConfiguration sentinelConfiguration = biz.getSentinelConfiguration();
+        Object standaloneConfiguration = biz.getStandaloneConfiguration();
+        Object clusterConfiguration = biz.getClusterConfiguration();
+        Object sentinelConfiguration = biz.getSentinelConfiguration();
 
 
         if (clusterConfiguration != null) {

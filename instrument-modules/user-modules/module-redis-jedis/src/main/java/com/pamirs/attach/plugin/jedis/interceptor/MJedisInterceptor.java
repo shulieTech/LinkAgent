@@ -34,6 +34,34 @@ import java.util.*;
 @ListenerBehavior(isFilterClusterTest = true)
 public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
+    private static List<String> readMethod = new ArrayList<String>(14);
+
+    /**
+     * redis黑名单支持的操作方法
+     * get、mget、hget、hmget、hgetAll、hlen、hgetAll
+     * 、lrange、llen、lindex
+     * 、smembers、zrange、strlen
+     * 、getbit
+     * 、getrange
+     * 、
+     */
+    static {
+        readMethod.add("get");
+        readMethod.add("mget");
+        readMethod.add("hget");
+        readMethod.add("hgetAll");
+        readMethod.add("hlen");
+        readMethod.add("hgetAll");
+        readMethod.add("lrange");
+        readMethod.add("llen");
+        readMethod.add("lindex");
+        readMethod.add("smembers");
+        readMethod.add("zrange");
+        readMethod.add("strlen");
+        readMethod.add("getbit");
+        readMethod.add("getrange");
+    }
+
     @Override
     public Object[] getParameter0(Advice advice) {
 
@@ -59,14 +87,18 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         }
 
         Collection<String> whiteList = GlobalConfig.getInstance().getCacheKeyWhiteList();
+        boolean canMatchWhiteList = false;
+        if (readMethod.contains(methodName)){
+            canMatchWhiteList = true;
+        }
 
         if (RedisUtils.EVAL_METHOD_NAME.contains(methodName)) {
-            return processEvalMethodName(args, whiteList);
+            return processEvalMethodName(args, whiteList, canMatchWhiteList);
         }
 
         //String methodSign = getMethodSign(methodName,args);
         if (RedisUtils.METHOD_MORE_KEYS.containsKey(methodName)) {
-            return processMoreKeys(methodName, args, whiteList);
+            return processMoreKeys(methodName, args, whiteList, canMatchWhiteList);
         }
 
         //jedis db非0时候选择不做处理
@@ -83,24 +115,24 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         }
 
         if ("mset".equals(advice.getBehaviorName())||"msetnx".equals(advice.getBehaviorName())) {
-            return processMset(args, whiteList);
+            return processMset(args, whiteList, canMatchWhiteList);
         }
 
-        return process(args, whiteList);
+        return process(args, whiteList, canMatchWhiteList);
     }
 
-    private Object[] processMset(Object[] args, Collection<String> whiteList) {
+    private Object[] processMset(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         Object params = args[0];
         if (params instanceof String[]) {
             String[] data = (String[]) params;
             for (int i = 0; i < data.length; i=i+2) {
-                data[i] = fetchKeyString(data[i], whiteList);
+                data[i] = fetchKeyString(data[i], whiteList, canMatchWhiteList);
             }
             return args;
         } else if (params instanceof byte[][]) {
             byte[][] data = (byte[][]) params;
             for (int i = 0; i < data.length; i = i + 2) {
-                String key = fetchKeyString(new String(data[i]), whiteList);
+                String key = fetchKeyString(new String(data[i]), whiteList, canMatchWhiteList);
                 data[i] = key.getBytes();
             }
             return args;
@@ -197,38 +229,38 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return args;
     }
 
-    private Object[] process(Object[] args, Collection<String> whiteList) {
+    private Object[] process(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         //遍历顺序获取一下几个类型值
         for (int i = 0; i < args.length; i++) {
             if (args[i] instanceof String) {
-                return processKeyString(args, whiteList, i);
+                return processKeyString(args, whiteList, i, canMatchWhiteList);
             } else if (args[i] instanceof String[]) {
-                return processKeyStringArray(args, whiteList, i);
+                return processKeyStringArray(args, whiteList, i, canMatchWhiteList);
             } else if (args[i] instanceof byte[]) {
-                return processKeyByte(args, whiteList, i);
+                return processKeyByte(args, whiteList, i, canMatchWhiteList);
             } else if (args[i] instanceof byte[][]) {
-                return processKeyByteArray(args, whiteList, i);
+                return processKeyByteArray(args, whiteList, i, canMatchWhiteList);
             }
         }
 
         throw new PressureMeasureError("Jedis not support key deserialize !");
     }
 
-    private Object[] processIndex(Object[] args, Collection<String> whiteList, int keyIndex) {
+    private Object[] processIndex(Object[] args, Collection<String> whiteList, int keyIndex, boolean canMatchWhiteList) {
         if (args[keyIndex] instanceof String) {
-            return processKeyString(args, whiteList, keyIndex);
+            return processKeyString(args, whiteList, keyIndex, canMatchWhiteList);
         } else if (args[keyIndex] instanceof String[]) {
-            return processKeyStringArray(args, whiteList, keyIndex);
+            return processKeyStringArray(args, whiteList, keyIndex, canMatchWhiteList);
         } else if (args[keyIndex] instanceof byte[]) {
-            return processKeyByte(args, whiteList, keyIndex);
+            return processKeyByte(args, whiteList, keyIndex, canMatchWhiteList);
         } else if (args[keyIndex] instanceof byte[][]) {
-            return processKeyByteArray(args, whiteList, keyIndex);
+            return processKeyByteArray(args, whiteList, keyIndex, canMatchWhiteList);
         } else {
             throw new PressureMeasureError("Jedis not support key deserialize !");
         }
     }
 
-    private Object[] processKeyStringArray(Object[] args, Collection<String> whiteList, int keyIndex) {
+    private Object[] processKeyStringArray(Object[] args, Collection<String> whiteList, int keyIndex, boolean canMatchWhiteList) {
         int keysIndex = keyIndex;
         String[] keys = (String[]) args[keysIndex];
         for (int i = 0; i < keys.length; i++) {
@@ -239,7 +271,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             }
 
             //白名单 忽略
-            if (whiteListValidate(whiteList, key)) {
+            if (canMatchWhiteList && whiteListValidate(whiteList, key)) {
                 continue;
             }
             if (!Pradar.isClusterTestPrefix(key)) {
@@ -260,29 +292,29 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return false;
     }
 
-    private Object[] processMoreKeys(String methodName, Object[] args, Collection<String> whiteList) {
+    private Object[] processMoreKeys(String methodName, Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         List<Integer> keyIndexes = RedisUtils.METHOD_MORE_KEYS.get(methodName);
         //如果出现枚举的值比方法参数数量大的，则进行判断单个key逻辑处理
         for (int i = 0; i < keyIndexes.size(); i++) {
             if (args.length < (keyIndexes.get(i) + 1)) {
-                return process(args, whiteList);
+                return process(args, whiteList, canMatchWhiteList);
             }
         }
 
         for (int i = 0; i < keyIndexes.size(); i++) {
-            processIndex(args, whiteList, keyIndexes.get(i));
+            processIndex(args, whiteList, keyIndexes.get(i), canMatchWhiteList);
         }
         return args;
     }
 
-    private Object[] processKeyString(Object[] args, Collection<String> whiteList, int keyIndex) {
+    private Object[] processKeyString(Object[] args, Collection<String> whiteList, int keyIndex, boolean canMatchWhiteList) {
         String key = (String) args[keyIndex];
-        args[keyIndex] = fetchKeyString(key, whiteList);
+        args[keyIndex] = fetchKeyString(key, whiteList, canMatchWhiteList);
         return args;
     }
 
-    private String fetchKeyString(String key, Collection<String> whiteList) {
-        if (whiteListValidate(whiteList, key)) {
+    private String fetchKeyString(String key, Collection<String> whiteList, boolean canMatchWhiteList) {
+        if (canMatchWhiteList && whiteListValidate(whiteList, key)) {
             return key;
         }
 
@@ -301,7 +333,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return false;
     }
 
-    private Object[] processEvalMethodName(Object[] args, Collection<String> whiteList) {
+    private Object[] processEvalMethodName(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         if (args.length != 3) {
             return args;
         }
@@ -324,12 +356,15 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         continue;
                     }
                     boolean contains = false;
-                    for (String white : whiteList) {
-                        if (key.startsWith(white)) {
-                            contains = true;
-                            break;
+                    if (canMatchWhiteList){
+                        for (String white : whiteList) {
+                            if (key.startsWith(white)) {
+                                contains = true;
+                                break;
+                            }
                         }
                     }
+
                     if (contains) {
                         continue;
                     }
@@ -359,12 +394,15 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         continue;
                     }
                     boolean contains = false;
-                    for (String white : whiteList) {
-                        if (key.startsWith(white)) {
-                            contains = true;
-                            break;
+                    if (canMatchWhiteList){
+                        for (String white : whiteList) {
+                            if (key.startsWith(white)) {
+                                contains = true;
+                                break;
+                            }
                         }
                     }
+
                     if (contains) {
                         continue;
                     }
@@ -403,12 +441,12 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return args;
     }
 
-    private Object[] processKeyByte(Object[] args, Collection<String> whiteList, int keyIndex) {
+    private Object[] processKeyByte(Object[] args, Collection<String> whiteList, int keyIndex, boolean canMatchWhiteList) {
         int keysIndex = keyIndex;
         String key = new String((byte[]) args[keysIndex]);
 
         //白名单 忽略
-        if (ignore(whiteList, key)) {
+        if (canMatchWhiteList && ignore(whiteList, key)) {
             return args;
         }
 
@@ -421,7 +459,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return args;
     }
 
-    private Object[] processKeyByteArray(Object[] args, Collection<String> whiteList, int keyIndex) {
+    private Object[] processKeyByteArray(Object[] args, Collection<String> whiteList, int keyIndex, boolean canMatchWhiteList) {
         int keysIndex = keyIndex;
         byte[][] keyBytes = (byte[][]) args[keysIndex];
 
@@ -433,7 +471,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             }
 
             //白名单 忽略
-            if (whiteListValidate(whiteList, key)) {
+            if (canMatchWhiteList && whiteListValidate(whiteList, key)) {
                 continue;
             }
             if (!Pradar.isClusterTestPrefix(key)) {

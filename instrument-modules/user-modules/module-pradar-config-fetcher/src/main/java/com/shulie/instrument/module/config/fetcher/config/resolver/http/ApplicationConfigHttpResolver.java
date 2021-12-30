@@ -141,6 +141,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private static final String APP_NAME = "appName";
     private static final String DATA = "data";
     private static final String B_LISTS = "newBlists";
+
+    private static final String NEW_B_LISTS = "newBlists";
+    private static final String BLACK_LISTS = "blacklists";
     private static final String W_LISTS = "wLists";
     private static final String REDIS_KEY = "REDIS_KEY";
     private static final String REDIS_KEY_NEW = "blacklists";
@@ -1330,12 +1333,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         JSONObject dataMap = JSON.parseObject(httpResult.getResult());
         JSONObject dataObj = dataMap.getJSONObject(DATA);
-//        JSONArray blackList = dataObj.getJSONArray(B_LISTS);
-//        for (int i = 0; i < blackList.size(); i++) {
-//            JSONObject blackMap = blackList.getJSONObject(i);
-//            Object keyObj = blackMap.get(REDIS_KEY);
-//            redisKeyWhiteList.add(String.valueOf(keyObj));
-//        }
         //按应用分的黑名单
         List<Object> blackList = (List<Object>) dataObj.get(B_LISTS);
         if (CollectionUtils.isNotEmpty(blackList)){

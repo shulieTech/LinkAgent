@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.spring.cloud.gateway;
 
 import com.pamirs.attach.plugin.spring.cloud.gateway.interceptor.FilteringWebHandlerHandleInterceptor;
+import com.pamirs.attach.plugin.spring.cloud.gateway.interceptor.GatewayFilterChainFilterInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -44,8 +45,22 @@ public class SpringCloudGatewayPlugin extends ModuleLifecycleAdapter implements 
                 public void doEnhance(InstrumentClass target) {
                     final InstrumentMethod handle = target.getDeclaredMethod("handle",
                         "org.springframework.web.server.ServerWebExchange");
-                    handle.addInterceptor(Listeners.of(FilteringWebHandlerHandleInterceptor.class, "SpringCloudGatewayScope",
-                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    handle.addInterceptor(
+                        Listeners.of(FilteringWebHandlerHandleInterceptor.class, "SpringCloudGatewayScope",
+                            ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this, "org.springframework.cloud.gateway.filter.NettyRoutingFilter",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod filter = target.getDeclaredMethod("filter",
+                        "org.springframework.web.server.ServerWebExchange",
+                        "org.springframework.cloud.gateway.filter.GatewayFilterChain");
+                    filter.addInterceptor(
+                        Listeners.of(GatewayFilterChainFilterInterceptor.class, "SpringCloudGatewayFilterScope",
+                            ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 }
             });
         return true;

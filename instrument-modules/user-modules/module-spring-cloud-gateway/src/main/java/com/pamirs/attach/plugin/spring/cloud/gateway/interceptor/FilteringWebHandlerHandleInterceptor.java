@@ -1,11 +1,23 @@
+/**
+ * Copyright 2021 Shulie Technology, Co.Ltd
+ * Email: shulie@shulie.io
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pamirs.attach.plugin.spring.cloud.gateway.interceptor;
-
-import java.util.Map;
-import java.util.Map.Entry;
 
 import com.pamirs.attach.plugin.common.web.RequestTracer;
 import com.pamirs.attach.plugin.spring.cloud.gateway.SpringCloudGatewayConstants;
 import com.pamirs.attach.plugin.spring.cloud.gateway.tracer.ServerHttpRequestTracer;
+import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -47,27 +59,23 @@ public class FilteringWebHandlerHandleInterceptor extends TraceInterceptorAdapto
         ServerWebExchange arg = (ServerWebExchange)args[0];
         ServerHttpRequest serverHttpRequest = arg.getRequest();
         requestTracer.startTrace(serverHttpRequest, null, SpringCloudGatewayConstants.MODULE_NAME);
-        final Map<String, String> invokeContextTransformMap = Pradar.getInvokeContextTransformMap();
-        for (Entry<String, String> entry : invokeContextTransformMap.entrySet()) {
-            arg.getAttributes().put(entry.getKey(),entry.getValue());
-        }
+        final InvokeContext invokeContext = Pradar.getInvokeContext();
+        arg.getAttributes().put(SpringCloudGatewayConstants.GATEWAY_CONTEXT, invokeContext);
     }
 
 
     @Override
     public void afterLast(Advice advice) {
-        final Object[] args = advice.getParameterArray();
-        ServerWebExchange arg = (ServerWebExchange)args[0];
-        ServerHttpRequest request = arg.getRequest();
-        requestTracer.endTrace(request, arg.getResponse(), null);
+        if(Pradar.hasInvokeContext()){
+            Pradar.popInvokeContext();
+        }
     }
 
     @Override
     public void exceptionLast(Advice advice) {
-        final Object[] args = advice.getParameterArray();
-        ServerWebExchange arg = (ServerWebExchange)args[0];
-        ServerHttpRequest request = arg.getRequest();
-        requestTracer.endTrace(request, arg.getResponse(), advice.getThrowable());
+        if(Pradar.hasInvokeContext()){
+            Pradar.popInvokeContext();
+        }
     }
 
 }

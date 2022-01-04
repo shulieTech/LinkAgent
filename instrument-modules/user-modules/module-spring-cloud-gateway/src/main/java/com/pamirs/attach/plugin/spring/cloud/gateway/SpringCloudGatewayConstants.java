@@ -23,4 +23,6 @@ import com.pamirs.pradar.MiddlewareType;
 public class SpringCloudGatewayConstants {
     public final static String MODULE_NAME = "spring-cloud-gateway";
     public static final Integer PLUGIN_TYPE = MiddlewareType.TYPE_WEB_SERVER;
+    public static final String GATEWAY_CONTEXT = "p-gateway-context";
+    public static final String NETTY_HTTP_CONTEXT = "p-netty-http-context";
 }

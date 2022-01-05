@@ -16,9 +16,7 @@ package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
 import javax.annotation.Resource;
 
-import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
-import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
@@ -55,16 +53,10 @@ public class ChannelNAckInterceptor extends CutoffInterceptorAdaptor {
             Channel target = (Channel)advice.getTarget();
             Channel ptChannel = ChannelHolder.isShadowChannel(target) ? target : ChannelHolder.getShadowChannel(
                 (Channel)advice.getTarget());
-            if (!manager.getDynamicField(ptChannel, RabbitmqConstants.IS_AUTO_ACK_FIELD, true)) {
-                if (ptChannel == null) {
-                    logger.warn("[RabbitMQ] cluster test but no shadow channel!");
-                } else {
-                    ptChannel.basicAck((Long)advice.getParameterArray()[0], (Boolean)advice.getParameterArray()[1]);
-                }
+            if (ptChannel != null) { //如果这里==null，说明是spring的，走CutOffResult.passed();
+                ptChannel.basicAck((Long)advice.getParameterArray()[0], (Boolean)advice.getParameterArray()[1]);
             }
-            return CutOffResult.cutoff(null);
-        } else {
-            return CutOffResult.passed();
         }
+        return CutOffResult.passed();
     }
 }

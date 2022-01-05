@@ -318,7 +318,6 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                         cTag = channel.basicConsume(consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(), ptConsumerTag,
                             false, consumerMetaData.isExclusive(),
                             new HashMap<String, Object>(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
-                        ChannelHolder.addConsumerTag(channel, consumerTag, cTag, consumerMetaData.getQueue());
                     } else {
                         cTag = consumeShadowQueue(channel, consumerMetaData);
                     }
@@ -357,7 +356,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
             Consumer consumer) throws IOException {
             synchronized (ChannelHolder.class) {
-                Channel shadowChannel = ChannelHolder.getShadowChannel(target);
+                Channel shadowChannel = ChannelHolder.getOrShadowChannel(target);
                 if (shadowChannel == null) {
                     logger.warn(
                         "[RabbitMQ] basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}",
@@ -373,7 +372,6 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 if (prefetchCount > 0) {
                     shadowChannel.basicQos(prefetchCount);
                 }
-                dynamicFieldManager.setDynamicField(shadowChannel, RabbitmqConstants.IS_AUTO_ACK_FIELD, autoAck);
                 String result = shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments,
                     consumer);
                 final int key = System.identityHashCode(shadowChannel);

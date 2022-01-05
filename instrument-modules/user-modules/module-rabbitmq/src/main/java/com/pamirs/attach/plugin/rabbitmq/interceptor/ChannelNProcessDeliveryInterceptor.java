@@ -314,8 +314,8 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 try {
                     String cTag;
                     if (consumerMetaData.isUseOriginChannel()) {
-                        //spring 要用业务本身的channel去订阅，spring的永远自动提交
-                        cTag = channel.basicConsume(consumerMetaData.getPtQueue(), true, ptConsumerTag,
+                        //spring 要用业务本身的channel去订阅
+                        cTag = channel.basicConsume(consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(), ptConsumerTag,
                             false, consumerMetaData.isExclusive(),
                             new HashMap<String, Object>(), new ShadowConsumerProxy(consumerMetaData.getConsumer()));
                         ChannelHolder.addConsumerTag(channel, consumerTag, cTag, consumerMetaData.getQueue());

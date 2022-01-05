@@ -86,6 +86,7 @@
         <module>module-apache-cxf</module>
         <module>module-apache-axis</module>
         <module>module-jersey</module>
+        <module>module-spring-cloud-gateway</module>
     </modules>
 
     <build>

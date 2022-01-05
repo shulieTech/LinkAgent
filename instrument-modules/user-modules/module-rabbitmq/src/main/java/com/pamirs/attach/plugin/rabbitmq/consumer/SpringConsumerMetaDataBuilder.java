@@ -14,11 +14,14 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.consumer;
 
+import java.util.Map;
+
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
 import com.pamirs.pradar.exception.PradarException;
 import com.rabbitmq.client.Consumer;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.rabbit.listener.BlockingQueueConsumer;
 
@@ -34,6 +37,8 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
         return INSTANCE;
     }
 
+    private final Logger logger = LoggerFactory.getLogger(SpringConsumerMetaDataBuilder.class);
+
     private SpringConsumerMetaDataBuilder() {}
 
     @Override
@@ -45,17 +50,43 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
             return null;
         }
         try {
-            BlockingQueueConsumer blockingQueueConsumer = Reflect.on(consumer).get("this$0");
-            return new ConsumerMetaData(
-                Reflect.on(consumer).<String>get("queueName"),
-                consumerTag,
-                consumer,
-                Reflect.on(blockingQueueConsumer).<Boolean>get("exclusive"),
-                Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get() == AcknowledgeMode.NONE,
-                Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
-                true);
-        } catch (ReflectException e) {
-            throw new PradarException("spring rabbitmq 版本不支持！", e);
+            return highVersion(consumer, consumerTag);
+        } catch (Throwable e) {
+            logger.warn("[RabbitMQ] get ConsumerMetaData from spring rabbitmq fail, try lowVersion");
+            try {
+                return lowVersion(consumer, consumerTag);
+            } catch (Throwable ie) {
+                throw new PradarException("spring rabbitmq 版本不支持！", ie);
+            }
         }
+    }
+
+    private ConsumerMetaData highVersion(Consumer consumer, String consumerTag) {
+        BlockingQueueConsumer blockingQueueConsumer = Reflect.on(consumer).get("this$0");
+        return new ConsumerMetaData(
+            Reflect.on(consumer).<String>get("queueName"),
+            consumerTag,
+            consumer,
+            Reflect.on(blockingQueueConsumer).<Boolean>get("exclusive"),
+            Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get("acknowledgeMode").isAutoAck(),
+            Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
+            true);
+    }
+
+    private ConsumerMetaData lowVersion(Consumer consumer, String consumerTag) {
+        BlockingQueueConsumer blockingQueueConsumer = Reflect.on(consumer).get("this$0");
+        Map<String, String> consumerTags = Reflect.on(blockingQueueConsumer).get("consumerTags");
+        String queue = consumerTags.get(consumerTag);
+        if (queue == null) {
+            throw new RuntimeException("this should never happened!");
+        }
+        return new ConsumerMetaData(
+            queue,
+            consumerTag,
+            consumer,
+            Reflect.on(blockingQueueConsumer).<Boolean>get("exclusive"),
+            Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get("acknowledgeMode").isAutoAck(),
+            Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
+            true);
     }
 }

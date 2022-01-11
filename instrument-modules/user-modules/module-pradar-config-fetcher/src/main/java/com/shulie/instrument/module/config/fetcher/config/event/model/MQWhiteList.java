@@ -16,6 +16,7 @@ package com.shulie.instrument.module.config.fetcher.config.event.model;
 
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.pressurement.agent.event.impl.MqWhiteListConfigEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowConsumerDisableEvent;
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;

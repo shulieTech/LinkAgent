@@ -60,7 +60,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>11.0.1</version>
+            <version>30.1-jre</version>
         </dependency>
 
         <dependency>
@@ -72,7 +72,7 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.68</version>
+            <version>1.2.72</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>

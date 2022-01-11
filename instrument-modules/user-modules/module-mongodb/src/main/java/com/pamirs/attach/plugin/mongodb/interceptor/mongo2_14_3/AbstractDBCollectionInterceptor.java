@@ -14,15 +14,8 @@
  */
 package com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import com.mongodb.DBCollection;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
-import com.mongodb.ServerAddress;
+import com.mongodb.*;
+import com.pamirs.attach.plugin.mongodb.utils.mongo343.ClientManagerUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -33,6 +26,12 @@ import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
+
+import java.lang.reflect.Field;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -57,14 +56,14 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
             return CutOffResult.passed();
         }
         DBCollection dbCollection = (DBCollection)advice.getTarget();
-        DBCollection ptCollection = getPtCollection(dbCollection);
+        DBCollection ptCollection = getPtCollection(dbCollection, advice);
         if (ptCollection == null) {
             return CutOffResult.passed();
         }
         return CutOffResult.cutoff(cutoffShadow(ptCollection, advice));
     }
 
-    protected DBCollection getPtCollection(DBCollection bizDbCollection) throws Throwable {
+    protected DBCollection getPtCollection(DBCollection bizDbCollection, Advice advice) throws Throwable {
 
         String busCollectionName = getCollectionName(bizDbCollection);
 
@@ -104,7 +103,7 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
                     }
 
                     if (shadowDatabaseConfig.isShadowDatabase()) {
-                        ptCollection = doShadowDatabase(bizDbCollection, busCollectionName, shadowDatabaseConfig);
+                        ptCollection = doShadowDatabase(bizDbCollection, busCollectionName, shadowDatabaseConfig, advice);
                     } else {
                         ptCollection = doShadowTable(bizDbCollection, busCollectionName, shadowDatabaseConfig);
                     }
@@ -123,11 +122,38 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
         return ptCollection;
     }
 
+    private Mongo getBusMongoClient(Advice advice){
+        Field field = null;
+        Field field1 = null;
+        try {
+            field = advice.getTarget().getClass().getDeclaredField("executor");
+            field.setAccessible(true);
+            Object object = field.get(advice.getTarget());
+            field1 = object.getClass().getDeclaredField("this$0");
+            field1.setAccessible(true);
+            return (Mongo) field1.get(object);
+        }catch (Exception e){
+            LOGGER.error("getBusMongoClient error ", e);
+            throw new PressureMeasureError(e.getMessage());
+        } finally {
+            if (field != null){
+                field.setAccessible(false);
+            }
+            if (field1 != null){
+                field1.setAccessible(false);
+            }
+        }
+
+    }
+
     protected DBCollection doShadowDatabase(DBCollection dbCollection, String busCollectionName,
-        ShadowDatabaseConfig config) throws Throwable {
+                                            ShadowDatabaseConfig config, Advice advice) throws Throwable {
         MongoClient ptMongoClient = getPtMongoClient(config);
-        return ptMongoClient.getDB(Pradar.addClusterTestPrefix(dbCollection.getDB().getName())).getCollection(
-            Pradar.addClusterTestPrefix(busCollectionName));
+        if (!ClientManagerUtils.getBusClient2ptClientMapping().containsValue(ptMongoClient)) {
+            ClientManagerUtils.getBusClient2ptClientMapping().put(getBusMongoClient(advice),ptMongoClient);
+        }
+        return ptMongoClient.getDB(config.getShadowSchema()).getCollection(
+                busCollectionName);
     }
 
     /**

@@ -48,7 +48,7 @@
         <module>module-mock</module>
         <module>module-mongodb</module>
         <!--        和mongodb 会有冲突， 暂时注释-->
-        <!--        <module>module-mongodb4</module>-->
+        <module>module-mongodb4</module>
         <module>module-motan</module>
         <module>module-mule</module>
         <!--        <module>module-mybatis</module>-->
@@ -72,7 +72,7 @@
         <module>module-hystrix</module>
         <module>module-httpserver</module>
         <module>module-caffeine</module>
-        <!--<module>module-proxool</module>-->
+        <module>module-proxool</module>
         <module>module-logback</module>
         <module>module-log4j</module>
         <module>module-apache-kafka-stream</module>
@@ -87,6 +87,7 @@
         <module>module-apache-axis</module>
         <module>module-jersey</module>
         <module>module-spring-cloud-gateway</module>
+        <module>module-jms</module>
     </modules>
 
     <build>

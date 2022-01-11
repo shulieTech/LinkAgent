@@ -14,17 +14,6 @@
  */
 package com.pamirs.pradar.pressurement.datasource;
 
-import java.io.StringWriter;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -40,13 +29,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.druid.DbType;
 import com.shulie.druid.sql.SQLUtils;
 import com.shulie.druid.sql.ast.SQLStatement;
-import com.shulie.druid.sql.ast.statement.SQLAlterTableStatement;
-import com.shulie.druid.sql.ast.statement.SQLCreateTableStatement;
-import com.shulie.druid.sql.ast.statement.SQLDeleteStatement;
-import com.shulie.druid.sql.ast.statement.SQLDropTableStatement;
-import com.shulie.druid.sql.ast.statement.SQLInsertStatement;
-import com.shulie.druid.sql.ast.statement.SQLSelectStatement;
-import com.shulie.druid.sql.ast.statement.SQLUpdateStatement;
+import com.shulie.druid.sql.ast.statement.*;
 import com.shulie.druid.sql.dialect.mysql.ast.statement.MySqlRenameTableStatement;
 import com.shulie.druid.sql.parser.SQLParserUtils;
 import com.shulie.druid.sql.parser.SQLStatementParser;
@@ -57,6 +40,12 @@ import com.shulie.druid.util.JdbcUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.StringWriter;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>{@code } instances should NOT be constructed in
@@ -331,6 +320,10 @@ public class SqlParser {
             return null;
         }
 
+        if (!Pradar.isShadowDatabaseWithShadowScheme()) {
+            return schema;
+        }
+
         if (StringUtils.equals(schema, config.getSchema())) {
             return config.getShadowSchema();
         } else {
@@ -359,6 +352,7 @@ public class SqlParser {
      * @throws SQLException
      */
     public static String parseAndReplaceSchema(String sql, String key, String dbTypeName) throws SQLException {
+        sql = sql.replaceAll("<  >","<>");
         ShadowDatabaseConfig config = GlobalConfig.getInstance().getShadowDatabaseConfig(key);
         if (config == null) {
             return sql;
@@ -452,6 +446,7 @@ public class SqlParser {
     }
 
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName) throws SQLException {
+        sql = sql.replaceAll("<  >","<>");
         DbType dbType = DbType.of(dbTypeName);
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {

@@ -101,6 +101,7 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
              * 根据配置判断是否是影子表
              */
             String url = getUrl(dataSourceBusiness);
+            String oldUrl = url;
             String username = getUsername(dataSourceBusiness);
             if (url == null || username == null) {
                 jdbcConnection = dataSourceBusiness.getConnection();
@@ -139,6 +140,11 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
                 this.dbType = "mysql";
             } else {
                 this.dbType = JdbcUtils.getDbType(url, driverClassName);
+            }
+            if (com.shulie.druid.DbType.oceanbase.name().equals(dbType)) {
+                if (oldUrl != null && oldUrl.startsWith("jdbc:oceanbase:oracle:")) {
+                    dbType = com.shulie.druid.DbType.oceanbase_oracle.name();
+                }
             }
             DbType type = DbType.nameOf(dbType);
             if (type != null) {

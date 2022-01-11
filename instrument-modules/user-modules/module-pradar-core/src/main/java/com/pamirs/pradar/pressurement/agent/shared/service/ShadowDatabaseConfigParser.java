@@ -167,6 +167,10 @@ public class ShadowDatabaseConfigParser {
             }
             if (StringUtils.equals(entry.getKey(), "url")) {
                 shadowDatabaseConfig.setUrl(toString(entry.getValue()));
+                if (shadowDatabaseConfig.getShadowUrl().startsWith("mongodb://")){
+                    String[] s = shadowDatabaseConfig.getShadowUrl().split("/");
+                    shadowDatabaseConfig.setShadowSchema(s[s.length - 1]);
+                }
             } else if (StringUtils.equals(entry.getKey(), "username")) {
                 shadowDatabaseConfig.setUsername(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "schema")) {
@@ -189,6 +193,18 @@ public class ShadowDatabaseConfigParser {
                 shadowDatabaseConfig.setShadowDriverClassName(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "schema")) {
                 shadowDatabaseConfig.setShadowSchema(toString(entry.getValue()));
+            } else if (StringUtils.equals(entry.getKey(), "extra")) {
+                Map<String, Object> extra = (Map) entry.getValue();
+                if (extra == null) {
+                    continue;
+                }
+                for (Map.Entry<String, Object> inner : extra.entrySet()) {
+                    String str = toString(inner.getValue());
+                    if (StringUtils.isBlank(str)) {
+                        continue;
+                    }
+                    properties.put(inner.getKey(), str);
+                }
             } else {
                 String str = toString(entry.getValue());
                 if (StringUtils.isBlank(str)) {

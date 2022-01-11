@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.rabbitmq.consumer.admin.support;
+package com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +24,7 @@ import java.util.zip.ZipException;
 
 import com.alibaba.fastjson.JSON;
 
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
 import com.pamirs.pradar.exception.PradarException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessLock;
@@ -36,7 +37,7 @@ import org.slf4j.LoggerFactory;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/11/17 5:37 下午
  */
-public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport {
+public class ZkWithIpCacheSupport extends AbstractCacheSupport implements CacheSupport {
 
     private volatile Map<CacheKey, ConsumerApiResult> CACHE;
 
@@ -46,9 +47,10 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
 
     private final String zkDataPath;
 
-    private final Logger logger = LoggerFactory.getLogger(ZkCacheSupport.class);
+    private final Logger logger = LoggerFactory.getLogger(ZkWithIpCacheSupport.class);
 
-    ZkCacheSupport(CuratorFramework zkClient, String parentPath) {
+    ZkWithIpCacheSupport(CuratorFramework zkClient, String parentPath) {
+        super(new WithIpCacheKeyBuilder());
         if (parentPath.endsWith("/")) {
             parentPath = parentPath.substring(0, parentPath.length() - 1);
         }
@@ -58,9 +60,10 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
     }
 
     @Override
-    public ConsumerApiResult computeIfAbsent(CacheKey cacheKey, Supplier supplier) {
+    public ConsumerApiResult computeIfAbsent(CacheKey key, Supplier supplier) {
+        WithCacheKey cacheKey = (WithCacheKey)key;
         if (CACHE == null) {
-            synchronized (ZkCacheSupport.class) {
+            synchronized (ZkWithIpCacheSupport.class) {
                 if (CACHE == null) {
                     List<ConsumerApiResult> consumerApiResults = getFromZK(cacheKey.getConnectionLocalIp());
                     if (consumerApiResults == null) {
@@ -81,7 +84,7 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
         }
         ConsumerApiResult consumerApiResult = CACHE.get(cacheKey);
         if (consumerApiResult == null) {
-            synchronized (ZkCacheSupport.class) {
+            synchronized (ZkWithIpCacheSupport.class) {
                 renew(supplier, cacheKey.getConnectionLocalIp());
                 consumerApiResult = CACHE.get(cacheKey);
             }
@@ -91,7 +94,7 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
 
     @Override
     public void destroy() {
-        synchronized (ZkCacheSupport.class) {
+        synchronized (ZkWithIpCacheSupport.class) {
             if (CACHE != null) {
                 CACHE.clear();
                 CACHE = null;
@@ -157,7 +160,7 @@ public class ZkCacheSupport extends AbstractCacheSupport implements CacheSupport
     private Map<String, List<ConsumerApiResult>> ipGroup(List<ConsumerApiResult> consumerApiResults) {
         Map<String, List<ConsumerApiResult>> result = new HashMap<String, List<ConsumerApiResult>>();
         for (ConsumerApiResult consumerApiResult : consumerApiResults) {
-            String ip = toCacheKey(consumerApiResult).getConnectionLocalIp();
+            String ip = ((WithCacheKey)cacheKeyBuilder.build(consumerApiResult)).getConnectionLocalIp();
             List<ConsumerApiResult> pieces = result.get(ip);
             if (pieces == null) {
                 pieces = new ArrayList<ConsumerApiResult>();

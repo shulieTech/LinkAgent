@@ -19,8 +19,7 @@ import java.util.List;
 import com.alibaba.fastjson.JSON;
 
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.CacheSupport;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.CacheSupport.CacheKey;
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupport;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
 import com.pamirs.attach.plugin.rabbitmq.utils.AdminAccessInfo;
 import com.pamirs.attach.plugin.rabbitmq.utils.HttpUtils;
@@ -52,7 +51,7 @@ public class AdminApiConsumerMetaDataBuilder implements ConsumerMetaDataBuilder 
     public ConsumerMetaData tryBuild(final ConsumerDetail consumerDetail) {
         try {
             ConsumerApiResult consumerApiResult = cacheSupport
-                .computeIfAbsent(consumerDetailToCacheKey(consumerDetail),
+                .computeIfAbsent(consumerDetail,
                     new CacheSupport.Supplier() {
                         @Override
                         public List<ConsumerApiResult> get() {
@@ -72,11 +71,6 @@ public class AdminApiConsumerMetaDataBuilder implements ConsumerMetaDataBuilder 
             logger.warn("get queue from web admin fail!", e);
         }
         return null;
-    }
-
-    private CacheKey consumerDetailToCacheKey(ConsumerDetail consumerDetail) {
-        return new CacheKey(consumerDetail.getConsumerTag(), consumerDetail.getChannel().getChannelNumber(),
-            consumerDetail.getConnectionLocalIp(), consumerDetail.getConnectionLocalPort());
     }
 
     private AdminAccessInfo resolveAdminAccessInfoByConfig(String virtualHost) {

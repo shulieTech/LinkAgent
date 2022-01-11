@@ -79,6 +79,7 @@ public class ShadowConsumerProxy implements Consumer {
             return;
         }
         try {
+            log.warn("consumerTag : {} handleShutdownSignal", consumerTag, sig);
             this.consumer.handleShutdownSignal(consumerTag, sig);
         } catch (Throwable e) {
             log.error("shadow consumer invoke handleShutdownSignal fail", e);

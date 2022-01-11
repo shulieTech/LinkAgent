@@ -18,7 +18,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
-import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.client.internal.OperationExecutor;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.internal.connection.Cluster;
@@ -73,7 +72,7 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
             throw new PressureMeasureError("mongo not support pressure operation class is " + args[0].getClass().getName());
         }
 
-        MongoClientDelegate mongoClientDelegate = Caches.getMongoClientDelegate(advice.getTarget());
+        Object mongoClientDelegate = Caches.getMongoClientDelegate(advice.getTarget());
 
         ShadowDatabaseConfig shadowDatabaseConfig = getShadowDatabaseConfig(mongoClientDelegate);
         if (shadowDatabaseConfig == null) {
@@ -125,8 +124,8 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
         }
     }
 
-    private ShadowDatabaseConfig getShadowDatabaseConfig(MongoClientDelegate mongoClientDelegate) {
-        ClusterSettings clusterSettings = mongoClientDelegate.getCluster().getSettings();
+    private ShadowDatabaseConfig getShadowDatabaseConfig(Object mongoClientDelegate) {
+        ClusterSettings clusterSettings = ((Cluster)(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"))).getSettings();
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         ShadowDatabaseConfig shadowDatabaseConfig = null;
         for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {

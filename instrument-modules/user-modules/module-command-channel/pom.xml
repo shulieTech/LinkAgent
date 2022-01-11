@@ -43,6 +43,12 @@
         </dependency>
 
         <dependency>
+            <artifactId>slf4j-log4j12</artifactId>
+            <groupId>org.slf4j</groupId>
+            <version>1.7.31</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-common-command-channel</artifactId>
             <version>common-2.0.0-SNAPSHOT</version>
@@ -50,6 +56,14 @@
                 <exclusion>
                     <artifactId>zookeeper</artifactId>
                     <groupId>org.apache.zookeeper</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>slf4j-log4j12</artifactId>
+                    <groupId>org.slf4j</groupId>
                 </exclusion>
             </exclusions>
         </dependency>

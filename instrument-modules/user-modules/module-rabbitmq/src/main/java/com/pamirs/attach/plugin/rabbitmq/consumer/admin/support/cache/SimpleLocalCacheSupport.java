@@ -41,7 +41,14 @@ public class SimpleLocalCacheSupport extends AbstractCacheSupport implements Cac
                 }
             }
         }
-        return cache.get(cacheKey);
+        ConsumerApiResult consumerApiResult = cache.get(cacheKey);
+        if (consumerApiResult == null) {
+            synchronized (SimpleLocalCacheSupport.class) {
+                renew(supplier);
+                consumerApiResult = cache.get(cacheKey);
+            }
+        }
+        return consumerApiResult;
     }
 
     @Override

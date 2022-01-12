@@ -55,6 +55,7 @@ public class ChannelNAckInterceptor extends CutoffInterceptorAdaptor {
                 (Channel)advice.getTarget());
             if (ptChannel != null) { //如果这里==null，说明是spring的，走CutOffResult.passed();
                 ptChannel.basicAck((Long)advice.getParameterArray()[0], (Boolean)advice.getParameterArray()[1]);
+                return CutOffResult.cutoff(null);
             }
         }
         return CutOffResult.passed();

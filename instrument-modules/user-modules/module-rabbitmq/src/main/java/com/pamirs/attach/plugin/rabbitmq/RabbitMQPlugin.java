@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.rabbitmq;
 
 import com.pamirs.attach.plugin.rabbitmq.destroy.ShadowConsumerDisableListenerImpl;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.AMQConnectionInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNAckInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicCancelInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicGetInterceptor;
@@ -23,6 +24,7 @@ import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNProcessDeliveryInte
 import com.pamirs.attach.plugin.rabbitmq.interceptor.QueueingConsumerHandleInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringRabbitRabbitAdminDeclareQueueInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.StrictExceptionHandlerInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -64,6 +66,32 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     }
                 });
         }
+
+        this.enhanceTemplate.enhance(this,
+            "com.rabbitmq.client.impl.AMQConnection", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    target.getDeclaredMethods("close").addInterceptor(Listeners.of(AMQConnectionInterceptor.class));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.StrictExceptionHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("handleConsumerException").addInterceptor(
+                    Listeners.of(StrictExceptionHandlerInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.ConsumerDispatcher", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("notifyConsumerOfShutdown").addInterceptor(
+                    Listeners.of(StrictExceptionHandlerInterceptor.class));
+            }
+        });
+
+
 
         //增强channel
         this.enhanceTemplate.enhance(this,

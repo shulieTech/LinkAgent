@@ -25,6 +25,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ObjectUtils;
 import org.springframework.amqp.core.Message;
@@ -88,7 +89,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
             Map<String, String> rpcContext = new HashMap<String, String>();
             for (String key : Pradar.getInvokeContextTransformKeys()) {
                 String value = ObjectUtils.toString(headers.get(key));
-                if (value != null) {
+                if (!StringUtil.isEmpty(value)) {
                     rpcContext.put(key, value);
                 }
             }

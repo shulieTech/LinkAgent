@@ -132,6 +132,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        if (ConfigCache.isWorkWithSpring()) {
+            return null;
+        }
         Object[] args = advice.getParameterArray();
         Command command = (Command)args[0];
         Deliver method = (Deliver)args[1];
@@ -162,6 +165,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if (ConfigCache.isWorkWithSpring()) {
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         return record;
@@ -169,6 +175,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
+        if (ConfigCache.isWorkWithSpring()) {
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         record.setResponse(advice.getThrowable());

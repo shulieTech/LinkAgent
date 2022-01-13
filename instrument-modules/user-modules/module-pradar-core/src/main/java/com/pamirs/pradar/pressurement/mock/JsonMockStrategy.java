@@ -13,19 +13,10 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
  */
 public abstract class JsonMockStrategy implements ExecutionStrategy {
 
-    public abstract String name();
-
-    Router router = new JsonMockRouter();
 
     @Override
     public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
-
-        JsonMockStrategy strategy = (JsonMockStrategy) router.route(name());
-        if (strategy == null) {
-            throw new PressureMeasureError("not support mock type.");
-        }
-        strategy.processBlock(returnType, classLoader, params);
-        return null;
+        throw new PressureMeasureError("not support mock type.");
     }
 
     @Override

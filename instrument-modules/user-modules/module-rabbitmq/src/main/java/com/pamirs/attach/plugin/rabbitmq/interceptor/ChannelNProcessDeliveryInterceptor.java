@@ -70,6 +70,8 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,9 +148,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         if (headers != null) {
             Map<String, String> rpcContext = new HashMap<String, String>();
             for (String key : Pradar.getInvokeContextTransformKeys()) {
-                Object value = headers.get(key);
-                if (value != null) {
-                    rpcContext.put(key, value.toString());
+                String value = ObjectUtils.toString(headers.get(key));
+                if (!StringUtil.isEmpty(value)) {
+                    rpcContext.put(key, value);
                 }
             }
             record.setContext(rpcContext);

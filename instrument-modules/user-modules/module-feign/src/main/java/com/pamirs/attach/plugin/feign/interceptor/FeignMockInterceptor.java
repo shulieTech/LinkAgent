@@ -49,6 +49,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     private final Logger logger = LoggerFactory.getLogger(FeignMockInterceptor.class);
     private final Logger mockLogger = LoggerFactory.getLogger("FEIGN-MOCK-LOGGER");
+    private static final Gson gson = new Gson();
 
     private static ExecutionStrategy fixJsonStrategy =
             new JsonMockStrategy() {
@@ -58,6 +59,9 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
                         try {
                             MatchConfig config = (MatchConfig) params;
                             String scriptContent = config.getScriptContent().trim();
+                            if (scriptContent.contains("return")) {
+                                return null;
+                            }
                             Advice advice = (Advice) config.getArgs().get("advice");
                             Map<Method, InvocationHandlerFactory.MethodHandler>
                                     dispatch = Reflect.on(advice.getTarget()).get("dispatch");
@@ -102,34 +106,6 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     }
 
-    static final Gson gson = new Gson();
-
-    void doJsonMock(Advice advice, MatchConfig config) throws ProcessControlException {
-
-        if (!MockStrategy.class.isAssignableFrom(config.getStrategy().getClass())) {
-            return;
-        }
-
-        String scriptContent = config.getScriptContent();
-        /**
-         * 放行去走执行代码的逻辑
-         */
-        if (scriptContent.contains("return")) {
-            return;
-        }
-
-        scriptContent = scriptContent.trim();
-        Map<Method, InvocationHandlerFactory.MethodHandler>
-                dispatch = Reflect.on(advice.getTarget()).get("dispatch");
-        InvocationHandlerFactory.MethodHandler methodHandler
-                = dispatch.get((Method) advice.getParameterArray()[1]);
-        MethodMetadata methodMetadata = Reflect.on(methodHandler).get("metadata");
-        Type typeRef = Reflect.on(methodMetadata).get("returnType");
-        Object result = gson.fromJson(scriptContent, typeRef);
-        ProcessController.returnImmediately(result);
-
-
-    }
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {

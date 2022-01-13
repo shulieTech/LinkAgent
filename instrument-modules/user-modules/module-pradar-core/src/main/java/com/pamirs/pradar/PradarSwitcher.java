@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -18,6 +18,7 @@ package com.pamirs.pradar;
 import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,6 +161,16 @@ public class PradarSwitcher {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
         }
+    }
+
+    /**
+     * 字段脱敏是否开启
+     *
+     * @return
+     */
+    public static boolean securityFieldOpen() {
+        return CollectionUtils.isNotEmpty(GlobalConfig.getInstance()
+                .getSimulatorDynamicConfig().getSecurityFieldCollection());
     }
 
     public static void turnConfigSwitcherOn(String configName) {

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,8 +14,13 @@
  */
 package com.pamirs.pradar;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+
+import java.util.List;
 
 /**
  * 基础上下文信息
@@ -264,18 +269,58 @@ abstract class BaseContext {
         return request;
     }
 
+
+    /**
+     * 脱敏
+     *
+     * @param arg
+     * @return
+     */
+    public Object encript(Object arg) {
+
+        if (PradarSwitcher.securityFieldOpen()) {
+            if (arg != null &&
+                    String.class.isAssignableFrom(arg.getClass())
+            ) {
+                String context = (String) arg;
+                if (context.startsWith("{") && context.endsWith("}")
+                        || (context.startsWith("[") && context.endsWith("]"))) {
+                    try {
+                        JSONObject jsonObject =
+                                JSON.parseObject((String) arg);
+                        List<String> fieldCollection =
+                                GlobalConfig.getInstance()
+                                        .getSimulatorDynamicConfig().getSecurityFieldCollection();
+                        for (String field : fieldCollection) {
+                            if (jsonObject.containsKey(field)) {
+                                jsonObject.put(field, CRIPTTEXT);
+                            }
+                        }
+                        return jsonObject.toString();
+                    } catch (Throwable e) {
+                        return arg;
+                    }
+                }
+            }
+        }
+        return arg;
+    }
+
+    private static final String CRIPTTEXT = "******";
+
     public void setRequest(Object request) {
-        if (GlobalConfig.getInstance().allowTraceRequestResponse()){
-            this.request = request;
+        if (GlobalConfig.getInstance().allowTraceRequestResponse()) {
+            this.request = encript(request);
         }
     }
+
 
     public Object getResponse() {
         return response;
     }
 
     public void setResponse(Object response) {
-        this.response = response;
+        this.response = encript(response);
     }
 
     /**

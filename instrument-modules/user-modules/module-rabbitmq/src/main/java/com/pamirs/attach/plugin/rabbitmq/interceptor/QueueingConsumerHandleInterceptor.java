@@ -34,6 +34,7 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 
@@ -115,7 +116,7 @@ public class QueueingConsumerHandleInterceptor extends ReversedTraceInterceptorA
                     Object tmp = headers.get(key);
                     if (tmp != null) {
                         String value = tmp.toString();
-                        if (value != null) {
+                        if (!StringUtil.isEmpty(value)) {
                             rpcContext.put(key, value);
                         }
                     }

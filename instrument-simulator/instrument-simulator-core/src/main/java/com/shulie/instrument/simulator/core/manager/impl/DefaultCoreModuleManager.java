@@ -267,15 +267,19 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 }
 
                 case MODULE_ACTIVE: {
+                    ModuleLoadInfo moduleLoadInfo = DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
+                        getModuleLoadInfos().get(moduleId);
+                    if(moduleLoadInfo == null){
+                        throw new ModuleException(String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId),
+                            MODULE_LOAD_ERROR);
+                    }
                     try {
 
                         boolean result = moduleLifecycle.onActive();
                         if (result) {
-                            DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
-                                    getModuleLoadInfos().get(moduleId).setStatus(ModuleLoadStatusEnum.LOAD_SUCCESS);
+                            moduleLoadInfo.setStatus(ModuleLoadStatusEnum.LOAD_SUCCESS);
                         } else {
-                            DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
-                                    getModuleLoadInfos().get(moduleId).setStatus(ModuleLoadStatusEnum.LOAD_DISABLE);
+                            moduleLoadInfo.setStatus(ModuleLoadStatusEnum.LOAD_DISABLE);
                         }
                         //发布事件
                         if (coreModule.getModuleSpec().isSwitchAuto()) {
@@ -283,8 +287,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                         }
                     } catch (Throwable throwable) {
                         logger.error("fail to active module :{}", moduleId, throwable);
-                        DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
-                                getModuleLoadInfos().get(moduleId).setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
+                        moduleLoadInfo.setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
                     }
                     break;

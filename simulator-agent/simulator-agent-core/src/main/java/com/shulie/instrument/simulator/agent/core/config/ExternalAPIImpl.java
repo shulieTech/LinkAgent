@@ -179,6 +179,9 @@ public class ExternalAPIImpl implements ExternalAPI {
             return response.getData();
         } catch (Throwable e) {
             logger.error("AGENT: parse command err. {}", resp, e);
+            if (200 == resp.getStatus()){
+                return Collections.emptyList();
+            }
             return null;
         }
     }

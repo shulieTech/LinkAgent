@@ -167,10 +167,6 @@ public class ShadowDatabaseConfigParser {
             }
             if (StringUtils.equals(entry.getKey(), "url")) {
                 shadowDatabaseConfig.setUrl(toString(entry.getValue()));
-                if (shadowDatabaseConfig.getShadowUrl().startsWith("mongodb://")){
-                    String[] s = shadowDatabaseConfig.getShadowUrl().split("/");
-                    shadowDatabaseConfig.setShadowSchema(s[s.length - 1]);
-                }
             } else if (StringUtils.equals(entry.getKey(), "username")) {
                 shadowDatabaseConfig.setUsername(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "schema")) {
@@ -185,6 +181,10 @@ public class ShadowDatabaseConfigParser {
             }
             if (StringUtils.equals(entry.getKey(), "url")) {
                 shadowDatabaseConfig.setShadowUrl(toString(entry.getValue()));
+                if (shadowDatabaseConfig.getShadowUrl().startsWith("mongodb://")){
+                    String[] s = shadowDatabaseConfig.getShadowUrl().split("/");
+                    shadowDatabaseConfig.setShadowSchema(s[s.length - 1]);
+                }
             } else if (StringUtils.equals(entry.getKey(), "username")) {
                 shadowDatabaseConfig.setShadowUsername(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "password")) {

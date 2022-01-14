@@ -309,7 +309,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         if (commandPacket == null) {
             installLocalOrRemote();
         } else {
-            logger.error("命令未清除,无法安装探针,命令详情:" + JSON.toJSONString(commandPacket));
+            logger.error("卸载命令未清除,无法安装探针,命令详情:" + JSON.toJSONString(commandPacket));
         }
 
 
@@ -422,11 +422,18 @@ public class HttpAgentScheduler implements AgentScheduler {
         heartRequest.setCommandResult(Collections.EMPTY_LIST);
         heartRequest.setCurUpgradeBatch(HeartCommandConstants.getCurUpgradeBatch());
         List<CommandPacket> commandPacketList = externalAPI.sendHeart(heartRequest);
-        if (null == commandPacketList || commandPacketList.isEmpty()){
+        if (null == commandPacketList){
             if (heartRequest.getDependencyInfo() == null){
                 logger.error("模块版本信息为空，检查module.properties是否存在");
             }
             return null;
+        } else if (commandPacketList.isEmpty()){//用本地探针包
+            CommandPacket commandPacket = new CommandPacket();
+            Map<String, Object> extra = new HashMap<String, Object>();
+            extra.put(HeartCommandConstants.PATH_TYPE_KEY, -1);
+            commandPacket.setExtras(extra);
+            commandPacket.setId(HeartCommandConstants.startCommandId);
+            commandPacketList.add(commandPacket);
         }
         if (commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY) == null){
             logger.error("版本批次号获取失败，无法在线升级操作!");

@@ -87,7 +87,6 @@
         <module>module-apache-axis</module>
         <module>module-jersey</module>
         <module>module-spring-cloud-gateway</module>
-        <module>module-jms</module>
     </modules>
 
     <build>

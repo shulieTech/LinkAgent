@@ -82,7 +82,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
 
     @Override
-    public void beforeLast(Advice advice) throws ProcessControlException {
+    public void beforeFirst(Advice advice) throws ProcessControlException {
         if (Pradar.isClusterTest()) {
             Object[] parameterArray = advice.getParameterArray();
             Method method = (Method) parameterArray[1];

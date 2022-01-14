@@ -708,7 +708,9 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
         context.put(PradarService.PRADAR_CLUSTER_TEST_KEY,
                 isClusterTest() ? Pradar.PRADAR_CLUSTER_TEST_ON : Pradar.PRADAR_CLUSTER_TEST_OFF);
         context.put(PradarService.PRADAR_DEBUG_KEY, isDebug() ? Pradar.PRADAR_DEBUG_ON : Pradar.PRADAR_DEBUG_OFF);
+/*
         context.put(PradarService.PRADAR_WHITE_LIST_CHECK, String.valueOf(isPassCheck()));
+*/
         if (serviceName != null) {
             context.put(PradarService.PRADAR_SERVICE_NAME, serviceName);
         }

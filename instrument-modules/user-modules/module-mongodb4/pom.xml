@@ -28,7 +28,7 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-core</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.2</version>
             <scope>provided</scope>
         </dependency>
                 <!-- https://mvnrepository.com/artifact/org.mongodb/mongodb-driver-sync -->

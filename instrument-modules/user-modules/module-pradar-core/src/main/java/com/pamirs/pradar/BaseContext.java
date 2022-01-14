@@ -17,7 +17,6 @@ package com.pamirs.pradar;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
@@ -344,7 +343,7 @@ abstract class BaseContext {
 
     public boolean isPassCheck() {
         //fixme,yuhan之前加的跳过白面单校验的逻辑，这块代码逻辑要整个干掉，先临时这么搞
-        return false;
+        return passCheck;
     }
 
     public void setPassCheck(boolean passCheck) {

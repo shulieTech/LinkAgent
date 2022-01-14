@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -354,7 +354,10 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
         String serviceName = map.get(PradarService.PRADAR_SERVICE_NAME);
         String methodName = map.get(PradarService.PRADAR_METHOD_NAME);
         String middlewareName = map.get(PradarService.PRADAR_MIDDLEWARE_NAME);
+
+/*      //  ！！！！！！！这个不要放开！！！！！！！！！ passcheck不要进行远程传输..........
         boolean passedCheck = Boolean.parseBoolean(map.get(PradarService.PRADAR_WHITE_LIST_CHECK));
+*/
         boolean isClusterTest = ClusterTestUtils.isClusterTestRequest(map.get(PradarService.PRADAR_CLUSTER_TEST_KEY));
         if (!isClusterTest) {
             isClusterTest = ClusterTestUtils.isClusterTestRequest(map.get(PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY));
@@ -392,7 +395,7 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
         ctx.setUpAppName(upAppName);
         ctx.setClusterTest(isClusterTest);
         ctx.setDebug(isDebug);
-        ctx.setPassCheck(passedCheck);
+        /* ctx.setPassCheck(passedCheck);*/
         if (StringUtils.isNotBlank(serviceName)) {
             ctx.setServiceName(serviceName);
         }

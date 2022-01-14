@@ -30,7 +30,6 @@ import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
-import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -106,7 +105,6 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     }
 
-
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
@@ -122,7 +120,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         if (arg != null) {
             record.setRequestSize(arg.length);
         }
-        if (!Pradar.isClusterTest()) {
+        if (Pradar.isClusterTest()) {
             record.setPassedCheck(true);
         }
         return record;

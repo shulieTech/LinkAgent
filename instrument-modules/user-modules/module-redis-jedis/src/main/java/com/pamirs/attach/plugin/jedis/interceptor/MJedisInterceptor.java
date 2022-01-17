@@ -48,6 +48,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
     static {
         readMethod.add("get");
         readMethod.add("mget");
+        readMethod.add("hmget");
         readMethod.add("hget");
         readMethod.add("hgetAll");
         readMethod.add("hlen");

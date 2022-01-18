@@ -115,8 +115,8 @@ public class SimulatorDynamicConfig {
         this.isSwitchSaveBusinessTrace = getSwitchSaveBusinessTrace(config);
         this.busRequestResponseDataAllowTrace = getBusRequestResponseDataAllowTrace(config);
         this.shadowRequestResponseDataAllowTrace = getShadowRequestResponseDataAllowTrace(config);
-        this.fieldCheckRules = getFieldCheckRules(config);
         this.fieldCheckRulesSwitcher = getFieldCheckRulesSwithcer(config);
+        this.fieldCheckRules = getFieldCheckRules(config);
         this.securityFieldCollection = getSecurityFieldCollection(config);
 
     }

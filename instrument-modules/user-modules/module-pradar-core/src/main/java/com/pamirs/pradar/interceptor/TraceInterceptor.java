@@ -218,14 +218,14 @@ abstract class TraceInterceptor extends BaseInterceptor {
         try {
             beforeFirst(advice);
         } catch (PradarException e) {
-            LOGGER.error("TraceInterceptor beforeFirst exec err:{}", this.getClass().getName(), e);
+            LOGGER.error("TraceInterceptor beforeFirst exec err, class: " + this.getClass().getName(), e);
             throwable = e;
         } catch (PressureMeasureError e) {
-            LOGGER.error("TraceInterceptor beforeFirst exec err:{}", this.getClass().getName(), e);
+            LOGGER.error("TraceInterceptor beforeFirst exec err, class: " + this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable t) {
             if (!(t instanceof ProcessControlException)) {
-                LOGGER.error("TraceInterceptor beforeFirst exec err:{}", this.getClass().getName(), t);
+                LOGGER.error("TraceInterceptor beforeFirst exec err, class: " + this.getClass().getName(), t);
             }
             throwable = t;
         }
@@ -236,25 +236,27 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 startServerInvoke(advice);
             }
         } catch (PradarException e) {
-            LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
+            LOGGER.error("TraceInterceptor before exec err, class:" + this.getClass().getName(), e);
             throwable = e;
         } catch (PressureMeasureError e) {
-            LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
+            LOGGER.error("TraceInterceptor before exec err, class:" + this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable e) {
-            LOGGER.error("TraceInterceptor before exec err:{}", this.getClass().getName(), e);
+            LOGGER.error("TraceInterceptor before exec err, class:" + this.getClass().getName(), e);
             throwable = e;
         } finally {
             try {
                 beforeLast(advice);
+            } catch (ProcessControlException e) {
+                // mock功能通过此异常中断后续流程
             } catch (PradarException e) {
-                LOGGER.error("TraceInterceptor beforeLast exec err:{}", this.getClass().getName(), e);
+                LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
-            } catch (PressureMeasureError e) {
-                LOGGER.error("TraceInterceptor beforeLast exec err:{}", this.getClass().getName(), e);
+            }catch (PressureMeasureError e) {
+                LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor beforeLast exec err:{}", this.getClass().getName(), t);
+                LOGGER.error("TraceInterceptor beforeLast exec err, class:" +  this.getClass().getName(), t);
                 throwable = t;
             }
         }

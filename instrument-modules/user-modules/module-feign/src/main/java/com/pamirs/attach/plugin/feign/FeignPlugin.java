@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.feign;
 
-import com.pamirs.attach.plugin.feign.interceptor.FeignDataPassInterceptor;
 import com.pamirs.attach.plugin.feign.interceptor.FeignMockInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -43,14 +42,14 @@ public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 enqueueMethod.addInterceptor(Listeners.of(FeignMockInterceptor.class));
             }
         });
-
+/*
         this.enhanceTemplate.enhance(this, "feign.SynchronousMethodHandler", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod enqueueMethod = target.getDeclaredMethod("executeAndDecode", "feign.RequestTemplate", "feign.Request$Options");
                 enqueueMethod.addInterceptor(Listeners.of(FeignDataPassInterceptor.class));
             }
-        });
+        });*/
         return true;
     }
 

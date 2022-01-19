@@ -12,11 +12,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.rabbitmq.consumer.admin.support;
+package com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache;
 
 import java.util.List;
 import java.util.Map;
 
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
 import com.pamirs.pradar.exception.PradarException;
 
 /**
@@ -27,11 +28,9 @@ public class SimpleLocalCacheSupport extends AbstractCacheSupport implements Cac
 
     private volatile Map<CacheKey, ConsumerApiResult> cache;
 
-    private static final SimpleLocalCacheSupport INSTANCE = new SimpleLocalCacheSupport();
-
-    private SimpleLocalCacheSupport() {}
-
-    public static SimpleLocalCacheSupport getInstance() {return INSTANCE;}
+    public SimpleLocalCacheSupport(CacheKeyBuilder cacheKeyBuilder) {
+        super(cacheKeyBuilder);
+    }
 
     @Override
     public ConsumerApiResult computeIfAbsent(CacheKey cacheKey, Supplier supplier) {
@@ -42,7 +41,14 @@ public class SimpleLocalCacheSupport extends AbstractCacheSupport implements Cac
                 }
             }
         }
-        return cache.get(cacheKey);
+        ConsumerApiResult consumerApiResult = cache.get(cacheKey);
+        if (consumerApiResult == null) {
+            synchronized (SimpleLocalCacheSupport.class) {
+                renew(supplier);
+                consumerApiResult = cache.get(cacheKey);
+            }
+        }
+        return consumerApiResult;
     }
 
     @Override

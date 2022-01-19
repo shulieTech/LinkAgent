@@ -15,8 +15,7 @@
 package com.pamirs.attach.plugin.rabbitmq.destroy;
 
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.SimpleLocalCacheSupport;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ZkCacheSupportFactory;
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupportFactory;
 import com.shulie.instrument.simulator.api.listener.Destroyed;
 
 /**
@@ -27,7 +26,6 @@ public class RabbitmqDestroy implements Destroyed {
     @Override
     public void destroy() {
         ChannelHolder.release();
-        SimpleLocalCacheSupport.getInstance().destroy();
-        ZkCacheSupportFactory.destroy();
+        CacheSupportFactory.destroy();
     }
 }

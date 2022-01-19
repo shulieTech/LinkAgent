@@ -29,14 +29,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
-import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
 import com.pamirs.attach.plugin.rabbitmq.utils.AdminAccessInfo;
 import com.pamirs.pradar.Pradar;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.impl.AMQConnection;
 import com.rabbitmq.client.impl.ChannelManager;
 import com.rabbitmq.client.impl.ChannelN;
@@ -199,7 +196,7 @@ public class ChannelHolder {
      * @param consumerTag consumerTag
      */
     public static void cancelShadowConsumerTag(Channel target, String consumerTag) {
-        Channel shadowChannel = getShadowChannel(target);
+        Channel shadowChannel = getOrShadowChannel(target);
         if (shadowChannel == null || !shadowChannel.isOpen()) {
             LOGGER.warn("rabbitmq basicCancel failed. cause by shadow channel is not found or closed. consumerTag={}",
                 consumerTag);
@@ -266,7 +263,7 @@ public class ChannelHolder {
      * @return 返回 queue 是否存在
      */
     public static boolean isQueueExists(Channel target, String queue) {
-        Channel channel = getShadowChannel(target);
+        Channel channel = getOrShadowChannel(target);
         if (channel == null) {
             return false;
         }
@@ -302,7 +299,7 @@ public class ChannelHolder {
      * @param target
      * @return
      */
-    public static Channel getShadowChannel(Channel target) {
+    public static Channel getOrShadowChannel(Channel target) {
         if (target == null || !target.isOpen()) {
             return null;
         }
@@ -328,6 +325,14 @@ public class ChannelHolder {
             return channel;
         }
         return shadowChannel;
+    }
+
+    public static Channel getShadowChannel(Channel target) {
+        if (target == null || !target.isOpen()) {
+            return null;
+        }
+        int key = System.identityHashCode(target);
+        return channelCache.get(key);
     }
 
     private static Connection getPtConnect(Connection connection) throws IOException, TimeoutException {

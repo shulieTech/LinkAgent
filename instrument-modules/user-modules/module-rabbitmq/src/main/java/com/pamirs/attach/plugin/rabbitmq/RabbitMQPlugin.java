@@ -15,7 +15,16 @@
 package com.pamirs.attach.plugin.rabbitmq;
 
 import com.pamirs.attach.plugin.rabbitmq.destroy.ShadowConsumerDisableListenerImpl;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.*;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.AMQConnectionInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNAckInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicCancelInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicGetInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicPublishInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNProcessDeliveryInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.QueueingConsumerHandleInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringRabbitRabbitAdminDeclareQueueInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.StrictExceptionHandlerInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -58,6 +67,32 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 });
         }
 
+        this.enhanceTemplate.enhance(this,
+            "com.rabbitmq.client.impl.AMQConnection", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    target.getDeclaredMethods("close").addInterceptor(Listeners.of(AMQConnectionInterceptor.class));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.StrictExceptionHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("handleConsumerException").addInterceptor(
+                    Listeners.of(StrictExceptionHandlerInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.rabbitmq.client.impl.ConsumerDispatcher", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("notifyConsumerOfShutdown").addInterceptor(
+                    Listeners.of(StrictExceptionHandlerInterceptor.class));
+            }
+        });
+
+
+
         //增强channel
         this.enhanceTemplate.enhance(this,
             "com.rabbitmq.client.impl.ChannelN", new EnhanceCallback() {
@@ -82,19 +117,6 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     final InstrumentMethod basicCancelMethod = target.getDeclaredMethod("basicCancel", "java.lang.String");
                     basicCancelMethod
                         .addInterceptor(Listeners.of(ChannelNBasicCancelInterceptor.class));
-
-                    final InstrumentMethod exchangeDeclareMethod = target.getDeclaredMethod("exchangeDeclare", "java.lang.String", "java.lang.String", "boolean");
-                    exchangeDeclareMethod.
-                            addInterceptor(Listeners.of(ChannelNExchangeDeclareInterceptor.class));
-
-                    final InstrumentMethod queueDeclareMethod = target.getDeclaredMethod("queueDeclare", "java.lang.String", "boolean", "boolean", "boolean", "java.util.Map");
-                    queueDeclareMethod.
-                            addInterceptor(Listeners.of(ChannelNQueueDeclareInterceptor.class));
-
-                    final InstrumentMethod queueBindMethod = target.getDeclaredMethod("queueBind", "java.lang.String", "java.lang.String", "java.lang.String");
-                    queueBindMethod.
-                            addInterceptor(Listeners.of(ChannelNQueueBindInterceptor.class));
-
 
                     addAckInterceptor(target);
                 }

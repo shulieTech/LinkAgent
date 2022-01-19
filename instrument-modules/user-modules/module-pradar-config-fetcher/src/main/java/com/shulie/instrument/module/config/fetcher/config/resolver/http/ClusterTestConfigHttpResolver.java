@@ -166,7 +166,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             if (map != null && map.get(SILENCE_SWITCH_STATUS) != null) {
                 //全局静默开关
                 String status = (String)map.get(SILENCE_SWITCH_STATUS);
-                clusterTestConfig.setSilenceSwitchOn(CLOSE.equals(status));
+                clusterTestConfig.setSilenceSwitchOn(!CLOSE.equals(status));
             }
 
         } catch (Throwable e) {

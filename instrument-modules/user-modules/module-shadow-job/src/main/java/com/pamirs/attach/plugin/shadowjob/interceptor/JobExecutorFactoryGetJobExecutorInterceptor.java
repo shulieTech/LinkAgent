@@ -176,7 +176,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
     public boolean registerShadowJob(ShadowJob shadowJob) throws Throwable {
         if (null == PradarSpringUtil.getBeanFactory()) {
-            logger.info("[spring-context] is null, igore...");
+            logger.info("[spring-context] is null, 无法注册影子 ElasticJob");
             return false;
         }
 
@@ -192,7 +192,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 JobScheduler jobScheduler = s.getValue();
 
                 LiteJobConfiguration liteJobConfiguration =
-                        Reflect.on(schedulerMap.get("simpleJobScheduler")).get("liteJobConfig");
+                        Reflect.on(jobScheduler).get("liteJobConfig");
                 JobTypeConfiguration jobTypeConfiguration = liteJobConfiguration.getTypeConfig();
                 String OriginJobName = jobTypeConfiguration.getJobClass();
 
@@ -284,27 +284,29 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                     PtDataflowJob ptJob = (PtDataflowJob) ptElasticJobField.get(ptSpringJobScheduler);
                     ptJob.setDataflowJob((DataflowJob) originJob);
                 }
-                break;
-            }
-            if (!found) {
-                boolean ok = false;
-                try {
-                    ok = processWithoutSpring(shadowJob);
-                } catch (Throwable t) {
-                    logger.info("[elastic-job] register failed. jobName is {},{}"
-                            , shadowJob.getClassName(), ThrowableUtils.toString(t));
-                }
-                if (ok) {
-                    logger.info("[elastic-job] register success. jobName is {}", shadowJob.getClassName());
-                    registered.add(shadowJob.getClassName());
+                if (!found) {
+                    boolean ok = false;
+                    try {
+                        ok = processWithoutSpring(shadowJob);
+                    } catch (Throwable t) {
+                        logger.info("[elastic-job] register failed. jobName is {},{}"
+                                , shadowJob.getClassName(), ThrowableUtils.toString(t));
+                    }
+                    if (ok) {
+                        logger.info("[elastic-job] register success. jobName is {}", shadowJob.getClassName());
+                        registered.add(shadowJob.getClassName());
 
-                    return true;
-                }
+                        return true;
+                    }
 
-                logger.error("[elastic-job] 未找到相关Class信息 className is {} ", shadowJob.getClassName());
-                shadowJob.setErrorMessage("【Elastic-Job】未找到相关Class信息，error:" + shadowJob.getClassName());
-                return false;
+                    logger.error("[elastic-job] 未找到相关Class信息 className is {} ", shadowJob.getClassName());
+                    shadowJob.setErrorMessage("【Elastic-Job】未找到相关Class信息，error:" + shadowJob.getClassName());
+                    return false;
+                } else {
+                    break;
+                }
             }
+
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             return false;

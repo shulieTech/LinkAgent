@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.grpc.interceptor;
 
 import com.pamirs.attach.plugin.grpc.GrpcConstants;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
@@ -78,6 +79,10 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         }
         MatchConfig matchConfig =
                 ClusterTestUtils.rpcClusterTest(interfaceName, methodName);
+        matchConfig.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, true);
+        matchConfig.addArgs("class", interfaceName);
+        matchConfig.addArgs("method", methodName);
+        matchConfig.addArgs("isInterface", Boolean.TRUE);
         matchConfig.getStrategy().processBlock(advice.getBehavior().getReturnType()
                 , advice.getClassLoader()
                 , matchConfig

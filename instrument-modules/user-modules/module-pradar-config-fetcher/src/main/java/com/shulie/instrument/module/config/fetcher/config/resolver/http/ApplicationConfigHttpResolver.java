@@ -170,6 +170,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private static final String DUBBO = "dubbo";
     private static final String FEIGN = "feign";
     private static final String RPC = "rpc";
+    private static final String GRPC = "grpc";
     private static final String MQ = "mq";
     private static final String SEARCH = "search";
     private static final String HTTP = "http";
@@ -1413,7 +1414,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             } else if (DUBBO.equals(type) || FEIGN.equals(type)) {
                 MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
                 rpcClassMethodName.add(matchConfig);
-            } else if (RPC.equals(type)) {
+            } else if (RPC.equals(type) || GRPC.equals(type)) {
                 MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
                 rpcClassMethodName.add(matchConfig);
             } else if (MQ.equals(type)) {

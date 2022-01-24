@@ -201,7 +201,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             case UPDATE_OPERATION:
                 objectFieldMapAdd(UpdateOperation.class);
                 busMongoNamespace = ((UpdateOperation) (args[0])).getNamespace();
-                setWritePtMongoNamespace(MapReduceToCollectionOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
+                setWritePtMongoNamespace(UpdateOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             case DELETE_OPERATION:
                 objectFieldMapAdd(DeleteOperation.class);

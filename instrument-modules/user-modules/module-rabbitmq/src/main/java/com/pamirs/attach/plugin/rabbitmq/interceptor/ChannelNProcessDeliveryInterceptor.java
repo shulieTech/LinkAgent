@@ -36,6 +36,7 @@ import com.pamirs.attach.plugin.rabbitmq.consumer.AdminApiConsumerMetaDataBuilde
 import com.pamirs.attach.plugin.rabbitmq.consumer.AutorecoveringChannelConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaDataBuilder;
+import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerDecoratorMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupportFactory;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
@@ -66,6 +67,7 @@ import com.rabbitmq.client.impl.ChannelN;
 import com.rabbitmq.client.impl.SocketFrameHandler;
 import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import com.shulie.instrument.module.pradar.core.handler.DefaultExceptionHandler;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -107,6 +109,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     public ChannelNProcessDeliveryInterceptor(SimulatorConfig simulatorConfig) throws Exception {
         this.simulatorConfig = simulatorConfig;
         consumerMetaDataBuilders.add(SpringConsumerMetaDataBuilder.getInstance());
+        consumerMetaDataBuilders.add(SpringConsumerDecoratorMetaDataBuilder.getInstance());
         consumerMetaDataBuilders.add(AutorecoveringChannelConsumerMetaDataBuilder.getInstance());
         consumerMetaDataBuilders.add(new AdminApiConsumerMetaDataBuilder(simulatorConfig,
             CacheSupportFactory.create(simulatorConfig)));

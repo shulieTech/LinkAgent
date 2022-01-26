@@ -71,7 +71,7 @@ public class SpringConsumerDecoratorMetaDataBuilder implements ConsumerMetaDataB
             Reflect.on(blockingQueueConsumer).<Boolean>get("exclusive"),
             Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get("acknowledgeMode").isAutoAck(),
             Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
-            true);
+            true, true);
         if(consumerTags != null){
             consumerTags.put(consumerMetaData.getPtConsumerTag(), consumerMetaData.getPtQueue());
         }

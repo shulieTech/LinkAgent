@@ -307,6 +307,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             Channel channel = consumerDetail.getChannel();
             try {
                 ConsumerMetaData consumerMetaData = getConsumerMetaData(consumerDetail);
+                if(consumerMetaData.isUseSpring()){
+                    return;
+                }
                 if (consumerMetaData == null) {
                     logger.warn("[RabbitMQ] SIMULATOR: can not find consumerMetaData for channel : {}, consumerTag : {}"
                         , consumerDetail.getChannel(), consumerDetail.getConsumerTag());

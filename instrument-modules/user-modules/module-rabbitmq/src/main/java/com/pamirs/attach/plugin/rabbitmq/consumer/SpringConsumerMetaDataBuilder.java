@@ -71,7 +71,7 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
             Reflect.on(blockingQueueConsumer).<Boolean>get("exclusive"),
             Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get("acknowledgeMode").isAutoAck(),
             Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
-            true);
+            true, true);
     }
 
     private ConsumerMetaData lowVersion(Consumer consumer, String consumerTag) {

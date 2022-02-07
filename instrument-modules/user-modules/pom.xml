@@ -12,6 +12,7 @@
     <artifactId>user-modules</artifactId>
     <packaging>pom</packaging>
 
+
     <modules>
         <module>module-log-data-pusher</module>
         <module>module-pradar-config-fetcher</module>

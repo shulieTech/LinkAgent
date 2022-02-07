@@ -15,49 +15,29 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
-import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
+
 import com.pamirs.attach.plugin.alibaba.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/30 3:53 下午
  */
 @Destroyable(MqDestroy.class)
-public class DefaultPushConsumerQueryMessageInterceptor extends CutoffInterceptorAdaptor {
-    protected final static Logger logger = LoggerFactory.getLogger(DefaultPushConsumerQueryMessageInterceptor.class);
+public class DefaultPushConsumerQueryMessageInterceptor extends AbstractUseShadowConsumerReplaceInterceptor {
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
-        /**
-         * 主要负责Consumer 注册，每一批的消息消费都会经过此方法
-         * 如果是已经注册过的，则忽略
-         */
-        DefaultMQPushConsumer defaultMQPushConsumer = (DefaultMQPushConsumer) advice.getTarget();
-        if (ConsumerRegistry.hasRegistered(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        /**
-         * 如果影子消费者，也忽略
-         */
-        if (ConsumerRegistry.isShadowConsumer(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        DefaultMQPushConsumer businessConsumer = (DefaultMQPushConsumer) advice.getTarget();
-        DefaultMQPushConsumer consumer = ConsumerRegistry.getConsumer(businessConsumer);
+    protected CutOffResult execute(DefaultMQPushConsumer consumer, Advice advice) {
         Object[] args = advice.getParameterArray();
         try {
-            return CutOffResult.cutoff(consumer.queryMessage((String) args[0], (String) args[1], (Integer) args[2], (Long) args[3], (Long) args[4]));
+            return CutOffResult.cutoff(
+                consumer.queryMessage((String)args[0], (String)args[1], (Integer)args[2], (Long)args[3], (Long)args[4]));
         } catch (Throwable e) {
-            logger.error("Alibaba-RocketMQ: queryMessage err, topic: {} key:{} maxNum:{} begin:{} end:{}", args[0], args[1], args[2], args[3], args[4], e);
+            logger.error("Alibaba-RocketMQ: queryMessage err, topic: {} key:{} maxNum:{} begin:{} end:{}", args[0], args[1],
+                args[2], args[3], args[4], e);
             throw new PressureMeasureError(e);
         }
     }

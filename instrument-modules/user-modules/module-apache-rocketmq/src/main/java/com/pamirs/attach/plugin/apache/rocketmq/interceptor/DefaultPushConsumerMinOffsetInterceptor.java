@@ -14,50 +14,26 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
-import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.common.message.MessageQueue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/30 3:53 下午
  */
 @Destroyable(MqDestroy.class)
-public class DefaultPushConsumerMinOffsetInterceptor extends CutoffInterceptorAdaptor {
-    protected final static Logger logger = LoggerFactory.getLogger(DefaultPushConsumerMinOffsetInterceptor.class);
+public class DefaultPushConsumerMinOffsetInterceptor extends AbstractUseShadowConsumerReplaceInterceptor {
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
+    protected CutOffResult execute(DefaultMQPushConsumer consumer, Advice advice) {
         Object[] args = advice.getParameterArray();
-        Object target = advice.getTarget();
-        /**
-         * 主要负责Consumer 注册，每一批的消息消费都会经过此方法
-         * 如果是已经注册过的，则忽略
-         */
-        DefaultMQPushConsumer defaultMQPushConsumer = (DefaultMQPushConsumer) target;
-        if (ConsumerRegistry.hasRegistered(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        /**
-         * 如果影子消费者，也忽略
-         */
-        if (ConsumerRegistry.isShadowConsumer(defaultMQPushConsumer)) {
-            return CutOffResult.passed();
-        }
-
-        DefaultMQPushConsumer businessConsumer = (DefaultMQPushConsumer) target;
-        DefaultMQPushConsumer consumer = ConsumerRegistry.getConsumer(businessConsumer);
         try {
-            return CutOffResult.cutoff(consumer.minOffset((MessageQueue) args[0]));
+            return CutOffResult.cutoff(consumer.minOffset((MessageQueue)args[0]));
         } catch (Throwable e) {
             logger.error("Apache-RocketMQ: minOffset err, queue: {}", args[0], e);
             throw new PressureMeasureError(e);

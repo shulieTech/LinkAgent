@@ -205,8 +205,14 @@ public class ConsumerRegistry {
         defaultMQPushConsumer.setConsumerGroup(Pradar.addClusterTestPrefix(businessConsumer.getConsumerGroup()));
         defaultMQPushConsumer.setConsumeFromWhere(businessConsumer.getConsumeFromWhere());
         defaultMQPushConsumer.setPullThresholdForQueue(businessConsumer.getPullThresholdForQueue());
-        defaultMQPushConsumer.setPullThresholdSizeForTopic(businessConsumer.getPullThresholdSizeForTopic());
-        defaultMQPushConsumer.setPullThresholdSizeForQueue(businessConsumer.getPullThresholdSizeForQueue());
+        try {
+            defaultMQPushConsumer.setPullThresholdSizeForTopic(businessConsumer.getPullThresholdSizeForTopic());
+        } catch (Throwable ignore) {
+        }
+        try {
+            defaultMQPushConsumer.setPullThresholdSizeForQueue(businessConsumer.getPullThresholdSizeForQueue());
+        } catch (Throwable ignore) {
+        }
         defaultMQPushConsumer.setPullBatchSize(businessConsumer.getPullBatchSize());
         defaultMQPushConsumer.setConsumeMessageBatchMaxSize(businessConsumer.getConsumeMessageBatchMaxSize());
         defaultMQPushConsumer.setConsumeThreadMax(businessConsumer.getConsumeThreadMax());
@@ -232,9 +238,18 @@ public class ConsumerRegistry {
         defaultMQPushConsumer.setMaxReconsumeTimes(businessConsumer.getMaxReconsumeTimes());
         defaultMQPushConsumer.setSuspendCurrentQueueTimeMillis(businessConsumer.getSuspendCurrentQueueTimeMillis());
         defaultMQPushConsumer.setConsumeTimeout(businessConsumer.getConsumeTimeout());
-        defaultMQPushConsumer.setUseTLS(businessConsumer.isUseTLS());
-        defaultMQPushConsumer.setLanguage(businessConsumer.getLanguage());
-        defaultMQPushConsumer.setVipChannelEnabled(businessConsumer.isVipChannelEnabled());
+        try {
+            defaultMQPushConsumer.setUseTLS(businessConsumer.isUseTLS());
+        } catch (Throwable ignore) {
+        }
+        try {
+            defaultMQPushConsumer.setVipChannelEnabled(businessConsumer.isVipChannelEnabled());
+        } catch (Throwable ignore) {
+        }
+        try {
+            defaultMQPushConsumer.setLanguage(businessConsumer.getLanguage());
+        } catch (Throwable ignore) {
+        }
         MessageListener messageListener = businessConsumer.getMessageListener();
         if (messageListener != null) {
             if (messageListener instanceof MessageListenerConcurrently) {

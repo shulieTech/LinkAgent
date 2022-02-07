@@ -92,6 +92,17 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     }
                 });
 
+        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.producer.DefaultMQProducer", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+
+                //压测代码
+                InstrumentMethod sendMethod = target.getDeclaredMethods("send*");
+                sendMethod.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
+
+            }
+        });
+
         this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

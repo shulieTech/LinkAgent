@@ -239,9 +239,9 @@
                     </dependency>
                     <!-- 依赖的已安装的自定义插件 -->
                     <dependency>
-                        <groupId>com.pamirs</groupId>
+                        <groupId>io.shulie</groupId>
                         <artifactId>custom-maven-checkstyle</artifactId>
-                        <version>1.0-SNAPSHOT</version>
+                        <version>1.0.0</version>
                     </dependency>
                 </dependencies>
             </plugin>

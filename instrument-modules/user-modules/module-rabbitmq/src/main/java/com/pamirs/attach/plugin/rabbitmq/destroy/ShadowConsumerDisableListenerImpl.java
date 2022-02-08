@@ -23,6 +23,7 @@ import java.util.concurrent.TimeoutException;
 
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
+import com.pamirs.attach.plugin.rabbitmq.common.LastMqWhiteListHolder;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
@@ -137,7 +138,7 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
     @Override
     public EventResult onEvent(IEvent event) {
         // any event flush LAST_MQ_WHITELIST
-        SpringBlockingQueueConsumerDeliveryInterceptor.LAST_MQ_WHITELIST.set(Collections.<String>emptySet());
+        LastMqWhiteListHolder.LAST_MQ_WHITELIST.set(Collections.<String>emptySet());
         try {
             if (event instanceof ShadowConsumerDisableEvent) {
                 ShadowConsumerDisableEvent shadowConsumerDisableEvent = (ShadowConsumerDisableEvent) event;

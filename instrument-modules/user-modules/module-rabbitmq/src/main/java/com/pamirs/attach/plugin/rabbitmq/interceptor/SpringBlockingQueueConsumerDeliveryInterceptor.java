@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
+import com.pamirs.attach.plugin.rabbitmq.common.LastMqWhiteListHolder;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
@@ -66,8 +67,6 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         = new ConcurrentHashMap<String, Date>();
 
     private static final AtomicBoolean MQ_WHITELIST_CHANGED = new AtomicBoolean(false);
-    public static final AtomicReference<Set<String>> LAST_MQ_WHITELIST = new AtomicReference<Set<String>>(
-        GlobalConfig.getInstance().getMqWhiteList());
 
     @Override
     protected boolean isClient(Advice advice) {
@@ -226,7 +225,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                         }
                     } else {
                         // compare to last mqWhitelist,to add new ptQueueNames
-                        final boolean change = !mqWhiteList.equals(LAST_MQ_WHITELIST.get());
+                        final boolean change = !mqWhiteList.equals(LastMqWhiteListHolder.LAST_MQ_WHITELIST.get());
                         if (change && MQ_WHITELIST_CHANGED.compareAndSet(false, true)) {
                             final HashSet<String> needAddPtQueueSet = new HashSet<String>();
                             for (String queueName : queueNames) {
@@ -242,7 +241,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                                     ptContainer.addQueueNames(needAddPtQueueSet.toArray(new String[] {}));
                                 }
                             } finally {
-                                LAST_MQ_WHITELIST.set(mqWhiteList);
+                                LastMqWhiteListHolder.LAST_MQ_WHITELIST.set(mqWhiteList);
                                 MQ_WHITELIST_CHANGED.compareAndSet(true, false);
                             }
                         }

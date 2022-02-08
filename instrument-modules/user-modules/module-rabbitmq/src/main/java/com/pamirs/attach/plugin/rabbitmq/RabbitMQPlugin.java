@@ -21,6 +21,7 @@ import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicCancelIntercep
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicGetInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicPublishInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNProcessDeliveryInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.NotifyConsumerOfShutdownInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.QueueingConsumerHandleInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
 import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringRabbitRabbitAdminDeclareQueueInterceptor;
@@ -87,7 +88,7 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             @Override
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethods("notifyConsumerOfShutdown").addInterceptor(
-                    Listeners.of(StrictExceptionHandlerInterceptor.class));
+                    Listeners.of(NotifyConsumerOfShutdownInterceptor.class));
             }
         });
 
@@ -170,6 +171,16 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     method1.addInterceptor(Listeners.of(SpringBlockingQueueConsumerDeliveryInterceptor.class));
                 }
             });
+        //
+        //this.enhanceTemplate.enhance(this, "org.springframework.cloud.stream.binding.StreamListenerMessageHandler",
+        //    new EnhanceCallback() {
+        //        @Override
+        //        public void doEnhance(InstrumentClass target) {
+        //            final InstrumentMethod handleRequestMessage = target.getDeclaredMethod("handleRequestMessage",
+        //                "org.springframework.messaging.Message");
+        //            handleRequestMessage.addInterceptor(Listeners.of(StreamListenerMessageHandlerIntercepter.class));
+        //        }
+        //    });
         return true;
     }
 

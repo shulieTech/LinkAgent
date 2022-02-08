@@ -36,6 +36,7 @@ import com.pamirs.attach.plugin.rabbitmq.consumer.AdminApiConsumerMetaDataBuilde
 import com.pamirs.attach.plugin.rabbitmq.consumer.AutorecoveringChannelConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
 import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaDataBuilder;
+import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerDecoratorMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerMetaDataBuilder;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupportFactory;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
@@ -66,10 +67,13 @@ import com.rabbitmq.client.impl.ChannelN;
 import com.rabbitmq.client.impl.SocketFrameHandler;
 import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
+import com.shulie.instrument.module.pradar.core.handler.DefaultExceptionHandler;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +109,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
     public ChannelNProcessDeliveryInterceptor(SimulatorConfig simulatorConfig) throws Exception {
         this.simulatorConfig = simulatorConfig;
         consumerMetaDataBuilders.add(SpringConsumerMetaDataBuilder.getInstance());
+        consumerMetaDataBuilders.add(SpringConsumerDecoratorMetaDataBuilder.getInstance());
         consumerMetaDataBuilders.add(AutorecoveringChannelConsumerMetaDataBuilder.getInstance());
         consumerMetaDataBuilders.add(new AdminApiConsumerMetaDataBuilder(simulatorConfig,
             CacheSupportFactory.create(simulatorConfig)));
@@ -132,6 +137,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        if (ConfigCache.isWorkWithSpring()) {
+            return null;
+        }
         Object[] args = advice.getParameterArray();
         Command command = (Command)args[0];
         Deliver method = (Deliver)args[1];
@@ -143,9 +151,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         if (headers != null) {
             Map<String, String> rpcContext = new HashMap<String, String>();
             for (String key : Pradar.getInvokeContextTransformKeys()) {
-                Object value = headers.get(key);
-                if (value != null) {
-                    rpcContext.put(key, value.toString());
+                String value = ObjectUtils.toString(headers.get(key));
+                if (!StringUtil.isEmpty(value)) {
+                    rpcContext.put(key, value);
                 }
             }
             record.setContext(rpcContext);
@@ -162,6 +170,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if (ConfigCache.isWorkWithSpring()) {
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         return record;
@@ -169,6 +180,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
+        if (ConfigCache.isWorkWithSpring()) {
+            return null;
+        }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         record.setResponse(advice.getThrowable());
@@ -293,6 +307,9 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
             Channel channel = consumerDetail.getChannel();
             try {
                 ConsumerMetaData consumerMetaData = getConsumerMetaData(consumerDetail);
+                if(consumerMetaData.isUseSpring()){
+                    return;
+                }
                 if (consumerMetaData == null) {
                     logger.warn("[RabbitMQ] SIMULATOR: can not find consumerMetaData for channel : {}, consumerTag : {}"
                         , consumerDetail.getChannel(), consumerDetail.getConsumerTag());

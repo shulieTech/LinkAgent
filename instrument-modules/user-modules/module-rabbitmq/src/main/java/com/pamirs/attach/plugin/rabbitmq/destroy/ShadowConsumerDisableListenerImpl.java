@@ -14,10 +14,18 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.destroy;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
+
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
+import com.pamirs.attach.plugin.rabbitmq.common.LastMqWhiteListHolder;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowConsumerDisableEvent;
@@ -29,12 +37,7 @@ import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisable
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeoutException;
+import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
 
 /**
  * @author angju
@@ -47,6 +50,19 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
 
     @Override
     public boolean disableBatch(List<ShadowConsumerDisableInfo> list) {
+        try {
+            final List<String> queueNames = new ArrayList<String>();
+            for (ShadowConsumerDisableInfo shadowConsumerDisableInfo : list) {
+                queueNames.add(Pradar.addClusterTestPrefix(shadowConsumerDisableInfo.getTopic()));
+            }
+            for (Object value : SpringBlockingQueueConsumerDeliveryInterceptor.RUNNING_CONTAINER.values()) {
+                if(value instanceof AbstractMessageListenerContainer){
+                    ((AbstractMessageListenerContainer)value).removeQueueNames(queueNames.toArray(new String[]{}));
+                }
+            }
+        } catch (Throwable e){
+            LOGGER.error("[RabbitMQ] disableBatch error", e);
+        }
         boolean result = true;
         for (ShadowConsumerDisableInfo shadowConsumerDisableInfo : list) {
             if (!ChannelHolder.getQueueChannel().containsKey(Pradar.addClusterTestPrefix(shadowConsumerDisableInfo.getTopic()))) {
@@ -62,6 +78,16 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
 
     @Override
     public boolean disableAll() {
+        try {
+            for (Object value : SpringBlockingQueueConsumerDeliveryInterceptor.RUNNING_CONTAINER.values()) {
+                if(value instanceof AbstractMessageListenerContainer){
+                    ((AbstractMessageListenerContainer)value).destroy();
+                }
+            }
+            SpringBlockingQueueConsumerDeliveryInterceptor.RUNNING_CONTAINER.clear();
+        } catch (Throwable e){
+            LOGGER.warn("[RabbitMQ] disableAll fail", e);
+        }
         boolean result = true;
         Map<String, List<Channel>> map = ChannelHolder.getQueueChannel();
         for (Map.Entry<String, List<Channel>> entry : map.entrySet()) {
@@ -111,6 +137,8 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
 
     @Override
     public EventResult onEvent(IEvent event) {
+        // any event flush LAST_MQ_WHITELIST
+        LastMqWhiteListHolder.LAST_MQ_WHITELIST.set(Collections.<String>emptySet());
         try {
             if (event instanceof ShadowConsumerDisableEvent) {
                 ShadowConsumerDisableEvent shadowConsumerDisableEvent = (ShadowConsumerDisableEvent) event;

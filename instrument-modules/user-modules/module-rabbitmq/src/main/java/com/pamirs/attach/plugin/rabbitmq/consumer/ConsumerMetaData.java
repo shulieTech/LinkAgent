@@ -36,9 +36,15 @@ public class ConsumerMetaData {
     private final int prefetchCount;
     private final Map<String, Object> arguments;
     private final boolean useOriginChannel;
+    private final boolean useSpring;
 
     public ConsumerMetaData(String queue, String consumerTag, Consumer consumer, boolean exclusive, boolean autoAck,
         int prefetchCount, boolean useOriginChannel) {
+        this(queue, consumerTag, consumer, exclusive, autoAck, prefetchCount, useOriginChannel, false);
+    }
+
+    public ConsumerMetaData(String queue, String consumerTag, Consumer consumer, boolean exclusive, boolean autoAck,
+        int prefetchCount, boolean useOriginChannel, boolean useSpring) {
         this.queue = queue;
         this.consumerTag = consumerTag;
         this.consumer = consumer;
@@ -49,6 +55,11 @@ public class ConsumerMetaData {
         this.arguments = Collections.emptyMap();
         this.ptQueue = Pradar.addClusterTestPrefix(queue);
         this.ptConsumerTag = Pradar.addClusterTestPrefix(consumerTag);
+        this.useSpring = useSpring;
+    }
+
+    public boolean isUseSpring() {
+        return useSpring;
     }
 
     public String getQueue() {

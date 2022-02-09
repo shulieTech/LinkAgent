@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,17 +15,27 @@
 package com.pamirs.attach.plugin.feign.interceptor;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.Map;
 
 import com.alibaba.fastjson.JSON;
+import com.google.gson.Gson;
 import com.pamirs.attach.plugin.feign.FeignConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import feign.InvocationHandlerFactory;
+import feign.MethodMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,9 +48,41 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     private final Logger logger = LoggerFactory.getLogger(FeignMockInterceptor.class);
     private final Logger mockLogger = LoggerFactory.getLogger("FEIGN-MOCK-LOGGER");
+    private static final Gson gson = new Gson();
+
+    private static ExecutionStrategy fixJsonStrategy =
+            new JsonMockStrategy() {
+                @Override
+                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+                    if (params instanceof MatchConfig) {
+                        try {
+                            MatchConfig config = (MatchConfig) params;
+                            String scriptContent = config.getScriptContent().trim();
+                            if (scriptContent.contains("return")) {
+                                return null;
+                            }
+                            Advice advice = (Advice) config.getArgs().get("advice");
+                            Map<Method, InvocationHandlerFactory.MethodHandler>
+                                    dispatch = Reflect.on(advice.getTarget()).get("dispatch");
+                            InvocationHandlerFactory.MethodHandler methodHandler
+                                    = dispatch.get(advice.getParameterArray()[1]);
+                            MethodMetadata methodMetadata = Reflect.on(methodHandler).get("metadata");
+                            Type typeRef = Reflect.on(methodMetadata).get("returnType");
+                            Object result = gson.fromJson(scriptContent, typeRef);
+                            ProcessController.returnImmediately(result);
+                        } catch (ProcessControlException pe) {
+                            throw pe;
+                        } catch (Throwable t) {
+                            throw new PressureMeasureError(t);
+                        }
+                    }
+                    return null;
+                }
+            };
+
 
     @Override
-    public void beforeLast(Advice advice) throws ProcessControlException {
+    public void beforeFirst(Advice advice) throws ProcessControlException {
         if (Pradar.isClusterTest()) {
             Object[] parameterArray = advice.getParameterArray();
             Method method = (Method) parameterArray[1];
@@ -53,7 +95,12 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             config.addArgs("isInterface", Boolean.TRUE);
             config.addArgs("class", className);
             config.addArgs("method", methodName);
-            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+
+            if (config.getStrategy() instanceof JsonMockStrategy) {
+                config.addArgs("advice", advice);
+                fixJsonStrategy.processBlock(method.getReturnType(), advice.getClassLoader(), config);
+            }
+            config.getStrategy().processBlock(method.getReturnType(), advice.getClassLoader(), config);
         }
 
     }
@@ -66,14 +113,14 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             logger.info("[debug] feign method =null , args: [{}]", JSON.toJSONString(args));
             return null;
         }
-        Object [] arg = (Object[]) args[2];
+        Object[] arg = (Object[]) args[2];
         SpanRecord record = new SpanRecord();
         record.setService(method.getDeclaringClass().getName());
         record.setMethod(method.getName() + getParameterTypesString(method.getParameterTypes()));
         if (arg != null) {
             record.setRequestSize(arg.length);
         }
-        if(!Pradar.isClusterTest()){
+        if (Pradar.isClusterTest()) {
             record.setPassedCheck(true);
         }
         return record;
@@ -122,7 +169,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), JSON.toJSONString(args));
             return null;
         }
-        Object [] arg = (Object[]) args[2];
+        Object[] arg = (Object[]) args[2];
         SpanRecord record = new SpanRecord();
         record.setService(method.getDeclaringClass().getName());
         record.setMethod(method.getName() + getParameterTypesString(method.getParameterTypes()));

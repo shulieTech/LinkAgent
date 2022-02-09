@@ -14,12 +14,16 @@
  */
 package com.pamirs.attach.plugin.alibaba.rocketmq.hook;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.alibaba.rocketmq.client.hook.SendMessageContext;
 import com.alibaba.rocketmq.client.hook.SendMessageHook;
 import com.alibaba.rocketmq.client.impl.CommunicationMode;
 import com.alibaba.rocketmq.common.message.Message;
 import com.alibaba.rocketmq.common.message.MessageAccessor;
+
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.MQTraceBean;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.MQTraceConstants;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.MQTraceContext;
@@ -30,23 +34,22 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.message.ConcurrentWeakHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 生产消息时的pradar埋点
  */
 public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
     private final static Logger LOGGER = LoggerFactory.getLogger(SendMessageHookImpl.class.getName());
+    private final static ConcurrentWeakHashMap<SendMessageContext, MQTraceContext> contexts
+        = new ConcurrentWeakHashMap<SendMessageContext, MQTraceContext>();
 
     @Override
     public String hookName() {
-        return "PradarSendMessageHook";
+        return "SendMessageHookImpl";
     }
 
     @Override
@@ -88,7 +91,7 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             traceBeans.add(traceBean);
 
             MQTraceContext mqTraceContext = new MQTraceContext();
-            context.setMqTraceContext(mqTraceContext);
+            contexts.put(context, mqTraceContext);
             mqTraceContext.setMqType(MQType.ROCKETMQ);
             mqTraceContext.setTopic(context.getMq().getTopic());
             mqTraceContext.setGroup(context.getProducerGroup());
@@ -139,7 +142,10 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             if (context == null || context.getMessage() == null) {
                 return;
             }
-            MQTraceContext mqTraceContext = (MQTraceContext) context.getMqTraceContext();
+            MQTraceContext mqTraceContext = contexts.remove(context);
+            if (mqTraceContext == null) {
+                return;
+            }
             MQTraceBean traceBean = mqTraceContext.getTraceBeans().get(0);
 
             if (traceBean != null && context.getSendResult() != null) {

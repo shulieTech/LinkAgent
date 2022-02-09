@@ -47,6 +47,14 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
     public static final String RETRYSTR = "%RETRY%";
     public static final String DLQSTR = "%DLQ%";
 
+    public static PushConsumeMessageHookImpl INSTANCE = new PushConsumeMessageHookImpl();
+
+    private PushConsumeMessageHookImpl() {}
+
+    public static PushConsumeMessageHookImpl getInstance() {
+        return INSTANCE;
+    }
+
     @Override
     public String hookName() {
         return "PradarPushConsumeMessageHook";
@@ -99,7 +107,7 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 } else {
                     storeHost = StringUtils.substring(msg.getStoreHost().toString(), 1);
                 }
-                traceBean.setStoreHost(msg.getProperty(RocketmqConstants.NAME_SERVER_ADDRESS));
+                traceBean.setStoreHost(storeHost);
                 traceBean.setStoreTime(msg.getStoreTimestamp());
                 traceBean.setBrokerName(context.getMq().getBrokerName());
                 traceBean.setQueueId(msg.getQueueId());

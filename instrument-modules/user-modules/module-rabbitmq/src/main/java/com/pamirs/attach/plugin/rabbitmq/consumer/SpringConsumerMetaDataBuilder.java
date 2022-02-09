@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.rabbitmq.consumer;
 import java.util.Map;
 
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PradarException;
 import com.rabbitmq.client.Consumer;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -70,7 +71,7 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
             Reflect.on(blockingQueueConsumer).<Boolean>get("exclusive"),
             Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get("acknowledgeMode").isAutoAck(),
             Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
-            true);
+            true, true);
     }
 
     private ConsumerMetaData lowVersion(Consumer consumer, String consumerTag) {
@@ -80,7 +81,7 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
         if (queue == null) {
             throw new RuntimeException("this should never happened!");
         }
-        return new ConsumerMetaData(
+        final ConsumerMetaData consumerMetaData = new ConsumerMetaData(
             queue,
             consumerTag,
             consumer,
@@ -88,5 +89,7 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
             Reflect.on(blockingQueueConsumer).<AcknowledgeMode>get("acknowledgeMode").isAutoAck(),
             Reflect.on(blockingQueueConsumer).<Integer>get("prefetchCount"),
             true);
+        consumerTags.put(consumerMetaData.getPtConsumerTag(), consumerMetaData.getPtQueue());
+        return consumerMetaData;
     }
 }

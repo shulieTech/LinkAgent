@@ -412,11 +412,19 @@ public class ShadowDatabaseConfig {
         if (businessShadowTables != null ? !businessShadowTables.equals(that.businessShadowTables)
                 : that.businessShadowTables != null) {return false;}
 
-        // shadow username 和 password 会被替换
-        if(properties != null && properties.get("extra") != null && that.properties != null && properties.get("extra").equals(this.getProperty("extra"))){
+        if((properties == null && that.properties != null) || (properties != null && that.properties == null)){
+            return false;
+        }
+
+        if(properties == null && that.properties == null){
             return true;
         }
-        return false;
+
+        // shadow username 和 password 会被替换
+        if(properties.containsKey("extra") && !properties.get("extra").equals(that.properties.get("extra"))){
+            return false;
+        }
+        return true;
     }
 
     @Override

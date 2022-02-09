@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -209,7 +209,7 @@ public class DruidDatasourceUtils {
             String validConnectionCheckerClass = ptDataSourceConf.getProperty("validConnectionCheckerClass");
             if (StringUtils.isNotBlank(validConnectionCheckerClass)) {
                 target.setValidConnectionCheckerClassName(validConnectionCheckerClass);
-            } else if (StringUtils.isNotBlank(sourceDatasource.getValidConnectionCheckerClassName())){
+            } else if (StringUtils.isNotBlank(sourceDatasource.getValidConnectionCheckerClassName())) {
                 target.setValidConnectionCheckerClassName(sourceDatasource.getValidConnectionCheckerClassName());
             }
 
@@ -373,6 +373,7 @@ public class DruidDatasourceUtils {
             }
 
             target.setBreakAfterAcquireFailure(true);
+            target.setProxyFilters(sourceDatasource.getProxyFilters());
         } catch (Throwable e) {
             logger.warn("init druid datasource failed.", e);
         }

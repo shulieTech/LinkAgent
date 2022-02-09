@@ -24,7 +24,7 @@ import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
  * @since 2021/5/9 1:56 上午
  */
 public class ConfigCache {
-
+    private static boolean workWithSpring;
     private static Map<Integer, Object> caches = new ConcurrentHashMap<Integer, Object>();
     private static Map<Integer, String> queueCaches = new ConcurrentHashMap<Integer, String>();
     private static Map<ConsumerMetaDataCacheKey, ConsumerMetaData> consumerMetaDataCaches
@@ -34,6 +34,17 @@ public class ConfigCache {
         consumerMetaDataCaches.remove(key);
     }
 
+    static {
+        try {
+            Class.forName("org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer");
+            workWithSpring = true;
+        } catch (ClassNotFoundException e) {
+            workWithSpring = false;
+        }
+    }
+    public static boolean isWorkWithSpring() {
+        return workWithSpring;
+    }
     public static boolean containsQueue(Integer key) {
         return queueCaches.containsKey(key);
     }

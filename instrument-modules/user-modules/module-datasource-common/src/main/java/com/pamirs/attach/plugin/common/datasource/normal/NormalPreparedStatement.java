@@ -60,6 +60,8 @@ public class NormalPreparedStatement implements PreparedStatement {
 
     private String dbType;
 
+    private final String midType;
+
     /**
      * <p>{@code } instances should NOT be constructed in
      * standard programming. </p>
@@ -68,11 +70,12 @@ public class NormalPreparedStatement implements PreparedStatement {
      * instance to operate.</p>
      */
     public NormalPreparedStatement(PreparedStatement preparedStatement, Connection connection, String dbConnectionKey
-            , String dbType) {
+        , String dbType, String midType) {
         this.preparedStatement = preparedStatement;
         this.connection = connection;
         this.dbConnectionKey = dbConnectionKey;
         this.dbType = dbType;
+        this.midType = midType;
     }
 
     /**
@@ -84,7 +87,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public void addBatch(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         preparedStatement.addBatch(arg0);
     }
 
@@ -161,7 +164,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public boolean execute(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.execute(arg0);
     }
 
@@ -174,7 +177,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public boolean execute(String arg0, int arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.execute(arg0, arg1);
     }
 
@@ -187,7 +190,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public boolean execute(String arg0, int[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.execute(arg0, arg1);
     }
 
@@ -200,7 +203,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public boolean execute(String arg0, String[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.execute(arg0, arg1);
     }
 
@@ -225,7 +228,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public ResultSet executeQuery(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.executeQuery(arg0);
     }
 
@@ -238,7 +241,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public int executeUpdate(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.executeUpdate(arg0);
     }
 
@@ -251,7 +254,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public int executeUpdate(String arg0, int arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.executeUpdate(arg0, arg1);
     }
 
@@ -264,7 +267,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public int executeUpdate(String arg0, int[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.executeUpdate(arg0, arg1);
     }
 
@@ -277,7 +280,7 @@ public class NormalPreparedStatement implements PreparedStatement {
      */
     @Override
     public int executeUpdate(String arg0, String[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return preparedStatement.executeUpdate(arg0, arg1);
     }
 

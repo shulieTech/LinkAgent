@@ -114,7 +114,7 @@ public class DataSourceWrapUtil {
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0002")
                     .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("c3p0:DataSourceWrapUtil:业务库配置:::url: " + target.getJdbcUrl())
+                    .setDetail("c3p0:DataSourceWrapUtil:业务库配置:::url: " + target.getJdbcUrl()  + "username：" + dataSourceMeta.getUsername() + "; 中间件类型：c3p0")
                     .report();
 
             C3p0MediaDataSource dbMediatorDataSource = new C3p0MediaDataSource();
@@ -146,7 +146,7 @@ public class DataSourceWrapUtil {
                         .setErrorCode("datasource-0002")
                         .setMessage("没有配置对应的影子表或影子库！")
                         .setDetail("c3p0:DataSourceWrapUtil:业务库配置:::url: " +
-                                target.getJdbcUrl() + Throwables.getStackTraceAsString(e))
+                                target.getJdbcUrl()  + "username：" + dataSourceMeta.getUsername() + "; 中间件类型：c3p0" + Throwables.getStackTraceAsString(e))
                         .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                         .report();
                 logger.error("[c3p0] init datasource err!", e);

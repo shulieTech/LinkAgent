@@ -63,7 +63,8 @@ public class TomcatJdbcMediatorDataSource extends WrappedDbMediatorDataSource<or
                     if (dataSourceBusiness == null) {
                         throw new PressureMeasureError("Business dataSource is null.");
                     }
-                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(), dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(), dbConnectionKey, url, username, dbType,
+                        getMidType());
                 } else {
                     //影子库
                     if (dataSourcePerformanceTest == null) {
@@ -109,7 +110,8 @@ public class TomcatJdbcMediatorDataSource extends WrappedDbMediatorDataSource<or
                     if (dataSourceBusiness == null) {
                         throw new PressureMeasureError("Business dataSource is null.");
                     }
-                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(username, password), dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(username, password), dbConnectionKey, url, username, dbType,
+                        "other");
                 } else {
                     //影子库
                     if (dataSourcePerformanceTest == null) {

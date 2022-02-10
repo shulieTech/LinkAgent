@@ -247,12 +247,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
         } finally {
             try {
                 beforeLast(advice);
-            } catch (ProcessControlException e) {
-                // mock功能通过此异常中断后续流程
             } catch (PradarException e) {
                 LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
-            }catch (PressureMeasureError e) {
+            } catch (PressureMeasureError e) {
                 LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {

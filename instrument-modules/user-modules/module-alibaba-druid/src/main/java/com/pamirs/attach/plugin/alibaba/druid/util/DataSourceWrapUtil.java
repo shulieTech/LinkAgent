@@ -67,7 +67,7 @@ public class DataSourceWrapUtil {
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0002")
                     .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("业务库配置:::url: " + target.getUrl() + " ;username: " + target.getUsername() + "; 中间件类型：druid")
+                    .setDetail("业务库配置:::url: " + target.getUrl() + " ; username: " + target.getUsername() + "; 中间件类型：druid")
                     .report();
             /**
              * 如果未配置,则返回包装的数据源,类似于影子表

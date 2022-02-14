@@ -63,7 +63,7 @@ public class DataSourceWrapUtil {
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0002")
                     .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("业务库配置:::url: " + target.getUrl() + " ;username: " + target.getUsername() + "; 中间件类型：other")
+                    .setDetail("业务库配置:::url: " + target.getUrl() + " ; username: " + target.getUsername() + "; 中间件类型：other")
                     .report();
             TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
             dbMediatorDataSource.setDataSourceBusiness(target);
@@ -98,7 +98,7 @@ public class DataSourceWrapUtil {
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0002")
                         .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("TomcatJdbcDataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + " ;username: " + target.getUsername() + "; 中间件类型：other")
+                        .setDetail("TomcatJdbcDataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "; username: " + target.getUsername() + "; 中间件类型：other")
                         .report();
                 return;
             }

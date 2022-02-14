@@ -129,7 +129,7 @@ public class DataSourceWrapUtil {
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0002")
                     .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl()  + "username：" + dataSourceMeta.getUsername() + "; 中间件类型：dbcp")
+                    .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl()  + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：dbcp")
                     .report();
             DbcpMediaDataSource dbMediatorDataSource = new DbcpMediaDataSource();
             dbMediatorDataSource.setDataSourceBusiness(target);

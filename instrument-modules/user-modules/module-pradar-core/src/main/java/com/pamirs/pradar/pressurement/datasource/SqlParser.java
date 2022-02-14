@@ -599,7 +599,7 @@ public class SqlParser {
                             .setErrorType(ErrorTypeEnum.DataSource)
                             .setErrorCode("datasource-0004")
                             .setMessage(String
-                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s userName:%s 中间件类型:%s", url,
+                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s, userName:%s, 中间件类型:%s", url,
                                     name.getName(),
                                     getDriverClassName(url), dbType, userName, midType))
                             .setDetail(
@@ -612,7 +612,7 @@ public class SqlParser {
                             .report();
                         throw new SQLException(String.format(
                             "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
-                                + "driverClassName:%s, dbType:%s username:%s 中间件类型:%s, [sql] %s [new sql] %s",
+                                + "driverClassName:%s, dbType:%s, username:%s, 中间件类型:%s, [sql] %s [new sql] %s",
                             name.getName(), url, name.getName(), getDriverClassName(url), dbType, userName, midType, sql, val));
                     }
                 }

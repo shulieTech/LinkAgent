@@ -73,8 +73,12 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         return false;
     }
 
+    /**
+     * 这里必须是afterLast如果是beforeLast，走到这个方法的时候当前线程的threadLocal是有业务流量的invokeContext，
+     * 在创建pt container时候就会把当前的context传播给影子消费者线程，导致traceId永远不会变（手动时）
+     */
     @Override
-    public void beforeLast(Advice advice) {
+    public void afterLast(Advice advice) {
         final AbstractMessageListenerContainer abstractMessageListenerContainer
             = (AbstractMessageListenerContainer)advice.getTarget();
         final String listenerId = abstractMessageListenerContainer.getListenerId();

@@ -40,8 +40,20 @@ if [ ! -x "$AGENT_TARGET_DIR/bootstrap" ]; then
     mkdir "$AGENT_TARGET_DIR/bootstrap"
 fi
 
+if [ ! -x "$AGENT_TARGET_DIR/bin" ]; then
+    mkdir "$AGENT_TARGET_DIR/bin"
+fi
+
+if [ ! -x "$AGENT_TARGET_DIR/logs" ]; then
+    mkdir "$AGENT_TARGET_DIR/logs"
+fi
+
 cp *.properties ${AGENT_TARGET_DIR}/config/
 cp simulator-agent-logback.xml ${AGENT_TARGET_DIR}/config/simulator-agent-logback.xml
+cp ignore.config ${AGENT_TARGET_DIR}/config/ignore.config
+cp lite-start.sh ${AGENT_TARGET_DIR}/bin/lite-start.sh
+cp lite-stop.sh ${AGENT_TARGET_DIR}/bin/lite-stop.sh
+cp lite-restart.sh ${AGENT_TARGET_DIR}/bin/lite-restart.sh
 
 # reset the target dir
 AGENT_VERSION=$(cat ..//simulator-agent-core/target/classes/com/shulie/instrument/simulator/agent/version)
@@ -49,6 +61,7 @@ AGENT_VERSION=$(cat ..//simulator-agent-core/target/classes/com/shulie/instrumen
 cp ../simulator-launcher-standalone/target/simulator-launcher-standalone-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-standalone.jar
 cp ../simulator-launcher-instrument/target/simulator-launcher-instrument-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-instrument.jar
 cp ../simulator-launcher-embedded/target/simulator-launcher-embedded-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-embedded.jar
+cp ../simulator-launcher-lite/target/simulator-launcher-lite-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-lite.jar
 cp ../simulator-agent-core/target/simulator-agent-core-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/core/simulator-agent-core.jar
 cp ../simulator-bootstrap-extras/target/lib/* ${AGENT_TARGET_DIR}/bootstrap/
 

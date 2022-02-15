@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.pamirs.pradar.Pradar;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.pressurement.entry.CheckerEntry;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
@@ -363,6 +364,10 @@ public class SimulatorDynamicConfig {
 
     private int getTraceSamplingInterval(Map<String, String> config) {
         try {
+            // 如果是takin lite则采样率返回1
+            if (Pradar.isLite) {
+                return 1;
+            }
             if (config == null) {
                 return DEFAULT_TRACE_SAMPLING_INTERVAL;
             }

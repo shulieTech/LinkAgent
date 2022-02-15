@@ -14,14 +14,21 @@
  */
 package com.pamirs.pradar.pressurement.mock;
 
-import com.pamirs.pradar.*;
+import java.util.Map;
+
+import com.pamirs.pradar.AppNameUtils;
+import com.pamirs.pradar.ConfigNames;
+import com.pamirs.pradar.ErrorTypeEnum;
+import com.pamirs.pradar.InvokeContext;
+import com.pamirs.pradar.MiddlewareType;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-
-import java.util.Map;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -37,11 +44,15 @@ public class WhiteListStrategy implements ExecutionStrategy {
         if (!Pradar.isClusterTest()) {
             return true;
         }
+        // takin lite 直接跳过
+        if (Pradar.isLite) {
+            return true;
+        }
         if (!PradarSwitcher.whiteListSwitchOn()) {
             return true;
         }
         if (params instanceof MatchConfig) {
-            MatchConfig config = (MatchConfig) params;
+            MatchConfig config = (MatchConfig)params;
             Map<String, Object> args = config.getArgs();
             // 直接通过通过白名单校验
            /* if (TRUE.equals(args.get(PradarService.PRADAR_WHITE_LIST_CHECK))) {
@@ -50,9 +61,9 @@ public class WhiteListStrategy implements ExecutionStrategy {
             InvokeContext invokeContext = Pradar.getInvokeContext();
 
             if (invokeContext.getParentInvokeContext() != null &&
-                    (invokeContext.getParentInvokeContext().getInvokeType() == MiddlewareType.TYPE_RPC ||
-                            invokeContext.getParentInvokeContext().getInvokeType() == MiddlewareType.TYPE_WEB_SERVER) &&
-                    invokeContext.getParentInvokeContext().isPassCheck()) {
+                (invokeContext.getParentInvokeContext().getInvokeType() == MiddlewareType.TYPE_RPC ||
+                    invokeContext.getParentInvokeContext().getInvokeType() == MiddlewareType.TYPE_WEB_SERVER) &&
+                invokeContext.getParentInvokeContext().isPassCheck()) {
                 return true;
             }
             /**
@@ -67,32 +78,33 @@ public class WhiteListStrategy implements ExecutionStrategy {
             if (!config.isSuccess()) {
                 Boolean isInterface = isInterface(config);
                 if (isInterface) {
-                    String className = (String) args.get("class");
-                    String methodName = (String) args.get("method");
-                    String message = "WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#" + methodName + "] is not allowed in WhiteList.";
+                    String className = (String)args.get("class");
+                    String methodName = (String)args.get("method");
+                    String message = "WhiteListError: [" + AppNameUtils.appName() + "] interface [" + className + "#"
+                        + methodName + "] is not allowed in WhiteList.";
                     if (Pradar.isClusterTest()) {
                         ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.AgentError)
-                                .setErrorCode("whiteList-0001")
-                                .setMessage(message)
-                                .setDetail(message)
-                                .closePradar(ConfigNames.RPC_WHITE_LIST)
-                                .report();
-                        throw new PressureMeasureError(message);
-                    }
-                } else {
-                    String url = (String) args.get("url");
-                    String message = "WhiteListError: [" + AppNameUtils.appName() + "] url [" + url + "] is not allowed in WhiteList.";
-                    ErrorReporter.buildError()
                             .setErrorType(ErrorTypeEnum.AgentError)
                             .setErrorCode("whiteList-0001")
                             .setMessage(message)
                             .setDetail(message)
-                            .closePradar(ConfigNames.URL_WHITE_LIST)
+                            .closePradar(ConfigNames.RPC_WHITE_LIST)
                             .report();
+                        throw new PressureMeasureError(message);
+                    }
+                } else {
+                    String url = (String)args.get("url");
+                    String message = "WhiteListError: [" + AppNameUtils.appName() + "] url [" + url
+                        + "] is not allowed in WhiteList.";
+                    ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("whiteList-0001")
+                        .setMessage(message)
+                        .setDetail(message)
+                        .closePradar(ConfigNames.URL_WHITE_LIST)
+                        .report();
                     throw new PressureMeasureError(message);
                 }
-
 
             }
         }
@@ -106,7 +118,7 @@ public class WhiteListStrategy implements ExecutionStrategy {
                 return Boolean.FALSE;
             }
             if (isInterface instanceof Boolean) {
-                return (Boolean) isInterface;
+                return (Boolean)isInterface;
             }
             return Boolean.FALSE;
         } catch (Exception e) {

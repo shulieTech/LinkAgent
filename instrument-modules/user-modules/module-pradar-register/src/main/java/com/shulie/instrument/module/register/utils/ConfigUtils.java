@@ -14,13 +14,15 @@
  */
 package com.shulie.instrument.module.register.utils;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.alibaba.fastjson.JSON;
+
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -29,31 +31,30 @@ import java.util.Map;
 public class ConfigUtils {
     private final static Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
 
-
     //配置控制台地址
     private static final String AGENT_CONFIG_URL = "/api/fast/agent/access/config/agentConfig";
-
-
 
     /**
      * 获取控制台的固定配置信息
      */
-    public static Map<String, Object> getFixedSimulatorConfigFromUrl(String troWebUrl, String appName, String configVersion){
+    public static Map<String, Object> getFixedSimulatorConfigFromUrl(String troWebUrl, String appName,
+        String configVersion) {
         return getAgentConfigFromUrl(troWebUrl, appName, configVersion, "0");
     }
-
-
-
 
     /**
      * 获取控制台的动态配置信息
      */
-    public static Map<String, Object> getDynamicSimulatorConfigFromUrl(String troWebUrl, String appName, String configVersion){
+    public static Map<String, Object> getDynamicSimulatorConfigFromUrl(String troWebUrl, String appName,
+        String configVersion) {
         return getAgentConfigFromUrl(troWebUrl, appName, configVersion, "1");
     }
 
-
-    private static Map<String, Object> getAgentConfigFromUrl(String troWebUrl, String appName, String configVersion, String type){
+    private static Map<String, Object> getAgentConfigFromUrl(String troWebUrl, String appName, String configVersion,
+        String type) {
+        if (Pradar.isLite) {
+            return new HashMap<String, Object>();
+        }
         final StringBuilder url = new StringBuilder(troWebUrl).append(AGENT_CONFIG_URL);
 
         Map<String, String> params = new HashMap<String, String>();
@@ -63,7 +64,7 @@ public class ConfigUtils {
         HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
         if (!httpResult.isSuccess()) {
             logger.error("获取控制台固定配置信息失败 url={}, result={}, 参数类型={}", url, httpResult.getResult(),
-                    type.equals("1") ? "动态" : "固定");
+                type.equals("1") ? "动态" : "固定");
             return null;
         }
         return JSON.parseObject(httpResult.getResult(), Map.class);

@@ -490,8 +490,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * 拉取mq影子消费者
      */
     private boolean fetchMqShadowConsumer(String troControlWebUrl, ApplicationConfig applicationConfig) {
+        // takin lite 不需要影子消费者
+        if (Pradar.isLite) {
+            return true;
+        }
         try {
-
             StringBuilder url = new StringBuilder(troControlWebUrl)
                     .append(TRO_SHADOW_MQ_CONSUMER_URL).append("?appName=").append(AppNameUtils.appName());
             final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
@@ -715,6 +718,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     }
 
     private void getShadowEsServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
+        if (Pradar.isLite) {
+            return;
+        }
         String appName = AppNameUtils.appName();
         String accessUrl = String.format("%s%s?appName=%s", troControlWebUrl, ES_SHADOW_SERVER_URL, appName);
         try {
@@ -775,6 +781,10 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     }
 
     private void getShadowRedisServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
+        if (Pradar.isLite) {
+            return;
+        }
+
         String appName = AppNameUtils.appName();
         StringBuilder builder = new StringBuilder(troControlWebUrl)
             .append(REDIS_SHADOW_SERVER_URL)
@@ -796,7 +806,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             Boolean success = result.getBoolean("success");
             if (!success) {
-                logger.error("SIMULATOR: get redis shadow config from server with a fault response. url={}, result={}",
+                logger.error(
+                    "SIMULATOR: get redis shadow config from server with a fault response. url={}, result = {}",
                     builder.toString(), httpResult.getResult());
                 ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.RedisServer)
@@ -1123,6 +1134,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troControlWebUrl
      */
     private boolean getShadowJobConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
+        // takin lite 不需要影子job
+        if (Pradar.isLite) {
+            return true;
+        }
+
         StringBuilder url = new StringBuilder(troControlWebUrl)
                 .append(TRO_SHADOW_JOB_URL).append("?appName=").append(AppNameUtils.appName());
         try {
@@ -1188,7 +1204,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         shaDowJob.setJobDataType(jobDataType);
                     }
 
-                    String beanName = configCode.get("beanName") == null ? null : configCode.get("beanName").toString();
+                    String beanName = configCode.get("beanName") == null ? null : configCode.get("beanName")
+                        .toString();
                     if (null != beanName) {
                         if (null == shaDowJob.getExtendParam()) {
                             shaDowJob.setExtendParam(new HashMap<String, Object>());
@@ -1220,6 +1237,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troWebUrl
      */
     private boolean getPressureTable4AccessSimple(String troWebUrl, ApplicationConfig applicationConfig) {
+        // takin lite不需要影子库表
+        if (Pradar.isLite) {
+            return true;
+        }
+
         final String getShadowDatasourceUrl = troWebUrl + SHADOW_DB_TABLE_URL + "?appName=" + AppNameUtils.appName();
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(getShadowDatasourceUrl);
@@ -1332,6 +1354,10 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 .append("?appName=")
                 .append(AppNameUtils.appName());
         try {
+            // takin lite不需要白名单，所以注释掉
+            if (Pradar.isLite) {
+                return true;
+            }
             return loadList(url, applicationConfig);
         } catch (Throwable e) {
             logger.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
@@ -1578,6 +1604,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troWebUrl
      */
     private boolean getHbaseShadowConfig(String troWebUrl, ApplicationConfig applicationConfig) {
+        // takin lite 不需要影子hbase
+        if (Pradar.isLite) {
+            return true;
+        }
+
         final String url = troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName();
         try {
             HttpUtils.HttpResult result = HttpUtils.doGet(url);

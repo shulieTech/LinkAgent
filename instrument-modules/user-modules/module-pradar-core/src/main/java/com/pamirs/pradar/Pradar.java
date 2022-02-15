@@ -146,6 +146,11 @@ public final class Pradar {
     static public final int MAX_USER_DATA_KEY_SIZE = 16;
 
     /**
+     * 获取是否为lite标识
+     */
+    static public final Boolean isLite = getIsLite();
+
+    /**
      * Invoke 日志输出
      */
     static AsyncAppender rpcAppender;
@@ -740,14 +745,32 @@ public final class Pradar {
     }
 
     /**
+     * 获取是否为 lite 标识
+     *
+     * @return true| false
+     */
+    public static Boolean getIsLite() {
+        String isLite = System.getProperty("simulator.lite");
+        if (StringUtils.isNotBlank(isLite)) {
+            return Boolean.parseBoolean(isLite);
+        }
+        return false;
+    }
+
+    /**
      * 获取压测前缀
      *
      * @return
      */
     public static String getClusterTestPrefix() {
-        String prefix = System.getProperty("pradar.cluster.test.prefix");
-        if (StringUtils.isBlank(prefix)) {
-            prefix = "PT_";
+        String prefix;
+        if (isLite) {
+            prefix = "";
+        } else {
+            prefix = System.getProperty("pradar.cluster.test.prefix");
+            if (StringUtils.isBlank(prefix)) {
+                prefix = "PT_";
+            }
         }
         System.out.println("SIMULATOR: cluster test prefix is:" + prefix);
         return prefix;
@@ -759,10 +782,16 @@ public final class Pradar {
      * @return
      */
     public static String getClusterTestSuffixRod() {
-        String prefix = System.getProperty("pradar.cluster.test.suffix.rod");
-        if (StringUtils.isBlank(prefix)) {
-            prefix = "-PT";
+        String prefix;
+        if (isLite) {
+            prefix = "";
+        } else {
+            prefix = System.getProperty("pradar.cluster.test.suffix.rod");
+            if (StringUtils.isBlank(prefix)) {
+                prefix = "-PT";
+            }
         }
+
         System.out.println("SIMULATOR: cluster test suffix rod is:" + prefix);
         return prefix;
     }
@@ -773,9 +802,14 @@ public final class Pradar {
      * @return
      */
     public static String getClusterTestPrefixRod() {
-        String prefix = System.getProperty("pradar.cluster.test.prefix.rod");
-        if (StringUtils.isBlank(prefix)) {
-            prefix = "PT-";
+        String prefix;
+        if (isLite) {
+            prefix = "";
+        } else {
+            prefix = System.getProperty("pradar.cluster.test.prefix.rod");
+            if (StringUtils.isBlank(prefix)) {
+                prefix = "PT-";
+            }
         }
         System.out.println("SIMULATOR: cluster test prefix rod is:" + prefix);
         return prefix;
@@ -787,10 +821,16 @@ public final class Pradar {
      * @return
      */
     public static String getClusterTestSuffix() {
-        String suffix = System.getProperty("pradar.cluster.test.suffix");
-        if (StringUtils.isBlank(suffix)) {
-            suffix = "_PT";
+        String suffix;
+        if (isLite) {
+            suffix = "";
+        } else {
+            suffix = System.getProperty("pradar.cluster.test.suffix");
+            if (StringUtils.isBlank(suffix)) {
+                suffix = "_PT";
+            }
         }
+
         System.out.println("SIMULATOR: cluster test suffix is:" + suffix);
         return suffix;
     }

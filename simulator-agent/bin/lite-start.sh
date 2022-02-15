@@ -1,0 +1,1 @@
+nohup java -Xbootclasspath/a:$JAVA_HOME/lib/tools.jar  -jar ../simulator-launcher-lite.jar >../logs/lite.log 2>&1 &

@@ -14,11 +14,10 @@
  */
 package com.shulie.instrument.simulator.agent.api;
 
-import com.shulie.instrument.simulator.agent.api.model.AppConfig;
-import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
-
 import java.io.File;
 import java.util.List;
+
+import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 
 /**
  * 外部 API，所有与配置中心交互的全部由此类完成

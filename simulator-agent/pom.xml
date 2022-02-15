@@ -26,6 +26,7 @@
         <module>simulator-launcher-embedded</module>
         <module>simulator-launcher-standalone</module>
         <module>simulator-bootstrap-extras</module>
+        <module>simulator-launcher-lite</module>
     </modules>
 
 

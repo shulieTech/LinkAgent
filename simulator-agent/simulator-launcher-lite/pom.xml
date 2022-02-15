@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2021 Shulie Technology, Co.Ltd
+  ~ Email: shulie@shulie.io
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -9,20 +24,26 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>simulator-launcher-instrument</artifactId>
+    <artifactId>simulator-launcher-lite</artifactId>
     <packaging>jar</packaging>
+
+    <properties>
+        <!--suppress UnresolvedMavenProperty -->
+        <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
+    </properties>
 
     <dependencies>
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>transmittable-thread-local</artifactId>
-            <version>2.12.1</version>
-            <optional>true</optional>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+            <version>1.8</version>
+            <scope>system</scope>
+            <systemPath>${jdk.8.home}/lib/tools.jar</systemPath>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>simulator-launcher-instrument-${project.version}</finalName>
+        <finalName>simulator-launcher-lite-${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -36,6 +57,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.6</version>
                 <executions>
                     <execution>
                         <goals>
@@ -47,20 +69,23 @@
                                 <descriptorRef>jar-with-dependencies</descriptorRef>
                             </descriptorRefs>
                             <archive>
-                                <manifestEntries>
-                                    <Premain-Class>com.shulie.instrument.simulator.agent.instrument.InstrumentLauncher
-                                    </Premain-Class>
-                                    <Agent-Class>com.shulie.instrument.simulator.agent.instrument.InstrumentLauncher
-                                    </Agent-Class>
-                                    <Can-Redefine-Classes>true</Can-Redefine-Classes>
-                                    <Can-Retransform-Classes>true</Can-Retransform-Classes>
-                                </manifestEntries>
+                                <manifest>
+                                    <mainClass>com.shulie.instrument.simulator.agent.lite.LiteLauncher</mainClass>
+                                </manifest>
                             </archive>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
 </project>

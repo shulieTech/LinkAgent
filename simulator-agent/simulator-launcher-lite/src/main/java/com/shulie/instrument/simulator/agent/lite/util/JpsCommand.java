@@ -53,7 +53,9 @@ public class JpsCommand {
                 if (!line.trim().matches("^[0-9]*$")) {
                     String[] pidItem = line.split(" ");
                     if (pidItem.length == 2) {
-                        JpsResult jpsResult = new JpsResult(pidItem[0], pidItem[1]);
+                        String appName = pidItem[1].endsWith(".jar") ? pidItem[1].substring(0, pidItem[1].length() - 4)
+                            : pidItem[1];
+                        JpsResult jpsResult = new JpsResult(pidItem[0], appName);
                         systemProcessList.add(jpsResult);
                     }
                 }

@@ -85,7 +85,7 @@ public class LiteLauncher {
      * agent启动参数配置
      */
     private static final String AGENT_START_PARAM
-        = ";simulator.use.premain=true;simulator.lite=true;simulator.delay=%s";
+        = ";simulator.use.premain=true;simulator.lite=true;simulator.delay=%s;simulator.app.name=%s";
 
     public static void main(String[] args) {
         LogUtil.info("simulator-launcher-lite 开始启动");
@@ -96,10 +96,10 @@ public class LiteLauncher {
                 List<JpsResult> systemProcessList = JpsCommand.getSystemProcessList();
                 LogUtil.info("system process list：" + systemProcessList);
                 if (systemProcessList.size() > 0) {
-                    List<String> pidList = getAttachPidList(systemProcessList);
-                    LogUtil.info("attach pid list: " + pidList);
+                    List<JpsResult> attachList = getAttachList(systemProcessList);
+                    LogUtil.info("attach list: " + attachList);
                     //生产需要attach的PID列表和生产对应的PID文件
-                    attachAgent(pidList);
+                    attachAgent(attachList);
                     deletePidFiles(systemProcessList.stream().map(JpsResult::getPid).collect(Collectors.toList()));
                 }
             } catch (Throwable t) {
@@ -113,22 +113,24 @@ public class LiteLauncher {
     /**
      * 加载agent
      *
-     * @param targetJvmPid 目标进程PID
+     * @param attachList 目标进程PID
      * @throws Exception
      */
-    private static void attachAgent(List<String> targetJvmPid) throws Exception {
+    private static void attachAgent(List<JpsResult> attachList) throws Exception {
         VirtualMachine vm = null;
-        for (String str : targetJvmPid) {
+        for (JpsResult jpsResult : attachList) {
             try {
-                vm = VirtualMachine.attach(str);
+                vm = VirtualMachine.attach(jpsResult.getPid());
                 if (vm != null) {
                     vm.loadAgent(LiteLauncher.SIMULATOR_BEGIN_JAR_PATH,
-                        String.format(AGENT_START_PARAM, SIMULATOR_DELAY));
+                        String.format(AGENT_START_PARAM, SIMULATOR_DELAY,
+                            jpsResult.getPid() + "-" + jpsResult.getAppName()));
                 }
-                LogUtil.info("PID: " + str + ", attach success");
+                LogUtil.info("PID: " + jpsResult.getPid() + ", attach success");
             } catch (Throwable e) {
-                deletePidFiles(Collections.singletonList(str));
-                LogUtil.info("PID: " + str + ", attach fail, errorMsg: " + Arrays.toString(e.getStackTrace()));
+                deletePidFiles(Collections.singletonList(jpsResult.getPid()));
+                LogUtil.info(
+                    "PID: " + jpsResult.getPid() + ", attach fail, errorMsg: " + Arrays.toString(e.getStackTrace()));
             } finally {
                 if (null != vm) {
                     vm.detach();
@@ -142,7 +144,7 @@ public class LiteLauncher {
      *
      * @param systemProcessList 进程列表
      */
-    private static List<String> getAttachPidList(List<JpsResult> systemProcessList) {
+    private static List<JpsResult> getAttachList(List<JpsResult> systemProcessList) {
         // 读取文件获取需要跳过的应用名
         List<String> ignoreApps = ignoreAppList();
         File directory = new File(PIDS_DIRECTORY_PATH);
@@ -150,7 +152,7 @@ public class LiteLauncher {
             //如果目录不存在则进行创建
             directory.mkdirs();
         }
-        List<String> attachPidList = new ArrayList<>();
+        List<JpsResult> attachList = new ArrayList<>();
         for (JpsResult jpsResult : systemProcessList) {
             // 过滤数据
             if (!jpsResult.isLegal()
@@ -168,7 +170,7 @@ public class LiteLauncher {
                         if (!file.exists()) {
                             file.createNewFile();
                             //如果创建了则代表需要attach
-                            attachPidList.add(jpsResult.getPid());
+                            attachList.add(jpsResult);
                         }
                     }
                 }
@@ -176,7 +178,7 @@ public class LiteLauncher {
                 LogUtil.error(Arrays.toString(e.getStackTrace()));
             }
         }
-        return attachPidList;
+        return attachList;
     }
 
     /**

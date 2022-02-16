@@ -423,17 +423,20 @@ public class CoreConfig {
      * @return 应用名称
      */
     public String getAppName() {
-        //String value = getPropertyInAll("simulator.app.name");
-        //if (StringUtils.isBlank(value)) {
-        //    value = getPropertyInAll("pradar.project.name");
-        //}
-        //if (StringUtils.isBlank(value)) {
-        //    value = getPropertyInAll("app.name");
-        //}
+        String value = getPropertyInAll("simulator.app.name");
+        if (StringUtils.isBlank(value)) {
+            value = getPropertyInAll("pradar.project.name");
+        }
+        if (StringUtils.isBlank(value)) {
+            value = getPropertyInAll("app.name");
+        }
 
-        // takin lite项目应用名改成：进程号-进程名
-        int pid = getPid();
-        return pid + "-" + pidName();
+        return value != null ? value : "default";
+
+        //
+        //// takin lite项目应用名改成：进程号-进程名
+        //int pid = getPid();
+        //return pid + "-" + pidName();
     }
 
     /**

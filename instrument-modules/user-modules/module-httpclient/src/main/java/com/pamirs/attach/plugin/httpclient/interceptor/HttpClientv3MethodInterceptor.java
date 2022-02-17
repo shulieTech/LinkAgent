@@ -80,7 +80,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                                 return null;
                             }
                             HttpMethod method = (HttpMethod) config.getArgs().get("extraMethod");
-                            byte[] bytes = JSONObject.toJSONBytes(config.getScriptContent());
+                            byte[] bytes = config.getScriptContent().getBytes();
                             Reflect.on(method).set("responseBody", bytes);
                             ProcessController.returnImmediately(int.class, 200);
                         } catch (ProcessControlException pe) {

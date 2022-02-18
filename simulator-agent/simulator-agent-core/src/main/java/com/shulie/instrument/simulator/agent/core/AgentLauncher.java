@@ -14,21 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.core;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.instrument.Instrumentation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
-
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
@@ -37,11 +23,7 @@ import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
-import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.ReloadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
+import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
 import com.sun.tools.attach.VirtualMachine;
@@ -50,6 +32,15 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.lang.instrument.Instrumentation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Agent启动器
@@ -86,6 +77,7 @@ public class AgentLauncher {
     private final Instrumentation instrumentation;
     private final ClassLoader parent;
     private final boolean usePremain;
+    private final boolean useAgentmain;
 
     private int startMode = START_MODE_ATTACH;
 
@@ -107,6 +99,7 @@ public class AgentLauncher {
             }
         }
         this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", false);
+        this.useAgentmain = agentConfig.getBooleanProperty("simulator.use.agentmain", false);
     }
 
     /**
@@ -141,14 +134,19 @@ public class AgentLauncher {
             logger.debug("AGENT: prepare to attach agent: descriptor={}, agentJarPath={}, config={}", descriptor,
                 agentJarPath, config);
         }
-        //针对docker pid小于等于5的使用premain方式
-        //如果是 main 方法执行， 强制使用 premain 模式
-        if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
-            startWithPremain(agentJarPath, config);
-            startMode = START_MODE_PREMAIN;
-            logger.info("AGENT: simulator with premain mode start successful.");
-            return;
+
+        //默认不是用agentMain，判断可以不用premain，则使用agentMain
+        if (!useAgentmain){
+            //针对docker pid小于等于5的使用premain方式
+            //如果是 main 方法执行， 强制使用 premain 模式
+            if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
+                startWithPremain(agentJarPath, config);
+                startMode = START_MODE_PREMAIN;
+                logger.info("AGENT: simulator with premain mode start successful.");
+                return;
+            }
         }
+
 
         try {
             VirtualMachineDescriptor virtualMachineDescriptor = null;
@@ -673,4 +671,5 @@ public class AgentLauncher {
         this.frameworkClassLoader.closeIfPossible();
         this.frameworkClassLoader = null;
     }
+
 }

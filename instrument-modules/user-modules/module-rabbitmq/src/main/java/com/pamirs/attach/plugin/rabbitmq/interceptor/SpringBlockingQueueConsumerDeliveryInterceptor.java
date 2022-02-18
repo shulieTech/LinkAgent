@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.LastMqWhiteListHolder;
@@ -61,8 +60,7 @@ import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 @Destroyable(RabbitmqDestroy.class)
 public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterceptorAdaptor {
 
-    public static final ConcurrentHashMap<String, Object> RUNNING_CONTAINER
-        = new ConcurrentHashMap<String, Object>();
+    public static final ConcurrentHashMap<String, Object> RUNNING_CONTAINER = new ConcurrentHashMap<String, Object>();
     private static final ConcurrentHashMap<String, Date> CONTAINER_AT_LAST_RESTART_DATE
         = new ConcurrentHashMap<String, Date>();
 
@@ -89,15 +87,13 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         final String[] queueNames = abstractMessageListenerContainer.getQueueNames();
         try {
             final Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
-            if (!Pradar.isClusterTestPrefix(cacheKey) && RUNNING_CONTAINER.putIfAbsent(cacheKey, new Object())
-                == null) {
+            if (!Pradar.isClusterTestPrefix(cacheKey) && RUNNING_CONTAINER.putIfAbsent(cacheKey, new Object()) == null) {
                 final String beanName = Reflect.on(abstractMessageListenerContainer).get("beanName");
                 final AbstractMessageListenerContainer ptContainer = abstractMessageListenerContainer.getClass()
                     .newInstance();
                 final List<String> ptQueueNameList = new ArrayList<String>();
                 for (String queueName : queueNames) {
-                    if (!mqWhiteList.contains(queueName + "#")
-                        && !mqWhiteList.contains("#" + queueName)) {
+                    if (!mqWhiteList.contains(queueName + "#") && !mqWhiteList.contains("#" + queueName)) {
                         continue;
                     }
                     ptQueueNameList.add(Pradar.addClusterTestPrefix(queueName));
@@ -113,18 +109,10 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                     if (!StringUtil.isEmpty(beanName)) {
                         ptContainer.setBeanName(Pradar.addClusterTestPrefix(beanName));
                     }
-                    initAbstractMessageListenerContainer(abstractMessageListenerContainer, ptContainer,
-                        "errorHandler",
-                        "messageConverter",
-                        "acknowledgeMode",
-                        "channelTransacted",
-                        "autoStartup",
-                        "phase",
-                        "applicationContext",
-                        "messageListener"
-                    );
-                    final ConnectionFactory busConnectionFactory
-                        = abstractMessageListenerContainer.getConnectionFactory();
+                    initAbstractMessageListenerContainer(abstractMessageListenerContainer, ptContainer, "errorHandler",
+                        "messageConverter", "acknowledgeMode", "channelTransacted", "autoStartup", "phase",
+                        "applicationContext", "messageListener");
+                    final ConnectionFactory busConnectionFactory = abstractMessageListenerContainer.getConnectionFactory();
                     /*
                     if this bus Container use CachingConnectionFactory and cacheMode is CHANNEL, create new
                     CachingConnectionFactory for
@@ -134,8 +122,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                     also see com.rabbitmq.client.impl.AMQConnection.doFinalShutdown
                      */
                     if (busConnectionFactory instanceof CachingConnectionFactory
-                        && ((CachingConnectionFactory)busConnectionFactory).getCacheMode().equals(
-                        CacheMode.CHANNEL)) {
+                        && ((CachingConnectionFactory)busConnectionFactory).getCacheMode().equals(CacheMode.CHANNEL)) {
                         CachingConnectionFactory busCachingConnectionFactory
                             = (CachingConnectionFactory)busConnectionFactory;
                         CachingConnectionFactory ptConnectionFactory = new CachingConnectionFactory();
@@ -150,8 +137,8 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                             LOGGER.warn("[RabbitMQ] CachingConnectionFactory find field addresses fail", e);
                         }
                         ptConnectionFactory.setUsername(busCachingConnectionFactory.getUsername());
-                        ptConnectionFactory.setPassword(busCachingConnectionFactory.getRabbitConnectionFactory()
-                            .getPassword());
+                        ptConnectionFactory.setPassword(
+                            busCachingConnectionFactory.getRabbitConnectionFactory().getPassword());
                         ptConnectionFactory.setVirtualHost(busCachingConnectionFactory.getVirtualHost());
                         ptConnectionFactory.setConnectionTimeout(
                             busCachingConnectionFactory.getRabbitConnectionFactory().getConnectionTimeout());
@@ -160,51 +147,28 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                                 .getThreadFactory());
                         ptConnectionFactory.setRequestedHeartBeat(
                             busCachingConnectionFactory.getRabbitConnectionFactory().getRequestedHeartbeat());
-                        initCachingConnectionFactory(busCachingConnectionFactory, ptConnectionFactory,
-                            "applicationContext",
-                            "connectionLimit",
-                            "publisherConfirms",
-                            "channelCacheSize",
-                            "channelCheckoutTimeout",
-                            "closeExceptionLogger",
-                            "connectionCacheSize",
-                            "publisherConfirms",
-                            "publisherReturns",
-                            "publisherConfirms",
-                            "connectionNameStrategy",
-                            "executorService");
+                        initCachingConnectionFactory(busCachingConnectionFactory, ptConnectionFactory, "applicationContext",
+                            "connectionLimit", "publisherConfirms", "channelCacheSize", "channelCheckoutTimeout",
+                            "closeExceptionLogger", "connectionCacheSize", "publisherConfirms", "publisherReturns",
+                            "publisherConfirms", "connectionNameStrategy", "executorService");
                         ptConnectionFactory.afterPropertiesSet();
                         ptContainer.setConnectionFactory(ptConnectionFactory);
                     } else {
                         ptContainer.setConnectionFactory(busConnectionFactory);
                     }
                     if (ptContainer instanceof SimpleMessageListenerContainer) {
-                        initSimpleMessageListenerContainer(
-                            (SimpleMessageListenerContainer)abstractMessageListenerContainer,
-                            (SimpleMessageListenerContainer)ptContainer,
-                            "concurrentConsumers",
-                            "maxConcurrentConsumers",
-                            "startConsumerMinInterval",
-                            "stopConsumerMinInterval",
-                            "consecutiveActiveTrigger",
-                            "consecutiveIdleTrigger",
-                            "prefetchCount",
-                            "receiveTimeout",
-                            "defaultRequeueRejected",
-                            "adviceChain",
-                            "recoveryBackOff",
-                            "mismatchedQueuesFatal",
-                            "missingQueuesFatal",
-                            "consumerTagStrategy",
-                            "idleEventInterval",
-                            "applicationEventPublisher");
+                        initSimpleMessageListenerContainer((SimpleMessageListenerContainer)abstractMessageListenerContainer,
+                            (SimpleMessageListenerContainer)ptContainer, "concurrentConsumers", "maxConcurrentConsumers",
+                            "startConsumerMinInterval", "stopConsumerMinInterval", "consecutiveActiveTrigger",
+                            "consecutiveIdleTrigger", "prefetchCount", "receiveTimeout", "defaultRequeueRejected",
+                            "adviceChain", "recoveryBackOff", "mismatchedQueuesFatal", "missingQueuesFatal",
+                            "consumerTagStrategy", "idleEventInterval", "applicationEventPublisher");
                     }
                     ptContainer.afterPropertiesSet();
                     ptContainer.start();
                     LOGGER.info(
                         String.format("[RabbitMQ] shadow consumer create successfully. cacheKey: %s, ptQueueNames: %s",
-                            cacheKey,
-                            Arrays.toString(ptQueueNames)));
+                            cacheKey, Arrays.toString(ptQueueNames)));
                     RUNNING_CONTAINER.put(cacheKey, ptContainer);
                 }
             } else {
@@ -222,8 +186,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                                 new Date(now.getTime() + 60 * 1000));
                             // in a concurrent state, make sure only restart once.
                             if (containerAtLastRestartDate == null || containerAtLastRestartDate.equals(beforeDate)) {
-                                LOGGER.warn(
-                                    String.format("[RabbitMQ] ptContainer restart. cacheKey: %s", cacheKey));
+                                LOGGER.warn(String.format("[RabbitMQ] ptContainer restart. cacheKey: %s", cacheKey));
                                 ptContainer.start();
                             }
                         }
@@ -235,8 +198,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                             for (String queueName : queueNames) {
                                 final String ptQueueName = Pradar.addClusterTestPrefix(queueName);
                                 if ((mqWhiteList.contains(queueName + "#") || (mqWhiteList.contains("#" + queueName)))
-                                    && !ptQueueNameList.contains(
-                                    ptQueueName)) {
+                                    && !ptQueueNameList.contains(ptQueueName)) {
                                     needAddPtQueueSet.add(ptQueueName);
                                 }
                             }
@@ -265,8 +227,6 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         if (message == null) {
             return;
         }
-
-        validatePressureMeasurement(message);
     }
 
     private void initSimpleMessageListenerContainer(SimpleMessageListenerContainer busContainer,
@@ -337,6 +297,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         byte[] body = message.getBody();
         record.setRequestSize(body.length);
         record.setRequest(body);
+        record.setClusterTest(isClusterTest(message));
         Map<String, Object> headers = message.getMessageProperties().getHeaders();
         if (headers != null) {
             Map<String, String> rpcContext = new HashMap<String, String>();
@@ -382,24 +343,18 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
         return record;
     }
 
-    private void validatePressureMeasurement(Message message) {
-        try {
-            Pradar.setClusterTest(false);
-            String queue = message.getMessageProperties().getConsumerQueue();
-            String exchange = message.getMessageProperties().getReceivedExchange();
-            String routingKey = message.getMessageProperties().getReceivedRoutingKey();
-            if (Pradar.isClusterTestPrefix(queue)) {
-                Pradar.setClusterTest(true);
-            } else if (Pradar.isClusterTestPrefix(exchange)) {
-                Pradar.setClusterTest(true);
-            } else if (Pradar.isClusterTestPrefix(routingKey)) {
-                Pradar.setClusterTest(true);
-            }
-        } catch (Throwable e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
+    private boolean isClusterTest(Message message) {
+        String queue = message.getMessageProperties().getConsumerQueue();
+        String exchange = message.getMessageProperties().getReceivedExchange();
+        String routingKey = message.getMessageProperties().getReceivedRoutingKey();
+        if (queue != null) {
+            return Pradar.isClusterTestPrefix(queue);
+        } else if (exchange != null) {
+            return Pradar.isClusterTestPrefix(exchange);
+        } else if (routingKey != null) {
+            return Pradar.isClusterTestPrefix(routingKey);
+        } else {
+            throw new PressureMeasureError("无法识别流量");
         }
     }
 

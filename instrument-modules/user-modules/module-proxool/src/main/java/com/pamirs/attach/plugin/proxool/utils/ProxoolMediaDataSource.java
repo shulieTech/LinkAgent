@@ -14,11 +14,6 @@
  */
 package com.pamirs.attach.plugin.proxool.utils;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
-import javax.sql.DataSource;
-
 import com.pamirs.attach.plugin.common.datasource.WrappedDbMediatorDataSource;
 import com.pamirs.attach.plugin.common.datasource.biz.BizConnection;
 import com.pamirs.attach.plugin.common.datasource.normal.NormalConnection;
@@ -31,6 +26,10 @@ import com.shulie.druid.util.JdbcUtils;
 import org.logicalcobwebs.proxool.ProxoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  * @Auther: vernon
@@ -68,7 +67,7 @@ public class ProxoolMediaDataSource extends WrappedDbMediatorDataSource<ProxoolD
                     }
                     Connection hikariConnection = dataSourceBusiness.getConnection();
                     return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username,
-                        dbType);
+                        dbType, "proxool");
                 } else {
                     if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");

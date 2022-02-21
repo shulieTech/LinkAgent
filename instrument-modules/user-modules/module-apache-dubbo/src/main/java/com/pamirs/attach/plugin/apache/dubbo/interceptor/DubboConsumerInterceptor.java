@@ -113,10 +113,12 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                         //for 2.7.5
                         java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
                         future.complete(new AppResponse(param));
-                        return reflect.create(future, invocation);
+                        Reflect result = reflect.create(future, invocation);
+                        return result.get();
                     } catch (ReflectException e) {
                         //for 2.7.3
-                        return reflect.create(invocation);
+                        Reflect result = reflect.create(invocation);
+                        return result.get();
                     }
                 } catch (Exception e) {
                     logger.error("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);

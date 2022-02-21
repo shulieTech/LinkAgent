@@ -21,11 +21,14 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
@@ -51,6 +54,41 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         }
         return url + path;
     }
+
+
+    private static ExecutionStrategy fixJsonStrategy =
+            new JsonMockStrategy() {
+                @Override
+                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+
+                    MatchConfig config = (MatchConfig) params;
+                    if (config.getScriptContent().contains("return")) {
+                        return null;
+                    }
+                    if (null == config.getArgs().get("futureCallback")){
+                        return null;
+                    }
+                    //现在先暂时注释掉因为只有jdk8以上才能用
+                    FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
+                    StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+                    try {
+                        HttpEntity entity = null;
+                        entity = new StringEntity(config.getScriptContent());
+
+                        BasicHttpResponse response = new BasicHttpResponse(statusline);
+                        response.setEntity(entity);
+                        java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
+                        future.complete(response);
+                        futureCallback.completed(response);
+                        ProcessController.returnImmediately(returnType, future);
+                    } catch (ProcessControlException pe) {
+                        throw pe;
+                    }
+                    catch (Exception e) {
+                    }
+                    return null;
+                }
+            };
 
     @Override
     public void doBefore(final Advice advice) throws ProcessControlException {
@@ -86,6 +124,9 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
             config.addArgs("futureCallback", args[2]);
         } else if (args.length == 4){
             config.addArgs("futureCallback", args[3]);
+        }
+        if (config.getStrategy() instanceof JsonMockStrategy){
+            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override

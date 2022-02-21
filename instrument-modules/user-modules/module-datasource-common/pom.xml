@@ -15,12 +15,13 @@
     <properties>
         <module-name>datasource-common</module-name>
     </properties>
+    <version>2.0.0.0</version>
 
     <dependencies>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.core.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -32,7 +33,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

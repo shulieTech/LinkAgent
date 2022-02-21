@@ -149,7 +149,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (IOException e) {
-            logger.warn("do http request fail!: url=" + url + "; reqeust:" + request, e);
+            logger.error("do http request fail!: url=" + url + "; reqeust:" + request, e);
             return null;
         } finally {
             closeQuietly(input);

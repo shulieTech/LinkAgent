@@ -11,6 +11,7 @@
     <artifactId>module-aerospike</artifactId>
     <name>${project.artifactId} ${project.version}</name>
 
+    <version>2.0.0.0</version>
     <properties>
         <module-name>aerospike</module-name>
     </properties>
@@ -19,14 +20,14 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.core.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-register</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.register.version}</version>
             <scope>provided</scope>
         </dependency>
 

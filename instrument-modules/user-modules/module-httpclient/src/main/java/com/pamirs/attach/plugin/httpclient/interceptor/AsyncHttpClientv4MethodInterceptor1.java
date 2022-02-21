@@ -14,11 +14,7 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import java.net.SocketTimeoutException;
-import java.util.Map;
-
 import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -31,17 +27,16 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.StatusLine;
+import org.apache.http.*;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
+
+import java.net.SocketTimeoutException;
+import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -70,7 +65,7 @@ public class AsyncHttpClientv4MethodInterceptor1 extends AroundInterceptor {
 
         //判断是否在白名单中
         String url = getService(request.getURI().getScheme(), host, port, path);
-        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
         Header[] wHeaders = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
         if (wHeaders != null && wHeaders.length > 0) {
             config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, wHeaders[0].getValue());
@@ -80,25 +75,33 @@ public class AsyncHttpClientv4MethodInterceptor1 extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
+        if (args.length == 2){
+            config.addArgs("futureCallback", args[1]);
+        } else if (args.length == 3){
+            config.addArgs("futureCallback", args[2]);
+        }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
+                if (null == config.getArgs().get("futureCallback")){
+                    return null;
+                }
                 //现在先暂时注释掉因为只有jdk8以上才能用
-                //java.util.concurrent.CompletableFuture<HttpResponse> future = new java.util.concurrent.CompletableFuture<HttpResponse>();
-                //StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
-                //try {
-                //    HttpEntity entity = null;
-                //    if (param instanceof String) {
-                //        entity = new StringEntity(String.valueOf(param));
-                //    } else {
-                //        entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
-                //    }
-                //    BasicHttpResponse response = new BasicHttpResponse(statusline);
-                //    response.setEntity(entity);
-                //    future.complete(response);
-                //    return future;
-                //} catch (Exception e) {
-                //}
+                FutureCallback<HttpResponse> future = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
+                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+                try {
+                    HttpEntity entity = null;
+                    if (param instanceof String) {
+                        entity = new StringEntity(String.valueOf(param));
+                    } else {
+                        entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                    }
+                    BasicHttpResponse response = new BasicHttpResponse(statusline);
+                    response.setEntity(entity);
+                    future.completed(response);
+                    return future;
+                } catch (Exception e) {
+                }
                 return null;
             }
         });

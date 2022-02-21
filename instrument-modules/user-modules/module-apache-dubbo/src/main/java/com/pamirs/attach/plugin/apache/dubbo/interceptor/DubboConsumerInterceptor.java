@@ -14,9 +14,11 @@
  */
 package com.pamirs.attach.plugin.apache.dubbo.interceptor;
 
+import com.google.gson.Gson;
 import com.pamirs.attach.plugin.apache.dubbo.DubboConstants;
-import com.pamirs.pradar.PradarCoreUtils;
-import com.pamirs.pradar.PradarService;
+import com.pamirs.attach.plugin.apache.dubbo.utils.ClassTypeUtils;
+import com.pamirs.pradar.*;
+import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -24,6 +26,7 @@ import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
@@ -107,7 +110,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                         try {
                             //for 2.7.5
                             java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
-                            future.complete(new AppResponse(config.getScriptContent()));
+                            future.complete(new AppResponse(getResultByType(invocation.getReturnType(),config.getScriptContent())));
                             Reflect result = reflect.create(future, invocation);
                             ProcessController.returnImmediately(returnType, result.get());
                         } catch (ReflectException e) {
@@ -115,6 +118,8 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                             Reflect result = reflect.create(invocation);
                             ProcessController.returnImmediately(returnType, result.get());
                         }
+                    } catch (ProcessControlException pe) {
+                        throw pe;
                     } catch (Exception e) {
                         logger.error("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);
                         throw new ReflectException("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);
@@ -122,6 +127,46 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                     return null;
                 }
             };
+
+    private static final Gson gson = new Gson();
+
+    private static final Object getResultByType(Class classType, String result){
+        try {
+            String classTypeName = classType.getName();
+            int code = -1;
+            if (ClassTypeUtils.getType2Code().containsKey(classTypeName)){
+                code = ClassTypeUtils.getType2Code().get(classTypeName);
+            }
+            switch (code){
+                case ClassTypeUtils.INT:
+                    return Integer.valueOf(result);
+                case ClassTypeUtils.BOOLEAN:
+                    return Boolean.valueOf(result);
+                case ClassTypeUtils.FLOAT:
+                    return Float.valueOf(result);
+                case ClassTypeUtils.DOUBLE:
+                    return Double.valueOf(result);
+                case ClassTypeUtils.LONG:
+                    return Long.valueOf(result);
+                case ClassTypeUtils.SHORT:
+                    return Short.valueOf(result);
+                case ClassTypeUtils.STRING:
+                    return result;
+                default:
+                    return gson.fromJson(result, classType);
+            }
+        }catch (Throwable t){
+            logger.error("dubbo mock返回值类型转换异常,classType is"  + classType.getName());
+            ErrorReporter.buildError()
+                    .setErrorType(ErrorTypeEnum.mock)
+                    .setErrorCode("mock-0003")
+                    .setMessage("mock处理异常")
+                    .setDetail("dubbo mock返回值类型转换异常,classType is"  + classType.getName())
+                    .report();
+            throw new PradarException("dubbo mock返回值类型转换异常,classType is " + classType.getName());
+        }
+
+    }
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {

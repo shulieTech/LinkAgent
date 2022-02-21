@@ -87,7 +87,7 @@ public class AsyncHttpClientv4MethodInterceptor1 extends AroundInterceptor {
                     return null;
                 }
                 //现在先暂时注释掉因为只有jdk8以上才能用
-                FutureCallback<HttpResponse> future = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
+                FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
                 StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
                 try {
                     HttpEntity entity = null;
@@ -98,7 +98,9 @@ public class AsyncHttpClientv4MethodInterceptor1 extends AroundInterceptor {
                     }
                     BasicHttpResponse response = new BasicHttpResponse(statusline);
                     response.setEntity(entity);
-                    future.completed(response);
+                    futureCallback.completed(response);
+                    java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
+                    future.complete(response);
                     return future;
                 } catch (Exception e) {
                 }

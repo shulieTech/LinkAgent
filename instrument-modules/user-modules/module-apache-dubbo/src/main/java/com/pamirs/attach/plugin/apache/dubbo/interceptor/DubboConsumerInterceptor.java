@@ -20,10 +20,13 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -39,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 @ListenerBehavior(isFilterBusinessData = true)
 public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
-    private final Logger logger = LoggerFactory.getLogger(DubboConsumerInterceptor.class);
+    private static final Logger logger = LoggerFactory.getLogger(DubboConsumerInterceptor.class);
 
     public void initConsumer(Invoker<?> invoker, Invocation invocation) {
         RpcContext.getContext()
@@ -80,6 +83,46 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         return false;
     }
 
+    private static ExecutionStrategy fixJsonStrategy =
+            new JsonMockStrategy() {
+                @Override
+                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+
+                    MatchConfig config = (MatchConfig) params;
+                    if (config.getScriptContent().contains("return")) {
+                        return null;
+                    }
+                    RpcInvocation invocation = (RpcInvocation) config.getArgs().get("invocation");
+                    try {
+                        //for 2.8.4
+                        return Reflect.on("org.apache.dubbo.rpc.RpcResult").create(config.getScriptContent()).get();
+                    } catch (Exception e) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
+                        }
+                        //
+                    }
+                    try {
+                        Reflect reflect = Reflect.on("org.apache.dubbo.rpc.AsyncRpcResult");
+                        try {
+                            //for 2.7.5
+                            java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
+                            future.complete(new AppResponse(config.getScriptContent()));
+                            Reflect result = reflect.create(future, invocation);
+                            ProcessController.returnImmediately(returnType, result.get());
+                        } catch (ReflectException e) {
+                            //for 2.7.3
+                            Reflect result = reflect.create(invocation);
+                            ProcessController.returnImmediately(returnType, result.get());
+                        }
+                    } catch (Exception e) {
+                        logger.error("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);
+                        throw new ReflectException("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);
+                    }
+                    return null;
+                }
+            };
+
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
@@ -92,8 +135,12 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("isInterface", Boolean.TRUE);
         config.addArgs("class", interfaceName);
         config.addArgs("method", methodName);
+        config.addArgs("invocation", invocation);
         if(isShentongEvent(interfaceName)){
             config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, "true");
+        }
+        if (config.getStrategy() instanceof JsonMockStrategy){
+            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
             @Override

@@ -1077,14 +1077,16 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
             Map<String, List<String>> data = map.getObject(DATA, new TypeReference<Map<String, List<String>>>() {
             }.getType());
-            Set<String> sets = new HashSet<String>();
-            for (Map.Entry<String, List<String>> entry : data.entrySet()) {
-                if (StringUtils.equals(entry.getKey(), AppNameUtils.appName())) {
-                    sets.addAll(entry.getValue());
+            if (data != null){
+                Set<String> sets = new HashSet<String>();
+                for (Map.Entry<String, List<String>> entry : data.entrySet()) {
+                    if (StringUtils.equals(entry.getKey(), AppNameUtils.appName())) {
+                        sets.addAll(entry.getValue());
+                    }
                 }
-            }
-            if (!sets.isEmpty()) {
-                GlobalConfig.getInstance().setTraceRules(sets);
+                if (!sets.isEmpty()) {
+                    GlobalConfig.getInstance().setTraceRules(sets);
+                }
             }
         } catch (Throwable e) {
             logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);

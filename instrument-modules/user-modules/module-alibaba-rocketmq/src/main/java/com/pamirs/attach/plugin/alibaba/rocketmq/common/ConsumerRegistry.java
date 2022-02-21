@@ -30,7 +30,6 @@ import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
-import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -70,6 +69,9 @@ public class ConsumerRegistry {
                 defaultMQPushConsumer.shutdown();
             }
         });
+    private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> hooks
+        = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
+
     private static ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object> shadowConsumers
         = new ConcurrentWeakHashMap<DefaultMQPushConsumer/*shadow consumer*/, Object>();
     private static ConcurrentHashMap<DefaultMQPushConsumer, PradarEventListener> listeners
@@ -91,6 +93,7 @@ public class ConsumerRegistry {
         shadowConsumers.clear();
         listeners.clear();
         businessConsumerHookedSet.clear();
+        hooks.clear();
     }
 
     public static DefaultMQPushConsumer getConsumer(Object target) {
@@ -144,7 +147,6 @@ public class ConsumerRegistry {
      * @return 返回注册是否成功, 如果
      */
     public static boolean registerConsumer(DefaultMQPushConsumer businessConsumer) {
-        registerBizConsumerHook(businessConsumer);
         DefaultMQPushConsumer shadowConsumer = caches.get(businessConsumer);
         if (shadowConsumer != null) {
             return false;
@@ -181,22 +183,6 @@ public class ConsumerRegistry {
         return true;
     }
 
-    static Set<DefaultMQPushConsumer> bizConsumerHook = new HashSet<DefaultMQPushConsumer>();
-
-    private static void registerBizConsumerHook(DefaultMQPushConsumer businessConsumer) {
-        if (bizConsumerHook.contains(businessConsumer)) {
-            return;
-        }
-        synchronized (ConsumerRegistry.class) {
-            if (bizConsumerHook.contains(businessConsumer)) {
-                return;
-            }
-            businessConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-            logger.info("register consumer hook to consumer : {} hashCode : {}", businessConsumer, businessConsumer.hashCode());
-            bizConsumerHook.add(businessConsumer);
-        }
-    }
-
     private static String getInstanceName() {
         String instanceName = System.getProperty("rocketmq.client.name", "DEFAULT");
         if (instanceName.equals("DEFAULT")) {
@@ -204,6 +190,8 @@ public class ConsumerRegistry {
         }
         return instanceName;
     }
+
+    private static Map<DefaultMQPushConsumer, Long> lastWhitelistWarnTimes = new ConcurrentWeakHashMap<DefaultMQPushConsumer, Long>();
 
     /**
      * 构建 DefaultMQPushConsumer
@@ -226,10 +214,19 @@ public class ConsumerRegistry {
             }
         }
         if (map != null) {
+            Long lastWhitelistWarnTime = lastWhitelistWarnTimes.get(businessConsumer);
+            if(lastWhitelistWarnTime == null){
+                lastWhitelistWarnTime = 0L;
+            }
+            long now = System.currentTimeMillis();
+            long passTime = now - lastWhitelistWarnTime;
             for (Map.Entry<String, SubscriptionData> entry : map.entrySet()) {
                 String topic = entry.getKey();
                 if (!isPermitInitConsumer(businessConsumer, topic)) {
-                    logger.warn("Alibaba-RocketMQ topic : {} is not in whitelist!", topic);
+                    if (passTime > 5000) {
+                        logger.warn("Alibaba-RocketMQ topic : {} is not in whitelist!", topic);
+                        lastWhitelistWarnTimes.put(businessConsumer, now);
+                    }
                     continue;
                 }
                 topicsInWhiteList.put(entry.getKey(), entry.getValue());
@@ -330,9 +327,6 @@ public class ConsumerRegistry {
                 }
             }
         }
-
-        defaultMQPushConsumer.getDefaultMQPushConsumerImpl().registerConsumeMessageHook(new PushConsumeMessageHookImpl());
-        logger.info("register shadow consumer hook to consumer : {} hashCode : {}", defaultMQPushConsumer, defaultMQPushConsumer.hashCode());
 
         for (Map.Entry<String, SubscriptionData> entry : topicsInWhiteList.entrySet()) {
             SubscriptionData subscriptionData = entry.getValue();

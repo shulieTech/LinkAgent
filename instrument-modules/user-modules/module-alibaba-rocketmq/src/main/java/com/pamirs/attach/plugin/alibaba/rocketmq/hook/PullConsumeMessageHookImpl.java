@@ -14,10 +14,17 @@
  */
 package com.pamirs.attach.plugin.alibaba.rocketmq.hook;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.alibaba.rocketmq.client.hook.ConsumeMessageContext;
 import com.alibaba.rocketmq.client.hook.ConsumeMessageHook;
 import com.alibaba.rocketmq.common.message.MessageAccessor;
 import com.alibaba.rocketmq.common.message.MessageExt;
+
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.MQTraceBean;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.MQTraceConstants;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.MQTraceContext;
@@ -28,35 +35,33 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.shulie.instrument.simulator.message.ConcurrentWeakHashMap;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceConstants {
     public static final String RETRYSTR = "%RETRY%";
     public static final String DLQSTR = "%DLQ%";
     private final static Logger LOGGER = LoggerFactory.getLogger(PullConsumeMessageHookImpl.class.getName());
+    private final static ConcurrentWeakHashMap<ConsumeMessageContext, MQTraceContext> contexts
+        = new ConcurrentWeakHashMap<ConsumeMessageContext, MQTraceContext>();
 
     @Override
     public String hookName() {
-        return "PradarPullConsumeMessageHook";
+        return "PullConsumeMessageHookImpl";
     }
 
     @Override
     public void consumeMessageBefore(ConsumeMessageContext context) {
         try {
             if (context == null
-                    || context.getMsgList() == null || context.getMsgList().isEmpty()) {
+                || context.getMsgList() == null || context.getMsgList().isEmpty()) {
                 return;
             }
+
             MQTraceContext mqTraceContext = new MQTraceContext();
-            context.setMqTraceContext(mqTraceContext);
+            contexts.put(context, mqTraceContext);
             mqTraceContext.setMqType(MQType.ROCKETMQ);
             mqTraceContext.setTopic(context.getMq().getTopic());
             mqTraceContext.setGroup(context.getConsumerGroup());
@@ -71,16 +76,18 @@ public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 MQTraceBean traceBean = new MQTraceBean();
 
                 boolean isClusterTest = msg.getTopic() != null &&
-                        (Pradar.isClusterTestPrefix(msg.getTopic())
-                                || Pradar.isClusterTestPrefix(msg.getTopic(), RETRYSTR)
-                                || Pradar.isClusterTestPrefix(msg.getTopic(), DLQSTR));
+                    (Pradar.isClusterTestPrefix(msg.getTopic())
+                        || Pradar.isClusterTestPrefix(msg.getTopic(), RETRYSTR)
+                        || Pradar.isClusterTestPrefix(msg.getTopic(), DLQSTR));
                 // 消息的properties是否包含Pradar.PRADAR_CLUSTER_TEST_KEY
-                isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
+                isClusterTest = isClusterTest || ClusterTestUtils.isClusterTestRequest(
+                    msg.getProperty(PradarService.PRADAR_CLUSTER_TEST_KEY));
                 if (isClusterTest) {
                     traceBean.setClusterTest(Boolean.TRUE.toString());
                 }
                 if (silence && isClusterTest) {
-                    throw new PressureMeasureError(this.getClass().getName() + "silence module ! can not handle cluster test data");
+                    throw new PressureMeasureError(
+                        this.getClass().getName() + "silence module ! can not handle cluster test data");
                 }
 
                 Map<String, String> rpcContext = new HashMap<String, String>();
@@ -104,7 +111,7 @@ public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 String storeHost = "";
                 String port = "";
                 if (msg.getStoreHost() != null && msg.getStoreHost() instanceof InetSocketAddress) {
-                    InetSocketAddress address = (InetSocketAddress) msg.getStoreHost();
+                    InetSocketAddress address = (InetSocketAddress)msg.getStoreHost();
                     storeHost = address.getAddress() == null ? null : address.getAddress().getHostAddress();
                     port = String.valueOf(address.getPort());
                 } else {
@@ -141,14 +148,17 @@ public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
         }
     }
 
-
     @Override
     public void consumeMessageAfter(ConsumeMessageContext context) {
         try {
             if (context == null || context.getMsgList() == null || context.getMsgList().isEmpty()) {
                 return;
             }
-            MQTraceContext mqTraceContext = (MQTraceContext) context.getMqTraceContext();
+
+            MQTraceContext mqTraceContext = contexts.remove(context);
+            if (mqTraceContext == null) {
+                return;
+            }
             mqTraceContext.setSuccess(context.isSuccess());
             mqTraceContext.setStatus(context.getStatus());
             MQConsumeMessageTraceLog.consumeMessageAfter(mqTraceContext);

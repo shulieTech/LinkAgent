@@ -39,7 +39,7 @@ public class AtomikosNormalConnection extends NormalConnection implements Dynami
      * @param dbType
      */
     public AtomikosNormalConnection(DataSource dataSource, Connection connection, String dbConnectionKey, String url, String username, String dbType) {
-        super(dataSource, connection, dbConnectionKey, url, username, dbType);
+        super(dataSource, connection, dbConnectionKey, url, username, dbType, "other");
     }
 
     @Override

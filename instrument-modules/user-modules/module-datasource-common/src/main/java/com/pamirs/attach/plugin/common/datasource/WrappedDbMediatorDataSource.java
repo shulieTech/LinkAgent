@@ -56,6 +56,10 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
      */
     public abstract String getUsername(T datasource);
 
+    protected String getMidType(){
+        return "other";
+    }
+
     /**
      * 根据数据源获取url
      *
@@ -315,7 +319,8 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
                     if (dataSourceBusiness == null) {
                         throw new PressureMeasureError("Business dataSource is null.");
                     }
-                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(), dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(), dbConnectionKey, url, username, dbType,
+                        getMidType());
                 } else {
                     //影子库
                     if (dataSourcePerformanceTest == null) {
@@ -364,7 +369,8 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
                     if (dataSourceBusiness == null) {
                         throw new PressureMeasureError("Business dataSource is null.");
                     }
-                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(username, password), dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(username, password), dbConnectionKey, url, username, dbType,
+                        getMidType());
                 } else {
                     if (dataSourcePerformanceTest == null) {
                         throw new PressureMeasureError("Performance dataSource is null.");

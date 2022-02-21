@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
+
 /**
  * Agent启动器
  *
@@ -83,6 +84,7 @@ public class AgentLauncher {
     private final Instrumentation instrumentation;
     private final ClassLoader parent;
     private final boolean usePremain;
+    private final boolean useAgentmain;
 
     private int startMode = START_MODE_ATTACH;
 
@@ -104,6 +106,7 @@ public class AgentLauncher {
             }
         }
         this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", false);
+        this.useAgentmain = agentConfig.getBooleanProperty("simulator.use.agentmain", false);
     }
 
     /**
@@ -138,14 +141,19 @@ public class AgentLauncher {
             logger.debug("AGENT: prepare to attach agent: descriptor={}, agentJarPath={}, config={}", descriptor,
                 agentJarPath, config);
         }
-        //针对docker pid小于等于5的使用premain方式
-        //如果是 main 方法执行， 强制使用 premain 模式
-        if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
-            startWithPremain(agentJarPath, config);
-            startMode = START_MODE_PREMAIN;
-            logger.info("AGENT: simulator with premain mode start successful.");
-            return;
+
+        //默认不是用agentMain，判断可以不用premain，则使用agentMain
+        if (!useAgentmain){
+            //针对docker pid小于等于5的使用premain方式
+            //如果是 main 方法执行， 强制使用 premain 模式
+            if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
+                startWithPremain(agentJarPath, config);
+                startMode = START_MODE_PREMAIN;
+                logger.info("AGENT: simulator with premain mode start successful.");
+                return;
+            }
         }
+
 
         try {
             VirtualMachineDescriptor virtualMachineDescriptor = null;
@@ -782,4 +790,5 @@ public class AgentLauncher {
         this.frameworkClassLoader.closeIfPossible();
         this.frameworkClassLoader = null;
     }
+
 }

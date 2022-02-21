@@ -170,6 +170,8 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                         String.format("[RabbitMQ] shadow consumer create successfully. cacheKey: %s, ptQueueNames: %s",
                             cacheKey, Arrays.toString(ptQueueNames)));
                     RUNNING_CONTAINER.put(cacheKey, ptContainer);
+                }else {
+                    RUNNING_CONTAINER.remove(cacheKey);
                 }
             } else {
                 final Object value = RUNNING_CONTAINER.get(cacheKey);
@@ -212,6 +214,8 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                             }
                         }
                     }
+                }else {
+                    RUNNING_CONTAINER.remove(cacheKey);
                 }
             }
         } catch (Throwable e) {

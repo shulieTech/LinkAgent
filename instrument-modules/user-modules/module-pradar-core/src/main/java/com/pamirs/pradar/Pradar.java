@@ -2398,34 +2398,33 @@ public final class Pradar {
      * @return
      */
     static private boolean isFilterContext(InvokeContext ctx) {
+        if (ctx.isDebug()) {
+            return false;
+        }
+        if (TraceIdGenerator.getNextId(ctx.getTraceId()) == 0) {
+            return false;
+        }
+
+        if (!ctx.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()) {
+            return true;
+        }
+
+        if (PradarSwitcher.isRpcOff()) {
+            return true;
+        }
+
+        if (!PradarSwitcher.isTraceEnabled()) {
+            return true;
+        }
+
+        if (!ctx.isTraceSampled()) {
+            return true;
+        }
+
+        if (ctx.logType < 0) {
+            return true;
+        }
         return false;
-        //if (ctx.isDebug()) {
-        //    return false;
-        //}
-        //if (TraceIdGenerator.getNextId(ctx.getTraceId()) == 0) {
-        //    return false;
-        //}
-        //
-        //if (!ctx.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()) {
-        //    return true;
-        //}
-        //
-        //if (PradarSwitcher.isRpcOff()) {
-        //    return true;
-        //}
-        //
-        //if (!PradarSwitcher.isTraceEnabled()) {
-        //    return true;
-        //}
-        //
-        //if (!ctx.isTraceSampled()) {
-        //    return true;
-        //}
-        //
-        //if (ctx.logType < 0) {
-        //    return true;
-        //}
-        //return false;
     }
 
     /**

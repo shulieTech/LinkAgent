@@ -129,7 +129,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                         ptConnectionFactory.setHost(busCachingConnectionFactory.getHost());
                         ptConnectionFactory.setPort(busCachingConnectionFactory.getPort());
                         try {
-                            final Address[] addresses = Reflect.on(busCachingConnectionFactory).get("addresses");
+                            final Object addresses = Reflect.on(busCachingConnectionFactory).get("addresses");
                             if (addresses != null) {
                                 Reflect.on(ptConnectionFactory).set("addresses", addresses);
                             }

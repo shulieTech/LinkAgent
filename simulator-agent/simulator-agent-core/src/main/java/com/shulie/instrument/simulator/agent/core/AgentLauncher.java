@@ -14,42 +14,40 @@
  */
 package com.shulie.instrument.simulator.agent.core;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.instrument.Instrumentation;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
-
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
+import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
+import com.shulie.instrument.simulator.agent.core.download.FtpOperationClient;
+import com.shulie.instrument.simulator.agent.core.download.OssOperationClient;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
-import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.ThrowableUtils;
-import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.ReloadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
+import com.shulie.instrument.simulator.agent.core.util.UpgradeFileUtils;
+import com.shulie.instrument.simulator.agent.spi.command.impl.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import com.shulie.instrument.simulator.agent.spi.impl.utils.FileUtils;
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.lang.instrument.Instrumentation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+
 
 /**
  * Agent启动器
@@ -86,6 +84,7 @@ public class AgentLauncher {
     private final Instrumentation instrumentation;
     private final ClassLoader parent;
     private final boolean usePremain;
+    private final boolean useAgentmain;
 
     private int startMode = START_MODE_ATTACH;
 
@@ -107,6 +106,7 @@ public class AgentLauncher {
             }
         }
         this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", false);
+        this.useAgentmain = agentConfig.getBooleanProperty("simulator.use.agentmain", false);
     }
 
     /**
@@ -141,14 +141,19 @@ public class AgentLauncher {
             logger.debug("AGENT: prepare to attach agent: descriptor={}, agentJarPath={}, config={}", descriptor,
                 agentJarPath, config);
         }
-        //针对docker pid小于等于5的使用premain方式
-        //如果是 main 方法执行， 强制使用 premain 模式
-        if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
-            startWithPremain(agentJarPath, config);
-            startMode = START_MODE_PREMAIN;
-            logger.info("AGENT: simulator with premain mode start successful.");
-            return;
+
+        //默认不是用agentMain，判断可以不用premain，则使用agentMain
+        if (!useAgentmain){
+            //针对docker pid小于等于5的使用premain方式
+            //如果是 main 方法执行， 强制使用 premain 模式
+            if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
+                startWithPremain(agentJarPath, config);
+                startMode = START_MODE_PREMAIN;
+                logger.info("AGENT: simulator with premain mode start successful.");
+                return;
+            }
         }
+
 
         try {
             VirtualMachineDescriptor virtualMachineDescriptor = null;
@@ -196,6 +201,7 @@ public class AgentLauncher {
         }
     }
 
+
     /**
      * 启动agent，返回 agent 访问地址
      *
@@ -206,6 +212,11 @@ public class AgentLauncher {
     public void startup(StartCommand<CommandPacket> startCommand) throws Throwable {
         AgentStatus.installing();
         try {
+            if (HeartCommandConstants.startCommandId != startCommand.getPacket().getId() ){
+                throw new IllegalArgumentException("startCommand commandId is wrong " + startCommand.getPacket().getId());
+            }
+            //TODO 安装卸载的代码 暂时去掉，和在线升级的功能类似
+            /**
             if (!startCommand.getPacket().isUseLocal()) {
                 File file = new File(agentConfig.getSimulatorHome());
                 File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp",
@@ -224,7 +235,44 @@ public class AgentLauncher {
                     logger.error("AGENT: launch on agent err. agent jar file is not found. ");
                     throw new RuntimeException("AGENT: launch on agent err. agent jar file is not found.");
                 }
+            } **/
+            //拉取升级包的代码
+            if (HeartCommandConstants.PATH_TYPE_LOCAL_VALUE != (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)){
+                int path = (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY);
+                String salt = (String) startCommand.getPacket().getExtra(HeartCommandConstants.SALT_KEY);
+                Map<String, Object> context = JSON.parseObject((String) startCommand.getPacket().getExtras().get("context"), Map.class);
+                String upgradeBatch = (String) startCommand.getPacket().getExtra(HeartCommandConstants.UPGRADE_BATCH_KEY);
+                //清除残留的旧包
+                UpgradeFileUtils.clearOldUpgradeFileTempFile(upgradeBatch);
+                //下载
+                switch (path){
+                    case 0://oss
+                        String accessKeyIdSource = (String) context.get(HeartCommandConstants.ACCESSKEYID_KEY);
+                        String accessKeySecretSource = (String) context.get(HeartCommandConstants.ACCESSKEYSECRET_KEY);
+                        String endpoint = (String) context.get(HeartCommandConstants.ENDPOINT_KEY);
+                        String bucketName = (String) context.get(HeartCommandConstants.BUCKETNAME_KEY);
+                        String accessKeyId = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeyIdSource);
+                        String accessKeySecret = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeySecretSource);
+                        OssOperationClient.download(endpoint, accessKeyId, accessKeySecret,UpgradeFileUtils.getUpgradeFileTempSaveDir(), bucketName, UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
+                        break;
+                    case 1://ftp
+                        String basePath = (String) context.get(HeartCommandConstants.BASEPATH_KEY);
+                        String ftpHost = (String) context.get(HeartCommandConstants.FTPHOST_KEY);
+                        Integer ftpPort = (Integer) context.get(HeartCommandConstants.FTPPORT_KEY);
+                        String passwd = (String)context.get(HeartCommandConstants.PASSWD_KEY);
+                        String username = (String) context.get(HeartCommandConstants.USERNAME_KEY);
+                        String s = SecureUtil.aes(salt.getBytes()).decryptStr(passwd);
+                        FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + File.separator + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
+                        break;
+                }
+                //解压
+                UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);
+            } else {
+                //需要判断是否有本地版本
+                UpgradeFileUtils.checkLocal();
             }
+
+
 
             if (!isRunning.compareAndSet(false, true)) {
                 return;
@@ -319,6 +367,7 @@ public class AgentLauncher {
             }
             AgentStatus.installed(result[2]);
             this.baseUrl = "http://" + result[0] + ":" + result[1] + "/simulator";
+
             logger.info("AGENT: got a available agent url: {} version : {}", this.baseUrl, result[2]);
             System.setProperty("ttl.disabled", "false");
         } catch (Throwable throwable) {
@@ -335,10 +384,78 @@ public class AgentLauncher {
                 logger.error("", e);
             }
             isRunning.set(false);
-            AgentStatus.uninstall();
+            AgentStatus.installFailed(throwable.getMessage());
             logger.error("AGENT: agent startup failed.", throwable);
             throw throwable;
         }
+    }
+
+
+    public CommandExecuteResponse commandModule(HeartCommand<CommandPacket> heartCommand){
+        CommandExecuteResponse commandExecuteResponse = new CommandExecuteResponse();
+        commandExecuteResponse.setId(heartCommand.getPacket().getId());
+        commandExecuteResponse.setTaskId(heartCommand.getPacket().getUuid());
+        String moduleId = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_ID_KEY);
+        String moduleMethod = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_METHOD_KEY);
+        String sync = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.MODULE_EXECUTE_COMMAND_TASK_SYNC_KEY);
+        Long commandId = (Long) heartCommand.getPacket().getExtra(HeartCommandConstants.COMMAND_ID_KEY);
+        String taskId = (String) heartCommand.getPacket().getExtra(HeartCommandConstants.TASK_ID_KEY);
+        if (StringUtils.isBlank(moduleId) || StringUtils.isBlank(moduleMethod) || StringUtils.isBlank(sync)
+            || commandId == 0 || StringUtils.isBlank(taskId)){
+            throw new IllegalArgumentException("command 参数不完整!");
+        }
+        if (logger.isInfoEnabled()) {
+            logger.info("prepare to load module from path={}.", moduleId);
+        }
+        if (baseUrl == null){
+            throw new IllegalArgumentException("agent还未安装成功，未完成本地服务启动!");
+        }
+        try {
+            String loadUrl = baseUrl + File.separator + moduleId + File.separator + moduleMethod + "?useApi=true&path="
+                    + moduleId + "&extrasString=" + heartCommand.getPacket().getExtrasString() + "&sync=" + sync
+                    + "&commandId=" + commandId + "&taskId=" + taskId  + "&troWebUrl=" + agentConfig.getTroWebUrl();
+
+
+            HttpUtils.HttpResult content = HttpUtils.doPost(loadUrl,agentConfig.getHttpMustHeaders(), heartCommand.getPacket().getExtrasString());
+
+            if (content == null) {
+                commandExecuteResponse.setSuccess(false);
+                commandExecuteResponse.setResult(null);
+                commandExecuteResponse.setMsg("请求模块ID:" + moduleId + "数据返回null");
+                commandExecuteResponse.setExecuteStatus("unknown");
+                return commandExecuteResponse;
+            }
+
+            if (content.getStatus() != 200){
+                commandExecuteResponse.setSuccess(false);
+                commandExecuteResponse.setResult(null);
+                commandExecuteResponse.setMsg(content.getResult());
+                commandExecuteResponse.setExecuteStatus("failed");
+                return commandExecuteResponse;
+            }
+
+
+
+            Response response = JSON.parseObject(content.getResult(), Response.class);
+
+            if (logger.isInfoEnabled()) {
+                logger.info("commandModule successful from path={}.", moduleId);
+            }
+            commandExecuteResponse.setSuccess(response.isSuccess());
+            commandExecuteResponse.setResult(response.getResult());
+            commandExecuteResponse.setMsg(response.getMessage());
+            if ("taskExceed".equals(response.getMessage())){
+                commandExecuteResponse.setTaskExceed(true);
+            }
+            return commandExecuteResponse;
+        } catch (Throwable e) {
+            logger.error("AGENT: commandModule failed.", e);
+            commandExecuteResponse.setResult(e.getMessage());
+            commandExecuteResponse.setSuccess(false);
+            commandExecuteResponse.setExecuteStatus("unknown");
+            return commandExecuteResponse;
+        }
+
     }
 
     /**
@@ -348,7 +465,7 @@ public class AgentLauncher {
      * @throws Throwable
      */
     public void loadModule(LoadModuleCommand<CommandPacket> command) throws Throwable {
-        String moduleId = command.getPacket().getExtra("moduleId");
+        String moduleId = (String) command.getPacket().getExtra("moduleId");
         if (logger.isInfoEnabled()) {
             logger.info("prepare to load module from path={}.", moduleId);
         }
@@ -387,7 +504,7 @@ public class AgentLauncher {
     }
 
     public void unloadModule(UnloadModuleCommand<CommandPacket> command) throws Throwable {
-        String moduleId = command.getPacket().getExtra("moduleId");
+        String moduleId = (String) command.getPacket().getExtra("moduleId");
         if (logger.isInfoEnabled()) {
             logger.info("prepare to unload module {}.", moduleId);
         }
@@ -428,7 +545,7 @@ public class AgentLauncher {
     }
 
     public void reloadModule(ReloadModuleCommand<CommandPacket> command) throws Throwable {
-        final String moduleId = command.getPacket().getExtra("moduleId");
+        final String moduleId = (String) command.getPacket().getExtra("moduleId");
         if (logger.isInfoEnabled()) {
             logger.info("prepare to reload module {}.", moduleId);
         }
@@ -673,4 +790,5 @@ public class AgentLauncher {
         this.frameworkClassLoader.closeIfPossible();
         this.frameworkClassLoader = null;
     }
+
 }

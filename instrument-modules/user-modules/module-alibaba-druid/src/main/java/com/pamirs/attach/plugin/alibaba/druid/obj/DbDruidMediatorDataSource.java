@@ -51,6 +51,11 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
     }
 
     @Override
+    protected String getMidType() {
+        return "druid";
+    }
+
+    @Override
     public Connection getConnection() throws SQLException {
         if (Pradar.isClusterTest()) {
             try {
@@ -62,7 +67,7 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
                     }
                     DruidPooledConnection druidPooledConnection = dataSourceBusiness.getConnection();
                     return new DruidPooledNormalConnection(druidPooledConnection,
-                            dbConnectionKey, url, username, this.dbType, sqlMetaData);
+                            dbConnectionKey, url, username, this.dbType, getMidType(), sqlMetaData);
                 } else {
                     //影子库
                     if (dataSourcePerformanceTest == null) {

@@ -15,20 +15,7 @@
 package com.pamirs.attach.plugin.shadowjob;
 
 import com.pamirs.attach.plugin.shadowjob.adapter.XxlJobAdapter;
-import com.pamirs.attach.plugin.shadowjob.interceptor.JobExecutionContextInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.JobExecutorFactoryGetJobExecutorInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.JobRunShellInitializeInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.JobRunShellInitializeInterceptor_1;
-import com.pamirs.attach.plugin.shadowjob.interceptor.JobRunnerHolderAddInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.LtsInitAdapterInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.LtsJobReceiverInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.MethodJobHandlerExecuteInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.QuartzInitAdapterInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.ReflectiveMethodInvocationProceedInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.RequestMappingHandlerAdapterInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.ScheduledMethodRunnableRunInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.SpringContextInterceptor;
-import com.pamirs.attach.plugin.shadowjob.interceptor.XxlInitAdapterInterceptor;
+import com.pamirs.attach.plugin.shadowjob.interceptor.*;
 import com.pamirs.attach.plugin.shadowjob.util.ElasticJobRegisterUtil;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
@@ -90,6 +77,15 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
                 return 6;
             }
         });
+
+        enhanceTemplate.enhance(this, "org.activiti.engine.impl.cmd.AcquireAsyncJobsDueCmd", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod constructor = target.getConstructor("org.activiti.engine.impl.asyncexecutor.AsyncExecutor");
+                constructor.addInterceptor(Listeners.of(AcquireAsyncJobsDueCmdInterceptor.class));
+            }
+        });
+
 
         enhanceTemplate.enhance(this, "org.quartz.core.QuartzScheduler", new EnhanceCallback() {
             @Override

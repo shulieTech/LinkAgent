@@ -106,7 +106,8 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             String url = getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
             final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
             Header header = method.getRequestHeader(PradarService.PRADAR_WHITE_LIST_CHECK);
-            if (header == null){
+
+            if (header == null) {
                 config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, true);
             } else {
                 config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());

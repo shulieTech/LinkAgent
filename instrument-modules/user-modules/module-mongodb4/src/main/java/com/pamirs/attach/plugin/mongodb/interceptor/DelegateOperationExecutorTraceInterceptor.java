@@ -14,13 +14,14 @@
  */
 package com.pamirs.attach.plugin.mongodb.interceptor;
 
-import com.mongodb.client.internal.MongoClientDelegate;
+import com.mongodb.internal.connection.Cluster;
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessor;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -56,8 +57,8 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
             }
         }
         try {
-            MongoClientDelegate mongoClientDelegate = Caches.getMongoClientDelegate(advice.getTarget());
-            String addressesStr = StringUtils.join(mongoClientDelegate.getCluster().getSettings().getHosts(), ",");
+            Object mongoClientDelegate = Caches.getMongoClientDelegate(advice.getTarget());
+            String addressesStr = StringUtils.join(((Cluster)(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"))).getSettings().getHosts(), ",");
             spanRecord.setRemoteIp(addressesStr);
         } catch (Exception e) {
             LOGGER.error("can not get mongoClientDelegate");

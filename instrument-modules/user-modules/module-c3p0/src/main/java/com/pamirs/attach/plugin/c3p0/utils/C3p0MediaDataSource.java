@@ -57,6 +57,11 @@ public class C3p0MediaDataSource extends WrappedDbMediatorDataSource<ComboPooled
     }
 
     @Override
+    protected String getMidType() {
+        return "c3p0";
+    }
+
+    @Override
     public Connection getConnection() throws SQLException {
         if (Pradar.isClusterTest()) {
             try {
@@ -67,7 +72,8 @@ public class C3p0MediaDataSource extends WrappedDbMediatorDataSource<ComboPooled
                         throw new RuntimeException("Business dataSource is null.");
                     }
                     Connection hikariConnection = dataSourceBusiness.getConnection();
-                    return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType,
+                        getMidType());
                 } else {
                     if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");

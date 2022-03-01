@@ -14,12 +14,33 @@
     <properties>
         <module-name>shadow-job</module-name>
     </properties>
+    <version>2.0.0.0</version>
 
     <dependencies>
         <dependency>
+            <groupId>com.github.kuhn-he</groupId>
+            <artifactId>elastic-job-lite-spring-boot-starter</artifactId>
+            <version>2.1.5</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>4.3.27.RELEASE</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.activiti</groupId>
+            <artifactId>activiti-engine</artifactId>
+            <version>5.21.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.core.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -129,13 +150,13 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>biz-classloader-inject-shadow-job</artifactId>
-            <version>1.0.0</version>
+            <version>${biz.classloader.inject.shadow.job.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

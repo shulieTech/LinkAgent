@@ -14,12 +14,8 @@
  */
 package com.pamirs.attach.plugin.mongodb.interceptor;
 
-import java.lang.reflect.Field;
-import java.util.List;
-
 import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.connection.ClusterSettings;
 import com.pamirs.attach.plugin.mongodb.MongodbConstants;
 import com.pamirs.pradar.ResultCode;
@@ -30,6 +26,9 @@ import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAdaptor {
 
@@ -46,7 +45,7 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
         return MongodbConstants.PLUGIN_TYPE;
     }
 
-    private MongoClientDelegate mongoClientDelegate = null;
+    private Object mongoClientDelegate = null;
     private Field executorField = null;
 
     static boolean skip = false;
@@ -83,7 +82,7 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
             try {
                 field = executor.getClass().getDeclaredField("this$0");
                 field.setAccessible(true);
-                mongoClientDelegate = (MongoClientDelegate)field.get(executor);
+                mongoClientDelegate = field.get(executor);
             } catch (Throwable e) {
                 LOGGER.error(
                     String.format("DelegateOperationExecutorInterceptor error,class:%s", executor.getClass().getName()), e);

@@ -14,20 +14,11 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
-import java.io.File;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
+import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 import com.shulie.instrument.simulator.agent.api.model.Result;
 import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
@@ -38,6 +29,11 @@ import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.lang.reflect.Type;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -51,11 +47,23 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     private final static String COMMAND_URL = "api/agent/application/node/probe/operate";
 
+    /**
+     * 心跳接口
+     */
+    private final static String HEART_URL = "api/agent/heartbeat";
     private final static String REPORT_URL = "api/agent/application/node/probe/operateResult";
+
+
+
 
     public ExternalAPIImpl(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
         isWarnAlready = new AtomicBoolean(false);
+    }
+
+    @Override
+    public void onlineUpgrade(CommandPacket commandPacket) {
+
     }
 
     @Override
@@ -134,6 +142,47 @@ public class ExternalAPIImpl implements ExternalAPI {
         } catch (Throwable e) {
             logger.error("AGENT: parse command err. {}", resp, e);
             return CommandPacket.NO_ACTION_PACKET;
+        }
+    }
+
+
+
+    @Override
+    public List<CommandPacket> sendHeart(HeartRequest heartRequest) {
+        HeartRequestUtil.configHeartRequest(heartRequest, agentConfig);
+        String webUrl = agentConfig.getTroWebUrl();
+        if (StringUtils.isBlank(webUrl)) {
+            logger.warn("AGENT: tro.web.url is not assigned.");
+            return null;
+        }
+        String agentHeartUrl = joinUrl(webUrl, HEART_URL);
+
+        HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(), JSON.toJSONString(heartRequest));
+
+        if (null == resp) {
+            logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
+            return null;
+        }
+
+        if (StringUtils.isBlank(resp.getResult())){
+            logger.warn("AGENT: sendHeart got response empty . {}", agentHeartUrl);
+            return null;
+        }
+
+        try {
+            Type type = new TypeReference<Result<List<CommandPacket>>>() {}.getType();
+            Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
+            if (!response.isSuccess()) {
+                logger.error("sendHeart got a err response. resp={}", resp);
+                throw new RuntimeException(response.getError());
+            }
+            return response.getData();
+        } catch (Throwable e) {
+            logger.error("AGENT: parse command err. {}", resp, e);
+            if (200 == resp.getStatus()){
+                return Collections.emptyList();
+            }
+            return null;
         }
     }
 

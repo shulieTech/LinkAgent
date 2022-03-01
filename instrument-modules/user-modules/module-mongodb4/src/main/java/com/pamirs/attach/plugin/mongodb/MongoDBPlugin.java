@@ -26,6 +26,7 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 /**
@@ -38,11 +39,24 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
+
         /**
          * 因为这个插件与mongodb322插件冲突，所以当mongodb322插件启用时此插件禁用
          */
-        if (simulatorConfig.getBooleanProperty("mongodb322.enabled", false)) {
-            return;
+
+        //默认不用4
+        boolean use = false;
+        String mongodb4Enabled = System.getProperty("mongodb4.enabled");
+        if (mongodb4Enabled == null){
+            mongodb4Enabled = simulatorConfig.getProperty("mongodb4.enabled");
+        }
+
+        if (StringUtils.isNotBlank(mongodb4Enabled) && Boolean.valueOf(mongodb4Enabled)){
+            use = true;
+        }
+
+        if (!use) {
+            return false;
         }
 
         enhanceTemplate.enhance(this, "com.mongodb.client.internal.MongoClientDelegate$DelegateOperationExecutor", new EnhanceCallback() {

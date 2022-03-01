@@ -14,6 +14,8 @@
  */
 package com.shulie.instrument.simulator.agent.api.model;
 
+import com.alibaba.fastjson.JSON;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,7 +25,7 @@ import java.util.Map;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/5/22 11:55 上午
  */
-public class CommandPacket {
+public class CommandPacket extends HeartCommandPacket {
     public final static int COMMAND_TYPE_FRAMEWORK = 1;
     public final static int COMMAND_TYPE_MODULE = 2;
 
@@ -73,7 +75,7 @@ public class CommandPacket {
     /**
      * 附加数据
      */
-    private Map<String, String> extras = Collections.EMPTY_MAP;
+    private Map<String, Object> extras = Collections.EMPTY_MAP;
 
     public boolean isUseLocal() {
         return useLocal;
@@ -131,15 +133,18 @@ public class CommandPacket {
         this.dataPath = dataPath;
     }
 
-    public Map<String, String> getExtras() {
+    public Map<String, Object> getExtras() {
+        if (extras.isEmpty() && null != getExtrasString() && !"".equals(getExtrasString())){
+            extras = JSON.parseObject(getExtrasString(), Map.class);
+        }
         return extras;
     }
 
-    public String getExtra(String key) {
+    public Object getExtra(String key) {
         return extras != null ? extras.get(key) : null;
     }
 
-    public void setExtras(Map<String, String> extras) {
+    public void setExtras(Map<String, Object> extras) {
         this.extras = extras;
     }
 

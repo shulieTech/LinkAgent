@@ -14,11 +14,6 @@
  */
 package com.pamirs.attach.plugin.command;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.command.handler.DispatcherCommandHandler;
 import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -32,6 +27,10 @@ import io.shulie.takin.channel.router.zk.DefaultClientChannel;
 import io.shulie.takin.channel.router.zk.ZkClientConfig;
 import io.shulie.takin.channel.type.CustomCommand;
 import org.kohsuke.MetaInfServices;
+
+import javax.annotation.Resource;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * 命令管道插件，负责与控制台之前的命令下发与执行

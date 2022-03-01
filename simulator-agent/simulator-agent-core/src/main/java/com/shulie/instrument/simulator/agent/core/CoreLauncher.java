@@ -14,6 +14,34 @@
  */
 package com.shulie.instrument.simulator.agent.core;
 
+import com.shulie.instrument.simulator.agent.api.ExternalAPI;
+import com.shulie.instrument.simulator.agent.core.classloader.ProviderClassLoader;
+import com.shulie.instrument.simulator.agent.core.config.AgentConfigImpl;
+import com.shulie.instrument.simulator.agent.core.config.CoreConfig;
+import com.shulie.instrument.simulator.agent.core.config.ExternalAPIImpl;
+import com.shulie.instrument.simulator.agent.core.exception.AgentDownloadException;
+import com.shulie.instrument.simulator.agent.core.register.Register;
+import com.shulie.instrument.simulator.agent.core.register.RegisterFactory;
+import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
+import com.shulie.instrument.simulator.agent.core.scheduler.HttpAgentScheduler;
+import com.shulie.instrument.simulator.agent.core.uploader.ApplicationUploader;
+import com.shulie.instrument.simulator.agent.core.uploader.HttpApplicationUploader;
+import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
+import com.shulie.instrument.simulator.agent.core.util.JarUtils;
+import com.shulie.instrument.simulator.agent.core.util.LogbackUtils;
+import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
+import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
+import com.shulie.instrument.simulator.agent.spi.command.Command;
+import com.shulie.instrument.simulator.agent.spi.command.impl.*;
+import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
+import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.reflect.FieldUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
 import java.lang.annotation.Annotation;
@@ -28,38 +56,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Resource;
-
-import com.shulie.instrument.simulator.agent.api.ExternalAPI;
-import com.shulie.instrument.simulator.agent.core.classloader.ProviderClassLoader;
-import com.shulie.instrument.simulator.agent.core.config.AgentConfigImpl;
-import com.shulie.instrument.simulator.agent.core.config.CoreConfig;
-import com.shulie.instrument.simulator.agent.core.config.ExternalAPIImpl;
-import com.shulie.instrument.simulator.agent.core.exception.AgentDownloadException;
-import com.shulie.instrument.simulator.agent.core.register.Register;
-import com.shulie.instrument.simulator.agent.core.register.RegisterFactory;
-import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
-import com.shulie.instrument.simulator.agent.core.uploader.ApplicationUploader;
-import com.shulie.instrument.simulator.agent.core.uploader.HttpApplicationUploader;
-import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
-import com.shulie.instrument.simulator.agent.core.util.JarUtils;
-import com.shulie.instrument.simulator.agent.core.util.LogbackUtils;
-import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
-import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
-import com.shulie.instrument.simulator.agent.spi.command.Command;
-import com.shulie.instrument.simulator.agent.spi.command.impl.LoadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.ReloadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StartCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.StopCommand;
-import com.shulie.instrument.simulator.agent.spi.command.impl.UnloadModuleCommand;
-import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import com.shulie.instrument.simulator.agent.spi.config.SchedulerArgs;
-import com.shulie.instrument.simulator.agent.spi.impl.HttpAgentScheduler;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.reflect.FieldUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -224,10 +220,30 @@ public class CoreLauncher {
                     register.init(registerOptions);
                     register.start();
 
+
+
                     agentScheduler.setAgentConfig(agentConfig);
+//                    String defaultAgentHome
+//                            = new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
+//                            .getParent();
+//                    String EE_HOME = defaultAgentHome.replace("core", "ee");
+//                    File file = new File(EE_HOME + "/module-agent-command-1.0.0.jar");
+//                    if (file.exists()){
+//                        URL url1 = new URL("file:" + EE_HOME + "/module-agent-command-1.0.0.jar");
+//                        URLClassLoader myClassLoader1 = new URLClassLoader(new URL[] { url1 }, this.getClass().getClassLoader());
+//                        Class<?> agentCommandExecutorClass = myClassLoader1.loadClass("com.pamirs.attach.plugin.agent.command.AgentCommandExecutor");
+//                        Constructor constructor = agentCommandExecutorClass.getConstructor(CommandExecutor.class);
+//                        CommandExecutor agentCommandExecutor = (CommandExecutor) constructor.newInstance(new DefaultCommandExecutor(launcher));
+//                        agentScheduler.setCommandExecutor(agentCommandExecutor);
+//                    } else {
+//                        agentScheduler.setCommandExecutor(new DefaultCommandExecutor(launcher));
+//                    }
+
                     agentScheduler.setCommandExecutor(new CommandExecutor() {
+
                         @Override
-                        public void execute(Command command) throws Throwable {
+                        public CommandExecuteResponse execute(Command command) throws Throwable {
+                            CommandExecuteResponse commandExecuteResponse = null;
                             if (command instanceof StartCommand) {
                                 launcher.startup(((StartCommand)command));
                             } else if (command instanceof StopCommand) {
@@ -237,8 +253,11 @@ public class CoreLauncher {
                             } else if (command instanceof UnloadModuleCommand) {
                                 launcher.unloadModule(((UnloadModuleCommand)command));
                             } else if (command instanceof ReloadModuleCommand) {
-                                launcher.reloadModule(((ReloadModuleCommand)command));
+                                launcher.reloadModule(((ReloadModuleCommand) command));
+                            } else if (command instanceof HeartCommand){
+                                commandExecuteResponse = launcher.commandModule((HeartCommand)command);
                             }
+                            return commandExecuteResponse;
                         }
 
                         @Override

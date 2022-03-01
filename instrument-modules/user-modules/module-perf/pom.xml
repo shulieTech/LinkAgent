@@ -13,24 +13,25 @@
     <properties>
         <module-name>perf</module-name>
     </properties>
+    <version>2.0.0.0</version>
 
     <dependencies>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.core.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.68</version>
+            <version>1.2.72</version>
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-register</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.register.version}</version>
             <scope>provided</scope>
         </dependency>
 

@@ -250,7 +250,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
             } catch (PradarException e) {
                 LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
-            }catch (PressureMeasureError e) {
+            } catch (PressureMeasureError e) {
                 LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {

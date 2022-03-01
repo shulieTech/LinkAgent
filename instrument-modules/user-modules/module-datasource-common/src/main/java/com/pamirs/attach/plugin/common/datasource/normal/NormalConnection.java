@@ -71,19 +71,23 @@ public class NormalConnection implements Connection {
      */
     protected String dbType;
 
+    protected final String midType;
+
     /**
      * sql metadata
      */
     protected SqlMetaData sqlMetaData;
 
 
-    public NormalConnection(DataSource dataSource, Connection connection, String dbConnectionKey, String url, String username, String dbType) {
+    public NormalConnection(DataSource dataSource, Connection connection, String dbConnectionKey, String url,
+        String username, String dbType, String midType) {
         this.dataSource = dataSource;
         this.connection = connection;
         this.dbConnectionKey = dbConnectionKey;
         this.url = url;
         this.username = username;
         this.dbType = dbType;
+        this.midType = midType;
         DbType type = DbType.nameOf(dbType);
         if (type != null) {
             try {
@@ -240,7 +244,8 @@ public class NormalConnection implements Connection {
      */
     @Override
     public Statement createStatement() throws SQLException {
-        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(), dbType), this.connection, this.dbConnectionKey, this.dbType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -252,7 +257,8 @@ public class NormalConnection implements Connection {
      */
     @Override
     public Statement createStatement(int arg0, int arg1) throws SQLException {
-        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -265,7 +271,8 @@ public class NormalConnection implements Connection {
     @Override
     public Statement createStatement(int arg0, int arg1, int arg2)
             throws SQLException {
-        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -417,7 +424,7 @@ public class NormalConnection implements Connection {
      */
     @Override
     public String nativeSQL(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return connection.nativeSQL(arg0);
     }
 
@@ -485,9 +492,10 @@ public class NormalConnection implements Connection {
      */
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType);
+        sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType, this.midType);
         SqlUtils.checkNormalConnectionAccessValid(dbType, sql);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(sql), dbType), this.connection, this.dbConnectionKey, this.dbType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(sql), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -500,9 +508,10 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -515,9 +524,10 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -530,9 +540,10 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, String[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -545,9 +556,10 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -560,9 +572,10 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2,
                                               int arg3) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2, arg3), dbType), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2, arg3), dbType), this.connection, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -573,7 +586,7 @@ public class NormalConnection implements Connection {
      * instance to operate.</p>
      */
     public void setSchema(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         try {
             connection.setSchema(arg0);
         } catch (AbstractMethodError e) {

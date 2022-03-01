@@ -14,12 +14,12 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache;
 
+import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
 
 /**
  * @author jirenhe | jirenhe@shulie.io

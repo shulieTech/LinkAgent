@@ -16,6 +16,7 @@ package com.shulie.instrument.module.config.fetcher.config.event.model;
 
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.pressurement.agent.event.impl.MqWhiteListConfigEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowConsumerDisableEvent;
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
@@ -57,6 +58,8 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Set<String> newValue) {
+        final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(newValue);
+        EventRouter.router().publish(mqWhiteListConfigEvent);
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         if (ObjectUtils.equals(mqWhiteList.size(), newValue.size())
                 && mqWhiteList.containsAll(newValue)) {

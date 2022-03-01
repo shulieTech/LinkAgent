@@ -14,16 +14,15 @@
  */
 package com.pamirs.pradar;
 
-import java.io.IOException;
-
 import com.alibaba.fastjson.JSON;
-
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.Converter;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
 import com.pamirs.pradar.json.ResultSerializer;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
+
+import java.io.IOException;
 
 /**
  * @Auther: vernon
@@ -88,7 +87,12 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                         TraceCoreUtils.isServer(ctx)))
                 .append("|")
                 .append(PradarCoreUtils.makeLogSafe(ctx.getCallBackMsg() == null ? "" : ctx.getCallBackMsg()));
-        final int samplingInterval = PradarSwitcher.getSamplingInterval();
+        int samplingInterval;
+        if (ctx.isClusterTest()){
+            samplingInterval = PradarSwitcher.getClusterTestSamplingInterval();
+        } else {
+            samplingInterval = PradarSwitcher.getSamplingInterval();
+        }
         buffer.append("|#").append(samplingInterval);
         buffer.append("|@").append(TraceCoreUtils.attributes(ctx.traceAppName, ctx.traceServiceName, ctx.traceMethod))
                 .append("|@")

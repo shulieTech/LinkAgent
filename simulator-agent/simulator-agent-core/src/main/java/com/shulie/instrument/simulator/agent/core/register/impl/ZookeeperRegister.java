@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
+
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
@@ -29,17 +30,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
-import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
-import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
-import com.shulie.instrument.simulator.agent.core.util.JvmArgsCheckUtils;
-import com.shulie.instrument.simulator.agent.core.util.JvmArgsConstants;
-import com.shulie.instrument.simulator.agent.core.util.PidUtils;
-import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
+import com.shulie.instrument.simulator.agent.core.util.*;
 import com.shulie.instrument.simulator.agent.core.zk.ZkClient;
 import com.shulie.instrument.simulator.agent.core.zk.ZkHeartbeatNode;
 import com.shulie.instrument.simulator.agent.core.zk.ZkNodeStat;
@@ -53,6 +48,19 @@ import org.apache.curator.framework.api.GetChildrenBuilder;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.lang.management.ManagementFactory;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * zookeeper 注册器实现
@@ -136,7 +144,8 @@ public class ZookeeperRegister implements Register {
         }
         map.put("agentId", agentId);
         String agentStatus = AgentStatus.getAgentStatus();
-        StringBuilder errorMsg = new StringBuilder(AgentStatus.getErrorMessage());
+        StringBuilder errorMsg = new StringBuilder(AgentStatus.getErrorMessage() == null ? "" : AgentStatus.getErrorMessage());
+
         map.put("errorCode", AgentStatus.getErrorCode());
         map.put("agentLanguage", "JAVA");
         map.put("agentVersion", agentConfig.getAgentVersion());

@@ -16,6 +16,7 @@ package com.pamirs.pradar.interceptor;
 
 
 import com.pamirs.pradar.scope.ScopeFactory;
+import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 import com.shulie.instrument.simulator.api.scope.InterceptorScope;
@@ -58,8 +59,18 @@ public class ScopedTraceInterceptor extends AroundInterceptor implements ScopedI
     public void doBefore(Advice advice) throws Throwable {
         final InterceptorScopeInvocation transaction = getScope(advice).getCurrentInvocation();
         final boolean success = transaction.tryEnter(policy);
+        boolean processControlException = false;
         if (success) {
-            interceptor.doBefore(advice);
+            try {
+                interceptor.doBefore(advice);
+            } catch (ProcessControlException p){
+                processControlException = true;
+                throw p;
+            } finally {
+                if (processControlException){
+                    transaction.leave(policy);
+                }
+            }
         } else {
             if (logger.isDebugEnabled()) {
                 logger.debug("tryBefore() returns false: interceptorScopeTransaction: {}, executionPoint: {}. Skip interceptor {}", transaction, policy, interceptor.getClass());

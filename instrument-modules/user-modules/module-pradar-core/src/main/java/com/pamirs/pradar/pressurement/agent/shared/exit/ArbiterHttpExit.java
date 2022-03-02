@@ -180,15 +180,7 @@ public class ArbiterHttpExit implements Exit {
     }
 
     private static MatchConfig copyMatchConfig(MatchConfig matchConfig) {
-        //return new MatchConfig(matchConfig);
-        MatchConfig copied = new MatchConfig();
-        copied.setUrl(matchConfig.getUrl());
-        copied.setStrategy(matchConfig.getStrategy());
-        copied.setScriptContent(matchConfig.getScriptContent());
-        copied.setArgs(new HashMap<String, Object>(matchConfig.getArgs()));
-        copied.setForwarding(matchConfig.getForwarding());
-        copied.setSuccess(matchConfig.isSuccess());
-        return copied;
+        return new MatchConfig(matchConfig);
     }
 
     public static void main(String[] args) {

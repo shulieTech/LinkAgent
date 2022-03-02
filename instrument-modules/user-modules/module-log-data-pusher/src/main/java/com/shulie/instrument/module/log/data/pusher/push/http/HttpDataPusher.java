@@ -15,7 +15,7 @@
 
 package com.shulie.instrument.module.log.data.pusher.push.http;
 
-import java.io.IOException;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 
+import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.remoting.protocol.CommandCode;
 import com.shulie.instrument.module.log.data.pusher.log.callback.LogCallback;
 import com.shulie.instrument.module.log.data.pusher.push.DataPusher;
@@ -74,6 +75,8 @@ public class HttpDataPusher implements DataPusher {
      */
     private String httpPath;
 
+    private String hostIp;
+
     @Override
     public String getName() {
         return "http";
@@ -86,47 +89,58 @@ public class HttpDataPusher implements DataPusher {
 
     @Override
     public boolean init(ServerOptions serverOptions) {
-        if (StringUtil.isEmpty(serverOptions.getHttpPath())) {
+        try {
+            if (StringUtil.isEmpty(serverOptions.getHttpPath())) {
+                LOGGER.error(
+                    "File: 'simulator-agent/agent/simulator/config/simulator.properties',config: 'pradar.push.server"
+                        + ".http"
+                        + ".path' is empty!!");
+                return false;
+            }
+            hostIp = PradarCoreUtils.getLocalAddress();
+            httpPath = serverOptions.getHttpPath();
+            final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+            // 总连接池数量
+            connectionManager.setMaxTotal(serverOptions.getMaxHttpPoolSize());
+            // setConnectTimeout表示设置建立连接的超时时间
+            // setConnectionRequestTimeout表示从连接池中拿连接的等待超时时间
+            // setSocketTimeout表示发出请求后等待对端应答的超时时间
+            RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(serverOptions.getTimeout())
+                .setConnectionRequestTimeout(serverOptions.getTimeout())
+                .setSocketTimeout(serverOptions.getTimeout())
+                .build();
+            // 重试处理器，StandardHttpRequestRetryHandler这个是官方提供的，看了下感觉比较挫，很多错误不能重试，可自己实现HttpRequestRetryHandler接口去做
+            HttpRequestRetryHandler retryHandler = new StandardHttpRequestRetryHandler();
+
+            httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .setRetryHandler(retryHandler)
+                .build();
+
+            // 服务端假设关闭了连接，对客户端是不透明的，HttpClient为了缓解这一问题，在某个连接使用前会检测这个连接是否过时，如果过时则连接失效，但是这种做法会为每个请求
+            // 增加一定额外开销，因此有一个定时任务专门回收长时间不活动而被判定为失效的连接，可以某种程度上解决这个问题
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        // 关闭失效连接并从连接池中移除
+                        connectionManager.closeExpiredConnections();
+                        // 关闭60秒钟内不活动的连接并从连接池中移除，空闲时间从交还给连接管理器时开始
+                        connectionManager.closeIdleConnections(60, TimeUnit.SECONDS);
+                    } catch (Throwable t) {
+                        LOGGER.error("closeExpiredConnections error", t);
+                    }
+                }
+            }, 0, 1000 * 5);
+            return true;
+        } catch (Throwable e) {
+            LOGGER.error("httpDataPush init error", e);
             return false;
         }
-        httpPath = serverOptions.getHttpPath();
-        final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        // 总连接池数量
-        connectionManager.setMaxTotal(serverOptions.getMaxHttpPoolSize());
-        // setConnectTimeout表示设置建立连接的超时时间
-        // setConnectionRequestTimeout表示从连接池中拿连接的等待超时时间
-        // setSocketTimeout表示发出请求后等待对端应答的超时时间
-        RequestConfig requestConfig = RequestConfig.custom()
-            .setConnectTimeout(serverOptions.getTimeout())
-            .setConnectionRequestTimeout(serverOptions.getTimeout())
-            .setSocketTimeout(serverOptions.getTimeout())
-            .build();
-        // 重试处理器，StandardHttpRequestRetryHandler这个是官方提供的，看了下感觉比较挫，很多错误不能重试，可自己实现HttpRequestRetryHandler接口去做
-        HttpRequestRetryHandler retryHandler = new StandardHttpRequestRetryHandler();
 
-        httpClient = HttpClients.custom()
-            .setConnectionManager(connectionManager)
-            .setDefaultRequestConfig(requestConfig)
-            .setRetryHandler(retryHandler)
-            .build();
-
-        // 服务端假设关闭了连接，对客户端是不透明的，HttpClient为了缓解这一问题，在某个连接使用前会检测这个连接是否过时，如果过时则连接失效，但是这种做法会为每个请求
-        // 增加一定额外开销，因此有一个定时任务专门回收长时间不活动而被判定为失效的连接，可以某种程度上解决这个问题
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    // 关闭失效连接并从连接池中移除
-                    connectionManager.closeExpiredConnections();
-                    // 关闭60秒钟内不活动的连接并从连接池中移除，空闲时间从交还给连接管理器时开始
-                    connectionManager.closeIdleConnections(60, TimeUnit.SECONDS);
-                } catch (Throwable t) {
-                    LOGGER.error("closeExpiredConnections error", t);
-                }
-            }
-        }, 0, 1000 * 5);
-        return true;
     }
 
     @Override
@@ -134,16 +148,22 @@ public class HttpDataPusher implements DataPusher {
         return new LogCallback() {
             @Override
             public boolean call(FileChannel fc, long position, long length, byte dataType, int version) {
+                if (!isStarted.get()) {
+                    return false;
+                }
                 try {
                     HttpPost httpPost = new HttpPost(httpPath + url);
                     httpPost.setHeader("Content-Type", "application/json");
                     httpPost.setHeader("time", String.valueOf(System.currentTimeMillis()));
                     httpPost.setHeader("dataType", String.valueOf(dataType));
                     httpPost.setHeader("version", String.valueOf(version));
-                    httpPost.setHeader("Accept-Encoding", "gzip,deflate,sdch");    //需要加上这个头字段
+                    httpPost.setHeader("hostIp", hostIp);
+                    httpPost.setHeader("Accept-Encoding", "gzip,deflate,sdch");
 
-                    ByteArrayEntity byteArrayEntity = new ByteArrayEntity(
-                        fc.map(FileChannel.MapMode.READ_ONLY, position, length).array());
+                    MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, position, length);
+                    byte[] data = new byte[bb.remaining()];
+                    bb.get(data);
+                    ByteArrayEntity byteArrayEntity = new ByteArrayEntity(data);
 
                     GzipCompressingEntity gzipEntity = new GzipCompressingEntity(byteArrayEntity);
                     httpPost.setEntity(gzipEntity);
@@ -155,6 +175,9 @@ public class HttpDataPusher implements DataPusher {
                         return false;
                     }
                     String content = EntityUtils.toString(response.getEntity());
+                    if (StringUtil.isEmpty(content)) {
+                        return false;
+                    }
                     JSONObject jsonObject = JSON.parseObject(content);
                     int responseCode = jsonObject.getIntValue("responseCode");
                     if (responseCode == CommandCode.SUCCESS) {
@@ -164,8 +187,8 @@ public class HttpDataPusher implements DataPusher {
                         || responseCode == CommandCode.COMMAND_CODE_NOT_SUPPORTED) {
                         return false;
                     }
-                } catch (IOException e) {
-                    LOGGER.error("log push error", e);
+                } catch (Throwable e) {
+                    LOGGER.error("http log push error", e);
                 }
                 return false;
             }
@@ -186,7 +209,7 @@ public class HttpDataPusher implements DataPusher {
                 LOGGER.error("http health check error, url {}", httpPath + healthCheckUrl);
                 return false;
             }
-        } catch (IOException e) {
+        } catch (Throwable e) {
             LOGGER.error("http health check error", e);
             return false;
         }

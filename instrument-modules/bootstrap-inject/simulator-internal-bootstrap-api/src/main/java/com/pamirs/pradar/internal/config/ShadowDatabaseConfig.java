@@ -18,8 +18,6 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
 
-import com.shulie.instrument.simulator.api.util.StringUtil;
-
 /**
  * 影子数据源配置
  *
@@ -266,6 +264,7 @@ public class ShadowDatabaseConfig {
 
     /**
      * 获取影子库用户名，可在业务用户名上加载固定前后缀生成
+     * oracle的用户名必须以 c## 开头
      *
      * @param bizUserName 业务库用户名，非必填
      * @return 影子库用户名
@@ -273,6 +272,11 @@ public class ShadowDatabaseConfig {
     public String getShadowUsername(String bizUserName) {
         if (stringIsEmpty(bizUserName) || !stringIsEmpty(shadowUsername)) {
             return shadowUsername;
+        }
+        // oracle 原用户名为 c##admin，处理以后的用户名为 c##PT_admin
+        if (isOracle() && bizUserName.toUpperCase().startsWith("C##")) {
+            return bizUserName.substring(0, 3) + this.shadowAccountPrefix + bizUserName.substring(3)
+                + this.shadowAccountSuffix;
         }
         return this.shadowAccountPrefix + bizUserName + this.shadowAccountSuffix;
     }
@@ -516,6 +520,15 @@ public class ShadowDatabaseConfig {
             ", shadowAccountPrefix=" + shadowAccountPrefix +
             ", shadowAccountSuffix=" + shadowAccountSuffix +
             '}';
+    }
+
+    /**
+     * 判断当前配置是否为oracle配置
+     *
+     * @return true oracle配置，false 不是
+     */
+    private boolean isOracle() {
+        return !stringIsEmpty(this.url) && this.url.startsWith("jdbc:oracle:thin:");
     }
 
     private boolean stringIsEmpty(String string) {

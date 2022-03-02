@@ -16,6 +16,7 @@ package com.pamirs.pradar.pressurement.agent.shared.exit;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -103,19 +104,6 @@ public class ArbiterHttpExit implements Exit {
 
     /**
      * 判断是否可以通过此 rpc 调用
-     * 只支持单独类名
-     *
-     * @param className 类名
-     */
-    public static MatchConfig shallWePassRpc(String className) {
-        if (!PradarSwitcher.whiteListSwitchOn()) {
-            return MatchConfig.success(new WhiteListStrategy());
-        }
-        return rpcMatchResult.getUnchecked(className);
-    }
-
-    /**
-     * 判断是否可以通过此 rpc 调用
      * 支持 类名+方法名 的组合方式
      *
      * @param className  类名
@@ -126,9 +114,9 @@ public class ArbiterHttpExit implements Exit {
             return MatchConfig.success(new WhiteListStrategy());
         }
         if (StringUtils.isBlank(methodName)) {
-            return rpcMatchResult.getUnchecked(className);
+            return copyMatchConfig(rpcMatchResult.getUnchecked(className));
         }
-        return rpcMatchResult.getUnchecked(className + '#' + methodName);
+        return copyMatchConfig(rpcMatchResult.getUnchecked(className + '#' + methodName));
     }
 
     private static MatchConfig getRpcPassedCache(String name) {
@@ -184,11 +172,23 @@ public class ArbiterHttpExit implements Exit {
             if (!PradarSwitcher.whiteListSwitchOn()) {
                 return MatchConfig.success(new WhiteListStrategy());
             }
-            return httpMatchResult.get(url);
+            return copyMatchConfig(httpMatchResult.get(url));
         } catch (ExecutionException e) {
             LOGGER.warn("WhiteListError: shallWePassHttpString cache exception!", e);
             return failure();
         }
+    }
+
+    private static MatchConfig copyMatchConfig(MatchConfig matchConfig) {
+        //return new MatchConfig(matchConfig);
+        MatchConfig copied = new MatchConfig();
+        copied.setUrl(matchConfig.getUrl());
+        copied.setStrategy(matchConfig.getStrategy());
+        copied.setScriptContent(matchConfig.getScriptContent());
+        copied.setArgs(new HashMap<String, Object>(matchConfig.getArgs()));
+        copied.setForwarding(matchConfig.getForwarding());
+        copied.setSuccess(matchConfig.isSuccess());
+        return copied;
     }
 
     public static void main(String[] args) {

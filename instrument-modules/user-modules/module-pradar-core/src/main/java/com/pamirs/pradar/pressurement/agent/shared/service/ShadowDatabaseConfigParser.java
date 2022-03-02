@@ -14,13 +14,17 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author xiaobin.zfb | xiaobin@shulie.io
@@ -67,9 +71,9 @@ public class ShadowDatabaseConfigParser {
         if (map == null || map.isEmpty()) {
             return null;
         }
-        int dsType = Integer.valueOf(map.get("dsType") == null ? "-1" : map.get("dsType").toString());
+        int dsType = Integer.parseInt(map.get("dsType") == null ? "-1" : map.get("dsType").toString());
         final String shadowTableConfig = StringUtils.trim(toString(map.get("shadowTableConfig")));
-        Map<String, Object> shadowDbConfig = (Map<String, Object>) map.get("shadowDbConfig");
+        Map<String, Object> shadowDbConfig = (Map<String, Object>)map.get("shadowDbConfig");
 
         /**
          * 这块判断一下，如果是影子库则需要校验 shadowDbConfig 不为空
@@ -98,16 +102,18 @@ public class ShadowDatabaseConfigParser {
         }
 
         ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
+        shadowDatabaseConfig.setShadowAccountPrefix(
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().shadowDatasourceAccountPrefix());
+        shadowDatabaseConfig.setShadowAccountSuffix(GlobalConfig.getInstance().getSimulatorDynamicConfig()
+            .shadowDatasourceAccountSuffix());
 
         final String applicationName = StringUtils.trim(toString(map.get("applicationName")));
         shadowDatabaseConfig.setApplicationName(applicationName);
-
 
         shadowDatabaseConfig.setDsType(dsType);
 
         final String url = StringUtils.trim(toString(map.get("url")));
         shadowDatabaseConfig.setUrl(url);
-
 
         if (StringUtils.isNotBlank(shadowTableConfig)) {
             String[] arr = StringUtils.split(shadowTableConfig, ',');
@@ -125,11 +131,10 @@ public class ShadowDatabaseConfigParser {
             }
         }
 
-
         if (shadowDbConfig == null) {
             return shadowDatabaseConfig;
         }
-        Map<String, Object> datasourceMediator = (Map<String, Object>) shadowDbConfig.get("datasourceMediator");
+        Map<String, Object> datasourceMediator = (Map<String, Object>)shadowDbConfig.get("datasourceMediator");
         if (datasourceMediator == null) {
             return shadowDatabaseConfig;
         }
@@ -142,7 +147,7 @@ public class ShadowDatabaseConfigParser {
             return shadowDatabaseConfig;
         }
 
-        List<Map<String, Object>> list = (List<Map<String, Object>>) shadowDbConfig.get("dataSources");
+        List<Map<String, Object>> list = (List<Map<String, Object>>)shadowDbConfig.get("dataSources");
         if (list == null || list.isEmpty()) {
             return shadowDatabaseConfig;
         }
@@ -181,7 +186,7 @@ public class ShadowDatabaseConfigParser {
             }
             if (StringUtils.equals(entry.getKey(), "url")) {
                 shadowDatabaseConfig.setShadowUrl(toString(entry.getValue()));
-                if (shadowDatabaseConfig.getShadowUrl().startsWith("mongodb://")){
+                if (shadowDatabaseConfig.getShadowUrl().startsWith("mongodb://")) {
                     String[] s = shadowDatabaseConfig.getShadowUrl().split("/");
                     shadowDatabaseConfig.setShadowSchema(s[s.length - 1]);
                 }
@@ -194,7 +199,7 @@ public class ShadowDatabaseConfigParser {
             } else if (StringUtils.equals(entry.getKey(), "schema")) {
                 shadowDatabaseConfig.setShadowSchema(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "extra")) {
-                Map<String, Object> extra = (Map) entry.getValue();
+                Map<String, Object> extra = (Map)entry.getValue();
                 if (extra == null) {
                     continue;
                 }

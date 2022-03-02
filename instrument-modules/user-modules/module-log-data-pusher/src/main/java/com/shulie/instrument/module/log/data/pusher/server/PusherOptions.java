@@ -60,6 +60,16 @@ public class PusherOptions {
     private int protocolCode = ProtocolCode.JAVA;
 
     /**
+     * http连接池大小
+     */
+    private int maxHttpPoolSize;
+
+    /**
+     * http请求path
+     */
+    private String httpPath;
+
+    /**
      * 日志推送启动参数
      */
     private List<LogPusherOptions> logPusherOptions;
@@ -126,5 +136,21 @@ public class PusherOptions {
 
     public void setSessionTimeoutMillis(int sessionTimeoutMillis) {
         this.sessionTimeoutMillis = sessionTimeoutMillis;
+    }
+
+    public int getMaxHttpPoolSize() {
+        return maxHttpPoolSize;
+    }
+
+    public void setMaxHttpPoolSize(int maxHttpPoolSize) {
+        this.maxHttpPoolSize = maxHttpPoolSize;
+    }
+
+    public String getHttpPath() {
+        return httpPath;
+    }
+
+    public void setHttpPath(String httpPath) {
+        this.httpPath = httpPath;
     }
 }

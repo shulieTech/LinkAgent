@@ -14,11 +14,18 @@
  */
 package com.shulie.instrument.module.log.data.pusher.push.impl;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusher;
 import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
 import com.shulie.instrument.module.log.data.pusher.push.DataPushManager;
 import com.shulie.instrument.module.log.data.pusher.push.DataPusher;
 import com.shulie.instrument.module.log.data.pusher.push.ServerOptions;
+import com.shulie.instrument.module.log.data.pusher.push.http.HttpDataPusher;
 import com.shulie.instrument.module.log.data.pusher.push.tcp.TcpDataPusher;
 import com.shulie.instrument.module.log.data.pusher.server.PusherOptions;
 import com.shulie.instrument.module.log.data.pusher.server.ServerAddrProvider;
@@ -29,12 +36,6 @@ import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author xiaobin.zfb
@@ -48,7 +49,6 @@ public class DefaultDataPushManager implements DataPushManager {
     private ServerAddrProvider provider;
     private PusherOptions pusherOptions;
     private AtomicBoolean isStarted = new AtomicBoolean(false);
-
 
     public DefaultDataPushManager(final PusherOptions pusherOptions) {
         loadDataPushers();
@@ -73,7 +73,9 @@ public class DefaultDataPushManager implements DataPushManager {
     private void loadDataPushers() {
         try {
             DataPusher dataPusher = new TcpDataPusher();
+            DataPusher httpDataPusher = new HttpDataPusher();
             dataPushers.put(dataPusher.getName(), dataPusher);
+            dataPushers.put(httpDataPusher.getName(), httpDataPusher);
         } catch (Throwable e) {
             LOGGER.error("load log data pusher err!", e);
         }
@@ -109,11 +111,13 @@ public class DefaultDataPushManager implements DataPushManager {
             final ServerOptions serverOptions = new ServerOptions();
             serverOptions.setTimeout(this.pusherOptions.getTimeout());
             serverOptions.setProtocolCode(this.pusherOptions.getProtocolCode());
+            serverOptions.setMaxHttpPoolSize(this.pusherOptions.getMaxHttpPoolSize());
+            serverOptions.setHttpPath(this.pusherOptions.getHttpPath());
             dataPusher.setServerAddrProvider(provider);
             boolean isSuccess = dataPusher.init(serverOptions);
             if (!isSuccess) {
                 this.isStarted.compareAndSet(true, false);
-                LOGGER.error("init log data pusher failed.retry next times.");
+                LOGGER.error("init log data pusher failed.retry next times. {}", serverOptions);
                 return false;
             }
 

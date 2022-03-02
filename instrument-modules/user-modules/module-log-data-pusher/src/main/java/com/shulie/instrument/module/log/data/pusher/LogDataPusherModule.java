@@ -89,13 +89,17 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
 
     private PusherOptions buildPusherOptions() {
         PusherOptions pusherOptions = new PusherOptions();
-        pusherOptions.setDataPusher(simulatorConfig.getProperty("pradar.data.pusher", "tcp"));
+        pusherOptions.setDataPusher(simulatorConfig.getProperty("pradar.data.pusher", "http"));
         pusherOptions.setTimeout(simulatorConfig.getIntProperty("pradar.data.pusher.timeout", 3000));
         pusherOptions.setServerZkPath(simulatorConfig.getProperty("pradar.server.zk.path", "/config/log/pradar/server"));
         pusherOptions.setZkServers(simulatorConfig.getZkServers());
         pusherOptions.setConnectionTimeoutMillis(simulatorConfig.getZkConnectionTimeout());
         pusherOptions.setSessionTimeoutMillis(simulatorConfig.getZkSessionTimeout());
         pusherOptions.setProtocolCode(simulatorConfig.getIntProperty("pradar.push.serialize.protocol.code", ProtocolCode.NONE));
+
+        pusherOptions.setMaxHttpPoolSize(simulatorConfig.getIntProperty("pradar.max.httpPool.size", 10));
+        pusherOptions.setHttpPath(simulatorConfig.getProperty("pradar.push.server.http.path", ""));
+
 
         List<LogPusherOptions> logPusherOptionsList = new ArrayList<LogPusherOptions>();
         LogPusherOptions traceLogOptions = new LogPusherOptions();

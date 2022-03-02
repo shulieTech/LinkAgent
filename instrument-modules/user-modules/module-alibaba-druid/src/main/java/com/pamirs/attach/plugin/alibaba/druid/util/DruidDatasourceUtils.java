@@ -43,8 +43,8 @@ public class DruidDatasourceUtils {
             return null;
         }
         String url = ptDataSourceConf.getShadowUrl();
-        String username = ptDataSourceConf.getShadowUsername();
-        String password = ptDataSourceConf.getShadowPassword();
+        String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
+        String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
         if (StringUtils.isBlank(url) || StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
             logger.error("[druid] shadow datasource config is invalid. [url/username/password] one in them or more is blank. url:{} username:{} password:{}", url, username, password);
             return null;

@@ -14,6 +14,12 @@
  */
 package com.pamirs.attach.plugin.atomikos.utils;
 
+import java.lang.reflect.Method;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.atomikos.jdbc.AtomikosDataSourceBean;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
@@ -32,20 +38,16 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class AtomikosDataSourceBeanWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(AtomikosDataSourceBeanWrapUtil.class.getName());
     private final static boolean isInfoEnabled = logger.isInfoEnabled();
 
-    public static final ConcurrentHashMap<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource>();
+    public static final ConcurrentHashMap<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource> pressureDataSources
+        = new ConcurrentHashMap<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource>();
 
     public static void destroy() {
-        Iterator<Map.Entry<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource>> it = pressureDataSources.entrySet().iterator();
+        Iterator<Map.Entry<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource>> it = pressureDataSources.entrySet()
+            .iterator();
         while (it.hasNext()) {
             Map.Entry<DataSourceMeta, AtomikosDataSourceBeanMediaDataSource> entry = it.next();
             it.remove();
@@ -63,6 +65,20 @@ public class AtomikosDataSourceBeanWrapUtil {
             username = datasource.getXaProperties().getProperty("User");
         }
         return username;
+    }
+
+    public static String getPassword(AtomikosDataSourceBean datasource) {
+        String password = datasource.getXaProperties().getProperty("password");
+        if (password == null) {
+            password = datasource.getXaProperties().getProperty("passWord");
+        }
+        if (password == null) {
+            password = datasource.getXaProperties().getProperty("Password");
+        }
+        if (password == null) {
+            password = datasource.getXaProperties().getProperty("PassWord");
+        }
+        return password;
     }
 
     public static String getUrl(AtomikosDataSourceBean datasource) {
@@ -109,7 +125,8 @@ public class AtomikosDataSourceBeanWrapUtil {
         try {
             String url = getUrl(sourceDataSource);
             String username = getUsername(sourceDataSource);
-            boolean contains = GlobalConfig.getInstance().containsShadowDatabaseConfig(DbUrlUtils.getKey(url, username));
+            boolean contains = GlobalConfig.getInstance().containsShadowDatabaseConfig(
+                DbUrlUtils.getKey(url, username));
             if (!contains) {
                 return GlobalConfig.getInstance().containsShadowDatabaseConfig(DbUrlUtils.getKey(url, null));
             }
@@ -142,7 +159,7 @@ public class AtomikosDataSourceBeanWrapUtil {
                 continue;
             }
             if (StringUtils.equals(getUsername(mediatorDataSource.getDataSourcePerformanceTest()), getUsername(target))
-                    && StringUtils.equals(getUrl(mediatorDataSource.getDataSourcePerformanceTest()), getUrl(target))) {
+                && StringUtils.equals(getUrl(mediatorDataSource.getDataSourcePerformanceTest()), getUrl(target))) {
                 return true;
             }
         }
@@ -162,11 +179,12 @@ public class AtomikosDataSourceBeanWrapUtil {
         if (!validate(target)) {
             //没有配置对应的影子表或影子库
             ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0002")
-                    .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getXaProperties().getProperty("URL")  + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：other")
-                    .report();
+                .setErrorType(ErrorTypeEnum.DataSource)
+                .setErrorCode("datasource-0002")
+                .setMessage("没有配置对应的影子表或影子库！")
+                .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getXaProperties().getProperty("URL")
+                    + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：other")
+                .report();
 
             AtomikosDataSourceBeanMediaDataSource dbMediatorDataSource = new AtomikosDataSourceBeanMediaDataSource();
             dbMediatorDataSource.setDataSourceBusiness(target);
@@ -174,7 +192,8 @@ public class AtomikosDataSourceBeanWrapUtil {
             DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
                 if (isInfoEnabled) {
-                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
+                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}",
+                        target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
                 }
                 old.close();
             }
@@ -183,24 +202,28 @@ public class AtomikosDataSourceBeanWrapUtil {
         if (shadowTable(target)) {
             //影子表
             try {
-                AtomikosDataSourceBeanMediaDataSource dbMediatorDataSource = new AtomikosDataSourceBeanMediaDataSource();
+                AtomikosDataSourceBeanMediaDataSource dbMediatorDataSource
+                    = new AtomikosDataSourceBeanMediaDataSource();
                 dbMediatorDataSource.setDataSourceBusiness(target);
 
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
                 if (old != null) {
                     if (isInfoEnabled) {
-                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
+                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}",
+                            target.getXaProperties().getProperty("URL"), target.getXaProperties().getProperty("user"));
                     }
                     old.close();
                 }
             } catch (Throwable e) {
                 ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子表设置初始化异常！")
-                        .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getXaProperties().getProperty("URL") + "|||" + Throwables.getStackTraceAsString(e))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
+                    .setErrorType(ErrorTypeEnum.DataSource)
+                    .setErrorCode("datasource-0003")
+                    .setMessage("影子表设置初始化异常！")
+                    .setDetail(
+                        "dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getXaProperties().getProperty("URL") + "|||"
+                            + Throwables.getStackTraceAsString(e))
+                    .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                    .report();
                 logger.error("[atomikos] init datasource err!", e);
             }
         } else {
@@ -214,22 +237,28 @@ public class AtomikosDataSourceBeanWrapUtil {
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
                 if (old != null) {
                     if (isInfoEnabled) {
-                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", getUrl(target), getUsername(target));
+                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}",
+                            getUrl(target), getUsername(target));
                     }
                     old.close();
                 }
                 if (isInfoEnabled) {
-                    logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), getUrl(target), getUsername(target), getUrl(ptDataSource), getUsername(ptDataSource));
+                    logger.info(
+                        "[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},"
+                            + "shadow-username:{}",
+                        target.hashCode(), getUrl(target), getUsername(target), getUrl(ptDataSource),
+                        getUsername(ptDataSource));
                 }
             } catch (Throwable t) {
                 logger.error("[atomikos] init datasource err!", t);
                 ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子库设置初始化异常！")
-                        .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + getUrl(target) + "|||" + Throwables.getStackTraceAsString(t))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
+                    .setErrorType(ErrorTypeEnum.DataSource)
+                    .setErrorCode("datasource-0003")
+                    .setMessage("影子库设置初始化异常！")
+                    .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + getUrl(target) + "|||"
+                        + Throwables.getStackTraceAsString(t))
+                    .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                    .report();
             }
         }
     }
@@ -239,21 +268,20 @@ public class AtomikosDataSourceBeanWrapUtil {
         return target;
     }
 
-
     public static AtomikosDataSourceBean generate(AtomikosDataSourceBean sourceDatasource) {
         Map<String, ShadowDatabaseConfig> conf = GlobalConfig.getInstance().getShadowDatasourceConfigs();
         if (conf == null) {
             return null;
         }
         ShadowDatabaseConfig ptDataSourceConf
-                = selectMatchPtDataSourceConfiguration(sourceDatasource, conf);
+            = selectMatchPtDataSourceConfiguration(sourceDatasource, conf);
         if (ptDataSourceConf == null) {
             return null;
         }
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
         String url = ptDataSourceConf.getShadowUrl();
-        String username = ptDataSourceConf.getShadowUsername();
-        String password = ptDataSourceConf.getShadowPassword();
+        String username = ptDataSourceConf.getShadowUsername(getUsername(sourceDatasource));
+        String password = ptDataSourceConf.getShadowPassword(getPassword(sourceDatasource));
         String xaDataSourceClassName = ptDataSourceConf.getProperty("xaDataSourceClassName");
 
         if (StringUtils.isBlank(driverClassName)) {
@@ -274,11 +302,13 @@ public class AtomikosDataSourceBeanWrapUtil {
         }
 
         if (StringUtils.isBlank(url) || StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
-            logger.error("ATOMIKOS: url/username/password/xaDataSourceClassName can't not be null,{} {} {} {}", url, username, password);
+            logger.error("ATOMIKOS: url/username/password/xaDataSourceClassName can't not be null,{} {} {} {}", url,
+                username, password);
             return null;
         }
         if (xaDataSourceClassName == null) {
-            logger.warn("ATOMIKOS: xaDataSourceClassName is empty. use business xaDataSourceClassName:{}", sourceDatasource.getXaDataSourceClassName());
+            logger.warn("ATOMIKOS: xaDataSourceClassName is empty. use business xaDataSourceClassName:{}",
+                sourceDatasource.getXaDataSourceClassName());
             xaDataSourceClassName = sourceDatasource.getXaDataSourceClassName();
         }
 
@@ -286,7 +316,8 @@ public class AtomikosDataSourceBeanWrapUtil {
         try {
             clazz = Class.forName(xaDataSourceClassName);
         } catch (Throwable e) {
-            logger.warn("ATOMIKOS: can't load class xaDataSourceClassName:{}", sourceDatasource.getXaDataSourceClassName(), e);
+            logger.warn("ATOMIKOS: can't load class xaDataSourceClassName:{}",
+                sourceDatasource.getXaDataSourceClassName(), e);
             return null;
         }
 
@@ -322,12 +353,14 @@ public class AtomikosDataSourceBeanWrapUtil {
         }
 
         if (hasField(clazz, "initialSize")) {
-            Integer initialSize = ptDataSourceConf.getIntProperty("initialSize", getIntProperty(sourceDatasource, "initialSize", 1));
+            Integer initialSize = ptDataSourceConf.getIntProperty("initialSize",
+                getIntProperty(sourceDatasource, "initialSize", 1));
             properties.put("initialSize", initialSize);
         }
 
         if (hasField(clazz, "minIdle")) {
-            Integer minIdle = ptDataSourceConf.getIntProperty("minIdle", getIntProperty(sourceDatasource, "minIdle", 1));
+            Integer minIdle = ptDataSourceConf.getIntProperty("minIdle",
+                getIntProperty(sourceDatasource, "minIdle", 1));
             properties.put("minIdle", minIdle);
         }
 
@@ -344,7 +377,6 @@ public class AtomikosDataSourceBeanWrapUtil {
                 }
             }
         }
-
 
         Integer maxWait = ptDataSourceConf.getIntProperty("maxWait");
         if (maxWait != null) {
@@ -367,7 +399,8 @@ public class AtomikosDataSourceBeanWrapUtil {
             }
         } else {
             if (hasField(clazz, "timeBetweenEvictionRunsMillis")) {
-                final String timeBetweenEvictionRunsMillis1 = getProperty(sourceDatasource, "timeBetweenEvictionRunsMillis");
+                final String timeBetweenEvictionRunsMillis1 = getProperty(sourceDatasource,
+                    "timeBetweenEvictionRunsMillis");
                 if (NumberUtils.isDigits(timeBetweenEvictionRunsMillis1)) {
                     properties.put("timeBetweenEvictionRunsMillis", Integer.valueOf(timeBetweenEvictionRunsMillis1));
                 }
@@ -472,30 +505,36 @@ public class AtomikosDataSourceBeanWrapUtil {
             }
         }
 
-        Integer maxPoolPreparedStatementPerConnectionSize = ptDataSourceConf.getIntProperty("maxPoolPreparedStatementPerConnectionSize");
+        Integer maxPoolPreparedStatementPerConnectionSize = ptDataSourceConf.getIntProperty(
+            "maxPoolPreparedStatementPerConnectionSize");
         if (maxPoolPreparedStatementPerConnectionSize != null) {
             if (hasField(clazz, "maxPoolPreparedStatementPerConnectionSize")) {
                 properties.put("maxPoolPreparedStatementPerConnectionSize", maxPoolPreparedStatementPerConnectionSize);
             }
         } else {
             if (hasField(clazz, "maxPoolPreparedStatementPerConnectionSize")) {
-                final String maxPoolPreparedStatementPerConnectionSize1 = getProperty(sourceDatasource, "maxPoolPreparedStatementPerConnectionSize");
+                final String maxPoolPreparedStatementPerConnectionSize1 = getProperty(sourceDatasource,
+                    "maxPoolPreparedStatementPerConnectionSize");
                 if (NumberUtils.isDigits(maxPoolPreparedStatementPerConnectionSize1)) {
-                    properties.put("maxPoolPreparedStatementPerConnectionSize", Integer.valueOf(maxPoolPreparedStatementPerConnectionSize1));
+                    properties.put("maxPoolPreparedStatementPerConnectionSize",
+                        Integer.valueOf(maxPoolPreparedStatementPerConnectionSize1));
                 }
             }
         }
 
-        Boolean pinGlobalTxToPhysicalConnection = ptDataSourceConf.getBooleanProperty("pinGlobalTxToPhysicalConnection");
+        Boolean pinGlobalTxToPhysicalConnection = ptDataSourceConf.getBooleanProperty(
+            "pinGlobalTxToPhysicalConnection");
         if (pinGlobalTxToPhysicalConnection != null) {
             if (hasField(clazz, "pinGlobalTxToPhysicalConnection")) {
                 properties.put("pinGlobalTxToPhysicalConnection", pinGlobalTxToPhysicalConnection);
             }
         } else {
             if (hasField(clazz, "pinGlobalTxToPhysicalConnection")) {
-                final String pinGlobalTxToPhysicalConnection1 = getProperty(sourceDatasource, "pinGlobalTxToPhysicalConnection");
+                final String pinGlobalTxToPhysicalConnection1 = getProperty(sourceDatasource,
+                    "pinGlobalTxToPhysicalConnection");
                 if (NumberUtils.isDigits(pinGlobalTxToPhysicalConnection1)) {
-                    properties.put("pinGlobalTxToPhysicalConnection", Integer.valueOf(pinGlobalTxToPhysicalConnection1));
+                    properties.put("pinGlobalTxToPhysicalConnection",
+                        Integer.valueOf(pinGlobalTxToPhysicalConnection1));
                 }
             }
         }
@@ -598,14 +637,16 @@ public class AtomikosDataSourceBeanWrapUtil {
         if (concurrentConnectionValidation != null) {
             target.setConcurrentConnectionValidation(concurrentConnectionValidation);
         } else {
-            target.setConcurrentConnectionValidation(getBooleanProperty(sourceDatasource, "concurrentConnectionValidation", true));
+            target.setConcurrentConnectionValidation(
+                getBooleanProperty(sourceDatasource, "concurrentConnectionValidation", true));
         }
 
         String resourceName = ptDataSourceConf.getProperty("resourceName");
         if (StringUtils.isNotBlank(resourceName)) {
             target.setUniqueResourceName(resourceName);
         } else {
-            target.setUniqueResourceName(Pradar.addClusterTestSuffixRodLower(Pradar.addClusterTestPrefixRodLower(sourceDatasource.getUniqueResourceName())));
+            target.setUniqueResourceName(Pradar.addClusterTestSuffixRodLower(
+                Pradar.addClusterTestPrefixRodLower(sourceDatasource.getUniqueResourceName())));
         }
 
         Integer defaultIsolationLevel = ptDataSourceConf.getIntProperty("defaultIsolationLevel");
@@ -618,7 +659,8 @@ public class AtomikosDataSourceBeanWrapUtil {
         return target;
     }
 
-    private static ShadowDatabaseConfig selectMatchPtDataSourceConfiguration(AtomikosDataSourceBean source, Map<String, ShadowDatabaseConfig> shadowDbConfigurations) {
+    private static ShadowDatabaseConfig selectMatchPtDataSourceConfiguration(AtomikosDataSourceBean source,
+        Map<String, ShadowDatabaseConfig> shadowDbConfigurations) {
         String key = DbUrlUtils.getKey(getUrl(source), getUsername(source));
         ShadowDatabaseConfig shadowDatabaseConfig = shadowDbConfigurations.get(key);
         if (shadowDatabaseConfig == null) {
@@ -634,7 +676,8 @@ public class AtomikosDataSourceBeanWrapUtil {
             Method[] methods = clazz.getMethods();
             for (int i = 0; i < methods.length; i++) {
                 Method method = methods[i];
-                if (method.getName().equals(setterName) && method.getReturnType().equals(void.class) && method.getParameterTypes().length == 1) {
+                if (method.getName().equals(setterName) && method.getReturnType().equals(void.class)
+                    && method.getParameterTypes().length == 1) {
                     return true;
                 }
             }

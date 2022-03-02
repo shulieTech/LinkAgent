@@ -32,6 +32,16 @@ public class ServerOptions {
      */
     private int protocolCode = ProtocolCode.JAVA;
 
+    /**
+     * http连接池大小
+     */
+    private int maxHttpPoolSize;
+
+    /**
+     * http请求path
+     */
+    private String httpPath;
+
     public int getProtocolCode() {
         return protocolCode;
     }
@@ -46,5 +56,21 @@ public class ServerOptions {
 
     public void setTimeout(int timeout) {
         this.timeout = timeout;
+    }
+
+    public int getMaxHttpPoolSize() {
+        return maxHttpPoolSize;
+    }
+
+    public void setMaxHttpPoolSize(int maxHttpPoolSize) {
+        this.maxHttpPoolSize = maxHttpPoolSize;
+    }
+
+    public String getHttpPath() {
+        return httpPath;
+    }
+
+    public void setHttpPath(String httpPath) {
+        this.httpPath = httpPath;
     }
 }

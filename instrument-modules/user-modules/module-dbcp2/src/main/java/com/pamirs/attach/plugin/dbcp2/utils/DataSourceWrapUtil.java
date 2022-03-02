@@ -214,8 +214,8 @@ public class DataSourceWrapUtil {
             return null;
         }
         String url = ptDataSourceConf.getShadowUrl();
-        String username = ptDataSourceConf.getShadowUsername();
-        String password = ptDataSourceConf.getShadowPassword();
+        String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
+        String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
 
 
         if (StringUtils.isBlank(url) || StringUtils.isBlank(username) || StringUtils.isBlank(password)) {

@@ -89,6 +89,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             Method method = (Method) parameterArray[1];
             String className = method.getDeclaringClass().getName();
             final String methodName = method.getName();
+            //todo ClusterTestUtils.rpcClusterTest里面已经做了对象copy，这么写是为了能单模块更新，后面要去掉
             MatchConfig config = copyMatchConfig(ClusterTestUtils.rpcClusterTest(className, methodName));
             config.addArgs("args", advice.getParameterArray());
             config.addArgs("mockLogger", mockLogger);

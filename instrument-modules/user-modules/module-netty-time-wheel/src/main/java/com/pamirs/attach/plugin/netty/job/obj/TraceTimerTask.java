@@ -12,7 +12,7 @@ import io.netty.util.TimerTask;
  * @author angju
  * @date 2021/6/11 15:39
  */
-public class PTTimerTask implements TimerTask {
+public class TraceTimerTask implements TimerTask {
 
     /**
      * 代理业务对象
@@ -23,7 +23,6 @@ public class PTTimerTask implements TimerTask {
     @Override
     public void run(Timeout timeout) throws Exception {
         String invokeId = rpcContext.get(PradarService.PRADAR_INVOKE_ID_KEY);
-        Pradar.setClusterTest(true);
         Pradar.startTrace(rpcContext.get(PradarService.PRADAR_TRACE_ID_KEY), invokeId + ".1",
             busTimerTask.getClass().getName(), NettyTimeWheelConstants.PLUGIN_NAME, NettyTimeWheelConstants.PLUGIN_NAME);
         Pradar.setClusterTest("1".equals(rpcContext.get(PradarService.PRADAR_CLUSTER_TEST_KEY)));
@@ -36,7 +35,7 @@ public class PTTimerTask implements TimerTask {
         }
     }
 
-    public PTTimerTask(TimerTask BUSTimerTask, Map<String, String> rpcContext) {
+    public TraceTimerTask(TimerTask BUSTimerTask, Map<String, String> rpcContext) {
         this.busTimerTask = BUSTimerTask;
         this.rpcContext = rpcContext;
     }

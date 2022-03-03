@@ -14,6 +14,34 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import com.alibaba.fastjson.JSONObject;
+import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.common.HeaderMark;
+import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.interceptor.ContextTransfer;
+import com.pamirs.pradar.interceptor.SpanRecord;
+import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
+import com.pamirs.pradar.internal.config.ExecutionCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
+import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
+import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
+import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.*;
+import org.apache.http.client.methods.*;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.message.BasicStatusLine;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,44 +49,6 @@ import java.net.SocketTimeoutException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.alibaba.fastjson.JSONObject;
-
-import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarService;
-import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.common.HeaderMark;
-import com.pamirs.pradar.interceptor.ContextTransfer;
-import com.pamirs.pradar.interceptor.SpanRecord;
-import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
-import com.pamirs.pradar.internal.config.ExecutionCall;
-import com.pamirs.pradar.internal.config.MatchConfig;
-import com.pamirs.pradar.pressurement.ClusterTestUtils;
-import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
-import com.shulie.instrument.simulator.api.ProcessControlException;
-import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpOptions;
-import org.apache.http.client.methods.HttpPatch;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpTrace;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHttpResponse;
-import org.apache.http.message.BasicStatusLine;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -83,6 +73,40 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
         }
         return url + path;
     }
+
+    private static ExecutionStrategy fixJsonStrategy =
+            new JsonMockStrategy() {
+                @Override
+                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+                    if (params instanceof MatchConfig) {
+                        try {
+                            MatchConfig config = (MatchConfig) params;
+                            if (config.getScriptContent().contains("return")) {
+                                return null;
+                            }
+                            StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+
+
+                            HttpEntity entity = null;
+                            entity = new StringEntity(config.getScriptContent(), "UTF-8");
+
+                            BasicHttpResponse response = new BasicHttpResponse(statusline);
+                            response.setEntity(entity);
+
+                            if (HttpClientConstants.clazz == null) {
+                                HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                            }
+                            Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                            ProcessController.returnImmediately(returnType, object);
+                        } catch (ProcessControlException pe) {
+                            throw pe;
+                        } catch (Throwable t) {
+                            throw new PressureMeasureError(t);
+                        }
+                    }
+                    return null;
+                }
+            };
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
@@ -111,6 +135,9 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
+        if (config.getStrategy() instanceof JsonMockStrategy){
+            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
             new ExecutionCall() {
                 @Override
@@ -120,7 +147,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                     try {
                         HttpEntity entity = null;
                         if (param instanceof String) {
-                            entity = new StringEntity(String.valueOf(param));
+                            entity = new StringEntity(String.valueOf(param), "UTF-8");
                         } else {
                             entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
                         }

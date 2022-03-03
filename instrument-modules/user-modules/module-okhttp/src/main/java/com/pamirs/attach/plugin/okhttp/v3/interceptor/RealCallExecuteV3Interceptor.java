@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
+import com.pamirs.attach.plugin.okhttp.utils.MockReturnUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -24,6 +25,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
@@ -56,6 +58,9 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
         return OKHttpConstants.PLUGIN_TYPE;
     }
 
+
+
+
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
         if (!Pradar.isClusterTest()) {
@@ -71,6 +76,10 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
         config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, check);
         config.addArgs("url", url);
         config.addArgs("isInterface", Boolean.FALSE);
+        if (config.getStrategy() instanceof JsonMockStrategy){
+            config.addArgs("call", call);
+            MockReturnUtils.fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
                 new ExecutionForwardCall() {
                     @Override

@@ -51,7 +51,7 @@ public class LiteLauncher {
     /**
      * simulator 延迟加载时间
      */
-    private static final Integer SIMULATOR_DELAY = 300;
+    private static final Integer SIMULATOR_DELAY = 0;
 
     /**
      * agentHome地址

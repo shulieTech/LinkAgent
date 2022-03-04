@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.feign.interceptor;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.alibaba.fastjson.JSON;
@@ -88,7 +89,8 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             Method method = (Method) parameterArray[1];
             String className = method.getDeclaringClass().getName();
             final String methodName = method.getName();
-            MatchConfig config = ClusterTestUtils.rpcClusterTest(className, methodName);
+            //todo ClusterTestUtils.rpcClusterTest里面已经做了对象copy，这么写是为了能单模块更新，后面要去掉
+            MatchConfig config = copyMatchConfig(ClusterTestUtils.rpcClusterTest(className, methodName));
             config.addArgs("args", advice.getParameterArray());
             config.addArgs("mockLogger", mockLogger);
             config.addArgs("url", className.concat("#").concat(methodName));
@@ -103,6 +105,17 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
             config.getStrategy().processBlock(method.getReturnType(), advice.getClassLoader(), config);
         }
 
+    }
+
+    private static MatchConfig copyMatchConfig(MatchConfig matchConfig) {
+        MatchConfig copied = new MatchConfig();
+        copied.setUrl(matchConfig.getUrl());
+        copied.setStrategy(matchConfig.getStrategy());
+        copied.setScriptContent(matchConfig.getScriptContent());
+        copied.setArgs(new HashMap<String, Object>(matchConfig.getArgs()));
+        copied.setForwarding(matchConfig.getForwarding());
+        copied.setSuccess(matchConfig.isSuccess());
+        return copied;
     }
 
     @Override

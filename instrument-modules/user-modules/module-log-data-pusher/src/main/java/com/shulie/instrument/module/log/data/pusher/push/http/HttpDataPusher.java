@@ -92,9 +92,8 @@ public class HttpDataPusher implements DataPusher {
         try {
             if (StringUtil.isEmpty(serverOptions.getHttpPath())) {
                 LOGGER.error(
-                    "File: 'simulator-agent/agent/simulator/config/simulator.properties',config: 'pradar.push.server"
-                        + ".http"
-                        + ".path' is empty!!");
+                    "File: 'simulator-agent/agent/simulator/config/simulator.properties',"
+                        + "config: 'pradar.push.server.http.path' is empty!!");
                 return false;
             }
             hostIp = PradarCoreUtils.getLocalAddress();

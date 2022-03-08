@@ -14,15 +14,17 @@
  */
 package com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3;
 
-import java.util.List;
-
+import com.mongodb.DB;
 import com.mongodb.DBCollection;
+import com.mongodb.Mongo;
 import com.mongodb.ServerAddress;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
+
+import java.util.List;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -42,12 +44,22 @@ public class DBCollectionTraceInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
-        DBCollection coll = (DBCollection)advice.getTarget();
         SpanRecord spanRecord = new SpanRecord();
-        spanRecord.setMethod(advice.getBehaviorName());
-        List<ServerAddress> serverAddresses = coll.getDB().getMongo().getAllAddress();
-        spanRecord.setRemoteIp(StringUtils.join(serverAddresses, ","));
-        spanRecord.setRequest(coll.getName());
+        try {
+            DBCollection coll = (DBCollection)advice.getTarget();
+            if (advice.getBehavior() != null && advice.getBehavior().getName() != null){
+                spanRecord.setMethod(advice.getBehavior().getName());
+            }
+            DB db = coll.getDB();
+            if (db != null && db.getMongo() != null){
+                Mongo mongo = db.getMongo();
+                List<ServerAddress> serverAddresses = mongo.getAllAddress();
+                spanRecord.setRemoteIp(StringUtils.join(serverAddresses, ","));
+            }
+            spanRecord.setRequest(coll.getName());
+        }catch (Exception e){
+            LOGGER.error("error:", e);
+        }
         return spanRecord;
     }
 

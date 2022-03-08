@@ -14,17 +14,6 @@
  */
 package com.pamirs.pradar.pressurement.datasource;
 
-import java.io.StringWriter;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -40,13 +29,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.druid.DbType;
 import com.shulie.druid.sql.SQLUtils;
 import com.shulie.druid.sql.ast.SQLStatement;
-import com.shulie.druid.sql.ast.statement.SQLAlterTableStatement;
-import com.shulie.druid.sql.ast.statement.SQLCreateTableStatement;
-import com.shulie.druid.sql.ast.statement.SQLDeleteStatement;
-import com.shulie.druid.sql.ast.statement.SQLDropTableStatement;
-import com.shulie.druid.sql.ast.statement.SQLInsertStatement;
-import com.shulie.druid.sql.ast.statement.SQLSelectStatement;
-import com.shulie.druid.sql.ast.statement.SQLUpdateStatement;
+import com.shulie.druid.sql.ast.statement.*;
 import com.shulie.druid.sql.dialect.mysql.ast.statement.MySqlRenameTableStatement;
 import com.shulie.druid.sql.parser.SQLParserUtils;
 import com.shulie.druid.sql.parser.SQLStatementParser;
@@ -57,6 +40,12 @@ import com.shulie.druid.util.JdbcUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.StringWriter;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>{@code } instances should NOT be constructed in
@@ -95,7 +84,8 @@ public class SqlParser {
                     String sql = args[0];
                     String key = args[1];
                     String dbType = args[2];
-                    return parseAndReplaceTableNames(sql, key, dbType);
+                    String midType = args[3];
+                    return parseAndReplaceTableNames(sql, key, dbType, midType);
                 }
             }
 
@@ -192,7 +182,7 @@ public class SqlParser {
         return new TableParserResult(tables, isSelect);
     }
 
-    public static String replaceTable(String sql, String dbConnectionKey, String dbType) throws SQLException {
+    public static String replaceTable(String sql, String dbConnectionKey, String dbType, String midType) throws SQLException {
         if (!Pradar.isClusterTest()) {
             return sql;
         }
@@ -200,7 +190,7 @@ public class SqlParser {
         String innerDbtype = dbType;
         //影子表压测
         try {
-            return cacheTableModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype);
+            return cacheTableModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype + "$$$$" + midType);
         } catch (Throwable e) {
             LOGGER.error("replace table to shadow table error. sql={}, key={}, dbType={}", sql, dbConnectionKey, dbType,
                 e);
@@ -331,6 +321,10 @@ public class SqlParser {
             return null;
         }
 
+        if (!Pradar.isShadowDatabaseWithShadowScheme()) {
+            return schema;
+        }
+
         if (StringUtils.equals(schema, config.getSchema())) {
             return config.getShadowSchema();
         } else {
@@ -359,6 +353,7 @@ public class SqlParser {
      * @throws SQLException
      */
     public static String parseAndReplaceSchema(String sql, String key, String dbTypeName) throws SQLException {
+        sql = sql.replaceAll("<  >","<>");
         ShadowDatabaseConfig config = GlobalConfig.getInstance().getShadowDatabaseConfig(key);
         if (config == null) {
             return sql;
@@ -438,7 +433,7 @@ public class SqlParser {
         System.out.println(parseAndReplaceTableNames(
             " select `testdb`.`user`.`id`, `testdb`.`user`.`name`, `testdb`.`user`.`password`, `testdb`.`user`"
                 + ".`createTime`, `testdb`.`user`.`updateTime` from `testdb`.`user` limit ? ",
-            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql"));
+            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
 
         System.out.println(parseAndReplaceTableNames(
             "SELECT r.*, c.org_name, c.org_code, (SELECT org_name FROM t_city WHERE org_code = c.parent_code) "
@@ -448,10 +443,11 @@ public class SqlParser {
                 + ".business_type = ? AND r.car_level = ? AND c.org_code = ? AND r.city_uuid = ? AND r.area_type = ? "
                 + "AND r.city_uuid IN (?) AND content->'$.examineYear' = ? AND r.type_trip = ? AND r.extend_biz_type "
                 + "= ? ORDER BY r.status DESC, r.effective_time DESC, r.version_number DESC, r.update_time DESC",
-            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql"));
+            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "other"));
     }
 
-    public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName) throws SQLException {
+    public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName, String midType) throws SQLException {
+        sql = sql.replaceAll("<  >","<>");
         DbType dbType = DbType.of(dbTypeName);
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {
@@ -594,25 +590,28 @@ public class SqlParser {
                             url = url.substring(0, url.indexOf('|'));
                         }
 
+                        int idx = key.lastIndexOf('|');
+                        String userName = idx > 0 ? key.substring(idx+1) : "未知";
+
                         ErrorReporter.buildError()
                             .setErrorType(ErrorTypeEnum.DataSource)
                             .setErrorCode("datasource-0004")
                             .setMessage(String
-                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s", url,
+                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s, userName:%s, 中间件类型:%s", url,
                                     name.getName(),
-                                    getDriverClassName(url), dbType))
+                                    getDriverClassName(url), dbType, userName, midType))
                             .setDetail(
                                 String.format(
                                     "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
                                         + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
                                     name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql,
-                                    val.toString()))
+                                    val))
                             .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                             .report();
                         throw new SQLException(String.format(
                             "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
-                                + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
-                            name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql, val.toString()));
+                                + "driverClassName:%s, dbType:%s, username:%s, 中间件类型:%s, [sql] %s [new sql] %s",
+                            name.getName(), url, name.getName(), getDriverClassName(url), dbType, userName, midType, sql, val));
                     }
                 }
             }

@@ -163,5 +163,13 @@ public class AgentStatus {
         }
     }
 
+    /**
+     * 是否安装操作完成，安装失败或者安装成功
+     * @return
+     */
+    public static boolean doInstall(){
+        return INSTALLED.equals(AGENT_STATUS) || INSTALL_FAILED.equals(AGENT_STATUS);
+    }
+
 
 }

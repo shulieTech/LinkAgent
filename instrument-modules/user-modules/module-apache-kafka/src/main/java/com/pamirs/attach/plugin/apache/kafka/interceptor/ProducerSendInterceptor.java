@@ -14,9 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
@@ -43,6 +40,9 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+
+import java.lang.reflect.Field;
+import java.util.Map;
 
 /**
  * send方法增强类

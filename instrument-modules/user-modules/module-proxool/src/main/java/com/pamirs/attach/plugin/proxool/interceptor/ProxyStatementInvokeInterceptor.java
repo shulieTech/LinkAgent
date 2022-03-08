@@ -101,7 +101,7 @@ public class ProxyStatementInvokeInterceptor extends ParametersWrapperIntercepto
         String ptSql = null;
         if (useTable) {
             try {
-                ptSql = SqlParser.replaceTable(sql, dbConnectionKey, dbType);
+                ptSql = SqlParser.replaceTable(sql, dbConnectionKey, dbType, "proxool");
             } catch (SQLException e) {
                 throw new PressureMeasureError(e.getMessage());
             }

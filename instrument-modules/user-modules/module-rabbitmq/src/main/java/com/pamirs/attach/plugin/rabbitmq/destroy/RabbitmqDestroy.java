@@ -15,9 +15,10 @@
 package com.pamirs.attach.plugin.rabbitmq.destroy;
 
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.SimpleLocalCacheSupport;
-import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ZkCacheSupportFactory;
+import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupportFactory;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
 import com.shulie.instrument.simulator.api.listener.Destroyed;
+import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -27,7 +28,12 @@ public class RabbitmqDestroy implements Destroyed {
     @Override
     public void destroy() {
         ChannelHolder.release();
-        SimpleLocalCacheSupport.getInstance().destroy();
-        ZkCacheSupportFactory.destroy();
+        CacheSupportFactory.destroy();
+        for (Object value : SpringBlockingQueueConsumerDeliveryInterceptor.RUNNING_CONTAINER.values()) {
+            if(value instanceof AbstractMessageListenerContainer){
+                ((AbstractMessageListenerContainer)value).destroy();
+            }
+        }
+        SpringBlockingQueueConsumerDeliveryInterceptor.RUNNING_CONTAINER.clear();
     }
 }

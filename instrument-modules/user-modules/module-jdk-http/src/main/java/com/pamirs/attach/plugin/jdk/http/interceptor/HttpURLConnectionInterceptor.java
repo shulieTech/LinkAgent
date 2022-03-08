@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,8 +21,11 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
+import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
@@ -44,7 +47,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
     private static volatile Field CONNECTED_FiELD = null;
     private static volatile Field CONNECTING_FiELD = null;
 
-    private static String getService(String schema, String host, int port, String path) {
+    protected static String getService(String schema, String host, int port, String path) {
         String url = schema + "://" + host;
         if (port != -1 && port != 80) {
             url = url + ':' + port;
@@ -67,6 +70,14 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         if (!Pradar.isClusterTest()) {
             return;
         }
+        /**
+         * 保持trace一致
+         */
+        boolean connecting = advice.hasMark(MARK_CONNECTING);
+        boolean connected = advice.hasMark(MARK_CONNECTED);
+        if (connected || connecting) {
+            return;
+        }
         Object target = advice.getTarget();
         final HttpURLConnection request = (HttpURLConnection) target;
         final URL url = request.getURL();
@@ -77,6 +88,11 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         String whiteList = request.getRequestProperty(PradarService.PRADAR_WHITE_LIST_CHECK);
 
         MatchConfig config = ClusterTestUtils.httpClusterTest(fullPath);
+        ExecutionStrategy strategy = config.getStrategy();
+        // mock不在connect里执行
+        if(strategy instanceof JsonMockStrategy || strategy instanceof MockStrategy){
+            return;
+        }
         config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, whiteList);
         // 白名单需要的信息
         config.addArgs("url", fullPath);

@@ -24,8 +24,10 @@ import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
@@ -67,6 +69,30 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         return url + path;
     }
 
+    private static ExecutionStrategy fixJsonStrategy =
+            new JsonMockStrategy() {
+                @Override
+                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+                    if (params instanceof MatchConfig) {
+                        try {
+                            MatchConfig config = (MatchConfig) params;
+                            if (config.getScriptContent().contains("return")) {
+                                return null;
+                            }
+                            HttpMethod method = (HttpMethod) config.getArgs().get("extraMethod");
+                            byte[] bytes = config.getScriptContent().getBytes();
+                            Reflect.on(method).set("responseBody", bytes);
+                            ProcessController.returnImmediately(int.class, 200);
+                        } catch (ProcessControlException pe) {
+                            throw pe;
+                        } catch (Throwable t) {
+                            throw new PressureMeasureError(t);
+                        }
+                    }
+                    return null;
+                }
+            };
+
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
         Object[] args = advice.getParameterArray();
@@ -80,9 +106,18 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             String url = getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
             final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
             Header header = method.getRequestHeader(PradarService.PRADAR_WHITE_LIST_CHECK);
-            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());
+
+            if (header == null) {
+                config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, true);
+            } else {
+                config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());
+            }
             config.addArgs("url", url);
             config.addArgs("isInterface", Boolean.FALSE);
+            if (config.getStrategy() instanceof JsonMockStrategy){
+                config.addArgs("extraMethod", method);
+                fixJsonStrategy.processBlock(java.lang.String.class, advice.getClassLoader(), config);
+            }
             config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
                 @Override
                 public Object call(Object param) throws ProcessControlException {

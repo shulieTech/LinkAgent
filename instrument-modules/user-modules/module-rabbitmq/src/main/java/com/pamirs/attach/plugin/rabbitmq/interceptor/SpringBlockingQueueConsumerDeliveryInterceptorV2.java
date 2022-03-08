@@ -30,6 +30,7 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -102,7 +103,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptorV2 extends TraceInter
                 Map<String, String> rpcContext = new HashMap<String, String>();
                 for (String key : Pradar.getInvokeContextTransformKeys()) {
                     String value = (String) headers.get(key);
-                    if (value != null) {
+                    if (!StringUtil.isEmpty(value)) {
                         rpcContext.put(key, value);
                     }
                 }

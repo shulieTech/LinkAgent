@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -20,11 +20,13 @@ import oshi.util.FileUtil;
 import oshi.util.Util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -57,9 +59,9 @@ public class ContainerStatsInfoCollector {
     private volatile int userHz;
 
     /**
-     * 网卡速度
+     * 网卡速度, 默认1000Mbs, 会在控制台配置覆盖这个值
      */
-    private volatile int networkSpeed;
+    private volatile int networkSpeed = 1000;
 
     private static long lastErrorTime;
 
@@ -145,16 +147,13 @@ public class ContainerStatsInfoCollector {
         statsInfo.containerCpuValue = new BigDecimal(FileUtil.readFile("/sys/fs/cgroup/cpuacct/cpuacct.usage").get(0));
         // 网口
         if (this.eth == null) {
-            this.eth = execCommand("ip -o -4 route show to default | awk '{print $5}'").get(0);
-        }
-        // 网卡
-        if (networkSpeed == 0) {
-            List<String> strings = FileUtil.readFile(String.format("/sys/class/net/%s/speed", eth));
-            if(strings.isEmpty()){
-                // 如果读取带宽速率文件失败, 则默认1000Mbs
-                strings.add("1000");
+            List<String> eths = execCommand("ip -o -4 route show to default | awk '{print $5}'");
+            if (!eths.isEmpty()) {
+                this.eth = eths.get(0);
+            }else if(new File("/sys/class/net/eth0/speed").exists()){
+                // 看看是否存在eth0网口,存在则用这个
+                this.eth = "eth0";
             }
-            this.networkSpeed = Integer.parseInt(strings.get(0));
         }
 
         // 用户赫兹
@@ -162,8 +161,10 @@ public class ContainerStatsInfoCollector {
             this.userHz = Integer.parseInt(execCommand("getconf CLK_TCK").get(0));
         }
         // 网络
-        statsInfo.rxBytesValue = Long.parseLong(FileUtil.readFile(String.format("/sys/class/net/%s/statistics/rx_bytes", eth)).get(0));
-        statsInfo.txBytesValue = Long.parseLong(FileUtil.readFile(String.format("/sys/class/net/%s/statistics/tx_bytes", eth)).get(0));
+        if (eth != null) {
+            statsInfo.rxBytesValue = Long.parseLong(FileUtil.readFile(String.format("/sys/class/net/%s/statistics/rx_bytes", eth)).get(0));
+            statsInfo.txBytesValue = Long.parseLong(FileUtil.readFile(String.format("/sys/class/net/%s/statistics/tx_bytes", eth)).get(0));
+        }
         // CPU核心
         if (coresNum == 0) {
             String coreNumLine = FileUtil.readFile("/sys/fs/cgroup/cpuset/cpuset.cpus").get(0);

@@ -12,6 +12,7 @@
     <artifactId>user-modules</artifactId>
     <packaging>pom</packaging>
 
+
     <modules>
         <module>module-log-data-pusher</module>
         <module>module-pradar-config-fetcher</module>
@@ -48,7 +49,7 @@
         <module>module-mock</module>
         <module>module-mongodb</module>
         <!--        和mongodb 会有冲突， 暂时注释-->
-        <!--        <module>module-mongodb4</module>-->
+        <module>module-mongodb4</module>
         <module>module-motan</module>
         <module>module-mule</module>
         <!--        <module>module-mybatis</module>-->
@@ -86,6 +87,8 @@
         <module>module-apache-cxf</module>
         <module>module-apache-axis</module>
         <module>module-jersey</module>
+        <module>module-spring-cloud-gateway</module>
+        <module>module-netty-time-wheel</module>
     </modules>
 
     <build>

@@ -27,11 +27,13 @@ import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.connection.*;
+import org.springframework.data.redis.connection.RedisClusterConfiguration;
+import org.springframework.data.redis.connection.RedisNode;
+import org.springframework.data.redis.connection.RedisSentinelConfiguration;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
 import java.util.*;
 
 /**
@@ -55,9 +57,9 @@ public class SpringRedisClientInfoCollector extends ResultInterceptorAdaptor {
             }
             LettuceConnectionFactory biz = (LettuceConnectionFactory) advice.getTarget();
 
-            RedisConfiguration standaloneConfiguration = biz.getStandaloneConfiguration();
-            RedisConfiguration clusterConfiguration = biz.getClusterConfiguration();
-            RedisConfiguration sentinelConfiguration = biz.getSentinelConfiguration();
+            Object standaloneConfiguration = biz.getStandaloneConfiguration();
+            Object clusterConfiguration = biz.getClusterConfiguration();
+            Object sentinelConfiguration = biz.getSentinelConfiguration();
 
             if (clusterConfiguration != null) {
                 Set<RedisNode> nodeSet = ((RedisClusterConfiguration) clusterConfiguration).getClusterNodes();

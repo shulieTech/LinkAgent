@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,9 +14,15 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.pamirs.pradar.Pradar;
+import com.alibaba.fastjson.JSON;
+import com.pamirs.pradar.pressurement.entry.CheckerEntry;
+import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +52,11 @@ public class SimulatorDynamicConfig {
     private static final String SWITCH_SAVE_BUSINESS_TRACE_KEY = "pradar.switch.save.business.trace";
     private static final String BUS_REQUEST_RESPONSE_DATA_ALLOW_TRACE = "pradar.bus.request.response.data.allow.trace";
     private static final String SHADOW_REQUEST_RESPONSE_DATA_ALLOW_TRACE
-        = "pradar.shadow.request.response.data.allow.trace";
+            = "pradar.shadow.request.response.data.allow.trace";
+    private static final String SECURITY_FIELD = "securityField";
 
+    private static final String FILED_CHECK_RULES_SWITCH = "filed.check.rules.switch";
+    private static final String FILED_CHECK_RULES = "filed.check.rules";
     /**
      * trace 业务流量采样率
      */
@@ -87,7 +96,11 @@ public class SimulatorDynamicConfig {
      */
     private final boolean shadowRequestResponseDataAllowTrace;
 
+    private Map<String, CheckerEntry> fieldCheckRules;
+    private final List<String> securityFieldCollection;
+
     private Map<String, String> config = null;
+    private boolean fieldCheckRulesSwitcher;
 
     public SimulatorDynamicConfig(Map<String, String> config) {
         this.config = config;
@@ -103,6 +116,27 @@ public class SimulatorDynamicConfig {
         this.isSwitchSaveBusinessTrace = getSwitchSaveBusinessTrace(config);
         this.busRequestResponseDataAllowTrace = getBusRequestResponseDataAllowTrace(config);
         this.shadowRequestResponseDataAllowTrace = getShadowRequestResponseDataAllowTrace(config);
+        this.fieldCheckRulesSwitcher = getFieldCheckRulesSwithcer(config);
+        this.fieldCheckRules = getFieldCheckRules(config);
+        this.securityFieldCollection = getSecurityFieldCollection(config);
+
+    }
+
+    private List<String> getSecurityFieldCollection(Map<String, String> config) {
+        if (config == null) {
+            return null;
+        }
+        String date = config.get(SECURITY_FIELD);
+        if (date == null) {
+            return null;
+        }
+        String[] splitter = date.split(",");
+        List<String> list = Arrays.asList(splitter);
+        return list;
+    }
+
+    public List<String> getSecurityFieldCollection() {
+        return securityFieldCollection;
     }
 
     public boolean isShadowRequestResponseDataAllowTrace() {
@@ -111,6 +145,72 @@ public class SimulatorDynamicConfig {
 
     public boolean isBusRequestResponseDataAllowTrace() {
         return busRequestResponseDataAllowTrace;
+    }
+
+    public Map<String, CheckerEntry> getFieldCheckRules() {
+        return fieldCheckRules;
+    }
+
+    public boolean getFieldCheckRulesSwithcer() {
+        return this.fieldCheckRulesSwitcher;
+    }
+
+    public boolean getFieldCheckRulesSwithcer(Map<String, String> config) {
+        boolean result = false;
+        if (config == null) {
+            return false;
+        }
+        String date = config.get(FILED_CHECK_RULES_SWITCH);
+        if (date == null) {
+            return false;
+        }
+        try {
+            result = Boolean.parseBoolean(date);
+        } catch (Throwable t) {
+
+        }
+        return result;
+    }
+
+    String mockStr = "[{ \"url\":\"jdbc:mysql://114.55.42.181:3306/atester?useUnicode=true\", \"table\":\"m_user\", \"operateType\":\"insert\", \"prefix\":\"PT_\" }]";
+
+    private Map<String, CheckerEntry> getFieldCheckRules(Map<String, String> config) {
+        if (!getFieldCheckRulesSwithcer()) {
+            return null;
+        }
+        if (config == null) {
+            return null;
+        }
+        String data = config.get(FILED_CHECK_RULES);
+        if (data == null) {
+            return null;
+        }
+        List<CheckerEntry> list = JSON.parseArray(data, CheckerEntry.class);
+        return parser(list);
+    }
+
+    private Map<String, CheckerEntry> parser(List<CheckerEntry> list) {
+        Map<String, CheckerEntry> res = new ConcurrentHashMap<String, CheckerEntry>();
+        if (CollectionUtils.isEmpty(list)) {
+            return null;
+        }
+        for (CheckerEntry entry : list) {
+
+            /**
+             * 格式化url,可能Url中有很多附加属性
+             */
+            String url = entry.getUrl();
+            url = url.contains("?") ? url.split("\\?")[0] : url;
+            /**
+             * 格式化table,可能是db.table
+             */
+            String table = entry.getTable();
+            table = table.contains(".") ? table.split(".")[1] : table;
+            String operateType = entry.getOperateType();
+            String key = url.concat("#").concat(table).concat("#").concat(operateType).toLowerCase();
+            res.put(key, entry);
+        }
+        return res;
     }
 
     /**

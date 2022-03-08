@@ -37,7 +37,7 @@ public class SchedulerArgs {
     /**
      * 调度间隔时间
      */
-    private int interval = 5;
+    private int interval = 10;
 
     /**
      * 调试间隔单位

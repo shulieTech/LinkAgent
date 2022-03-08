@@ -16,19 +16,20 @@
     <properties>
         <module-name>mongodb4</module-name>
     </properties>
+    <version>2.0.0.0</version>
 
     <dependencies>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.core.version}</version>
             <scope>provided</scope>
         </dependency>
         <!--        https://mvnrepository.com/artifact/org.mongodb/mongodb-driver-core-->
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-core</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.2</version>
             <scope>provided</scope>
         </dependency>
                 <!-- https://mvnrepository.com/artifact/org.mongodb/mongodb-driver-sync -->
@@ -48,7 +49,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
 

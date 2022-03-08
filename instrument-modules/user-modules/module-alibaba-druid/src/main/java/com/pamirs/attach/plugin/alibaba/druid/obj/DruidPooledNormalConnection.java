@@ -47,13 +47,15 @@ import java.util.concurrent.Executor;
 public class DruidPooledNormalConnection extends DruidPooledConnection {
     private DruidPooledConnection target;
 
-    public DruidPooledNormalConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username, String dbType, SqlMetaData sqlMetaData) {
+    public DruidPooledNormalConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username,
+        String dbType, String midType, SqlMetaData sqlMetaData) {
         super(connection.getConnectionHolder());
         this.target = connection;
         this.dbConnectionKey = dbConnectionKey;
         this.url = url;
         this.username = username;
         this.dbType = dbType;
+        this.midType = midType;
         this.sqlMetaData = sqlMetaData;
     }
 
@@ -73,6 +75,8 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
      * dbType
      */
     private String dbType;
+
+    private final String midType;
 
     /**
      * sql metadata
@@ -140,18 +144,21 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
 
     @Override
     public Statement createStatement() throws SQLException {
-        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(), dbType), this.conn, this.dbConnectionKey, this.dbType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public Statement createStatement(int arg0, int arg1) throws SQLException {
-        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public Statement createStatement(int arg0, int arg1, int arg2)
             throws SQLException {
-        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+        return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
@@ -228,7 +235,7 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
 
     @Override
     public String nativeSQL(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return target.nativeSQL(arg0);
     }
 
@@ -263,48 +270,54 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
 
     @Override
     public PreparedStatement prepareStatement(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0), dbType), this.conn, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, int[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, String[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int arg1, int arg2,
                                               int arg3) throws SQLException {
-        sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(sql, arg1, arg2, arg3), dbType), this.conn, this.dbConnectionKey, this.dbType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType, this.midType);
+        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(sql, arg1, arg2, arg3), dbType), this.conn, this.dbConnectionKey, this.dbType,
+            midType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public void setSchema(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         try {
             target.setSchema(arg0);
         } catch (AbstractMethodError e) {

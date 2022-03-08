@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.jdk.http;
 
 import com.pamirs.attach.plugin.jdk.http.interceptor.HttpClientInterceptor;
+import com.pamirs.attach.plugin.jdk.http.interceptor.HttpURLConnectionGetInputStreamInterceptor;
 import com.pamirs.attach.plugin.jdk.http.interceptor.HttpURLConnectionInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -45,7 +46,7 @@ public class JdkHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
 
                 final InstrumentMethod getInputStreamMethod = target.getDeclaredMethod("getInputStream");
-                getInputStreamMethod.addInterceptor(Listeners.of(HttpURLConnectionInterceptor.class, "JDK_HTTP_HTTPURLCONNECTION_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                getInputStreamMethod.addInterceptor(Listeners.of(HttpURLConnectionGetInputStreamInterceptor.class, "JDK_HTTP_HTTPURLCONNECTION_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 final InstrumentMethod getOutputStreamMethod = target.getDeclaredMethod("getOutputStream");
                 getOutputStreamMethod.addInterceptor(Listeners.of(HttpURLConnectionInterceptor.class, "JDK_HTTP_HTTPURLCONNECTION_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));

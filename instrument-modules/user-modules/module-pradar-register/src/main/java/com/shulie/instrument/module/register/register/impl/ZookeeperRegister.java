@@ -14,37 +14,9 @@
  */
 package com.shulie.instrument.module.register.register.impl;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarCoreUtils;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.ScanJarPomUtils;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.HttpUtils.HttpResult;
 import com.pamirs.pradar.common.IOUtils;
@@ -58,6 +30,7 @@ import com.shulie.instrument.module.register.NodeRegisterModule;
 import com.shulie.instrument.module.register.register.Register;
 import com.shulie.instrument.module.register.register.RegisterOptions;
 import com.shulie.instrument.module.register.utils.ConfigUtils;
+import com.shulie.instrument.module.register.utils.SimulatorStatus;
 import com.shulie.instrument.module.register.zk.ZkClient;
 import com.shulie.instrument.module.register.zk.ZkHeartbeatNode;
 import com.shulie.instrument.module.register.zk.ZkNodeStat;
@@ -70,6 +43,16 @@ import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.util.*;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * @Description
@@ -123,17 +106,21 @@ public class ZookeeperRegister implements Register {
         map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
         map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
 
+        if (!SimulatorStatus.statusCalculated()){
+            boolean moduleLoadResult = getModuleLoadResult();
+            if (!moduleLoadResult){
+                SimulatorStatus.installFailed(JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+            } else {
+                SimulatorStatus.installed();
+            }
+        }
+        map.put("agentStatus", SimulatorStatus.getStatus());
+        if (SimulatorStatus.isInstallFailed()){
+            map.put("errorMsg", "模块加载异常，请查看模块加载详情");
+        }
         // 放入当前环境及用户信息
         map.put("tenantAppKey", Pradar.PRADAR_TENANT_KEY);
         map.put("envCode", Pradar.PRADAR_ENV_CODE);
-
-        boolean moduleLoadResult = getModuleLoadResult();
-        if (!moduleLoadResult) {
-            map.put("agentStatus", "INSTALL_FAILED");
-            map.put("errorMsg", "模块加载异常，请查看模块加载详情");
-        } else {
-            map.put("agentStatus", "INSTALLED");
-        }
         map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
         map.put("moduleLoadDetail",
             JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));

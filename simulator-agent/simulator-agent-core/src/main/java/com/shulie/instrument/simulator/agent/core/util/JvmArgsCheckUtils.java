@@ -14,17 +14,11 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.alibaba.fastjson.JSON;
-
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
+
+import java.io.File;
+import java.util.*;
 
 /**
  * @author angju

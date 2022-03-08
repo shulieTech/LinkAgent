@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.shadowjob.ShadowJobConstants;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.springframework.aop.framework.ReflectiveMethodInvocation;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -46,11 +47,13 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
         }
         try {
             interceptorsField = ReflectiveMethodInvocation.class.getDeclaredField(ShadowJobConstants.DYNAMIC_FIELD_INTERCEPTORS_AND_DYNAMIC_METHOD_MATCHERS);
+            interceptorsField.setAccessible(true);
         } catch (Throwable e) {
         }
 
         try {
             beanFactoryField = TransactionAspectSupport.class.getDeclaredField(ShadowJobConstants.DYNAMIC_FIELD_BEAN_FACTORY);
+            beanFactoryField.setAccessible(true);
         } catch (Throwable e) {
         }
     }
@@ -95,12 +98,27 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
         for (Object interceptor : interceptorsOfList) {
             if (interceptor instanceof TransactionInterceptor) {
                 TransactionInterceptor transactionInterceptor = (TransactionInterceptor) interceptor;
-                BeanFactory beanFactory = getBeanFactory(transactionInterceptor);
+                BeanFactory beanFactory = _getBeanFactory(transactionInterceptor);
+                if (beanFactory != null && beanFactory instanceof DefaultListableBeanFactory) {
+                    PradarSpringUtil.refreshBeanFactory((DefaultListableBeanFactory) beanFactory);
+                    break;
+                }
+            } else {
+                BeanFactory beanFactory = _getBeanFactory(interceptor);
                 if (beanFactory != null && beanFactory instanceof DefaultListableBeanFactory) {
                     PradarSpringUtil.refreshBeanFactory((DefaultListableBeanFactory) beanFactory);
                     break;
                 }
             }
+        }
+    }
+
+
+    private BeanFactory _getBeanFactory(Object target) {
+        try {
+            return Reflect.on(target).get("beanFactory");
+        } catch (Throwable e) {
+            return null;
         }
     }
 }

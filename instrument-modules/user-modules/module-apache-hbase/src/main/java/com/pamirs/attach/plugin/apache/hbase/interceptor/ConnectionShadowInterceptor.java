@@ -21,7 +21,6 @@ import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
 import com.pamirs.attach.plugin.dynamic.template.HbaseTemplate;
 import com.pamirs.pradar.CutOffResult;
-import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -38,7 +37,7 @@ import java.util.concurrent.ExecutorService;
  * @package: com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver
  * @Date 2021/4/18 8:34 下午
  */
-public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
+public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
 
     void attachment(Advice advice) {
         try {
@@ -62,8 +61,7 @@ public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
     }
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
-        Object[] args = advice.getParameterArray();
+    protected Object getResult0(Advice advice) { Object[] args = advice.getParameterArray();
         Object result = advice.getReturnObj();
         if (InvokeSwitcher.status()) {
             return CutOffResult.passed();
@@ -76,7 +74,7 @@ public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
         Configuration configuration = (Configuration) args[0];
         HbaseMediatorConnection mediatorConnection = (HbaseMediatorConnection) MediatorConnection.mediatorMap.get(converConfiguration(configuration));
         if (mediatorConnection != null) {
-            return CutOffResult.cutoff(mediatorConnection);
+            return mediatorConnection;
         }
         try {
             mediatorConnection = new HbaseMediatorConnection();
@@ -95,7 +93,7 @@ public class ConnectionShadowInterceptor extends CutoffInterceptorAdaptor {
             LOGGER.error(e.getMessage(), e);
         }
 
-        return CutOffResult.cutoff(mediatorConnection);
+        return mediatorConnection;
     }
 
     public static String converConfiguration(Configuration configuration) {

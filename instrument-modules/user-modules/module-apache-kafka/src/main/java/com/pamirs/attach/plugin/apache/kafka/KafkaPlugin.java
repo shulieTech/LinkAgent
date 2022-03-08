@@ -16,6 +16,8 @@ package com.pamirs.attach.plugin.apache.kafka;
 
 import com.pamirs.attach.plugin.apache.kafka.destroy.ShadowConsumerDisableListenerImpl;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
+import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProvider;
+
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerCommitAsyncInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerCommitSyncInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerConstructorInterceptor;
@@ -23,13 +25,12 @@ import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerMultiRecordEntr
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerOtherMethodInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerPollInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerRecordEntryPointInterceptor;
+import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerRecordEntryPointInterceptor2;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerTraceInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.KafkaListenerContainerInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.ProducerSendInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.SpringKafkaPollAndInvokeInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.SpringKafkaProcessSeeksInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProvider;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.*;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -53,19 +54,16 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() throws Throwable {
+        addProducerInterceptor();
+        if (simulatorConfig.getBooleanProperty("kafka.use.other.plugin", false)) {
+            return true;
+        }
         final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
         EventRouter.router().addListener(shadowConsumerDisableListener);
-        return addHookRegisterInterceptor();
+        return addConsumerRegisterInterceptor();
     }
 
-    private boolean addHookRegisterInterceptor() {
-
-        enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RecordMessagingMessageListenerAdapter");
-        enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RetryingMessageListenerAdapter");
-        enhanceBatchMessagingMessage("org.springframework.kafka.listener.adapter.BatchMessagingMessageListenerAdapter");
-
-        enhanceSetMessageListener("org.springframework.kafka.listener.KafkaMessageListenerContainer$ListenerConsumer");
-
+    private boolean addProducerInterceptor() {
         this.enhanceTemplate.enhance(this, "org.apache.kafka.clients.producer.KafkaProducer", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -74,6 +72,16 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 sendMethod.addInterceptor(Listeners.of(ProducerSendInterceptor.class));
             }
         });
+        return true;
+    }
+
+    private boolean addConsumerRegisterInterceptor() {
+
+        enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RecordMessagingMessageListenerAdapter");
+        enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RetryingMessageListenerAdapter");
+        enhanceBatchMessagingMessage("org.springframework.kafka.listener.adapter.BatchMessagingMessageListenerAdapter");
+
+        enhanceSetMessageListener("org.springframework.kafka.listener.KafkaMessageListenerContainer$ListenerConsumer");
 
         this.enhanceTemplate.enhance(this, "org.apache.kafka.clients.consumer.KafkaConsumer", new EnhanceCallback() {
             @Override
@@ -160,13 +168,17 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 /**
                  * spring-kafka 1.3.9
                  */
-                InstrumentMethod declareMethod2 = target.getDeclaredMethod("onMessage", "org.apache.kafka.clients.consumer.ConsumerRecord", "*");
+                InstrumentMethod declareMethod2 = target.getDeclaredMethod("onMessage",
+                    "org.apache.kafka.clients.consumer.ConsumerRecord", "*");
                 declareMethod2.addInterceptor(
-                        Listeners.of(ConsumerRecordEntryPointInterceptor2.class, "KAFKA_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    Listeners.of(ConsumerRecordEntryPointInterceptor2.class, "KAFKA_SCOPE", ExecutionPolicy.BOUNDARY,
+                        Interceptors.SCOPE_CALLBACK));
 
-               /* InstrumentMethod onMessage = target.getDeclaredMethod("onMessage", "org.apache.kafka.clients.consumer.ConsumerRecord", "org.springframework.kafka.support.Acknowledgment");
+               /* InstrumentMethod onMessage = target.getDeclaredMethod("onMessage", "org.apache.kafka.clients.consumer
+               .ConsumerRecord", "org.springframework.kafka.support.Acknowledgment");
                 onMessage.addInterceptor(
-                        Listeners.of(ConsumerRecordEntryPointInterceptor.class, "KAFKA_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));*/
+                        Listeners.of(ConsumerRecordEntryPointInterceptor.class, "KAFKA_SCOPE", ExecutionPolicy.BOUNDARY,
+                        Interceptors.SCOPE_CALLBACK));*/
             }
         });
     }

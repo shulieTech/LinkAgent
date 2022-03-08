@@ -18,7 +18,6 @@ import com.pamirs.attach.plugin.common.datasource.WrappedDbMediatorDataSource;
 import com.pamirs.attach.plugin.common.datasource.biz.BizConnection;
 import com.pamirs.attach.plugin.common.datasource.normal.NormalConnection;
 import com.pamirs.attach.plugin.common.datasource.pressure.PressureConnection;
-import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -53,6 +52,11 @@ public class DbcpMediaDataSource extends WrappedDbMediatorDataSource<BasicDataSo
     }
 
     @Override
+    protected String getMidType() {
+        return "dbcp";
+    }
+
+    @Override
     public Connection getConnection() throws SQLException {
         if (Pradar.isClusterTest()) {
             try {
@@ -63,7 +67,8 @@ public class DbcpMediaDataSource extends WrappedDbMediatorDataSource<BasicDataSo
                         throw new RuntimeException("Business dataSource is null.");
                     }
                     Connection hikariConnection = dataSourceBusiness.getConnection();
-                    return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType,
+                        getMidType());
                 } else {
                     if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");
@@ -104,7 +109,8 @@ public class DbcpMediaDataSource extends WrappedDbMediatorDataSource<BasicDataSo
                         throw new RuntimeException("Business dataSource is null.");
                     }
                     Connection hikariConnection = dataSourceBusiness.getConnection(username, password);
-                    return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType);
+                    return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType,
+                        getMidType());
                 } else {
                     if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");

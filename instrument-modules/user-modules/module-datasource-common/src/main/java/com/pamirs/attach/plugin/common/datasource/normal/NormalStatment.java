@@ -56,6 +56,8 @@ public class NormalStatment implements Statement {
 
     String dbType;
 
+    private final String midType;
+
     /**
      * <p>{@code } instances should NOT be constructed in
      * standard programming. </p>
@@ -63,11 +65,13 @@ public class NormalStatment implements Statement {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
-    public NormalStatment(Statement statement, Connection connection, String dbConnectionKey, String dbType) {
+    public NormalStatment(Statement statement, Connection connection, String dbConnectionKey, String dbType,
+        String midType) {
         this.statement = statement;
         this.connection = connection;
         this.dbConnectionKey = dbConnectionKey;
         this.dbType = dbType;
+        this.midType = midType;
     }
 
     /**
@@ -103,7 +107,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public void addBatch(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         statement.addBatch(arg0);
     }
 
@@ -180,7 +184,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public boolean execute(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.execute(arg0);
     }
 
@@ -193,7 +197,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public boolean execute(String arg0, int arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.execute(arg0, arg1);
     }
 
@@ -206,7 +210,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public boolean execute(String arg0, int[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.execute(arg0, arg1);
     }
 
@@ -219,7 +223,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public boolean execute(String arg0, String[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.execute(arg0, arg1);
     }
 
@@ -244,7 +248,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public ResultSet executeQuery(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.executeQuery(arg0);
     }
 
@@ -257,7 +261,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public int executeUpdate(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.executeUpdate(arg0);
     }
 
@@ -270,7 +274,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public int executeUpdate(String arg0, int arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.executeUpdate(arg0, arg1);
     }
 
@@ -283,7 +287,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public int executeUpdate(String arg0, int[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.executeUpdate(arg0, arg1);
     }
 
@@ -296,7 +300,7 @@ public class NormalStatment implements Statement {
      */
     @Override
     public int executeUpdate(String arg0, String[] arg1) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType);
+        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         return statement.executeUpdate(arg0, arg1);
     }
 

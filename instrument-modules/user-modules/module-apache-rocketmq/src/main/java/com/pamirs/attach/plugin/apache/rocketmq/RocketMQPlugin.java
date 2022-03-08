@@ -92,6 +92,17 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     }
                 });
 
+        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.producer.DefaultMQProducer", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+
+                //压测代码
+                InstrumentMethod sendMethod = target.getDeclaredMethods("send*");
+                sendMethod.addInterceptor(Listeners.of(MQProducerSendInterceptor.class));
+
+            }
+        });
+
         this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -114,6 +125,46 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 enhanceMethod.addInterceptor(Listeners.of(TransactionCheckInterceptor.class));
             }
         });
+
+        this.enhanceTemplate.enhance(this,
+            "org.apache.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                    enhanceMethod.addInterceptor(Listeners.of(ConcurrentlyTraceInterceptor.class));
+                }
+            });
+
+        //--for orderly
+        this.enhanceTemplate.enhance(this,
+            "org.apache.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService$ConsumeRequest", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceContextInterceptor.class));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this,
+            "org.apache.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("takeMessags");
+                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
+                }
+            });
+
+        this.enhanceTemplate.enhance(this,
+            "org.apache.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");
+                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceAfterInterceptor.class));
+                }
+            });
+
+        //--for orderly
         return true;
     }
 }

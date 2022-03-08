@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.agent.spi;
 
 import com.shulie.instrument.simulator.agent.spi.command.Command;
+import com.shulie.instrument.simulator.agent.spi.model.CommandExecuteResponse;
 
 /**
  * 命令执行器
@@ -22,13 +23,14 @@ import com.shulie.instrument.simulator.agent.spi.command.Command;
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2020/11/17 7:57 下午
  */
-public interface CommandExecutor {
+public interface CommandExecutor{
+
     /**
      * 执行指定的命令，支持 Start/Stop
      *
      * @param command 命令
      */
-    void execute(Command command) throws Throwable;
+    CommandExecuteResponse execute(Command command) throws Throwable;
 
     /**
      * 是否已经安装

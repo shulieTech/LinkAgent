@@ -4,15 +4,15 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pamirs.attach.plugin.apache.kafka.util;
+package com.pamirs.attach.plugin.apache.kafka;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +46,32 @@ public final class ConfigCache {
         int code = System.identityHashCode(target);
         isInited.put(code, true);
 
+    }
+
+    static Map<Thread, Boolean> cache = new ConcurrentHashMap();
+
+    public static boolean isBiz() {
+        /**
+         *
+         */
+        if (cache.get(Thread.currentThread()) != null) {
+            return cache.get(Thread.currentThread());
+        } else {
+            if (cache.isEmpty()) {
+                cache.put(Thread.currentThread(), Boolean.TRUE);
+                return Boolean.TRUE;
+            } else {
+                int size = cache.size();
+                if (size % 2 == 1) {
+                    //下一个为压测
+                    cache.put(Thread.currentThread(), Boolean.FALSE);
+                    return Boolean.FALSE;
+                } else {
+                    cache.put(Thread.currentThread(), Boolean.TRUE);
+                    return Boolean.TRUE;
+                }
+            }
+        }
     }
 
 

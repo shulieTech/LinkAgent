@@ -109,7 +109,7 @@ public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor 
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0002")
                         .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("业务库配置:::url: " + s)
+                        .setDetail("业务库配置:::url: " + s + "; 中间件类型：other")
                         .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                         .report();
                 return;

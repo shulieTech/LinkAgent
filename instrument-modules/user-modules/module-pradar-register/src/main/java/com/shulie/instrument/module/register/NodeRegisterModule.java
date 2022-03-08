@@ -19,10 +19,13 @@ import com.pamirs.pradar.JvmUtils;
 import com.shulie.instrument.module.register.register.Register;
 import com.shulie.instrument.module.register.register.RegisterFactory;
 import com.shulie.instrument.module.register.register.RegisterOptions;
+import com.shulie.instrument.module.register.utils.SimulatorStatus;
 import com.shulie.instrument.module.register.zk.impl.NetflixCuratorZkClientFactory;
+import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.resource.ModuleLoadInfoManager;
@@ -31,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,6 +48,16 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
 
     private Register register;
     private volatile boolean isActive;
+
+
+    @Command("getSimulatorStatus")
+    public CommandResponse info(Map<String, String> args) {
+        CommandResponse<String> commandResponse = new CommandResponse();
+        commandResponse.setSuccess(true);
+        commandResponse.setResult(SimulatorStatus.getStatus());
+        commandResponse.setMessage(SimulatorStatus.getErrorMsg());
+        return commandResponse;
+    }
 
     @Resource
     public static ModuleLoadInfoManager moduleLoadInfoManager;

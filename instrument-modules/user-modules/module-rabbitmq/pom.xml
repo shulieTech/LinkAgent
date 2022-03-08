@@ -13,12 +13,13 @@
     <properties>
         <module-name>rabbitmq</module-name>
     </properties>
+    <version>2.0.0.0</version>
 
     <dependencies>
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.68</version>
+            <version>1.2.72</version>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>
@@ -38,7 +39,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
-            <version>1.0.0</version>
+            <version>${pradar.core.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -62,7 +63,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

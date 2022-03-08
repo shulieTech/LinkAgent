@@ -17,7 +17,6 @@ package com.pamirs.attach.plugin.proxool.utils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
@@ -118,7 +117,7 @@ public class DataSourceWrapUtil {
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0002")
                     .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl())
+                    .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
                     .report();
 
             ProxoolMediaDataSource dbMediatorDataSource = new ProxoolMediaDataSource();
@@ -151,8 +150,7 @@ public class DataSourceWrapUtil {
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0002")
                         .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " +
-                                target.getDriverUrl() + Throwables.getStackTraceAsString(e))
+                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
                         .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                         .report();
                 logger.error("[proxool] init datasource err!", e);
@@ -188,8 +186,7 @@ public class DataSourceWrapUtil {
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0003")
                         .setMessage("影子库初始化失败！")
-                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " +
-                                target.getDriverUrl() + Throwables.getStackTraceAsString(t))
+                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
                         .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                         .report();
             }

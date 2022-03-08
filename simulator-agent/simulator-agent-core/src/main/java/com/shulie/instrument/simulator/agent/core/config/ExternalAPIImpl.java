@@ -159,7 +159,7 @@ public class ExternalAPIImpl implements ExternalAPI {
     @Override
     public List<CommandPacket> sendHeart(HeartRequest heartRequest) {
         if (agentConfig.isLite()) {
-            return Collections.emptyList();
+            return new ArrayList<>();
         }
         HeartRequestUtil.configHeartRequest(heartRequest, agentConfig);
         String webUrl = agentConfig.getTroWebUrl();
@@ -193,7 +193,7 @@ public class ExternalAPIImpl implements ExternalAPI {
         } catch (Throwable e) {
             logger.error("AGENT: parse command err. {}", resp, e);
             if (200 == resp.getStatus()) {
-                return Collections.emptyList();
+                return new ArrayList<>();
             }
             return null;
         }

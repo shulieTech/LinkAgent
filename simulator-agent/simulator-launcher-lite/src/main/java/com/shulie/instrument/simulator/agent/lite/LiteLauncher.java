@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -109,7 +108,8 @@ public class LiteLauncher {
                     LogUtil.info("attach list: " + attachList);
                     //生产需要attach的PID列表和生产对应的PID文件
                     attachAgent(agentProperties, attachList);
-                    deletePidFiles(systemProcessList.stream().map(JpsResult::getPid).collect(Collectors.toList()));
+                    clearSurplusPidFiles(
+                        systemProcessList.stream().map(JpsResult::getPid).collect(Collectors.toList()));
                 }
             } catch (Throwable t) {
                 LogUtil.error("simulator-launcher-lite error: " + Arrays.toString(t.getStackTrace()));
@@ -140,7 +140,7 @@ public class LiteLauncher {
                 }
                 LogUtil.info("PID: " + jpsResult.getPid() + ", attach success");
             } catch (Throwable e) {
-                deletePidFiles(Collections.singletonList(jpsResult.getPid()));
+                deletePidFile(jpsResult.getPid());
                 LogUtil.info(
                     "PID: " + jpsResult.getPid() + ", attach fail, errorMsg: " + Arrays.toString(e.getStackTrace()));
             } finally {
@@ -217,11 +217,11 @@ public class LiteLauncher {
     }
 
     /**
-     * 删除PID文件
+     * 清理多余的pid文件
      *
-     * @param pidList
+     * @param savePidList 保留的pid文件集合
      */
-    private static void deletePidFiles(List<String> pidList) {
+    private static void clearSurplusPidFiles(List<String> savePidList) {
         File[] pidFileList = new File(PIDS_DIRECTORY_PATH).listFiles();
         if (pidFileList == null || pidFileList.length == 0) {
             return;
@@ -230,9 +230,21 @@ public class LiteLauncher {
         Arrays.stream(pidFileList).forEach(pidFile -> pidNameList.add(pidFile.getName()));
         //pid文件根据pid列表移除，剩下的就是不需要的，size=0说明没有重启过，或者刚好一致，
         // 如果>0就说明剩下的文件没有进程与之匹配需要删除
-        pidNameList.removeAll(pidList);
+        pidNameList.removeAll(savePidList);
         if (pidNameList.size() > 0) {
             pidNameList.forEach(item -> new File(PIDS_DIRECTORY_PATH + File.separator + item).delete());
+        }
+    }
+
+    /**
+     * 删除对应的pid文件
+     *
+     * @param deletePid 需要删除的pid
+     */
+    private static void deletePidFile(String deletePid) {
+        File file = new File(PIDS_DIRECTORY_PATH + File.separator + deletePid);
+        if (file.exists()) {
+            file.delete();
         }
     }
 }

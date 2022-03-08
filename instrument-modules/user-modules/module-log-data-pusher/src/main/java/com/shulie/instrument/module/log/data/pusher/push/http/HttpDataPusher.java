@@ -15,8 +15,12 @@
 
 package com.shulie.instrument.module.log.data.pusher.push.http;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -27,9 +31,11 @@ import com.alibaba.fastjson.JSONObject;
 
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.remoting.protocol.CommandCode;
+import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
 import com.shulie.instrument.module.log.data.pusher.log.callback.LogCallback;
 import com.shulie.instrument.module.log.data.pusher.push.DataPusher;
 import com.shulie.instrument.module.log.data.pusher.push.ServerOptions;
+import com.shulie.instrument.module.log.data.pusher.server.HttpPushOptions;
 import com.shulie.instrument.module.log.data.pusher.server.ServerAddrProvider;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.http.HttpStatus;
@@ -59,6 +65,7 @@ public class HttpDataPusher implements DataPusher {
 
     private CloseableHttpClient httpClient = null;
     private AtomicBoolean isStarted = new AtomicBoolean(false);
+    private final HttpPushOptions httpPushOptions;
 
     /**
      * 日志上传接口
@@ -71,15 +78,19 @@ public class HttpDataPusher implements DataPusher {
     private final String healthCheckUrl = "/health";
 
     /**
-     * 服务地址
+     * 本机IP
      */
-    private String httpPath;
-
     private String hostIp;
 
+    public HttpDataPusher(HttpPushOptions httpOptions) {
+        this.httpPushOptions = httpOptions;
+    }
+
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     @Override
-    public String getName() {
-        return "http";
+    public DataPushEnum getType() {
+        return DataPushEnum.HTTP;
     }
 
     @Override
@@ -90,17 +101,16 @@ public class HttpDataPusher implements DataPusher {
     @Override
     public boolean init(ServerOptions serverOptions) {
         try {
-            if (StringUtil.isEmpty(serverOptions.getHttpPath())) {
+            if (StringUtil.isEmpty(httpPushOptions.getHttpPath())) {
                 LOGGER.error(
                     "File: 'simulator-agent/agent/simulator/config/simulator.properties',"
                         + "config: 'pradar.push.server.http.path' is empty!!");
                 return false;
             }
             hostIp = PradarCoreUtils.getLocalAddress();
-            httpPath = serverOptions.getHttpPath();
             final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
             // 总连接池数量
-            connectionManager.setMaxTotal(serverOptions.getMaxHttpPoolSize());
+            connectionManager.setMaxTotal(httpPushOptions.getMaxHttpPoolSize());
             // setConnectTimeout表示设置建立连接的超时时间
             // setConnectionRequestTimeout表示从连接池中拿连接的等待超时时间
             // setSocketTimeout表示发出请求后等待对端应答的超时时间
@@ -147,11 +157,12 @@ public class HttpDataPusher implements DataPusher {
         return new LogCallback() {
             @Override
             public boolean call(FileChannel fc, long position, long length, byte dataType, int version) {
+                long start = System.currentTimeMillis();
                 if (!isStarted.get()) {
                     return false;
                 }
                 try {
-                    HttpPost httpPost = new HttpPost(httpPath + url);
+                    HttpPost httpPost = new HttpPost(httpPushOptions.getHttpPath() + url);
                     httpPost.setHeader("Content-Type", "application/json");
                     httpPost.setHeader("time", String.valueOf(System.currentTimeMillis()));
                     httpPost.setHeader("dataType", String.valueOf(dataType));
@@ -164,8 +175,12 @@ public class HttpDataPusher implements DataPusher {
                     bb.get(data);
                     ByteArrayEntity byteArrayEntity = new ByteArrayEntity(data);
 
-                    GzipCompressingEntity gzipEntity = new GzipCompressingEntity(byteArrayEntity);
-                    httpPost.setEntity(gzipEntity);
+                    if (httpPushOptions.isEnableGzip()) {
+                        GzipCompressingEntity gzipEntity = new GzipCompressingEntity(byteArrayEntity);
+                        httpPost.setEntity(gzipEntity);
+                    } else {
+                        httpPost.setEntity(byteArrayEntity);
+                    }
 
                     CloseableHttpResponse response = httpClient.execute(httpPost);
 
@@ -188,6 +203,11 @@ public class HttpDataPusher implements DataPusher {
                     }
                 } catch (Throwable e) {
                     LOGGER.error("http log push error", e);
+                } finally {
+                    long end = System.currentTimeMillis();
+                    writeFile(
+                        String.format("date:%s, time:%d, type:%d, length:%d\n", sdf.format(new Date()),
+                            end - start, dataType, length), dataType);
                 }
                 return false;
             }
@@ -201,11 +221,11 @@ public class HttpDataPusher implements DataPusher {
         }
 
         // 探活
-        HttpGet httpGet = new HttpGet(httpPath + healthCheckUrl);
+        HttpGet httpGet = new HttpGet(httpPushOptions.getHttpPath() + healthCheckUrl);
         try {
             CloseableHttpResponse response = httpClient.execute(httpGet);
             if (response.getStatusLine().getStatusCode() != 200) {
-                LOGGER.error("http health check error, url {}", httpPath + healthCheckUrl);
+                LOGGER.error("http health check error, url {}", httpPushOptions.getHttpPath() + healthCheckUrl);
                 return false;
             }
         } catch (Throwable e) {
@@ -225,6 +245,17 @@ public class HttpDataPusher implements DataPusher {
             this.httpClient.close();
         } catch (Throwable e) {
             LOGGER.error("close httpClient err!", e);
+        }
+    }
+
+    private void writeFile(String str, int dataType) {
+        try {
+            BufferedWriter out = new BufferedWriter(
+                new FileWriter("/Users/ocean_wll/httpPerf-" + dataType + ".txt", true));
+            out.write(str);
+            out.close();
+        } catch (Exception e) {
+            // ignore
         }
     }
 }

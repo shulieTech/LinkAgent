@@ -14,10 +14,11 @@
  */
 package com.shulie.instrument.module.log.data.pusher.server;
 
-import com.pamirs.pradar.remoting.protocol.ProtocolCode;
-import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
-
 import java.util.List;
+
+import com.pamirs.pradar.remoting.protocol.ProtocolCode;
+import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
+import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
 
 /**
  * @Description
@@ -47,7 +48,7 @@ public class PusherOptions {
     /**
      * 使用的data pusher
      */
-    private String dataPusher;
+    private DataPushEnum dataPusher;
 
     /**
      * 调用超时时间
@@ -59,15 +60,18 @@ public class PusherOptions {
      */
     private int protocolCode = ProtocolCode.JAVA;
 
-    /**
-     * http连接池大小
-     */
-    private int maxHttpPoolSize;
+    public HttpPushOptions getHttpPushOptions() {
+        return httpPushOptions;
+    }
+
+    public void setHttpPushOptions(HttpPushOptions httpPushOptions) {
+        this.httpPushOptions = httpPushOptions;
+    }
 
     /**
-     * http请求path
+     * http通道配置信息
      */
-    private String httpPath;
+    private HttpPushOptions httpPushOptions;
 
     /**
      * 日志推送启动参数
@@ -106,11 +110,11 @@ public class PusherOptions {
         this.serverZkPath = serverZkPath;
     }
 
-    public String getDataPusher() {
+    public DataPushEnum getDataPusher() {
         return dataPusher;
     }
 
-    public void setDataPusher(String dataPusher) {
+    public void setDataPusher(DataPushEnum dataPusher) {
         this.dataPusher = dataPusher;
     }
 
@@ -136,21 +140,5 @@ public class PusherOptions {
 
     public void setSessionTimeoutMillis(int sessionTimeoutMillis) {
         this.sessionTimeoutMillis = sessionTimeoutMillis;
-    }
-
-    public int getMaxHttpPoolSize() {
-        return maxHttpPoolSize;
-    }
-
-    public void setMaxHttpPoolSize(int maxHttpPoolSize) {
-        this.maxHttpPoolSize = maxHttpPoolSize;
-    }
-
-    public String getHttpPath() {
-        return httpPath;
-    }
-
-    public void setHttpPath(String httpPath) {
-        this.httpPath = httpPath;
     }
 }

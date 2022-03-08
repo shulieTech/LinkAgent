@@ -14,6 +14,13 @@
  */
 package com.shulie.instrument.module.log.data.pusher.push.tcp;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.remoting.RemotingClient;
@@ -22,7 +29,13 @@ import com.pamirs.pradar.remoting.exception.RemotingSendRequestException;
 import com.pamirs.pradar.remoting.exception.RemotingTimeoutException;
 import com.pamirs.pradar.remoting.netty.NettyClientConfigurator;
 import com.pamirs.pradar.remoting.netty.NettyRemotingClient;
-import com.pamirs.pradar.remoting.protocol.*;
+import com.pamirs.pradar.remoting.protocol.CommandCode;
+import com.pamirs.pradar.remoting.protocol.CommandVersion;
+import com.pamirs.pradar.remoting.protocol.DefaultProtocolFactorySelector;
+import com.pamirs.pradar.remoting.protocol.EncoderType;
+import com.pamirs.pradar.remoting.protocol.ProtocolFactorySelector;
+import com.pamirs.pradar.remoting.protocol.RemotingCommand;
+import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
 import com.shulie.instrument.module.log.data.pusher.log.callback.LogCallback;
 import com.shulie.instrument.module.log.data.pusher.push.DataPusher;
 import com.shulie.instrument.module.log.data.pusher.push.ServerOptions;
@@ -31,10 +44,6 @@ import com.shulie.instrument.module.log.data.pusher.server.ServerAddrProvider;
 import io.netty.channel.DefaultFileRegion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author xiaobin.zfb
@@ -51,12 +60,14 @@ public class TcpDataPusher implements DataPusher {
     private ServerAddrProvider provider;
     private ConnectInfo currentConnectInfo;
 
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     public TcpDataPusher() {
     }
 
     @Override
-    public String getName() {
-        return "tcp";
+    public DataPushEnum getType() {
+        return DataPushEnum.TCP;
     }
 
     @Override
@@ -73,9 +84,10 @@ public class TcpDataPusher implements DataPusher {
             return false;
         }
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("client start to use log server addr:{} port:{}", connectInfo.getServerAddr(), connectInfo.getPort());
+            LOGGER.info("client start to use log server addr:{} port:{}", connectInfo.getServerAddr(),
+                connectInfo.getPort());
         }
-        currentConnectInfo=connectInfo;
+        currentConnectInfo = connectInfo;
         NettyClientConfigurator config = new NettyClientConfigurator();
         ProtocolFactorySelector protocolFactorySelector = new DefaultProtocolFactorySelector();
         client = new NettyRemotingClient(protocolFactorySelector, config);
@@ -92,6 +104,7 @@ public class TcpDataPusher implements DataPusher {
 
             @Override
             public boolean call(FileChannel fc, long position, long length, byte dataType, int version) {
+                long start = System.currentTimeMillis();
                 if (!isStarted.get()) {
                     return false;
                 }
@@ -104,9 +117,10 @@ public class TcpDataPusher implements DataPusher {
                     requestCommand.setIp(PradarCoreUtils.getLocalAddressNumber());
                     requestCommand.setDataVersion(version);
                     requestCommand.setEncodeType(EncoderType.of(Pradar.DEFAULT_CHARSET.name()).getEncoderType());
-                    requestCommand.setLength((int) length);
+                    requestCommand.setLength((int)length);
                     requestCommand.setFile(new DefaultFileRegion(fc, position, length));
-                    RemotingCommand responseCommand = client.invokeSync(currentConnectInfo.getAddr(), requestCommand, serverOptions.getTimeout());
+                    RemotingCommand responseCommand = client.invokeSync(currentConnectInfo.getAddr(), requestCommand,
+                        serverOptions.getTimeout());
                     if (responseCommand.getCode() == CommandCode.SUCCESS) {
                         return true;
                     } else if (responseCommand.getCode() == CommandCode.SYSTEM_ERROR) {
@@ -114,7 +128,8 @@ public class TcpDataPusher implements DataPusher {
                     } else if (responseCommand.getCode() == CommandCode.SYSTEM_BUSY) {
                         provider.errorConnectInfo(currentConnectInfo);
                         if (LOGGER.isInfoEnabled()) {
-                            LOGGER.info("log server is busy {}. attempt to choose another log server.", currentConnectInfo.getAddr());
+                            LOGGER.info("log server is busy {}. attempt to choose another log server.",
+                                currentConnectInfo.getAddr());
                         }
                         ConnectInfo c = provider.selectConnectInfo();
                         if (c != null) {
@@ -131,7 +146,10 @@ public class TcpDataPusher implements DataPusher {
                     return false;
                 } catch (RemotingConnectException e) {
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("client send request to log server {} ,can't connect to server. attempt to choose another log server.", currentConnectInfo.getAddr(), e);
+                        LOGGER.info(
+                            "client send request to log server {} ,can't connect to server. attempt to choose another"
+                                + " log server.",
+                            currentConnectInfo.getAddr(), e);
                     }
                     provider.errorConnectInfo(currentConnectInfo);
                     ConnectInfo connectInfo = provider.selectConnectInfo();
@@ -144,7 +162,10 @@ public class TcpDataPusher implements DataPusher {
                     return false;
                 } catch (RemotingSendRequestException e) {
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("client send request to log server {} occur RemotingSendRequestException. attempt to choose another log server.", currentConnectInfo.getAddr(), e);
+                        LOGGER.info(
+                            "client send request to log server {} occur RemotingSendRequestException. attempt to "
+                                + "choose another log server.",
+                            currentConnectInfo.getAddr(), e);
                     }
                     provider.errorConnectInfo(currentConnectInfo);
                     ConnectInfo connectInfo = provider.selectConnectInfo();
@@ -157,7 +178,9 @@ public class TcpDataPusher implements DataPusher {
                     return false;
                 } catch (RemotingTimeoutException e) {
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("client send request to log server {} timeout. attempt to choose another log server.", currentConnectInfo.getAddr(), e);
+                        LOGGER.info(
+                            "client send request to log server {} timeout. attempt to choose another log server.",
+                            currentConnectInfo.getAddr(), e);
                     }
                     provider.errorConnectInfo(currentConnectInfo);
                     ConnectInfo connectInfo = provider.selectConnectInfo();
@@ -171,6 +194,10 @@ public class TcpDataPusher implements DataPusher {
                 } finally {
                     requestCommand.setFile(null);
                     requestCommand.setBody(null);
+                    long end = System.currentTimeMillis();
+                    writeFile(
+                        String.format("date:%s, time:%d, type:%d, length:%d\n", sdf.format(new Date()),
+                            end - start, dataType, length), dataType);
                 }
                 return false;
             }
@@ -200,6 +227,17 @@ public class TcpDataPusher implements DataPusher {
             this.client.shutdownSync();
         } catch (Throwable e) {
             LOGGER.error("close client err! host:{} ", currentConnectInfo.getAddr(), e);
+        }
+    }
+
+    private void writeFile(String str, int dataType) {
+        try {
+            BufferedWriter out = new BufferedWriter(
+                new FileWriter("/Users/ocean_wll/nettyPerf-" + dataType + ".txt", true));
+            out.write(str);
+            out.close();
+        } catch (Exception e) {
+            // ignore
         }
     }
 

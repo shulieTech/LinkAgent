@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
 import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusher;
 import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
 import com.shulie.instrument.module.log.data.pusher.push.DataPushManager;
@@ -43,39 +44,43 @@ import org.slf4j.LoggerFactory;
  */
 public class DefaultDataPushManager implements DataPushManager {
     private final static Logger LOGGER = LoggerFactory.getLogger(DefaultDataPushManager.class.getName());
-    private Map<String, DataPusher> dataPushers = new HashMap<String, DataPusher>();
-    private DataPusher dataPusher;
+    private final Map<DataPushEnum, DataPusher> dataPushers = new HashMap<DataPushEnum, DataPusher>();
+    private final Map<DataPushEnum, ServerAddrProvider> providers = new HashMap<DataPushEnum, ServerAddrProvider>();
+    private final DataPusher dataPusher;
     private LogPusher logPusher;
-    private ServerAddrProvider provider;
-    private PusherOptions pusherOptions;
-    private AtomicBoolean isStarted = new AtomicBoolean(false);
+    private final ServerAddrProvider provider;
+    private final PusherOptions pusherOptions;
+    private final AtomicBoolean isStarted = new AtomicBoolean(false);
 
     public DefaultDataPushManager(final PusherOptions pusherOptions) {
-        loadDataPushers();
+        init(pusherOptions);
         this.pusherOptions = pusherOptions;
-        ServerProviderOptions serverProviderOptions = new ServerProviderOptions();
-        serverProviderOptions.setServerZkPath(pusherOptions.getServerZkPath());
-
-        ZkClientSpec zkClientSpec = new ZkClientSpec();
-        zkClientSpec.setZkServers(pusherOptions.getZkServers());
-        zkClientSpec.setConnectionTimeoutMillis(pusherOptions.getConnectionTimeoutMillis());
-        zkClientSpec.setSessionTimeoutMillis(pusherOptions.getSessionTimeoutMillis());
-        zkClientSpec.setThreadName("dataPusher");
-        serverProviderOptions.setSpec(zkClientSpec);
-        this.provider = new DefaultServerAddrProvider(serverProviderOptions);
+        this.provider = providers.get(pusherOptions.getDataPusher());
         this.dataPusher = dataPushers.get(pusherOptions.getDataPusher());
         if (this.dataPusher == null) {
             LOGGER.error("can't found log data pusher with name:{}", pusherOptions.getDataPusher());
-            return;
         }
     }
 
-    private void loadDataPushers() {
+    private void init(PusherOptions pusherOptions) {
         try {
             DataPusher dataPusher = new TcpDataPusher();
-            DataPusher httpDataPusher = new HttpDataPusher();
-            dataPushers.put(dataPusher.getName(), dataPusher);
-            dataPushers.put(httpDataPusher.getName(), httpDataPusher);
+            DataPusher httpDataPusher = new HttpDataPusher(pusherOptions.getHttpPushOptions());
+            dataPushers.put(dataPusher.getType(), dataPusher);
+            dataPushers.put(httpDataPusher.getType(), httpDataPusher);
+
+            ServerProviderOptions serverProviderOptions = new ServerProviderOptions();
+            serverProviderOptions.setServerZkPath(pusherOptions.getServerZkPath());
+            ZkClientSpec zkClientSpec = new ZkClientSpec();
+            zkClientSpec.setZkServers(pusherOptions.getZkServers());
+            zkClientSpec.setConnectionTimeoutMillis(pusherOptions.getConnectionTimeoutMillis());
+            zkClientSpec.setSessionTimeoutMillis(pusherOptions.getSessionTimeoutMillis());
+            zkClientSpec.setThreadName("dataPusher");
+            serverProviderOptions.setSpec(zkClientSpec);
+            ServerAddrProvider tcpProvider = new DefaultServerAddrProvider(serverProviderOptions);
+            providers.put(DataPushEnum.TCP, tcpProvider);
+            providers.put(DataPushEnum.HTTP, null);
+
         } catch (Throwable e) {
             LOGGER.error("load log data pusher err!", e);
         }
@@ -111,8 +116,6 @@ public class DefaultDataPushManager implements DataPushManager {
             final ServerOptions serverOptions = new ServerOptions();
             serverOptions.setTimeout(this.pusherOptions.getTimeout());
             serverOptions.setProtocolCode(this.pusherOptions.getProtocolCode());
-            serverOptions.setMaxHttpPoolSize(this.pusherOptions.getMaxHttpPoolSize());
-            serverOptions.setHttpPath(this.pusherOptions.getHttpPath());
             dataPusher.setServerAddrProvider(provider);
             boolean isSuccess = dataPusher.init(serverOptions);
             if (!isSuccess) {

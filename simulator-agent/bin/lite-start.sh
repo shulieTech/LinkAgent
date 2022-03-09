@@ -1,3 +1,10 @@
+current_path=$(dirname $(pwd))
+
+sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
+line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
+
+sed -i "_bak" 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
+
 JAVAHOME=$JAVA_HOME
 toolsPath=$JAVA_HOME/lib/tools.jar
 
@@ -26,12 +33,12 @@ function checkTools(){
 
 checkJavaHome
 checkTools
-echo $checkToolsResult
 while [ 1 == $checkToolsResult ]; do
     read -p "请手动指定tools.jar路径: " toolsPath
     checkTools
 done
 
-echo "环境检查成功，启动探针...，启动日志请查看'../logs/lite.log'"
+echo "环境检查成功，启动探针...,启动日志请查看../logs/lite.log"
+
 
 nohup java -Xbootclasspath/a:$toolsPath -jar ../simulator-launcher-lite.jar >../logs/lite.log 2>&1 &

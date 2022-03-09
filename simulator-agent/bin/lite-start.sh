@@ -1,3 +1,5 @@
+sh lite-stop.sh
+
 current_path=$(dirname $(pwd))
 
 sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties

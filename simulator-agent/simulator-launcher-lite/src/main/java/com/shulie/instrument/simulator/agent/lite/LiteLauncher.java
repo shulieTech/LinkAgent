@@ -112,7 +112,8 @@ public class LiteLauncher {
                         systemProcessList.stream().map(JpsResult::getPid).collect(Collectors.toList()));
                 }
             } catch (Throwable t) {
-                LogUtil.error("simulator-launcher-lite error: " + Arrays.toString(t.getStackTrace()));
+                LogUtil.error(String.format("simulator-launcher-lite error. msg:%s \n stack:%s", t.getMessage(),
+                    Arrays.toString(t.getStackTrace())));
             }
 
         }, 2, 1, TimeUnit.MINUTES);
@@ -141,8 +142,9 @@ public class LiteLauncher {
                 LogUtil.info("PID: " + jpsResult.getPid() + ", attach success");
             } catch (Throwable e) {
                 deletePidFile(jpsResult.getPid());
-                LogUtil.info(
-                    "PID: " + jpsResult.getPid() + ", attach fail, errorMsg: " + Arrays.toString(e.getStackTrace()));
+                LogUtil.error(
+                    String.format("PID: %s, attach error. msg:%s \n stack:%s", jpsResult.getPid(), e.getMessage(),
+                        Arrays.toString(e.getStackTrace())));
             } finally {
                 if (null != vm) {
                     vm.detach();

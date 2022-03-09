@@ -14,7 +14,20 @@
  */
 package com.pamirs.pradar;
 
+import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.net.URL;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.alibaba.fastjson.JSON;
+
 import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.debug.DebugHelper;
@@ -26,13 +39,6 @@ import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.lang.management.ManagementFactory;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.pamirs.pradar.AppNameUtils.appName;
 import static com.pamirs.pradar.InvokeContext.INVOKE_ID_LENGTH_LIMIT;
@@ -427,7 +433,6 @@ public final class Pradar {
         return true;
     }
 
-
     /**
      * 是否影子库里用影子scheme模式
      *
@@ -440,7 +445,6 @@ public final class Pradar {
         }
         return true;
     }
-
 
     /**
      * 给指定值添加小写的压测后缀
@@ -2453,6 +2457,10 @@ public final class Pradar {
      * @return
      */
     static private boolean isFilterContext(InvokeContext ctx) {
+        // 如果是takin-lite则trace日志都打印
+        if (isLite) {
+            return false;
+        }
         if (ctx.isDebug()) {
             return false;
         }

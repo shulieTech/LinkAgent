@@ -32,6 +32,6 @@ while [ 1 == $checkToolsResult ]; do
     checkTools
 done
 
-echo "环境检查成功，启动探针...，启动日志请查看../logs/lite.log"
+echo "环境检查成功，启动探针...，启动日志请查看'../logs/lite.log'"
 
 nohup java -Xbootclasspath/a:$toolsPath -jar ../simulator-launcher-lite.jar >../logs/lite.log 2>&1 &

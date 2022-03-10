@@ -37,6 +37,7 @@ import com.alibaba.fastjson.JSONObject;
 
 import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
 import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
+import com.shulie.instrument.simulator.agent.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
 import org.apache.commons.lang.StringUtils;
@@ -51,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * @since 2020/11/17 8:09 下午
  */
 public class CoreConfig {
-    private final Logger logger = LoggerFactory.getLogger(CoreConfig.class);
+    private final Logger logger;
 
     private static final RuntimeMXBean RUNTIME_MBEAN = ManagementFactory.getRuntimeMXBean();
     private static final Random RANDOM = new Random();
@@ -133,6 +134,8 @@ public class CoreConfig {
         this.simulatorJarPath = this.simulatorHome + File.separator + "simulator" + File.separator
             + "instrument-simulator-agent.jar";
         this.logConfigFilePath = this.configFilePath + File.separator + "simulator-agent-logback.xml";
+        LogbackUtils.init(this.getLogConfigFile());
+        logger = LoggerFactory.getLogger(CoreConfig.class);
         File configFile = new File(configFilePath, "agent.properties");
         Properties properties = new Properties();
         properties.putAll(System.getProperties());

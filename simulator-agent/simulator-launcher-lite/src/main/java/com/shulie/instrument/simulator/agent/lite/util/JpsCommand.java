@@ -16,6 +16,7 @@
 package com.shulie.instrument.simulator.agent.lite.util;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,7 +35,7 @@ public class JpsCommand {
     /**
      * JPS命令
      */
-    private final static String JPS_COMMAND = "jps";
+    private final static String JPS_COMMAND = "jps -l";
 
     /**
      * 获取系统进程集合
@@ -53,9 +54,7 @@ public class JpsCommand {
                 if (!line.trim().matches("^[0-9]*$")) {
                     String[] pidItem = line.split(" ");
                     if (pidItem.length == 2) {
-                        String appName = pidItem[1].endsWith(".jar") ? pidItem[1].substring(0, pidItem[1].length() - 4)
-                            : pidItem[1];
-                        JpsResult jpsResult = new JpsResult(pidItem[0], appName);
+                        JpsResult jpsResult = new JpsResult(pidItem[0], pidItem[1], buildAppName(pidItem[1]));
                         systemProcessList.add(jpsResult);
                     }
                 }
@@ -68,6 +67,38 @@ public class JpsCommand {
     }
 
     /**
+     * 处理应用名
+     *
+     * app.main/cc.cc1234.PrettyZooApplication
+     * io.shulie.takin.agent.server.TakinAgentServerApplication
+     * sun.tools.jps.Jps
+     * ../HelloWord.jar
+     *
+     * 处理步骤：
+     * 1、有文件分隔符的取最后一个分隔符后的字符串
+     * 2、以.jar结尾的取.jar前的字符串
+     * 3、如果字符串中还包含.则取最后一个.后的字符串
+     *
+     * @param originalName 原始的进程名
+     * @return 处理后的应用名
+     */
+    private static String buildAppName(String originalName) {
+        if (originalName == null) {
+            return "";
+        }
+        if (originalName.contains(File.separator)) {
+            originalName = originalName.substring(originalName.lastIndexOf(File.separator) + 1);
+        }
+        if (originalName.endsWith(".jar")) {
+            originalName = originalName.substring(0, originalName.length() - 4);
+        }
+        if (originalName.contains(".")) {
+            originalName = originalName.substring(originalName.lastIndexOf(".") + 1);
+        }
+        return originalName;
+    }
+
+    /**
      * jps对象
      */
     public static class JpsResult {
@@ -77,6 +108,11 @@ public class JpsCommand {
         private String pid;
 
         /**
+         * 原始名称
+         */
+        private String originalName;
+
+        /**
          * jar包名
          */
         private String appName;
@@ -84,8 +120,9 @@ public class JpsCommand {
         public JpsResult() {
         }
 
-        public JpsResult(String pid, String appName) {
+        public JpsResult(String pid, String originalName, String appName) {
             this.pid = pid;
+            this.originalName = originalName;
             this.appName = appName;
         }
 
@@ -95,6 +132,14 @@ public class JpsCommand {
 
         public void setPid(String pid) {
             this.pid = pid;
+        }
+
+        public String getOriginalName() {
+            return originalName;
+        }
+
+        public void setOriginalName(String originalName) {
+            this.originalName = originalName;
         }
 
         public String getAppName() {
@@ -111,7 +156,8 @@ public class JpsCommand {
         }
 
         public boolean isLegal() {
-            return pid != null && !"".equals(pid.trim()) && appName != null && !"".equals(appName.trim());
+            return pid != null && !"".equals(pid.trim()) && appName != null && !"".equals(appName.trim())
+                && originalName != null && !"".equals(originalName.trim());
         }
     }
 }

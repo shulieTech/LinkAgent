@@ -62,7 +62,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2020/11/16 8:50 下午
  */
 public class CoreLauncher {
-    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    private final Logger LOGGER;
     private AgentLauncher launcher;
     private AgentScheduler agentScheduler;
     private final CoreConfig coreConfig;
@@ -95,7 +95,7 @@ public class CoreLauncher {
         this.agentConfig = new AgentConfigImpl(this.coreConfig);
         System.setProperty("SIMULATOR_LOG_PATH", this.agentConfig.getLogPath());
         System.setProperty("SIMULATOR_LOG_LEVEL", this.agentConfig.getLogLevel());
-        LogbackUtils.init(this.agentConfig.getLogConfigFile());
+        LOGGER = LoggerFactory.getLogger(getClass());
         this.launcher = new AgentLauncher(this.agentConfig, instrumentation, classLoader);
         this.externalAPI = new ExternalAPIImpl(this.agentConfig);
         initAgentLoader();

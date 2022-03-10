@@ -14,11 +14,17 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
-import com.alibaba.fastjson.JSON;
-import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-
 import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.alibaba.fastjson.JSON;
+
+import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 
 /**
  * @author angju
@@ -66,6 +72,9 @@ public class JvmArgsCheckUtils {
      * @return
      */
     public static Map<String, Object> checkJvmArgs(String jdkVersion, String inputArgs, AgentConfig agentConfig) {
+        if (agentConfig.isLite()) {
+            return new HashMap<>();
+        }
         List<String> jvmArgsList = JSON.parseObject(inputArgs, List.class);
         //数据解析准备
         int transmittableIndex = -1;
@@ -137,7 +146,8 @@ public class JvmArgsCheckUtils {
             simulatorLauncherInstrumentIndex, minJavaagentIndex);
 
         Map<String, Object> r = new HashMap<String, Object>(2, 1);
-        if (skipJvmArgsCheck(agentConfig) || (transmittableResult && permSizeValueCheckResult && metaspaceSizeValueCheckResult
+        if (skipJvmArgsCheck(agentConfig) || (transmittableResult && permSizeValueCheckResult
+            && metaspaceSizeValueCheckResult
             && jdk9ExportArgsExistsCheckResult && skyWalkingCheckResult && checkToolsJarPathResult
             && checkSimulatorLauncherInstrumentResult)) {
             checkJvmArgsStatus = true;
@@ -151,7 +161,7 @@ public class JvmArgsCheckUtils {
     }
 
     private static boolean skipJvmArgsCheck(AgentConfig agentConfig) {
-        return agentConfig.getBooleanProperty("simulator.agent.skip.jvmArgsCheck",false);
+        return agentConfig.getBooleanProperty("simulator.agent.skip.jvmArgsCheck", false);
     }
 
     private static boolean checkSimulatorLauncherInstrument(Map<String, String> result,

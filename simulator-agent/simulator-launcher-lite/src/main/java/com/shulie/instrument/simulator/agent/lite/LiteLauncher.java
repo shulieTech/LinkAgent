@@ -48,11 +48,6 @@ public class LiteLauncher {
     private static final Object LOCK = new Object();
 
     /**
-     * simulator 延迟加载时间
-     */
-    private static final Integer SIMULATOR_DELAY = 0;
-
-    /**
      * agentHome地址
      */
     private static final String DEFAULT_AGENT_HOME
@@ -137,13 +132,14 @@ public class LiteLauncher {
                 vm = VirtualMachine.attach(jpsResult.getPid());
                 if (vm != null) {
                     vm.loadAgent(LiteLauncher.SIMULATOR_BEGIN_JAR_PATH,
-                        String.format(AGENT_START_PARAM, SIMULATOR_DELAY, projectName));
+                        String.format(AGENT_START_PARAM, agentProperties.getIntProperty("simulator.delay", 0),
+                            projectName));
                 }
-                LogUtil.info("PID: " + jpsResult.getPid() + ", attach success");
+                LogUtil.info(jpsResult + ", attach success");
             } catch (Throwable e) {
                 deletePidFile(jpsResult.getPid());
                 LogUtil.error(
-                    String.format("PID: %s, attach error. msg:%s \n stack:%s", jpsResult.getPid(), e.getMessage(),
+                    String.format("%s, attach error. msg:%s \n stack:%s", jpsResult.getPid(), e.getMessage(),
                         Arrays.toString(e.getStackTrace())));
             } finally {
                 if (null != vm) {
@@ -170,9 +166,9 @@ public class LiteLauncher {
         for (JpsResult jpsResult : systemProcessList) {
             // 过滤数据
             if (!jpsResult.isLegal()
-                || ignoreApps.contains(jpsResult.getAppName().trim())
+                || needIgnore(ignoreApps, jpsResult.getOriginalName().trim())
                 || jpsResult.getPid().equals(String.valueOf(RuntimeMXBeanUtils.getPid()))) {
-                LogUtil.info("ignore: " + jpsResult);
+                LogUtil.info("ignore.config exist config, ignore: " + jpsResult);
                 continue;
             }
             //创建文件
@@ -187,12 +183,33 @@ public class LiteLauncher {
                             attachList.add(jpsResult);
                         }
                     }
+                } else {
+                    LogUtil.info("attached, ignore: " + jpsResult);
                 }
             } catch (IOException e) {
                 LogUtil.error(Arrays.toString(e.getStackTrace()));
             }
         }
         return attachList;
+    }
+
+    /**
+     * 判断当前应用是否需要跳过
+     *
+     * @param ignoreApps   忽略应用列表,只要原始的应用名中包含这个字符串就跳过
+     * @param originalName 原始的应用名
+     * @return true:需要跳过,false:不需要跳过
+     */
+    private static boolean needIgnore(List<String> ignoreApps, String originalName) {
+        if (ignoreApps == null || ignoreApps.size() == 0) {
+            return false;
+        }
+        for (String ignoreApp : ignoreApps) {
+            if (originalName.contains(ignoreApp)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

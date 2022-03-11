@@ -1,14 +1,10 @@
 sh lite-stop.sh
 
 current_path=$(dirname $(pwd))
-
-sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
-line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
-
-sed -i "_bak" 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
-
+PLATFORM=`uname`
 JAVAHOME=$JAVA_HOME
 toolsPath=$JAVA_HOME/lib/tools.jar
+checkToolsResult=1
 
 function checkJavaHome(){
 	echo "检查JAVA_HOME！"
@@ -21,7 +17,6 @@ function checkJavaHome(){
   return 0;
 }
 
-checkToolsResult=1
 function checkTools(){
 	echo "检查tools.jar!"
   if [ ! -f "${toolsPath}" ]; then
@@ -32,6 +27,18 @@ function checkTools(){
     checkToolsResult=0
   fi
 }
+
+if [ "$PLATFORM" = "Linux" ]; then
+  sed -i 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
+  line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
+
+  sed -i 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
+elif [ -f /etc/lsb-release ]; then
+  sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
+  line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
+
+  sed -i "_bak" 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
+fi
 
 checkJavaHome
 checkTools

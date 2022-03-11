@@ -227,7 +227,9 @@ public class InstrumentLauncher {
     public static void start(String featureString, Instrumentation inst) {
         final Map<String, String> args = toFeatureMap(featureString);
         for (Map.Entry<String, String> entry : args.entrySet()) {
-            System.setProperty(entry.getKey(), entry.getValue());
+            if (System.getProperty(entry.getKey()) == null) {
+                System.setProperty(entry.getKey(), entry.getValue());
+            }
         }
         final Integer delay = getDelay(args, null);
         final TimeUnit timeUnit = getTimeUnit(args, null);

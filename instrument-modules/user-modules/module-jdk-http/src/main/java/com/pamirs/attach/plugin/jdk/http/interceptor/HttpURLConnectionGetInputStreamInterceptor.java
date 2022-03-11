@@ -12,6 +12,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 
 /**
  * @author jiangjibo
@@ -34,7 +35,8 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
                 url.getPath());
         String whiteList = request.getRequestProperty(PradarService.PRADAR_WHITE_LIST_CHECK);
 
-        MatchConfig config = ClusterTestUtils.httpClusterTest(fullPath);
+        //todo ClusterTestUtils.httpClusterTest里面已经做了对象copy，这么写是为了能单模块更新，后面要去掉
+        MatchConfig config = copyMatchConfig(ClusterTestUtils.httpClusterTest(fullPath));
         ExecutionStrategy strategy = config.getStrategy();
         // 仅mock在getInputStream里执行
         if (!(strategy instanceof JsonMockStrategy) && !(strategy instanceof MockStrategy)) {
@@ -49,5 +51,17 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
         config.addArgs("method", "url");
         config.addArgs("isInterface", Boolean.FALSE);
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+    }
+
+
+    private static MatchConfig copyMatchConfig(MatchConfig matchConfig) {
+        MatchConfig copied = new MatchConfig();
+        copied.setUrl(matchConfig.getUrl());
+        copied.setStrategy(matchConfig.getStrategy());
+        copied.setScriptContent(matchConfig.getScriptContent());
+        copied.setArgs(new HashMap<String, Object>(matchConfig.getArgs()));
+        copied.setForwarding(matchConfig.getForwarding());
+        copied.setSuccess(matchConfig.isSuccess());
+        return copied;
     }
 }

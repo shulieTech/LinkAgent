@@ -33,7 +33,7 @@ if [ "$PLATFORM" = "Linux" ]; then
   line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
 
   sed -i 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
-elif [ -f /etc/lsb-release ]; then
+else
   sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
   line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
 

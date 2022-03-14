@@ -42,7 +42,7 @@ public class InstrumentLauncher {
 
     private final static String SIMULATOR_KEY_DELAY = "simulator.delay";
     private final static String SIMULATOR_KEY_UNIT = "simulator.unit";
-    private final static String SIMULATOR_KEY_LITE = "simulator.lite";
+    private final static String SIMULATOR_KEY_LOAD_TTL = "simulator.load.ttl";
 
     public static void premain(final String agentArgs, final Instrumentation instrumentation) {
         start(agentArgs, instrumentation);
@@ -207,10 +207,10 @@ public class InstrumentLauncher {
      * @param defaultValue 默认值
      * @return
      */
-    private static Boolean getIsLite(Map<String, String> args, Boolean defaultValue) {
-        String property = System.getProperty(SIMULATOR_KEY_LITE);
+    private static Boolean getLoadTTl(Map<String, String> args, Boolean defaultValue) {
+        String property = System.getProperty(SIMULATOR_KEY_LOAD_TTL);
         if (property == null || property.trim().length() == 0) {
-            property = args.get(SIMULATOR_KEY_LITE);
+            property = args.get(SIMULATOR_KEY_LOAD_TTL);
         }
         if (isBooleanStr(property)) {
             return Boolean.parseBoolean(property);
@@ -233,7 +233,7 @@ public class InstrumentLauncher {
         }
         final Integer delay = getDelay(args, null);
         final TimeUnit timeUnit = getTimeUnit(args, null);
-        final Boolean isLite = getIsLite(args, false);
+        final Boolean loadTTl = getLoadTTl(args, true);
         /**
          * 延迟加载，因为使用 instrument 方式增强，不使用独立进程方式，所以
          * 需要防止此 jar 包中可能存在一些与应用相冲突的依赖如 zk 等，需要等待这些资源
@@ -243,7 +243,7 @@ public class InstrumentLauncher {
         final long pid = RuntimeMXBeanUtils.getPid();
         final String processName = RuntimeMXBeanUtils.getName();
         try {
-            if (isLite) {
+            if (loadTTl) {
                 // 加载ttl
                 try {
                     ttlJarToSystemClassLoader(inst);

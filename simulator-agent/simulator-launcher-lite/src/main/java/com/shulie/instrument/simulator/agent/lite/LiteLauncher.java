@@ -87,7 +87,8 @@ public class LiteLauncher {
      * agent启动参数配置
      */
     private static final String AGENT_START_PARAM
-        = ";simulator.use.premain=true;simulator.lite=true;simulator.delay=%s;simulator.app.name=%s";
+        = ";simulator.use.premain=true;simulator.lite=%s;simulator.delay=%s;simulator.app.name=%s;simulator.load"
+        + ".ttl=%s";
 
     public static void main(String[] args) throws FileNotFoundException {
         LogUtil.info("simulator-launcher-lite 开始启动");
@@ -126,14 +127,9 @@ public class LiteLauncher {
         VirtualMachine vm = null;
         for (JpsResult jpsResult : attachList) {
             try {
-                // 应用名为:jar包名(userId)
-                String projectName = jpsResult.getAppName() + "(" + agentProperties.getProperty("pradar.user.id", "-1")
-                    + ")";
                 vm = VirtualMachine.attach(jpsResult.getPid());
                 if (vm != null) {
-                    vm.loadAgent(LiteLauncher.SIMULATOR_BEGIN_JAR_PATH,
-                        String.format(AGENT_START_PARAM, agentProperties.getIntProperty("simulator.delay", 0),
-                            projectName));
+                    vm.loadAgent(LiteLauncher.SIMULATOR_BEGIN_JAR_PATH, buildStartParam(jpsResult, agentProperties));
                 }
                 LogUtil.info(jpsResult + ", attach success");
             } catch (Throwable e) {
@@ -147,6 +143,23 @@ public class LiteLauncher {
                 }
             }
         }
+    }
+
+    /**
+     * 构建agent启动参数
+     *
+     * @param jpsResult       java进程信息
+     * @param agentProperties agent.properties配置信息
+     * @return
+     */
+    private static String buildStartParam(JpsResult jpsResult, PropertiesReader agentProperties) {
+        String isLite = agentProperties.getProperty("simulator.lite", "true");
+        String delay = agentProperties.getProperty("simulator.delay", "0");
+        // 应用名为:jar包名(userId)
+        String projectName = jpsResult.getAppName() + "(" + agentProperties.getProperty("pradar.user.id", "-1") + ")";
+        String loadTTL = agentProperties.getProperty("simulator.load.ttl", "true");
+
+        return String.format(AGENT_START_PARAM, isLite, delay, projectName, loadTTL);
     }
 
     /**

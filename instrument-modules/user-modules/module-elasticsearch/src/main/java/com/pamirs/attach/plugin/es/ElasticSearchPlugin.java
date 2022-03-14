@@ -104,6 +104,18 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
             }
         });
 
+        //BulkRequest修改影子索引需要在添加请求时就执行
+        enhanceTemplate.enhance(this, "org.elasticsearch.action.bulk.BulkRequest", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("add", "org.elasticsearch.action.index.IndexRequest");
+                method.addInterceptor(Listeners
+                        .of(BulkRequestAddInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
+
+            }
+        });
+
         //链路监控需要增强该类所有方法
         enhanceTemplate.enhance(this, "org.elasticsearch.client.RestClient", new EnhanceCallback() {
             @Override

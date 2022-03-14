@@ -104,7 +104,7 @@ public class TcpDataPusher implements DataPusher {
 
             @Override
             public boolean call(FileChannel fc, long position, long length, byte dataType, int version) {
-                long start = System.currentTimeMillis();
+                //long start = System.currentTimeMillis();
                 if (!isStarted.get()) {
                     return false;
                 }
@@ -194,10 +194,10 @@ public class TcpDataPusher implements DataPusher {
                 } finally {
                     requestCommand.setFile(null);
                     requestCommand.setBody(null);
-                    long end = System.currentTimeMillis();
-                    writeFile(
-                        String.format("date:%s, time:%d, type:%d, length:%d\n", sdf.format(new Date()),
-                            end - start, dataType, length), dataType);
+                    //long end = System.currentTimeMillis();
+                    //writeFile(
+                    //    String.format("date:%s, time:%d, type:%d, length:%d\n", sdf.format(new Date()),
+                    //        end - start, dataType, length), dataType);
                 }
                 return false;
             }
@@ -230,15 +230,15 @@ public class TcpDataPusher implements DataPusher {
         }
     }
 
-    private void writeFile(String str, int dataType) {
-        try {
-            BufferedWriter out = new BufferedWriter(
-                new FileWriter("/Users/ocean_wll/nettyPerf-" + dataType + ".txt", true));
-            out.write(str);
-            out.close();
-        } catch (Exception e) {
-            // ignore
-        }
-    }
+    //private void writeFile(String str, int dataType) {
+    //    try {
+    //        BufferedWriter out = new BufferedWriter(
+    //            new FileWriter("/Users/ocean_wll/nettyPerf-" + dataType + ".txt", true));
+    //        out.write(str);
+    //        out.close();
+    //    } catch (Exception e) {
+    //        // ignore
+    //    }
+    //}
 
 }

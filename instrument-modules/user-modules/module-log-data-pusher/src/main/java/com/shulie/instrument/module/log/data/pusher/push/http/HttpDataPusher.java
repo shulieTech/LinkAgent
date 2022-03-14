@@ -157,7 +157,7 @@ public class HttpDataPusher implements DataPusher {
         return new LogCallback() {
             @Override
             public boolean call(FileChannel fc, long position, long length, byte dataType, int version) {
-                long start = System.currentTimeMillis();
+                //long start = System.currentTimeMillis();
                 if (!isStarted.get()) {
                     return false;
                 }
@@ -203,12 +203,13 @@ public class HttpDataPusher implements DataPusher {
                     }
                 } catch (Throwable e) {
                     LOGGER.error("http log push error", e);
-                } finally {
-                    long end = System.currentTimeMillis();
-                    writeFile(
-                        String.format("date:%s, time:%d, type:%d, length:%d\n", sdf.format(new Date()),
-                            end - start, dataType, length), dataType);
                 }
+                //finally {
+                //    long end = System.currentTimeMillis();
+                //    writeFile(
+                //        String.format("date:%s, time:%d, type:%d, length:%d\n", sdf.format(new Date()),
+                //            end - start, dataType, length), dataType);
+                //}
                 return false;
             }
         };
@@ -247,15 +248,15 @@ public class HttpDataPusher implements DataPusher {
             LOGGER.error("close httpClient err!", e);
         }
     }
-
-    private void writeFile(String str, int dataType) {
-        try {
-            BufferedWriter out = new BufferedWriter(
-                new FileWriter("/Users/ocean_wll/httpPerf-" + dataType + ".txt", true));
-            out.write(str);
-            out.close();
-        } catch (Exception e) {
-            // ignore
-        }
-    }
+    //
+    //private void writeFile(String str, int dataType) {
+    //    try {
+    //        BufferedWriter out = new BufferedWriter(
+    //            new FileWriter("/Users/ocean_wll/httpPerf-" + dataType + ".txt", true));
+    //        out.write(str);
+    //        out.close();
+    //    } catch (Exception e) {
+    //        // ignore
+    //    }
+    //}
 }

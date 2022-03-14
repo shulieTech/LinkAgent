@@ -16,11 +16,6 @@ package com.pamirs.attach.plugin.es.common.impl;
 
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
-import com.pamirs.pradar.exception.PressureMeasureError;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
-import org.elasticsearch.action.ActionRequest;
-import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 
 import java.util.ArrayList;
@@ -52,97 +47,17 @@ public class BulkRequestIndexRename extends AbstractReadRequestIndexRename {
 
     @Override
     public boolean supportedDirectReindex(Object target) {
-        BulkRequest req = (BulkRequest)target;
-        List reqs = req.requests();
-        for (Object r : reqs) {
-            if (r == null) {
-                continue;
-            }
-            RequestIndexRename requestIndexRename = RequestIndexRenameProvider.get(r);
-            if (!requestIndexRename.supportedDirectReindex(r)) {
-                return false;
-            }
-        }
-        return true;
+        return false;
     }
 
     @Override
     public Object indirectIndex(Object target) {
-        BulkRequest req = (BulkRequest)target;
-        List reqs = req.requests();
-        List newReqs = new ArrayList();
-        for (Object r : reqs) {
-            if (r == null) {
-                continue;
-            }
-            RequestIndexRename requestIndexRename = RequestIndexRenameProvider.get(r);
-            if (requestIndexRename != null) {
-                newReqs.add(requestIndexRename.indirectIndex(r));
-            } else {
-                throw new PressureMeasureError("elasticsearch " + r.getClass().getName() + " is not supported!");
-            }
-        }
-        BulkRequest bulkRequest = new BulkRequest();
-        try {
-            List<Object> payloads = req.payloads();
-            if (payloads != null) {
-                for (int i = 0, size = newReqs.size(); i < size; i++) {
-                    if (i < payloads.size()) {
-                        if (isLowVersion) {
-                            bulkRequest.add((ActionRequest)newReqs.get(i), payloads.get(i));
-                        } else {
-                            bulkRequest.add((DocWriteRequest)newReqs.get(i), payloads.get(i));
-                        }
-                    }
-                }
-            } else {
-                bulkRequest.add(newReqs);
-            }
-        } catch (NoSuchFieldError e) {
-            bulkRequest.add(newReqs);
-        }
-
-        try {
-            Reflect.on(bulkRequest).set("timeout", Reflect.on(req).get("timeout"));
-        } catch (ReflectException e) {
-        }
-        try {
-            Reflect.on(bulkRequest).set("globalPipeline", Reflect.on(req).get("globalPipeline"));
-        } catch (ReflectException e) {
-        }
-        try {
-            Reflect.on(bulkRequest).set("globalRouting", Reflect.on(req).get("globalRouting"));
-        } catch (ReflectException e) {
-        }
-        try {
-            Reflect.on(bulkRequest).set("refreshPolicy", Reflect.on(req).get("refreshPolicy"));
-        } catch (ReflectException e) {
-        }
-        try {
-            Reflect.on(bulkRequest).set("waitForActiveShards", Reflect.on(req).get("waitForActiveShards"));
-        } catch (ReflectException e) {
-        }
-
-        return bulkRequest;
+        return target;
     }
 
     @Override
     public List<String> reindex0(Object target) {
-        BulkRequest req = (BulkRequest)target;
-        List reqs = req.requests();
-        List<String> list = new ArrayList<String>();
-        for (Object r : reqs) {
-            if (r == null) {
-                continue;
-            }
-            RequestIndexRename requestIndexRename = RequestIndexRenameProvider.get(r);
-            if (requestIndexRename != null) {
-                list.addAll(requestIndexRename.reindex(r));
-            } else {
-                throw new PressureMeasureError("elasticsearch " + r.getClass().getName() + " is not supported!");
-            }
-        }
-        return list;
+        return null;
     }
 
     @Override

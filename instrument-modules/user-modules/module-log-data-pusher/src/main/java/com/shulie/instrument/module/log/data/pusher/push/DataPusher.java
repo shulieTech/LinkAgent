@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.module.log.data.pusher.push;
 
+import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
 import com.shulie.instrument.module.log.data.pusher.log.callback.LogCallback;
 import com.shulie.instrument.module.log.data.pusher.server.ServerAddrProvider;
 
@@ -29,7 +30,7 @@ public interface DataPusher {
      *
      * @return 名称
      */
-    String getName();
+    DataPushEnum getType();
 
     /**
      * 设置地址提供者

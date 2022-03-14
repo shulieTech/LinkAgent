@@ -52,6 +52,7 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
     private Method getUrlMethod;
     private Method getUserMethod;
     private Method getDriverMethod;
+    private Method getPasswordMethod;
 
     @Override
     public Object[] getParameter0(Advice advice) {
@@ -77,6 +78,7 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
         }
 
         String username = null;
+        String password = null;
         String url = null;
         Properties definitionProperties = null;
         try {
@@ -87,12 +89,16 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
             Object definition = getDefinitionMethod.invoke(ConnectionPoolUtils.getConnectionPoolMap().get(alias));
             getUrlMethod = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_URL_METHOD);
             getUserMethod = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_USER_METHOD);
+            getPasswordMethod = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_PASSWORD_METHOD);
+
             Method getCompleteInfo = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_COMPLETE_INFO_METHOD);
             getUrlMethod.setAccessible(true);
             getUserMethod.setAccessible(true);
+            getPasswordMethod.setAccessible(true);
             getCompleteInfo.setAccessible(true);
             url = (String) getUrlMethod.invoke(definition);
             username = (String) getUserMethod.invoke(definition);
+            password = (String) getPasswordMethod.invoke(definition);
             definitionProperties = (Properties) getCompleteInfo.invoke(definition);
         } catch (Exception e) {
             logger.error("proxool init getDefinitionMethod and definition error.", e);
@@ -121,7 +127,7 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
             Class connectionPoolDefinitionClass = Thread.currentThread().getContextClassLoader().loadClass("org.logicalcobwebs.proxool.ConnectionPoolDefinition");
             Constructor connectionPoolDefinitionOfConstructor = connectionPoolDefinitionClass.getDeclaredConstructor(String.class, Properties.class, boolean.class);
             connectionPoolDefinitionOfConstructor.setAccessible(true);
-            Object ptConnectionPoolDefinitionOfInstance = connectionPoolDefinitionOfConstructor.newInstance(ptUrl.toString(), buildPtProperties(definitionProperties, shadowDatabaseConfig), true);
+            Object ptConnectionPoolDefinitionOfInstance = connectionPoolDefinitionOfConstructor.newInstance(ptUrl.toString(), buildPtProperties(definitionProperties, shadowDatabaseConfig, username, password), true);
 
             Class connectionPoolClass = Thread.currentThread().getContextClassLoader().loadClass("org.logicalcobwebs.proxool.ConnectionPool");
             Constructor connectionPoolOfConstructor = connectionPoolClass.getDeclaredConstructors()[0];
@@ -141,11 +147,11 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
         return args;
     }
 
-    private Properties buildPtProperties(Properties bizProperties, ShadowDatabaseConfig shadowDatabaseConfig) {
+    private Properties buildPtProperties(Properties bizProperties, ShadowDatabaseConfig shadowDatabaseConfig, String bizUserName, String bizPassword) {
         if (bizProperties == null) {
             Properties properties = new Properties();
-            properties.put("user", shadowDatabaseConfig.getShadowUsername());
-            properties.put("password", shadowDatabaseConfig.getShadowPassword());
+            properties.put("user", shadowDatabaseConfig.getShadowUsername(bizUserName));
+            properties.put("password", shadowDatabaseConfig.getShadowPassword(bizPassword));
             return properties;
         }
 
@@ -160,8 +166,8 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
             }
         }
         //设置用户名密码
-        properties.put("user", shadowDatabaseConfig.getShadowUsername());
-        properties.put("password", shadowDatabaseConfig.getShadowPassword());
+        properties.put("user", shadowDatabaseConfig.getShadowUsername(bizUserName));
+        properties.put("password", shadowDatabaseConfig.getShadowPassword(bizPassword));
 
         return properties;
     }

@@ -220,8 +220,9 @@ public class RedissonFactory extends AbstractRedisServerFactory {
 
         nodes = RedissonUtils.addPre(nodes);
         String[] nodesArrays = nodes.toArray(new String[nodes.size()]);
-        String passwd = shadowRedisConfig.getPassword() != null
-                && !"null".equals(shadowRedisConfig.getPassword()) ? shadowRedisConfig.getPassword() : null;
+
+        //String passwd = shadowRedisConfig.getPassword() != null
+        //        && !"null".equals(shadowRedisConfig.getPassword()) ? shadowRedisConfig.getPassword() : null;
 
         Config newConfig = initBaseConfig(oldConfig);
         SingleServerConfig singleServerConfig = Reflect.on(oldConfig).get(RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
@@ -238,6 +239,8 @@ public class RedissonFactory extends AbstractRedisServerFactory {
                     .setTimeout(oldConfig.useSingleServer().getTimeout())
                     .setClientName(Pradar.CLUSTER_TEST_PREFIX + oldConfig.useSingleServer().getClientName())
                     .setDnsMonitoringInterval(oldConfig.useSingleServer().getDnsMonitoringInterval());
+
+            String passwd = shadowRedisConfig.getPassword(singleServerConfig.getPassword());
             if (passwd != null) {
                 newConfig.useSingleServer().setPassword(passwd);
             }
@@ -249,6 +252,9 @@ public class RedissonFactory extends AbstractRedisServerFactory {
                     .addNodeAddress(nodesArrays)
                     .setClientName(Pradar.CLUSTER_TEST_PREFIX + oldConfig.useClusterServers().getClientName())
             ;
+
+            String passwd = shadowRedisConfig.getPassword(clusterServersConfig.getPassword());
+
             if (passwd != null) {
                 newConfig.useClusterServers().setPassword(passwd);
             }
@@ -272,6 +278,9 @@ public class RedissonFactory extends AbstractRedisServerFactory {
             if (master != null && !"null".equals(master)) {
                 newConfig.useSentinelServers().setMasterName(master);
             }
+
+            String passwd = shadowRedisConfig.getPassword(sentinelServersConfig.getPassword());
+
             if (passwd != null) {
                 newConfig.useSentinelServers().setPassword(passwd);
             }
@@ -281,6 +290,8 @@ public class RedissonFactory extends AbstractRedisServerFactory {
         } else if (replicatedServersConfig != null) {
             newConfig.useReplicatedServers()
                     .addNodeAddress(nodesArrays);
+
+            String passwd = shadowRedisConfig.getPassword(replicatedServersConfig.getPassword());
             if (passwd != null) {
                 newConfig.useReplicatedServers().setPassword(passwd);
             }
@@ -294,6 +305,8 @@ public class RedissonFactory extends AbstractRedisServerFactory {
             if (database != null) {
                 newConfig.useMasterSlaveServers().setDatabase(database);
             }
+            String passwd = shadowRedisConfig.getPassword(masterSlaveServersConfig.getPassword());
+
             if (passwd != null) {
                 newConfig.useMasterSlaveServers().setPassword(passwd);
             }

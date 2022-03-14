@@ -56,8 +56,10 @@ public class RequestBuilderBuildMethodV3Interceptor extends TraceInterceptorAdap
         Request.Builder builder = (Request.Builder) target;
         Map<String, String> contextMap = Pradar.getInvokeContextTransformMap();
         for (Map.Entry<String, String> entry : contextMap.entrySet()) {
-            builder.removeHeader(entry.getKey());
-            builder.addHeader(entry.getKey(), entry.getValue());
+            if(entry.getKey() != null && entry.getValue() != null){
+                builder.removeHeader(entry.getKey());
+                builder.addHeader(entry.getKey(), entry.getValue());
+            }
         }
         return null;
     }

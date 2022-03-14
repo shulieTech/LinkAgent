@@ -61,6 +61,16 @@ public class ShadowRedisConfig {
      */
     private String master;
 
+    /**
+     * 影子库账号前缀
+     */
+    private String shadowAccountPrefix;
+
+    /**
+     * 影子库账号后缀
+     */
+    private String shadowAccountSuffix;
+
     public String getClient() {
         return client;
     }
@@ -107,8 +117,11 @@ public class ShadowRedisConfig {
         this.nodes = nodes;
     }
 
-    public String getPassword() {
-        return password;
+    public String getPassword(String bizPassword) {
+        if (stringIsEmpty(bizPassword) || !stringIsEmpty(password)) {
+            return password;
+        }
+        return this.shadowAccountPrefix + bizPassword + this.shadowAccountSuffix;
     }
 
     public void setPassword(String password) {
@@ -131,23 +144,46 @@ public class ShadowRedisConfig {
         this.nodeNums = nodeNums;
     }
 
+    public String getShadowAccountPrefix() {
+        return shadowAccountPrefix;
+    }
+
+    public void setShadowAccountPrefix(String shadowAccountPrefix) {
+        this.shadowAccountPrefix = shadowAccountPrefix;
+    }
+
+    public String getShadowAccountSuffix() {
+        return shadowAccountSuffix;
+    }
+
+    public void setShadowAccountSuffix(String shadowAccountSuffix) {
+        this.shadowAccountSuffix = shadowAccountSuffix;
+    }
+
     @Override
     public boolean equals(Object obj) {
         ShadowRedisConfig that = (ShadowRedisConfig) obj;
         if (this == that) {
             return true;
         }
-        return String.valueOf(this.nodes).equals(String.valueOf(that.getNodes()))
-                && String.valueOf(password).equals(String.valueOf(that.getPassword()))
-                && String.valueOf(this.database).equals(String.valueOf(that.getDatabase()))
-                && String.valueOf(master).equals(String.valueOf(that.getMaster()))
+        return String.valueOf(this.nodes).equals(String.valueOf(that.nodes))
+                && String.valueOf(password).equals(String.valueOf(that.password))
+                && String.valueOf(this.database).equals(String.valueOf(that.database))
+                && String.valueOf(master).equals(String.valueOf(that.master))
                 && String.valueOf(this.model).equals(String.valueOf(that.model))
                 && String.valueOf(this.client).equals(String.valueOf(that.client))
+                && String.valueOf(this.shadowAccountPrefix).equals(String.valueOf(that.shadowAccountPrefix))
+                && String.valueOf(this.shadowAccountSuffix).equals(String.valueOf(that.shadowAccountSuffix))
                 ;
     }
 
     @Override
     public int hashCode() {
         return super.hashCode();
+    }
+
+    private boolean stringIsEmpty(String string) {
+        return null == string
+            || string.isEmpty();
     }
 }

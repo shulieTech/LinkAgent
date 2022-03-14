@@ -88,6 +88,7 @@
         <module>module-apache-axis</module>
         <module>module-jersey</module>
         <module>module-spring-cloud-gateway</module>
+        <module>module-netty-time-wheel</module>
     </modules>
 
     <build>
@@ -101,8 +102,12 @@
                         <relocation>
                             <!-- 修改 guava 包名 -->
                             <pattern>com.google.common</pattern>
-                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common
-                            </shadedPattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <!-- 修改httpclient包名 -->
+                            <pattern>org.apache.http</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.org.apache.http</shadedPattern>
                         </relocation>
                     </relocations>
                     <shadedArtifactAttached>true</shadedArtifactAttached>

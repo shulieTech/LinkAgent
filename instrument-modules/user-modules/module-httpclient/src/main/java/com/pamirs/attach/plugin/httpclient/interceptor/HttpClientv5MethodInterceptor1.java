@@ -95,7 +95,9 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
 
         MatchConfig config = ClusterTestUtils.httpClusterTest(url);
         Header[] headers = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
-        config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, headers[0].getValue());
+        if (headers != null && headers.length > 0){
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, headers[0].getValue());
+        }
         config.addArgs("url", url);
         config.addArgs("request", request);
         config.addArgs("method", "uri");

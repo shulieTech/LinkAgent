@@ -20,6 +20,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.client.internal.OperationExecutor;
+import com.mongodb.operation.AggregateOperation;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -74,6 +75,9 @@ public class Caches {
                     operationExecutorMap.put(key, executorModule);
                 }
             }
+        }
+        if(operation instanceof AggregateOperation){
+            operation = com.pamirs.attach.plugin.dynamic.reflect.Reflect.on(operation).get("wrapped");
         }
         operationAccessor.setMongoNamespace(operation, executorModule.getPtMongoNamespace());
         return executorModule.getOperationExecutor();

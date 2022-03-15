@@ -24,6 +24,8 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.connection.ClusterSettings;
+import com.mongodb.operation.AggregateOperation;
+import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -56,6 +58,7 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
         operationNumMap.put("ListIndexesOperation", 1);
         operationNumMap.put("MapReduceWithInlineResultsOperation", 1);
         operationNumMap.put("ParallelCollectionScanOperation", 1);
+        operationNumMap.put("AggregateOperation", 1);
 
         //写操作
         operationNumMap.put("MixedBulkWriteOperation", 2);
@@ -115,12 +118,22 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
 
         final Field field = objectFieldMap.get(args[0].getClass());
         if(field == null){
-            final Field namespace = ReflectionUtils.getDeclaredField(args[0], "namespace");
+            final Field namespace;
+            if(isAggregateOperationInstance(args[0])){
+                namespace = Reflect.on(args[0]).get("wrapped").getClass().getDeclaredField("namespace");
+            }else{
+                namespace = ReflectionUtils.getDeclaredField(args[0], "namespace");
+            }
             namespace.setAccessible(Boolean.TRUE);
             objectFieldMap.put(args[0].getClass(), namespace);
         }
 
-        MongoNamespace busMongoNamespace = (MongoNamespace) objectFieldMap.get(args[0].getClass()).get(args[0]);
+        MongoNamespace busMongoNamespace;
+        if(isAggregateOperationInstance(args[0])){
+            busMongoNamespace = Reflect.on(args[0]).call("getNamespace").get();
+        }else{
+            busMongoNamespace = (MongoNamespace) objectFieldMap.get(args[0].getClass()).get(args[0]);
+        }
         switch (operationNum) {
             case 1:
                 setReadPtMongoNamespace(args[0], busMongoNamespace, shadowDatabaseConfig);
@@ -134,6 +147,10 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
         }
 
         return advice.getParameterArray();
+    }
+
+    private boolean isAggregateOperationInstance(Object obj){
+        return obj.getClass().getSimpleName().equals("AggregateOperation");
     }
 
 
@@ -194,6 +211,9 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
 
             nameSpaceField.setAccessible(true);
             objectFieldMap.put(operationClass, nameSpaceField);
+        }
+        if(isAggregateOperationInstance(target)){
+            target = Reflect.on(target).get("wrapped");
         }
         objectFieldMap.get(operationClass).set(target, ptMongoNamespace);
     }

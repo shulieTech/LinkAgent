@@ -287,6 +287,15 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+        enhanceTemplate.enhance(this, "com.mongodb.operation.AggregateOperationImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("defaultAggregateTarget")
+                        .addInterceptor(Listeners.of(AggregateOperationImplInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+            }
+        });
+
         return true;
     }
 

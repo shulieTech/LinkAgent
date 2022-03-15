@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.mongodb.utils;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.operation.*;
+import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +63,13 @@ public class OperationAccessorFactory {
                 }
             });
             operationNumMap.put(ParallelCollectionScanOperation.class, readReflectOperationAccessorAdaptor);
+
+            operationNumMap.put(AggregateOperation.class, new ReflectOperationAccessorAdaptor(true) {
+                @Override
+                public MongoNamespace getMongoNamespace(Object operation) {
+                    return Reflect.on(operation).call("getNamespace").get();
+                }
+            });
 
             //写操作
             operationNumMap.put(MixedBulkWriteOperation.class, new ReflectOperationAccessorAdaptor(false) {

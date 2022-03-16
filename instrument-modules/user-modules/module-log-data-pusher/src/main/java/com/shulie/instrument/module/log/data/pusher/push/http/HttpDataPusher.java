@@ -180,7 +180,6 @@ public class HttpDataPusher implements DataPusher {
                     httpPost.setHeader("dataType", String.valueOf(dataType));
                     httpPost.setHeader("version", String.valueOf(version));
                     httpPost.setHeader("hostIp", hostIp);
-                    httpPost.setHeader("Accept-Encoding", "gzip,deflate,sdch");
 
                     MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, position, length);
                     byte[] data = new byte[bb.remaining()];
@@ -188,6 +187,7 @@ public class HttpDataPusher implements DataPusher {
                     ByteArrayEntity byteArrayEntity = new ByteArrayEntity(data);
 
                     if (httpPushOptions.isEnableGzip()) {
+                        httpPost.setHeader("Accept-Encoding", "gzip,deflate,sdch");
                         GzipCompressingEntity gzipEntity = new GzipCompressingEntity(byteArrayEntity);
                         httpPost.setEntity(gzipEntity);
                     } else {

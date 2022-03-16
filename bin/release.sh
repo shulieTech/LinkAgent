@@ -11,6 +11,5 @@ sh ${HOME}/bin/deploy.sh
 echo "end deploy ..."
 
 
-
 echo "release finish ..."
 echo "release home package: ${HOME}/deploy"

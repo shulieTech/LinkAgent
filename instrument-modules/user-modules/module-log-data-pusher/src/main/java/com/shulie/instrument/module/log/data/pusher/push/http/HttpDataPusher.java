@@ -252,7 +252,7 @@ public class HttpDataPusher implements DataPusher {
         } catch (Throwable e) {
             LOGGER.error("http health check error", e);
             return false;
-        }finally {
+        } finally {
             if (response != null) {
                 try {
                     EntityUtils.consume(response.getEntity());

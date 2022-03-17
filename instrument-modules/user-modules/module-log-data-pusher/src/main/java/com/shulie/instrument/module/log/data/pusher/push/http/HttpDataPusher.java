@@ -15,12 +15,10 @@
 
 package com.shulie.instrument.module.log.data.pusher.push.http;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -111,6 +109,7 @@ public class HttpDataPusher implements DataPusher {
             final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
             // 总连接池数量
             connectionManager.setMaxTotal(httpPushOptions.getMaxHttpPoolSize());
+            connectionManager.setDefaultMaxPerRoute(httpPushOptions.getMaxHttpPoolSize());
             // setConnectTimeout表示设置建立连接的超时时间
             // setConnectionRequestTimeout表示从连接池中拿连接的等待超时时间
             // setSocketTimeout表示发出请求后等待对端应答的超时时间
@@ -144,6 +143,18 @@ public class HttpDataPusher implements DataPusher {
                     }
                 }
             }, 0, 1000 * 5);
+
+            // jvm 停止或重启时，关闭连接池释放连接资源
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        httpClient.close();
+                    } catch (IOException e) {
+                        LOGGER.error("HttpClient close exception", e);
+                    }
+                }
+            });
             return true;
         } catch (Throwable e) {
             LOGGER.error("httpDataPush init error", e);
@@ -161,6 +172,7 @@ public class HttpDataPusher implements DataPusher {
                 if (!isStarted.get()) {
                     return false;
                 }
+                CloseableHttpResponse response = null;
                 try {
                     HttpPost httpPost = new HttpPost(httpPushOptions.getHttpPath() + url);
                     httpPost.setHeader("Content-Type", "application/json");
@@ -168,7 +180,6 @@ public class HttpDataPusher implements DataPusher {
                     httpPost.setHeader("dataType", String.valueOf(dataType));
                     httpPost.setHeader("version", String.valueOf(version));
                     httpPost.setHeader("hostIp", hostIp);
-                    httpPost.setHeader("Accept-Encoding", "gzip,deflate,sdch");
 
                     MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, position, length);
                     byte[] data = new byte[bb.remaining()];
@@ -176,13 +187,18 @@ public class HttpDataPusher implements DataPusher {
                     ByteArrayEntity byteArrayEntity = new ByteArrayEntity(data);
 
                     if (httpPushOptions.isEnableGzip()) {
+                        httpPost.setHeader("Accept-Encoding", "gzip,deflate,sdch");
                         GzipCompressingEntity gzipEntity = new GzipCompressingEntity(byteArrayEntity);
                         httpPost.setEntity(gzipEntity);
                     } else {
                         httpPost.setEntity(byteArrayEntity);
                     }
 
-                    CloseableHttpResponse response = httpClient.execute(httpPost);
+                    response = httpClient.execute(httpPost);
+
+                    if (response == null) {
+                        return false;
+                    }
 
                     int httpCode = response.getStatusLine().getStatusCode();
                     if (httpCode != HttpStatus.SC_OK) {
@@ -193,16 +209,19 @@ public class HttpDataPusher implements DataPusher {
                         return false;
                     }
                     JSONObject jsonObject = JSON.parseObject(content);
-                    int responseCode = jsonObject.getIntValue("responseCode");
+                    Integer responseCode = jsonObject.getInteger("responseCode");
                     if (responseCode == CommandCode.SUCCESS) {
                         return true;
-                    } else if (responseCode == CommandCode.SYSTEM_ERROR
-                        || responseCode == CommandCode.SYSTEM_BUSY
-                        || responseCode == CommandCode.COMMAND_CODE_NOT_SUPPORTED) {
-                        return false;
                     }
                 } catch (Throwable e) {
                     LOGGER.error("http log push error", e);
+                    if (response != null) {
+                        try {
+                            EntityUtils.consume(response.getEntity());
+                        } catch (Exception e1) {
+                            LOGGER.error("callback consume response entity exception", e);
+                        }
+                    }
                 }
                 //finally {
                 //    long end = System.currentTimeMillis();
@@ -223,8 +242,9 @@ public class HttpDataPusher implements DataPusher {
 
         // 探活
         HttpGet httpGet = new HttpGet(httpPushOptions.getHttpPath() + healthCheckUrl);
+        CloseableHttpResponse response = null;
         try {
-            CloseableHttpResponse response = httpClient.execute(httpGet);
+            response = httpClient.execute(httpGet);
             if (response.getStatusLine().getStatusCode() != 200) {
                 LOGGER.error("http health check error, url {}", httpPushOptions.getHttpPath() + healthCheckUrl);
                 return false;
@@ -232,6 +252,14 @@ public class HttpDataPusher implements DataPusher {
         } catch (Throwable e) {
             LOGGER.error("http health check error", e);
             return false;
+        }finally {
+            if (response != null) {
+                try {
+                    EntityUtils.consume(response.getEntity());
+                } catch (IOException e) {
+                    LOGGER.error("start consume response entity exception", e);
+                }
+            }
         }
 
         return isStarted.compareAndSet(false, true);

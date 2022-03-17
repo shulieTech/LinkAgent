@@ -352,6 +352,14 @@ public abstract class HttpUtils {
         public void setResult(String result) {
             this.result = result;
         }
+
+        @Override
+        public String toString() {
+            return "HttpResult{" +
+                "status=" + status +
+                ", result='" + result + '\'' +
+                '}';
+        }
     }
 
 }

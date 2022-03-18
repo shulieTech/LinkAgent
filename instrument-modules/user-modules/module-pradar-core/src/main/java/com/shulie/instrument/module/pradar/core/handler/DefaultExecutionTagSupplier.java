@@ -26,6 +26,10 @@ import com.shulie.instrument.simulator.message.ExecutionTagSupplier;
 public class DefaultExecutionTagSupplier implements ExecutionTagSupplier {
     @Override
     public int getExecutionTag(int listenerTag) {
+        // 如果是takin-lite不做任何拦截，直接执行
+        if(Pradar.isLite){
+            return ExecutionTagSupplier.EXECUTION_CONTINUE;
+        }
         if (PradarSwitcher.silenceSwitchOn() && !ListenersUtil.isNoSilence(listenerTag)) {
             return ExecutionTagSupplier.EXECUTION_IGNORE;
         }

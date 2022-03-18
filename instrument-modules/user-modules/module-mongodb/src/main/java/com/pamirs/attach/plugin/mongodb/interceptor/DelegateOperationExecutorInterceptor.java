@@ -21,8 +21,10 @@ import com.mongodb.ServerAddress;
 import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.client.internal.OperationExecutor;
 import com.mongodb.connection.ClusterSettings;
+import com.mongodb.operation.AggregateOperation;
 import com.mongodb.operation.ReadOperation;
 import com.mongodb.operation.WriteOperation;
+import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessor;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
@@ -166,6 +168,9 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
             return;
         }
         MongoNamespace ptMongoNamespace = new MongoNamespace(busMongoNamespace.getDatabaseName(), shadowTableName);
+        if(operation instanceof AggregateOperation){
+            operation = Reflect.on(operation).get("wrapped");
+        }
         operationAccessor.setMongoNamespace(operation, ptMongoNamespace);
     }
 

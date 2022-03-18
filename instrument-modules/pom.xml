@@ -20,7 +20,7 @@
         <module.datasource.common.version>2.0.0.0</module.datasource.common.version>
         <module.servlet.common.version>2.0.0.0</module.servlet.common.version>
         <module.log.data.pusher>2.0.0.0</module.log.data.pusher>
-        <module.pradar.config.fetcher>2.0.0.0</module.pradar.config.fetcher>
+        <module.pradar.config.fetcher>2.0.0.1</module.pradar.config.fetcher>
     </properties>
 
     <profiles>
@@ -241,7 +241,7 @@
                     <dependency>
                         <groupId>io.shulie</groupId>
                         <artifactId>custom-maven-checkstyle</artifactId>
-                        <version>1.0.0</version>
+                        <version>1.0.1</version>
                     </dependency>
                 </dependencies>
             </plugin>

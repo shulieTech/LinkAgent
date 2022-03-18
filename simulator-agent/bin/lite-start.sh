@@ -1,3 +1,5 @@
+#!/bin/bash
+
 sh lite-stop.sh
 
 current_path=$(dirname $(pwd))

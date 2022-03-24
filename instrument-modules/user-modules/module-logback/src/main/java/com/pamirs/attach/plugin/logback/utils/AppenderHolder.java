@@ -96,7 +96,7 @@ public class AppenderHolder {
                     return Reflect.on(appender).call(method, args).get();
                 }
                 Pradar.setClusterTest(true);
-                if(!LogInterceptor.logEventInvokeContextMappings.isEmpty()){
+                if(LogInterceptor.logEventInvokeContextMappings.containsKey(appender.getClass().getName())){
                     InvokeContext context = LogInterceptor.logEventInvokeContextMappings.remove(args[0]);
                     if(context != null){
                         Pradar.setInvokeContext(context);

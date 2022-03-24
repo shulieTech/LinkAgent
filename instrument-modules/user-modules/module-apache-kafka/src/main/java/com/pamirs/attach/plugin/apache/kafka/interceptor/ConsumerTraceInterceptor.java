@@ -117,6 +117,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setResponse("next poll");
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
+        spanRecord.setMiddlewareName(KafkaConstants.PLUGIN_NAME);
         return spanRecord;
     }
 

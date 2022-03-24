@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -26,7 +26,6 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
-import redis.clients.jedis.Jedis;
 
 
 /**
@@ -144,6 +143,19 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 closeMethod.addInterceptor(Listeners.of(PoolCloseInterceptor.class));
             }
         });
+
+        // 目前使用这种方式不支持影子库
+        enhanceTemplate.enhance(this, "redis.clients.jedis.Connection", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod sendCommand = target.getDeclaredMethods("sendCommand");
+                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandTraceInterceptor.class));
+                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandInterceptor.class));
+                sendCommand.addInterceptor(Listeners.of(JedisSingleClientCutOffInterceptor.class));
+            }
+        });
+
+
         return true;
     }
 }

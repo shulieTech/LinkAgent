@@ -215,12 +215,11 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                         }
                     }
                 }else {
-                    RUNNING_CONTAINER.remove(cacheKey);
+                    // if value not instanceof AbstractMessageListenerContainer，is creating ptContainer.
                 }
             }
         } catch (Throwable e) {
             LOGGER.warn(String.format("[RabbitMQ] ptContainer start fail. cacheKey: %s", cacheKey), e);
-            RUNNING_CONTAINER.remove(cacheKey);
         }
 
         Object[] args = advice.getParameterArray();

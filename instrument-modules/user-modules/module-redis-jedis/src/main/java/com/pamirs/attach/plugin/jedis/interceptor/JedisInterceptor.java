@@ -31,6 +31,7 @@ import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import redis.clients.jedis.*;
+import redis.clients.jedis.commands.ProtocolCommand;
 
 import java.lang.reflect.Field;
 import java.util.Iterator;
@@ -45,6 +46,16 @@ import java.util.Set;
 public class JedisInterceptor extends TraceInterceptorAdaptor {
     Model model = Model.INSTANCE();
     private static ConcurrentWeakHashMap<Class, Field> pipelineClientFieldCache = new ConcurrentWeakHashMap<Class, Field>();
+
+    /**
+     * 防止{@link redis.clients.jedis.Client#set(byte[], byte[])}等方法和{@link redis.clients.jedis.Connection#sendCommand(ProtocolCommand)}增强方法重复执行
+     */
+    public static ThreadLocal<Boolean> interceptorApplied = new ThreadLocal<Boolean>(){
+        @Override
+        protected Boolean initialValue() {
+            return false;
+        }
+    };
 
     @Override
     public String getPluginName() {
@@ -204,6 +215,8 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        interceptorApplied.set(true);
+
         Object[] args = advice.getParameterArray();
         String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
@@ -244,6 +257,7 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        interceptorApplied.set(false);
         Object result = advice.getReturnObj();
         SpanRecord record = new SpanRecord();
         record.setResponse(result);
@@ -255,6 +269,7 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
+        interceptorApplied.set(false);
         SpanRecord record = new SpanRecord();
         record.setResponse(advice.getThrowable());
         record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);

@@ -63,6 +63,9 @@ public class WebHandlerDecoratorInterceptor extends TraceInterceptorAdaptor {
         ServerHttpRequest serverHttpRequest = arg.getRequest();
         requestTracer.startTrace(serverHttpRequest, null, SpringWebConstants.MODULE_NAME);
         final InvokeContext invokeContext = Pradar.getInvokeContext();
+        if (invokeContext == null) {
+            return;
+        }
         arg.getAttributes().put(SpringWebConstants.WEB_CONTEXT, invokeContext);
     }
 

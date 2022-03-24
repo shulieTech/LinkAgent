@@ -11,7 +11,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <simulator.version>5.3.0</simulator.version>
+        <simulator.version>5.3.1</simulator.version>
         <pradar.core.version>2.0.1.0</pradar.core.version>
         <pradar.register.version>2.0.0.0</pradar.register.version>
         <simulator.bootstrap.api.version>1.0.0</simulator.bootstrap.api.version>
@@ -241,7 +241,7 @@
                     <dependency>
                         <groupId>io.shulie</groupId>
                         <artifactId>custom-maven-checkstyle</artifactId>
-                        <version>1.0.0</version>
+                        <version>1.0.1</version>
                     </dependency>
                 </dependencies>
             </plugin>

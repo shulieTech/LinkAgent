@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -24,6 +24,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ThrowableUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -57,12 +58,26 @@ public class JedisSingleClientCutOffInterceptor extends CutoffInterceptorAdaptor
 
 
     CutOffResult process(Advice advice) {
+        String className = advice.getTargetClass().getName();
+
+        if (JedisConstant.CONNECTION.equals(className)) {
+            if (!GlobalConfig.getInstance().isShadowDbRedisServer()) {
+                return CutOffResult.PASSED;
+            } else {
+                String msg = "jedis connection直接调用不支持影子库模式";
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.RedisServer)
+                        .setErrorCode("redis-jedis-0002")
+                        .setMessage(msg)
+                        .report();
+                throw new PressureMeasureError(msg);
+            }
+        }
 
         if (ignore(advice)) {
             return CutOffResult.PASSED;
         }
 
-        String className = advice.getTargetClass().getName();
         if (JedisConstant.JEDIS.equals(className)
                 || JedisConstant.BINARY_JEDIS.equals(className)) {
 

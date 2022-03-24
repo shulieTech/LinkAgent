@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>simulator</artifactId>
-        <version>5.3.0</version>
+        <version>5.3.1</version>
     </parent>
     <artifactId>instrument-simulator-messager</artifactId>
     <name>instrument-simulator-messager ${simulator.major.version}</name>

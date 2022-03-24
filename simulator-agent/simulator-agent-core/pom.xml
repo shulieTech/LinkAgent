@@ -120,6 +120,11 @@
             <artifactId>commons-net</artifactId>
             <version>3.8.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.javaswift</groupId>
+            <artifactId>joss</artifactId>
+            <version>0.10.4</version>
+        </dependency>
     </dependencies>
 
     <build>

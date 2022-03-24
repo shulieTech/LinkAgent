@@ -105,6 +105,11 @@ public class HeartCommandConstants {
     public static final String PASSWD_KEY = "passwd";
     public static final String USERNAME_KEY = "username";
 
+    public static final String AUTH_URL = "authUrl";
+    public static final String TENANT_ID = "tenantId";
+    public static final String TENANT_NAME = "tenantName";
+    public static final String CONTAINER = "container";
+
     public static String getCurUpgradeBatch() {
         return curUpgradeBatch;
     }

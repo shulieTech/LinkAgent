@@ -14,15 +14,7 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
-
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -36,6 +28,13 @@ import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author shiyajian

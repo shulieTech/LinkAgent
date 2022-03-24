@@ -67,10 +67,13 @@ public class PerfResponseBuilder {
             for (MemoryEntry memoryEntry : memoryInfo.getHeapMemories()) {
                 String poolName = beautifyName(memoryEntry.getName());
                 if (poolName.equals("ps_eden_space") || poolName.equals("ps_survivor_space")
-                        || poolName.equals("eden_space") || poolName.equals("survivor_space")) {
+                        || poolName.equals("eden_space") || poolName.equals("survivor_space")
+                        || poolName.equals("g1_eden_space") || poolName.equals("g1_survivor_space")
+                        || poolName.equals("par_eden_space") || poolName.equals("par_survivor_space")) {
                     youngMemoryUsed = youngMemoryUsed + memoryEntry.getUsed();
                     youngMemoryTotal = youngMemoryTotal + memoryEntry.getMax();
-                } else if (poolName.equals("ps_old_gen") || poolName.equals("tenured_gen")) {
+                } else if (poolName.equals("ps_old_gen") || poolName.equals("tenured_gen")
+                    || poolName.equals("g1_old_gen") || poolName.equals("cms_old_gen")) {
                     oldMemoryUsed = oldMemoryUsed + memoryEntry.getUsed();
                     oldMemoryTotal = oldMemoryTotal + memoryEntry.getMax();
                 } else {

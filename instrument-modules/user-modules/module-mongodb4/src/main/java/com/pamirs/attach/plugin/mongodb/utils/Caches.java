@@ -18,7 +18,6 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.client.internal.OperationExecutor;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -40,8 +39,8 @@ public class Caches {
     private final static Map<String, ExecutorModule> operationExecutorMap
             = new ConcurrentHashMap<String, ExecutorModule>();
 
-    private final static Map<String, MongoClientDelegate> mongoClientDelegates
-            = new ConcurrentHashMap<String, MongoClientDelegate>();
+    private final static Map<String, Object> mongoClientDelegates
+            = new ConcurrentHashMap<String, Object>();
 
     public static OperationExecutor getPtOperationExecutor(OperationAccessor operationAccessor,
                                                            ShadowDatabaseConfig shadowDatabaseConfig, Object operation, MongoNamespace busMongoNamespace) throws Exception {
@@ -101,9 +100,9 @@ public class Caches {
         return mongoClient;
     }
 
-    public static MongoClientDelegate getMongoClientDelegate(Object executor) throws Exception {
+    public static Object getMongoClientDelegate(Object executor) throws Exception {
         String key = executor.toString();
-        MongoClientDelegate mongoClientDelegate = mongoClientDelegates.get(key);
+        Object mongoClientDelegate = mongoClientDelegates.get(key);
         if (mongoClientDelegate == null) {
             synchronized (mongoClientDelegates) {
                 mongoClientDelegate = mongoClientDelegates.get(key);
@@ -112,7 +111,7 @@ public class Caches {
                     try {
                         field = executor.getClass().getDeclaredField("this$0");
                         field.setAccessible(true);
-                        mongoClientDelegate = (MongoClientDelegate) field.get(executor);
+                        mongoClientDelegate = field.get(executor);
                         mongoClientDelegates.put(key, mongoClientDelegate);
                     } finally {
                         if (field != null) {

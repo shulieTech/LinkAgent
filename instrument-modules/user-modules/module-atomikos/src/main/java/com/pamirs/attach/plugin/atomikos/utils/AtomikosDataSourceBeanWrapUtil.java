@@ -165,7 +165,7 @@ public class AtomikosDataSourceBeanWrapUtil {
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0002")
                     .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getXaProperties().getProperty("URL"))
+                    .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getXaProperties().getProperty("URL")  + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：other")
                     .report();
 
             AtomikosDataSourceBeanMediaDataSource dbMediatorDataSource = new AtomikosDataSourceBeanMediaDataSource();

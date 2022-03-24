@@ -389,6 +389,9 @@ abstract class BeforeTraceInterceptor extends BaseInterceptor {
                         }
                     }
                 } catch (Throwable e) {
+                    if (Pradar.isClusterTest()){
+                        throw new PressureMeasureError(e);
+                    }
                     LOGGER.error("AGENT: {} trace context transfer err, trace context may be lost.", getClass().getName(), e);
                 }
                 if (record != null && record.getContextInject() != null) {

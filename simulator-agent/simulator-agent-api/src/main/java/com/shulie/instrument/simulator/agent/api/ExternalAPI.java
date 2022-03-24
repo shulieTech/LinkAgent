@@ -14,8 +14,8 @@
  */
 package com.shulie.instrument.simulator.agent.api;
 
-import com.shulie.instrument.simulator.agent.api.model.AppConfig;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
+import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 
 import java.io.File;
 import java.util.List;
@@ -27,6 +27,14 @@ import java.util.List;
  * @since 2020/11/23 7:13 下午
  */
 public interface ExternalAPI {
+
+
+    /**
+     * 在先升级包
+     * @param commandPacket
+     * @return
+     */
+    void onlineUpgrade(CommandPacket commandPacket);
 
     /**
      * 下载模块包
@@ -43,6 +51,12 @@ public interface ExternalAPI {
      * @return 返回命令包
      */
     CommandPacket getLatestCommandPacket();
+
+    /**
+     * 发送心跳消息
+     * @return
+     */
+    List<CommandPacket> sendHeart(HeartRequest heartRequest);
 
     /**
      * 上报命令执行结果

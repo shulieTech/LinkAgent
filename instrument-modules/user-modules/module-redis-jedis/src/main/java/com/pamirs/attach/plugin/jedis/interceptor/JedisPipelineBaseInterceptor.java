@@ -14,6 +14,8 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
+import java.util.Collection;
+
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.pradar.Pradar;
@@ -22,8 +24,6 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-
-import java.util.Collection;
 
 /**
  * @Author: guohz
@@ -47,9 +47,12 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
         }
 
         Collection<String> whiteList = GlobalConfig.getInstance().getCacheKeyWhiteList();
+        if (args[0] == null) {
+            return args;
+        }
 
         if (args[0] instanceof String) {
-            String key = (String) args[0];
+            String key = (String)args[0];
 
             //白名单 忽略
             if (whiteList != null && whiteList.contains(key)) {
@@ -62,8 +65,23 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 return args;
             }
 
+        } else if (args[0] instanceof String[]) {
+            String[] keys = (String[])args[0];
+            for (int i = 0; i < keys.length; i++) {
+                String key = keys[i];
+                //白名单 忽略
+                if (whiteList != null && whiteList.contains(key)) {
+                    continue;
+                }
+                if (!Pradar.isClusterTestPrefix(key)) {
+                    key = Pradar.addClusterTestPrefix(key);
+                    keys[i] = key;
+                }
+            }
+            args[0] = keys;
+            return args;
         } else if (args[0] instanceof byte[]) {
-            String key = new String((byte[]) args[0]);
+            String key = new String((byte[])args[0]);
 
             //白名单 忽略
             if (whiteList != null && whiteList.contains(key)) {
@@ -76,7 +94,7 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 return args;
             }
         } else if (args[0] instanceof byte[][]) {
-            byte[][] keyBytes = (byte[][]) args[0];
+            byte[][] keyBytes = (byte[][])args[0];
             String key = new String(keyBytes[0]);
 
             //白名单 忽略
@@ -90,6 +108,8 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 args[0] = keyBytes;
                 return args;
             }
+        } else {
+            LOGGER.warn("jedis 版本或方法不支持，方法：{} 参数:{}", advice.getBehaviorName(), args);
         }
         return args;
     }

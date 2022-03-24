@@ -14,19 +14,6 @@
  */
 package com.pamirs.pradar.utils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarCoreUtils;
@@ -36,14 +23,19 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import oshi.SystemInfo;
-import oshi.hardware.CentralProcessor;
-import oshi.hardware.GlobalMemory;
-import oshi.hardware.HWDiskStore;
-import oshi.hardware.HardwareAbstractionLayer;
-import oshi.hardware.NetworkIF;
+import oshi.hardware.*;
 import oshi.software.os.FileSystem;
 import oshi.software.os.OSFileStore;
 import oshi.util.Util;
+
+import java.io.*;
+import java.text.DecimalFormat;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author angju
@@ -84,6 +76,7 @@ public class MonitorCollector {
     private void executeResourcesInfoCollectingTaskOutsideContainer() {
         future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new OutsideContainerResourcesInfoCollector(), 5, 1, TimeUnit.SECONDS);
     }
+
 
     private void executeResourcesInfoCollectingTaskInsideContainer() {
         future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new InsideContainerResourcesInfoCollector(), 5, 1, TimeUnit.SECONDS);

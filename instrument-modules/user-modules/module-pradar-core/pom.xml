@@ -10,18 +10,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>module-pradar-core</artifactId>
-    <version>1.0.0</version>
     <packaging>jar</packaging>
+
 
     <properties>
         <module-name>pradar-core</module-name>
     </properties>
+    <version>2.0.0.1</version>
 
     <dependencies>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -34,7 +35,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -47,7 +48,7 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.29</version>
+            <version>1.7.31</version>
             <scope>provided</scope>
         </dependency>
 
@@ -60,7 +61,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>11.0.1</version>
+            <version>30.1-jre</version>
         </dependency>
 
         <dependency>
@@ -72,18 +73,30 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.68</version>
+            <version>1.2.72</version>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.1</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>oshi-core</artifactId>
             <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -104,6 +117,12 @@
             <groupId>org.beanshell</groupId>
             <artifactId>bsh</artifactId>
             <version>2.0b5</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>slf4j-api</artifactId>
+            <groupId>org.slf4j</groupId>
+            <version>1.7.31</version>
         </dependency>
     </dependencies>
 </project>

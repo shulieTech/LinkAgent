@@ -75,4 +75,9 @@ public interface ModuleLifecycle extends LoadCompleted {
      */
     void onFrozen() throws Throwable;
 
+    /**
+     * 执行命令
+     */
+    void executeCommand();
+
 }

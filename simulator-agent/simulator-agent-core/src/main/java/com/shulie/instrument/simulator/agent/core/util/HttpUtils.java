@@ -14,11 +14,11 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -29,10 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
@@ -153,7 +149,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (IOException e) {
-            logger.warn("do http request fail!: url=" + url + "; reqeust:" + request, e);
+            logger.error("do http request fail!: url=" + url + "; reqeust:" + request, e);
             return null;
         } finally {
             closeQuietly(input);

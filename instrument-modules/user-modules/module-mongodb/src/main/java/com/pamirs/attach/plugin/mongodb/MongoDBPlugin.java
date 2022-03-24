@@ -14,32 +14,8 @@
  */
 package com.pamirs.attach.plugin.mongodb;
 
-import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.MongoCollectionInternalTraceInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.MongoCollectionTraceInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorTraceInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.MongoExecuteInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.SyncDelegateOperationExecutorInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionAggregateInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionCountInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionCreateIndexInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionDistinctInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionDropIndexesInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionDropInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionExplainAggregateInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionFindAndModifyInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionFindInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionFineOneInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionGetDBInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionGetIndexInfoInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionGroupInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionInitializeOrderedBulkOperationInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionInitializeUnorderedBulkOperationInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionInsertInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionParallelScanInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionRemoveInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionTraceInterceptor;
-import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.DBCollectionUpdateInterceptor;
+import com.pamirs.attach.plugin.mongodb.interceptor.*;
+import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.*;
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
 import com.pamirs.pradar.interceptor.Interceptors;
@@ -51,6 +27,7 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 /**
@@ -66,7 +43,25 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
         /**
          * 因为这个插件与mongodb322插件冲突，所以当mongodb322插件启用时此插件禁用
          */
-        if (simulatorConfig.getBooleanProperty("mongodb322.enabled", false)) {
+        //默认用3
+        boolean use = true;
+        String mongodb3Enabled = System.getProperty("mongodb3.enabled");
+        String mongodb4Enabled = System.getProperty("mongodb4.enabled");
+
+        if (mongodb4Enabled == null){
+            mongodb4Enabled = simulatorConfig.getProperty("mongodb4.enabled");
+        }
+        if (mongodb3Enabled == null){
+            mongodb3Enabled = simulatorConfig.getProperty("mongodb3.enabled");
+        }
+
+        if (StringUtils.isNotBlank(mongodb4Enabled) && Boolean.valueOf(mongodb4Enabled)){
+            use = false;
+        }
+        if (StringUtils.isNotBlank(mongodb3Enabled) && !Boolean.valueOf(mongodb3Enabled)){
+            use = false;
+        }
+        if (!use) {
             return false;
         }
 
@@ -170,6 +165,10 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
                 instrumentMethod_1.addInterceptor(Listeners.of(MongoExecuteInterceptor.class));
                 instrumentMethod_2.addInterceptor(Listeners.of(MongoExecuteInterceptor.class));
+                instrumentMethod_1.addInterceptor(Listeners.of(MongoExecuteTraceInterceptor.class));
+                instrumentMethod_2.addInterceptor(Listeners.of(MongoExecuteTraceInterceptor.class));
+                instrumentMethod_1.addInterceptor(Listeners.of(MongoExecuteCutoffInterceptor.class,"WriteOperation", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                instrumentMethod_2.addInterceptor(Listeners.of(MongoExecuteCutoffInterceptor.class, "ReadOperation", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
 
@@ -252,9 +251,9 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 target.getDeclaredMethod("explainAggregate", "java.util.List", "com.mongodb.AggregationOptions")
                     .addInterceptor(Listeners.of(DBCollectionExplainAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
-                target.getDeclaredMethods("insert", "update","find","drop", "findAndModify","aggregate",
-                    "count","createIndex","dropIndexes", "group", "explainAggregate", "remove", "getIndexInfo", "parallelScan")
-                    .addInterceptor(Listeners.of(DBCollectionTraceInterceptor.class, "TraceScope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+//                target.getDeclaredMethods("insert", "update","find","drop", "findAndModify","aggregate",
+//                    "count","createIndex","dropIndexes", "group", "explainAggregate", "remove", "getIndexInfo", "parallelScan")
+//                    .addInterceptor(Listeners.of(DBCollectionTraceInterceptor.class, "TraceScope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
 
@@ -285,6 +284,22 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethods(MongodbConstants.mongoCollectionList)
                     .addInterceptor(Listeners.of(MongoCollectionInternalTraceInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "com.mongodb.operation.AggregateOperationImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("defaultAggregateTarget")
+                        .addInterceptor(Listeners.of(AggregateOperationImplInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            }
+        });
+        enhanceTemplate.enhance(this, "com.mongodb.internal.operation.AggregateOperationImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("defaultAggregateTarget")
+                        .addInterceptor(Listeners.of(AggregateOperationImplInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
             }
         });
 

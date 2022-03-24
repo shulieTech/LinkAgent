@@ -108,7 +108,12 @@ public class TraceIdGenerator {
      */
     public static String generate(String ip, boolean isClusterTestRequest) {
         if (StringUtils.isNotBlank(ip) && validate(ip)) {
-            return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId(isClusterTestRequest));
+            try {
+                return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId(isClusterTestRequest));
+            }catch (Throwable t){
+                //说明ip格式有问题
+                return generate(isClusterTestRequest);
+            }
         } else {
             return generate(isClusterTestRequest);
         }

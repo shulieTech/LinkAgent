@@ -25,3 +25,4 @@ hadoop
 ``
 local*.sh
 local*.groovy
+module.properties

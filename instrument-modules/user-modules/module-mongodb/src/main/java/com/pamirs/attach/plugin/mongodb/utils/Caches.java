@@ -20,6 +20,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.client.internal.OperationExecutor;
+import com.mongodb.operation.AggregateOperation;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -35,22 +36,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Caches {
 
     private final static Map<String, MongoClient> clientMapping
-        = new ConcurrentHashMap<String, MongoClient>();
+            = new ConcurrentHashMap<String, MongoClient>();
 
-    private final static Map<String, OperationExecutor> operationExecutorMap
-        = new ConcurrentHashMap<String, OperationExecutor>();
+    private final static Map<String, ExecutorModule> operationExecutorMap
+            = new ConcurrentHashMap<String, ExecutorModule>();
 
     private final static Map<Object, MongoClientDelegate> mongoClientDelegates
-        = new ConcurrentHashMap<Object, MongoClientDelegate>();
+            = new ConcurrentHashMap<Object, MongoClientDelegate>();
 
     public static OperationExecutor getPtOperationExecutor(OperationAccessor operationAccessor,
-        ShadowDatabaseConfig shadowDatabaseConfig, Object operation, MongoNamespace busMongoNamespace) throws Exception {
-        OperationExecutor ptExecutor = operationExecutorMap.get(operation);
-        if (ptExecutor == null) {
-            ptExecutor = operationExecutorMap.get(operation);
+                                                           ShadowDatabaseConfig shadowDatabaseConfig, Object operation, MongoNamespace busMongoNamespace) throws Exception {
+        String key = shadowDatabaseConfig.getShadowUrl() + ":" + busMongoNamespace.getFullName();
+        ExecutorModule executorModule = operationExecutorMap.get(key);
+        if (executorModule == null) {
             synchronized (operationExecutorMap) {
-                if (ptExecutor == null) {
+                executorModule = operationExecutorMap.get(key);
+                if (executorModule == null) {
                     MongoClient ptMongoClient = getPtMongoClient(shadowDatabaseConfig);
+
                     String ptDB = busMongoNamespace.getDatabaseName();
                     String ptCOL = busMongoNamespace.getCollectionName();
                     if (!Pradar.isClusterTestPrefix(ptDB)) {
@@ -62,20 +65,25 @@ public class Caches {
                         }
                     }
                     MongoNamespace ptMongoNamespace = new MongoNamespace(ptDB
-                        , ptCOL
-                         //大写与影子表模式保持一致
+                            , ptCOL
+                            //大写与影子表模式保持一致
                     );
                     MongoCollection ptMongoCollection = ptMongoClient.getDatabase(ptMongoNamespace.getDatabaseName())
-                        .getCollection(ptMongoNamespace.getCollectionName());
-                    operationAccessor.setMongoNamespace(operation, ptMongoNamespace);
-                    ptExecutor = Reflect.on(ptMongoCollection).get("executor");
+                            .getCollection(ptMongoNamespace.getCollectionName());
+                    OperationExecutor ptExecutor = Reflect.on(ptMongoCollection).get("executor");
+                    executorModule = new ExecutorModule(ptExecutor, ptMongoNamespace);
+                    operationExecutorMap.put(key, executorModule);
                 }
             }
         }
-        return ptExecutor;
+        if(operation instanceof AggregateOperation){
+            operation = com.pamirs.attach.plugin.dynamic.reflect.Reflect.on(operation).get("wrapped");
+        }
+        operationAccessor.setMongoNamespace(operation, executorModule.getPtMongoNamespace());
+        return executorModule.getOperationExecutor();
     }
 
-    private static String fetchShadowDatabase(ShadowDatabaseConfig shadowDatabaseConfig) {
+    private static String fetchShadowDatabase(ShadowDatabaseConfig shadowDatabaseConfig){
         String shadowUrl = shadowDatabaseConfig.getShadowUrl();
         String[] split = shadowUrl.split("/");
         String temp = split[split.length - 1];
@@ -123,5 +131,31 @@ public class Caches {
         clientMapping.clear();
         mongoClientDelegates.clear();
         operationExecutorMap.clear();
+    }
+
+    private static class ExecutorModule {
+        private OperationExecutor operationExecutor;
+        private MongoNamespace ptMongoNamespace;
+
+        public ExecutorModule(OperationExecutor operationExecutor, MongoNamespace ptMongoNamespace) {
+            this.operationExecutor = operationExecutor;
+            this.ptMongoNamespace = ptMongoNamespace;
+        }
+
+        public OperationExecutor getOperationExecutor() {
+            return operationExecutor;
+        }
+
+        public void setOperationExecutor(OperationExecutor operationExecutor) {
+            this.operationExecutor = operationExecutor;
+        }
+
+        public MongoNamespace getPtMongoNamespace() {
+            return ptMongoNamespace;
+        }
+
+        public void setPtMongoNamespace(MongoNamespace ptMongoNamespace) {
+            this.ptMongoNamespace = ptMongoNamespace;
+        }
     }
 }

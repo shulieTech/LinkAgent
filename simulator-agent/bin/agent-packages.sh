@@ -44,6 +44,14 @@ if [ ! -x "$AGENT_TARGET_DIR/bin" ]; then
     mkdir "$AGENT_TARGET_DIR/bin"
 fi
 
+if [ ! -x "$AGENT_TARGET_DIR/bin/linux" ]; then
+    mkdir "$AGENT_TARGET_DIR/bin/linux"
+fi
+
+if [ ! -x "$AGENT_TARGET_DIR/bin/windows" ]; then
+    mkdir "$AGENT_TARGET_DIR/bin/windows"
+fi
+
 if [ ! -x "$AGENT_TARGET_DIR/logs" ]; then
     mkdir "$AGENT_TARGET_DIR/logs"
 fi
@@ -51,9 +59,8 @@ fi
 cp *.properties ${AGENT_TARGET_DIR}/config/
 cp simulator-agent-logback.xml ${AGENT_TARGET_DIR}/config/simulator-agent-logback.xml
 cp ignore.config ${AGENT_TARGET_DIR}/config/ignore.config
-cp lite-start.sh ${AGENT_TARGET_DIR}/bin/lite-start.sh
-cp lite-stop.sh ${AGENT_TARGET_DIR}/bin/lite-stop.sh
-cp lite-restart.sh ${AGENT_TARGET_DIR}/bin/lite-restart.sh
+cp linux/* ${AGENT_TARGET_DIR}/bin/linux
+cp windows/* ${AGENT_TARGET_DIR}/bin/windows
 
 # reset the target dir
 AGENT_VERSION=$(cat ..//simulator-agent-core/target/classes/com/shulie/instrument/simulator/agent/version)

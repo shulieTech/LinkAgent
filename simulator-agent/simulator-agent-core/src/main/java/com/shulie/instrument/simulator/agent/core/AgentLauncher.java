@@ -265,14 +265,13 @@ public class AgentLauncher {
                         FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + File.separator + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
                         break;
                     case 2: // swiftOSS
-                        String authUrl = (String) context.get(HeartCommandConstants.AUTH_URL);
-                        String tenantId = (String) context.get(HeartCommandConstants.TENANT_ID);
-                        String tenantName = (String) context.get(HeartCommandConstants.TENANT_NAME);
-                        String pwd = (String) context.get(HeartCommandConstants.PASSWD_KEY);
-                        pwd = SecureUtil.aes(salt.getBytes()).decryptStr(pwd);
+                        String userKey = (String) context.get(HeartCommandConstants.USER_KEY);
+                        String account = (String) context.get(HeartCommandConstants.ACCOUNT_KEY);
+                        String url = (String) context.get(HeartCommandConstants.URL_KEy);
+                        String ak = (String) context.get(HeartCommandConstants.AK_KEY);
                         String uname = (String) context.get(HeartCommandConstants.USERNAME_KEY);
-                        String container = (String) context.get(HeartCommandConstants.CONTAINER);
-                        SwiftOperationClient.download(uname, pwd, authUrl, tenantId, tenantName, container, upgradeBatch);
+                        String container = (String) context.get(HeartCommandConstants.CONTAINER_KEY);
+                        SwiftOperationClient.download(uname, account, userKey,ak, url, container, upgradeBatch);
                 }
                 //解压
                 UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);

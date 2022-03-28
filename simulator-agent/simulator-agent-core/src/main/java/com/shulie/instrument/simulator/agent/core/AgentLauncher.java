@@ -271,7 +271,8 @@ public class AgentLauncher {
                         String ak = (String) context.get(HeartCommandConstants.AK_KEY);
                         String uname = (String) context.get(HeartCommandConstants.USERNAME_KEY);
                         String container = (String) context.get(HeartCommandConstants.CONTAINER_KEY);
-                        SwiftOperationClient.download(uname, account, userKey,ak, url, container, upgradeBatch);
+                        logger.info("swift-oss config: userKeu:{}, ak:{}, url:{}, username:{}.  container:{}", userKey, ak, url, uname, container);
+                        SwiftOperationClient.download(uname, account, userKey, ak, url, container, upgradeBatch);
                 }
                 //解压
                 UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);

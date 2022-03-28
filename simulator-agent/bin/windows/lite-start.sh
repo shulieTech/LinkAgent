@@ -8,8 +8,8 @@ toolsPath=$JAVA_HOME\\lib\\tools.jar
 checkToolsResult=1
 
 function checkJavaHome(){
-	echo "检查JAVA_HOME！"
-  if [ ! $JAVAHOME ]; then
+  echo "检查JAVA_HOME！"
+  if [ ! "$JAVAHOME" ]; then
     echo "启动失败，未配置JAVA_HOME，请配置后重启！"
     exit 1
   else
@@ -19,7 +19,7 @@ function checkJavaHome(){
 }
 
 function checkTools(){
-	echo "检查tools.jar!"
+  echo "检查tools.jar!"
   if [ ! -f "${toolsPath}" ]; then
     echo "$toolsPath 不存在，请检查后再重启！"
     checkToolsResult=1

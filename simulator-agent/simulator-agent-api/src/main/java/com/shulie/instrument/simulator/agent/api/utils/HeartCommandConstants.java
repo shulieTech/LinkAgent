@@ -105,6 +105,7 @@ public class HeartCommandConstants {
     public static final String PASSWD_KEY = "passwd";
     public static final String USERNAME_KEY = "username";
 
+    public static final String UNAME_KEY = "uname";
     public static final String USER_KEY = "userKey";
     public static final String ACCOUNT_KEY = "account";
     public static final String AK_KEY = "ak";

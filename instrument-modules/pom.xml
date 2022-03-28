@@ -241,7 +241,7 @@
                     <dependency>
                         <groupId>io.shulie</groupId>
                         <artifactId>custom-maven-checkstyle</artifactId>
-                        <version>1.0.2</version>
+                        <version>1.0.1</version>
                     </dependency>
                 </dependencies>
             </plugin>

@@ -37,9 +37,9 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
     @Resource
     protected DynamicFieldManager manager;
 
-    private static final String[] EXCLUDE_METHOD_NAMES = new String[]{"_$SIMULATOR$_getDynamicField", "clone", "equals", "finalize", "getClass", "hashCode", "notify", "notifyAll", "toString", "wait", "dispatch", "getConnection", "setAutoFlushCommands", "setTimeout", "createMono", "createDissolvingFlux"};
+    public static final String[] EXCLUDE_METHOD_NAMES = new String[]{"_$SIMULATOR$_getDynamicField", "clone", "equals", "finalize", "getClass", "hashCode", "notify", "notifyAll", "toString", "wait", "dispatch", "getConnection", "setAutoFlushCommands", "setTimeout", "createMono", "createDissolvingFlux"};
 
-    private static final String[] FIRST_ARGS_INCLUDE_METHODS = new String[]{
+    public static final String[] FIRST_ARGS_INCLUDE_METHODS = new String[]{
             "append",
             "bitcount",
             "bitfield",
@@ -183,6 +183,7 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         addSpringLettuceSupport();
         addCloseConnectionSupport();
 
+        addAbstractRedisAsyncCommandsDispatchInterceptor();
 
         return true;
     }
@@ -746,4 +747,18 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             migrate1.addInterceptor(Listeners.of(LettuceMethodMigrateInterceptor.class, "Lettuce_migrate", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
         }
     };
+
+    void addAbstractRedisAsyncCommandsDispatchInterceptor() {
+        this.enhanceTemplate.enhance(this, "io.lettuce.core.AbstractRedisAsyncCommands",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod closeMethod = target.getDeclaredMethod("dispatch", "io.lettuce.core.protocol.ProtocolKeyword", "io.lettuce.core.output.CommandOutput", "io.lettuce.core.protocol.CommandArgs");
+                        closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchTraceInterceptor.class, "Lettuce_Commands_Trace", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                        closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchClusterTestInterceptor.class, "Lettuce_Commands_Cluster", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    }
+                });
+    }
+
+
 }

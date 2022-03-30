@@ -31,15 +31,15 @@ function checkTools(){
 }
 
 if [ "$PLATFORM" = "Linux" ]; then
-  sed -i 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
-  line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
+  sed -i 's/simulator.log.path=~/simulator.log.path=/g' ../../config/agent.properties
+  line=$(sed -n '/simulator.log.path=/p' ../../config/agent.properties)
 
-  sed -i 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
+  sed -i 's~'$line'~simulator.log.path='$current_path'/logs~g' ../../config/agent.properties
 else
-  sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../config/agent.properties
-  line=$(sed -n '/simulator.log.path=/p' ../config/agent.properties)
+  sed -i "_bak" 's/simulator.log.path=~/simulator.log.path=/g' ../../config/agent.properties
+  line=$(sed -n '/simulator.log.path=/p' ../../config/agent.properties)
 
-  sed -i "_bak" 's~'$line'~simulator.log.path='$current_path'/logs~g' ../config/agent.properties
+  sed -i "_bak" 's~'$line'~simulator.log.path='$current_path'/logs~g' ../../config/agent.properties
 fi
 
 checkJavaHome
@@ -49,7 +49,7 @@ while [ 1 == $checkToolsResult ]; do
     checkTools
 done
 
-echo "环境检查成功，启动探针...,启动日志请查看../logs/lite.log"
+echo "环境检查成功，启动探针...,启动日志请查看../../logs/lite.log"
 
 
-nohup java -Xbootclasspath/a:"$toolsPath" -jar ../simulator-launcher-lite.jar >../logs/lite.log 2>&1 &
+nohup java -Xbootclasspath/a:"$toolsPath" -jar ../../simulator-launcher-lite.jar >../../logs/lite.log 2>&1 &

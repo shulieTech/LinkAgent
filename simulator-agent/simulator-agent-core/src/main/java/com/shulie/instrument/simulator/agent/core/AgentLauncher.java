@@ -265,13 +265,13 @@ public class AgentLauncher {
                         FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + File.separator + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
                         break;
                     case 2: // swiftOSS
-                        String userKey = (String) context.get(HeartCommandConstants.USER_KEY);
-                        String account = (String) context.get(HeartCommandConstants.ACCOUNT_KEY);
-                        String url = (String) context.get(HeartCommandConstants.URL_KEy);
-                        String ak = (String) context.get(HeartCommandConstants.AK_KEY);
                         String uname = (String) context.get(HeartCommandConstants.UNAME_KEY);
+                        String account = (String) context.get(HeartCommandConstants.ACCOUNT_KEY);
+                        String ak = (String) context.get(HeartCommandConstants.AK_KEY);
+                        String userKey = (String) context.get(HeartCommandConstants.USER_KEY);
+                        String url = (String) context.get(HeartCommandConstants.URL_KEy);
                         String container = (String) context.get(HeartCommandConstants.CONTAINER_KEY);
-                        logger.info("swift-oss config: userKeu:{}, ak:{}, url:{}, uname:{}.  container:{}", userKey, ak, url, uname, container);
+                        logger.info("swift-oss config: userKey:{}, ak:{}, url:{}, uname:{}, account:{},  container:{}", userKey, ak, url, uname,account, container);
                         SwiftOperationClient.download(uname, account, userKey, ak, url, container, upgradeBatch);
                 }
                 //解压

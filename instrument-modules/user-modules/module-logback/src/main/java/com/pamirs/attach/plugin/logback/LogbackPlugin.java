@@ -40,17 +40,19 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
     private final static Logger logger = LoggerFactory.getLogger(LogbackPlugin.class);
     private boolean isBusinessLogOpen;
     private String bizShadowLogPath;
+    private String customizedAppenderClasses;
 
     @Override
     public boolean onActive() {
         this.isBusinessLogOpen = simulatorConfig.getBooleanProperty("pradar.biz.log.divider", false);
-        this.bizShadowLogPath = simulatorConfig.getProperty("pradar.biz.log.divider.path", simulatorConfig.getLogPath());
         if (!isBusinessLogOpen) {
             if (logger.isInfoEnabled()) {
                 logger.info("logback biz log divider switcher is not open. ignore enhanced logback.");
             }
             return false;
         }
+        this.customizedAppenderClasses = simulatorConfig.getProperty("pradar.logback.customized.classes", null);
+        this.bizShadowLogPath = simulatorConfig.getProperty("pradar.biz.log.divider.path", simulatorConfig.getLogPath());
 
         //改版后sift appender隔离不了，先不支持，有碰到再说
         // for sifting appender start
@@ -81,7 +83,7 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
                 InstrumentMethod addAppenderMethod = target.getDeclaredMethods("appendLoopOnAppenders");
                 addAppenderMethod.addInterceptor(
-                        Listeners.of(LogInterceptor.class, new Object[]{bizShadowLogPath}));
+                        Listeners.of(LogInterceptor.class, new Object[]{bizShadowLogPath,customizedAppenderClasses}));
             }
         });
         return true;

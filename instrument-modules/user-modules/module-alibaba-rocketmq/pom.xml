@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>module-alibaba-rocketmq</artifactId>
     <name>${project.artifactId} ${project.version}</name>
-    <version>2.0.0.0</version>
+    <version>2.0.0.1</version>
 
     <properties>
         <module-name>alibaba-rocketmq</module-name>

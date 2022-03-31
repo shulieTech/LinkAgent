@@ -14,25 +14,7 @@
  */
 package com.pamirs.attach.plugin.alibaba.rocketmq;
 
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultMQPushConsumerImplHasHookListener;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerCreateTopicInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerEarliestMsgStoreTimeInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerMaxOffsetInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerMinOffsetInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerQueryMessageInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerSearchOffsetInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerSendMessageBackInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerShutdownInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerViewMessageInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerSendInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceAfterInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceBeforeInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceContextInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.PullConsumerInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.ConcurrentlyTraceInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.TransactionCheckInterceptor;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -83,8 +65,6 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         final InstrumentMethod fetchSubscribeMessageQueuesMethod = target.getDeclaredMethods("fetchSubscribeMessageQueues");
                         fetchSubscribeMessageQueuesMethod.addInterceptor(Listeners.of(DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor.class));
 
-                        final InstrumentMethod sendMessageBackMethod = target.getDeclaredMethods("sendMessageBack");
-                        sendMessageBackMethod.addInterceptor(Listeners.of(DefaultPushConsumerSendMessageBackInterceptor.class));
 
                         final InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
                         shutdownMethod.addInterceptor(Listeners.of(DefaultPushConsumerShutdownInterceptor.class));

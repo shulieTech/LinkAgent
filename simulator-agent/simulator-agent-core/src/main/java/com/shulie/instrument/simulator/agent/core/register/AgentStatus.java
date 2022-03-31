@@ -144,6 +144,12 @@ public class AgentStatus {
         trigger();
     }
 
+    public static void checkError(String errorMessage) {
+        AGENT_STATUS = UNINSTALL_FAILED;
+        setError(errorMessage);
+        trigger();
+    }
+
     /**
      * 获取 agent 状态
      *

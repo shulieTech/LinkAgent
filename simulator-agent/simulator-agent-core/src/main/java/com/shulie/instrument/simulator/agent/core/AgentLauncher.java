@@ -105,7 +105,7 @@ public class AgentLauncher {
                 this.descriptor = System.getProperty("attach.name");
             }
         }
-        this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", false);
+        this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", true);
         this.useAgentmain = agentConfig.getBooleanProperty("simulator.use.agentmain", false);
     }
 

@@ -19,10 +19,7 @@ import org.apache.catalina.Context;
 import org.apache.catalina.Host;
 import org.apache.catalina.Session;
 import org.apache.catalina.Wrapper;
-import org.apache.catalina.connector.Connector;
-import org.apache.catalina.connector.Request;
-import org.apache.catalina.connector.RequestFacade;
-import org.apache.catalina.connector.Response;
+import org.apache.catalina.connector.*;
 import org.apache.catalina.core.AsyncContextImpl;
 import org.apache.catalina.mapper.MappingData;
 import org.apache.tomcat.util.buf.MessageBytes;
@@ -50,6 +47,7 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
     private byte[] buffer;
     private final Request request;
     protected RequestFacade facade;
+    private ServletInputStream inputStream;
 
     public BufferedServletRequestWrapper9x(Request request) {
         super(request.getConnector());
@@ -694,7 +692,12 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
         if (this.buffer == null) {
             initBuffer();
         }
-        return new BufferedServletInputStream(this.buffer);
+        if (this.inputStream == null) {
+            this.inputStream = new BufferedServletInputStream(this.buffer);
+        }
+
+        return this.inputStream;
+//        return new BufferedServletInputStream(this.buffer);
     }
 
     @Override

@@ -223,6 +223,8 @@ public class ShadowDatabaseConfig {
             return "COM.cloudscape.core.JDBCDriver";
         } else if (rawUrl.startsWith("jdbc:informix-sqli:")) {
             return "com.informix.jdbc.IfxDriver";
+        } else if (rawUrl.startsWith("jdbc:gbasedbt-sqli:")) {
+            return "com.gbasedbt.jdbc.Driver";
         } else if (rawUrl.startsWith("jdbc:timesten:")) {
             return "com.timesten.jdbc.TimesTenDriver";
         } else if (rawUrl.startsWith("jdbc:as400:")) {

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -37,26 +37,26 @@ public class HeartRequestUtil {
     private static final String pid = String.valueOf(PidUtils.getPid());
 
 
-    public static String getUpgradeFileTempSaveDir(){
+    public static String getUpgradeFileTempSaveDir() {
         return new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
                 .getParent();
     }
 
 
-    public static void configHeartRequest(HeartRequest heartRequest, AgentConfig agentConfig){
+    public static void configHeartRequest(HeartRequest heartRequest, AgentConfig agentConfig) {
         heartRequest.setProjectName(agentConfig.getAppName());
         heartRequest.setAgentId(agentConfig.getAgentId());
         heartRequest.setIpAddress(AddressUtils.getLocalAddress());
         heartRequest.setProgressId(pid);
         heartRequest.setAgentStatus(AgentStatus.getAgentStatus());
         heartRequest.setSimulatorStatus(SimulatorStatus.getAgentStatus());
-        heartRequest.setAgentErrorInfo(agentErrorMsg);
-        heartRequest.setSimulatorErrorInfo(SimulatorStatus.getAgentStatus());
+        heartRequest.setAgentErrorInfo(AgentStatus.getErrorMessage());
+        heartRequest.setSimulatorErrorInfo(SimulatorStatus.getErrorMsg());
         heartRequest.setAgentVersion(agentConfig.getAgentVersion());
-        if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())){
+        if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())) {
             String agentBasePath = getUpgradeFileTempSaveDir().replace("core", "");
             File localFile = new File(agentBasePath + "agent/simulator_-1");
-            if (!localFile.exists()){
+            if (!localFile.exists()) {
                 heartRequest.setDependencyInfo(HeartCommandUtils.allModuleVersionDetail);
             }
         } else {

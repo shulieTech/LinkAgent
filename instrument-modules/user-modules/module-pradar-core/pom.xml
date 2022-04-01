@@ -16,7 +16,7 @@
     <properties>
         <module-name>pradar-core</module-name>
     </properties>
-    <version>2.0.0.2</version>
+    <version>${pradar.core.version}</version>
 
     <dependencies>
         <dependency>

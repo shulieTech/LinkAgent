@@ -111,13 +111,13 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
-//        enhanceTemplate.enhance(this, "org.springframework.context.support.ApplicationContextAwareProcessor", new EnhanceCallback() {
-//            @Override
-//            public void doEnhance(InstrumentClass target) {
-//                InstrumentMethod getMethod = target.getDeclaredMethod("invokeAwareInterfaces", "java.lang.Object");
-//                getMethod.addInterceptor(Listeners.of(SpringContextInterceptor.class));
-//            }
-//        });
+        enhanceTemplate.enhance(this, "org.springframework.context.support.ApplicationContextAwareProcessor", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("invokeAwareInterfaces", "java.lang.Object");
+                getMethod.addInterceptor(Listeners.of(SpringContextInterceptor.class));
+            }
+        });
 
         enhanceTemplate.enhance(this, "org.springframework.context.support.AbstractRefreshableApplicationContext", new EnhanceCallback() {
             @Override

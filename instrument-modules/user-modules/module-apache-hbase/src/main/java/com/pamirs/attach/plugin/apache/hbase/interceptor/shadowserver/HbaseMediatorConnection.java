@@ -14,7 +14,7 @@
  */
 package com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver;
 
-h'bimport java.io.IOException;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;

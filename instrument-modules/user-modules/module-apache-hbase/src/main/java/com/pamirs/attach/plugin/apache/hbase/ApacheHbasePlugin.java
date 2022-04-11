@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.apache.hbase;
 
 import com.pamirs.attach.plugin.apache.hbase.interceptor.ConnectionShadowInterceptor;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
+import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowHbaseDisableEvent;
@@ -31,8 +32,8 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
-
 
 /**
  * apache-hbase 影子库
@@ -54,9 +55,10 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
             @Override
             public void doEnhance(InstrumentClass target) {
                 final InstrumentMethod connectionMethod = target.getDeclaredMethod("createConnection",
-                        "org.apache.hadoop.conf.Configuration", "java.util.concurrent.ExecutorService",
-                        "org.apache.hadoop.hbase.security.User");
-                connectionMethod.addInterceptor(Listeners.of(ConnectionShadowInterceptor.class));
+                    "org.apache.hadoop.conf.Configuration", "java.util.concurrent.ExecutorService",
+                    "org.apache.hadoop.hbase.security.User");
+                connectionMethod.addInterceptor(
+                    Listeners.of(ConnectionShadowInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
 
         });
@@ -78,7 +80,7 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
                 }
 
                 try {
-                    MediatorConnection.dynamic((ShadowHbaseConfig) event.getTarget());
+                    MediatorConnection.dynamic((ShadowHbaseConfig)event.getTarget());
                 } catch (Exception e) {
                 }
                 return EventResult.success(event.getTarget());
@@ -98,7 +100,7 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
                     return EventResult.IGNORE;
                 }
                 try {
-                    MediatorConnection.disable((String) event.getTarget());
+                    MediatorConnection.disable((String)event.getTarget());
                 } catch (Exception e) {
                 }
                 return EventResult.success(event.getTarget());

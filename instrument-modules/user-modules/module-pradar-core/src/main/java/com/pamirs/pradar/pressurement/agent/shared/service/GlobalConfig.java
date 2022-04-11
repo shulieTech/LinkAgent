@@ -400,7 +400,7 @@ public final class GlobalConfig {
      * hbase是否使用影子表替换
      * 影子库里的影子表模式 或者影子表模式
      *
-     * @return
+     * @returnx
      */
     public boolean isShadowTableReplace() {
         if (isShadowHbaseServer) {

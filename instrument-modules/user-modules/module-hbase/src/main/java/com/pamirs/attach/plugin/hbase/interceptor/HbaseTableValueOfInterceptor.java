@@ -53,7 +53,7 @@ public class HbaseTableValueOfInterceptor extends ParametersWrapperInterceptorAd
         if (args.length != 2) {
             return args;
         }
-        if (GlobalConfig.getInstance().isShadowHbaseServer()) {
+        if (!GlobalConfig.getInstance().isShadowTableReplace()) {
             return args;
         }
         ClusterTestUtils.validateClusterTest();

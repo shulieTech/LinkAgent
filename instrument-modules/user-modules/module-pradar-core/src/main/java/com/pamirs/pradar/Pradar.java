@@ -176,6 +176,11 @@ public final class Pradar {
     static public final String CLUSTER_TEST_PREFIX = getClusterTestPrefix();
 
     /**
+     * 全链路压测前缀
+     */
+    static public final String CLUSTER_TEST_PREFIX_LOWER = getClusterTestPrefixLower();
+
+    /**
      * 全链路压测前缀 非下划线后缀
      */
     static public final String CLUSTER_TEST_PREFIX_ROD = getClusterTestPrefixRod();
@@ -752,6 +757,20 @@ public final class Pradar {
         }
 
         return agentId;
+    }
+
+    /**
+     * 获取压测前缀
+     *
+     * @return
+     */
+    public static String getClusterTestPrefixLower() {
+        String prefix = System.getProperty("pradar.cluster.test.prefix.lower");
+        if (StringUtils.isBlank(prefix)) {
+            prefix = "pt_";
+        }
+        System.out.println("SIMULATOR: cluster test prefix lower is:" + prefix);
+        return prefix;
     }
 
     /**

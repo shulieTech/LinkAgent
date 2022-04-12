@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.core.classloader;
 
 import com.shulie.instrument.simulator.core.util.CompoundEnumeration;
 import com.shulie.instrument.simulator.core.util.EmptyEnumeration;
+import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
 import org.apache.commons.lang.ArrayUtils;
 
 import java.io.IOException;
@@ -79,7 +80,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                     .findExportResourceClassLoadersInOrder(resourceName);
             if (exportResourceClassLoadersInOrder != null) {
                 for (ClassLoaderFactory exportResourceClassLoaderFactory : exportResourceClassLoadersInOrder) {
-                    ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
+                    ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(getBizClassLoader());
                     url = classLoader.getResource(resourceName);
                     if (url != null) {
                         return url;
@@ -112,15 +113,23 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                 if (classLoaderFactory == null) {
                     return null;
                 }
-                ClassLoader classLoader = classLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
+                ClassLoader classLoader = classLoaderFactory.getClassLoader(getBizClassLoader());
                 return classLoader == null ? null : classLoader.getResource(resourceName);
             }
         }
         return null;
     }
 
+    private ClassLoader getBizClassLoader() {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
+            return null;
+        }
+        return classLoader;
+    }
+
     protected URL getBusinessResource(String name) {
-        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+        final ClassLoader bizClassLoader = getBizClassLoader();
         if (bizClassLoader != null) {
             return bizClassLoader.getResource(name);
         }
@@ -128,7 +137,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     protected Enumeration<URL> getBusinessResources(String name) throws IOException {
-        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+        final ClassLoader bizClassLoader = getBizClassLoader();
         if (bizClassLoader == null) {
             return bizClassLoader.getResources(name);
         }
@@ -183,7 +192,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
             if (exportResourceClassLoadersInOrder != null) {
                 List<Enumeration<URL>> enumerationList = new ArrayList<Enumeration<URL>>();
                 for (ClassLoaderFactory exportResourceClassLoaderFactory : exportResourceClassLoadersInOrder) {
-                    ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
+                    ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(getBizClassLoader());
                     enumerationList.add(((ModuleRoutingURLClassLoader) classLoader)
                             .getLocalResources(resourceName));
                 }
@@ -276,7 +285,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
             ClassLoaderFactory importClassLoaderFactory = classLoaderService.findExportClassLoaderFactory(name);
             if (importClassLoaderFactory != null) {
                 try {
-                    ClassLoader classLoader = importClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
+                    ClassLoader classLoader = importClassLoaderFactory.getClassLoader(getBizClassLoader());
                     return classLoader.loadClass(name);
                 } catch (ClassNotFoundException e) {
                     // just log when debug level
@@ -338,7 +347,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
      */
     protected Class resolveBusinessClassLoader(String name) {
         try {
-            final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+            final ClassLoader bizClassLoader = getBizClassLoader();
             if (bizClassLoader == null) {
                 return null;
             }

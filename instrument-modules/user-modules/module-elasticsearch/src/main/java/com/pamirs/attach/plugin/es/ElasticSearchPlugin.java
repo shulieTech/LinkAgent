@@ -133,9 +133,22 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
                         "org.elasticsearch.client.HttpAsyncResponseConsumerFactory", "org.elasticsearch.client.ResponseListener",
                         "org.apache.http.Header[]");
 
+                InstrumentMethod performRequestAsyncMethodLowVersionTrace = target.getDeclaredMethod("performRequestAsync",
+                        "long", "org.elasticsearch.client.RestClient$HostTuple", "org.apache.http.client.methods.HttpRequestBase", "java.util.Set",
+                        "org.elasticsearch.client.HttpAsyncResponseConsumerFactory",
+                        "org.elasticsearch.client.RestClient$FailureTrackingResponseListener");
+
+
                 if (performRequestAsyncMethod != null) {
                     performRequestAsyncMethod.addInterceptor(Listeners.of(RestClientPerformAsyncRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 }
+
+
+                if (performRequestAsyncMethodLowVersionTrace != null){
+                    performRequestAsyncMethodLowVersionTrace.addInterceptor(
+                            Listeners.of(RestClientPerformAsyncLowVersionRequestTraceInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                }
+
 
                 if (performRequestAsyncMethodLowVersion != null) {
                     performRequestAsyncMethodLowVersion.addInterceptor(

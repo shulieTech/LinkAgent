@@ -63,6 +63,7 @@ public abstract class MediatorConnection<T> {
     public void setPerformanceTestConnection(T performanceTestConnection) {
         if (performanceTestConnection instanceof MediatorConnection) {
             logger.error("performanceTestConnection is MediatorConnection", new Exception());
+            return;
         }
         this.performanceTestConnection = performanceTestConnection;
     }
@@ -76,7 +77,7 @@ public abstract class MediatorConnection<T> {
     public abstract T initConnection();
 
     public static void dynamic(ShadowHbaseConfig config) {
-        for (Map.Entry<String, ShadowHbaseConfig> entry : GlobalConfig.getInstance().getShadowHbaseServerConfigs()
+        /*for (Map.Entry<String, ShadowHbaseConfig> entry : GlobalConfig.getInstance().getShadowHbaseServerConfigs()
             .entrySet()) {
             ShadowHbaseConfig hbaseConfig = entry.getValue();
             if (!hbaseConfig.equals(config)) {
@@ -90,13 +91,15 @@ public abstract class MediatorConnection<T> {
                 Object ptConfig = mediator.matching(mediator.businessConfig);
                 if (ptConfig != null) {
                     try {
-                        mediator.setPerformanceTestConnection(mediator.initConnection());
+                        //todo 这里设置进去的是一个HbaseMediatorConnection，因为mediator.initConnection()会被增强, 并且没有走interceptor的scope约束，导致栈溢出，临时先注释
+                        //
+                        //mediator.setPerformanceTestConnection(mediator.initConnection());
                     } catch (Exception e) {
                         logger.error(e.getMessage(), e);
                     }
                 }
             }
-        }
+        }*/
     }
 
     public static void disable(String businessKey) throws Exception {

@@ -14,8 +14,6 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.io.IOException;
-
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
 import com.pamirs.attach.plugin.es.shadowserver.ShadowEsClientHolder;
@@ -30,6 +28,8 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.elasticsearch.client.RestClient;
+
+import java.io.IOException;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -54,6 +54,11 @@ public abstract class AbstractRestClientShadowServerInterceptor extends CutoffIn
         }
     }
 
+    /**
+     * 低版本es无法使用
+     * @param advice
+     * @return
+     */
     protected CutOffResult doShadowIndexInterceptor(Advice advice) {
         Object[] args = advice.getParameterArray();
         RequestIndexRename requestIndexRename = RequestIndexRenameProvider.get(args[0]);

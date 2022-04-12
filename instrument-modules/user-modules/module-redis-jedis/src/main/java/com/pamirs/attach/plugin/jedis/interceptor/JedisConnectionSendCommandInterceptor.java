@@ -1,7 +1,6 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
-import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
@@ -98,7 +97,7 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
         values[0] = cmd;
 
         Object array;
-        if (args[1] instanceof byte[]) {
+        if (args[0] instanceof byte[]) {
             array = new byte[args.length][];
         } else {
             array = new String[args.length];

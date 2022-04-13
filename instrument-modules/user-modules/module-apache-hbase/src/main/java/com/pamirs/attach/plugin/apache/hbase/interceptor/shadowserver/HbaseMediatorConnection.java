@@ -90,11 +90,12 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         SS:
         for (Map.Entry<String, ShadowHbaseConfig> entry : hbaseConfigMap.entrySet()) {
             String[] split = entry.getKey().split("\\|");
+            ShadowHbaseConfig shadowHbaseConfig = entry.getValue();
             if (split.length == 3) {
                 if (logger.isInfoEnabled()) {
                     logger.info("business config quorums:{}, port:{}, znode:{} ---------- " +
                             "perfomanceTest config quorums:{}, port:{}, znode:{}",
-                        quorum, port, znode, split[0], split[1], split[2]);
+                        quorum, port, znode, shadowHbaseConfig.getQuorum(), shadowHbaseConfig.getPort(), shadowHbaseConfig.getZnode());
                 }
                 if (!split[1].equals(port) || !split[2].equals(znode)) {
                     continue;

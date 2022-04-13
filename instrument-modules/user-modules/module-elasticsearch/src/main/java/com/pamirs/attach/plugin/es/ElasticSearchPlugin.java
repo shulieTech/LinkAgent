@@ -96,7 +96,7 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethods("internalPerformRequest",
-                        "internalPerformRequestAsync");
+                        "internalPerformRequestAsync", "performRequest", "performRequestAsync");
                 method.addInterceptor(Listeners
                         .of(RestHighLevelClientInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));
@@ -108,7 +108,7 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
         enhanceTemplate.enhance(this, "org.elasticsearch.action.bulk.BulkRequest", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethod("add", "org.elasticsearch.action.index.IndexRequest");
+                InstrumentMethod method = target.getDeclaredMethods("add");
                 method.addInterceptor(Listeners
                         .of(BulkRequestAddInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));

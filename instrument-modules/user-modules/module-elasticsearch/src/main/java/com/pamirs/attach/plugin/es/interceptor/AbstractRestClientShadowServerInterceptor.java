@@ -55,7 +55,7 @@ public abstract class AbstractRestClientShadowServerInterceptor extends CutoffIn
     }
 
     /**
-     * 低版本es无法使用
+     * 5.x低版本es无法使用
      * @param advice
      * @return
      */

@@ -1,31 +1,29 @@
 package com.pamirs.attach.plugin.apache.hbase.interceptor;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
 import com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver.HbaseMediatorConnection;
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder;
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder.Supplier;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.security.User;
 import org.slf4j.Logger;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -44,6 +42,9 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
         if (advice.getTarget() instanceof HbaseMediatorConnection) {
+            return CutOffResult.passed();
+        }
+        if (ShadowConnectionHolder.isPtConnection((ClusterConnection) advice.getTarget())){
             return CutOffResult.passed();
         }
         Object target = advice.getTarget();
@@ -74,9 +75,16 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
             });
         if (ptClusterConnection != null) {
             return CutOffResult.cutoff(process(ptClusterConnection, advice.getBehaviorName(), advice.getParameterArray()));
-        }
+        } else {
+            Configuration busConfiguration = ((ClusterConnection) target).getConfiguration();
 
-        return CutOffResult.passed();
+            String quorum = busConfiguration.get(HConstants.ZOOKEEPER_QUORUM);
+            String port = busConfiguration.get(HConstants.ZOOKEEPER_CLIENT_PORT);
+            String znode = busConfiguration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
+
+            throw new PressureMeasureError("hbase未配置影子库, HConnectionShadowReplaceInterceptor business config quorums:  "+ quorum
+                    +" +, port: "+port+", znode:"+znode+" ---------- ");
+        }
     }
 
     private Object process(ClusterConnection ptClusterConnection, String behaviorName, Object[] args) throws Exception {
@@ -122,35 +130,67 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
                 }
             }
         } else if ("cacheLocation".equals(behaviorName)) {
-            return ptClusterConnection.cacheLocation(args[0], args[1]);
+            ptClusterConnection.cacheLocation((TableName) args[0], (RegionLocations) args[1]);
+            return null;
         } else if ("deleteCachedRegionLocation".equals(behaviorName)) {
-            return ptClusterConnection.deleteCachedRegionLocation();
+            ptClusterConnection.deleteCachedRegionLocation((HRegionLocation) args[0]);
+            return null;
         } else if ("relocateRegion".equals(behaviorName)) {
-            return ptClusterConnection.relocateRegion();
+            if (args.length == 3){
+                return ptClusterConnection.relocateRegion((TableName) args[0], (byte[]) args[1], (Integer) args[2]);
+            }else if (args[0] instanceof TableName){
+                return ptClusterConnection.relocateRegion((TableName) args[0], (byte[]) args[1]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.relocateRegion((byte[]) args[0], (byte[]) args[1]);
+            }
         } else if ("updateCachedLocations".equals(behaviorName)) {
-            return ptClusterConnection.updateCachedLocations();
+            if (args.length == 5){
+                ptClusterConnection.updateCachedLocations((TableName) args[0], (byte[]) args[1], (byte[]) args[2], args[3], (ServerName) args[4]);
+                return null;
+            } else if (args[0] instanceof TableName){
+                ptClusterConnection.updateCachedLocations((TableName) args[0], (byte[]) args[1], args[2], (HRegionLocation) args[3]);
+                return null;
+            } else if (args[0] instanceof byte[]){
+                ptClusterConnection.updateCachedLocations((byte[]) args[0], (byte[]) args[1], args[2], (HRegionLocation) args[3]);
+                return null;
+            }
         } else if ("locateRegions".equals(behaviorName)) {
-            return ptClusterConnection.locateRegions();
+            if (args.length == 3){
+                if (args[0] instanceof TableName){
+                    return ptClusterConnection.locateRegions((TableName) args[0],(Boolean) args[1],(Boolean) args[2]);
+                } else {
+                    return ptClusterConnection.locateRegions((byte[]) args[0],(Boolean) args[1],(Boolean) args[2]);
+                }
+            } else if (args[0] instanceof TableName){
+                return ptClusterConnection.locateRegions((TableName) args[0]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.locateRegions((byte[]) args[0]);
+            }
         } else if ("getMaster".equals(behaviorName)) {
             return ptClusterConnection.getMaster();
         } else if ("getAdmin".equals(behaviorName)) {
             return ptClusterConnection.getAdmin();
         } else if ("getClient".equals(behaviorName)) {
-            return ptClusterConnection.getClient();
+            return ptClusterConnection.getClient((ServerName) args[0]);
         } else if ("getRegionLocation".equals(behaviorName)) {
-            return ptClusterConnection.getRegionLocation();
+            if (args[0] instanceof TableName){
+                return ptClusterConnection.getRegionLocation((TableName) args[0], (byte[]) args[1],(Boolean) args[2]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.getRegionLocation((byte[]) args[0], (byte[]) args[1],(Boolean) args[2]);
+            }
         } else if ("clearCaches".equals(behaviorName)) {
-            return ptClusterConnection.clearCaches();
+            ptClusterConnection.clearCaches((ServerName) args[0]);
+            return null;
         } else if ("getKeepAliveMasterService".equals(behaviorName)) {
             return ptClusterConnection.getKeepAliveMasterService();
         } else if ("isDeadServer".equals(behaviorName)) {
-            return ptClusterConnection.isDeadServer();
+            return ptClusterConnection.isDeadServer((ServerName) args[0]);
         } else if ("getNonceGenerator".equals(behaviorName)) {
             return ptClusterConnection.getNonceGenerator();
         } else if ("getAsyncProcess".equals(behaviorName)) {
             return ptClusterConnection.getAsyncProcess();
         } else if ("getNewRpcRetryingCallerFactory".equals(behaviorName)) {
-            return ptClusterConnection.getNewRpcRetryingCallerFactory();
+            return ptClusterConnection.getNewRpcRetryingCallerFactory((Configuration) args[0]);
         } else if ("getRpcRetryingCallerFactory".equals(behaviorName)) {
             return ptClusterConnection.getRpcRetryingCallerFactory();
         } else if ("getRpcControllerFactory".equals(behaviorName)) {
@@ -170,13 +210,37 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
         } else if ("getConfiguration".equals(behaviorName)) {
             return ptClusterConnection.getConfiguration();
         } else if ("getTable".equals(behaviorName)) {
-            return ptClusterConnection.getTable();
+            if (args.length == 1){
+                if (args[0] instanceof String){
+                    return ptClusterConnection.getTable((String) args[0]);
+                } else if (args[0] instanceof byte[]){
+                    return ptClusterConnection.getTable((byte[]) args[0]);
+                } else if (args[0] instanceof TableName){
+                    return ptClusterConnection.getTable((TableName) args[0]);
+                }
+            } else {
+                if (args[0] instanceof String){
+                    return ptClusterConnection.getTable((String) args[0], (ExecutorService) args[1]);
+                } else if (args[0] instanceof byte[]){
+                    return ptClusterConnection.getTable((byte[]) args[0], (ExecutorService) args[1]);
+                } else if (args[0] instanceof TableName){
+                    return ptClusterConnection.getTable((TableName) args[0], (ExecutorService) args[1]);
+                }
+            }
         } else if ("getRegionLocator".equals(behaviorName)) {
-            return ptClusterConnection.getRegionLocator();
+            return ptClusterConnection.getRegionLocator((TableName) args[0]);
         } else if ("isTableEnabled".equals(behaviorName)) {
-            return ptClusterConnection.isTableEnabled();
+            if (args[0] instanceof TableName){
+                return ptClusterConnection.isTableEnabled((TableName) args[0]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.isTableEnabled((byte[]) args[0]);
+            }
         } else if ("isTableDisabled".equals(behaviorName)) {
-            return ptClusterConnection.isTableDisabled();
+            if (args[0] instanceof TableName){
+                return ptClusterConnection.isTableDisabled((TableName) args[0]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.isTableDisabled((byte[]) args[0]);
+            }
         } else if ("listTables".equals(behaviorName)) {
             return ptClusterConnection.listTables();
         } else if ("getTableNames".equals(behaviorName)) {
@@ -184,25 +248,55 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
         } else if ("listTableNames".equals(behaviorName)) {
             return ptClusterConnection.listTableNames();
         } else if ("getHTableDescriptor".equals(behaviorName)) {
-            return ptClusterConnection.getHTableDescriptor();
+            if (args[0] instanceof TableName){
+                return ptClusterConnection.getHTableDescriptor((TableName) args[0]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.getHTableDescriptor((byte[]) args[0]);
+            }
         } else if ("processBatch".equals(behaviorName)) {
-            return ptClusterConnection.processBatch();
+            if (args[1] instanceof TableName){
+                ptClusterConnection.processBatch((List<? extends Row>) args[0],(TableName) args[1],(ExecutorService) args[2],(Object[]) args[3]);
+                return null;
+            } else if (args[1] instanceof byte[]){
+                ptClusterConnection.processBatch((List<? extends Row>) args[0],(byte[]) args[1],(ExecutorService) args[2],(Object[]) args[3]);
+                return null;
+            }
         } else if ("processBatchCallback".equals(behaviorName)) {
-            return ptClusterConnection.processBatchCallback();
+            if (args[1] instanceof TableName){
+                ptClusterConnection.processBatchCallback((List<? extends Row>) args[0],(TableName) args[1],(ExecutorService) args[2],(Object[]) args[3], (Batch.Callback<? extends Object>) args[4]);
+                return null;
+            } else if (args[1] instanceof byte[]){
+                ptClusterConnection.processBatchCallback((List<? extends Row>) args[0],(byte[]) args[1],(ExecutorService) args[2],(Object[]) args[3], (Batch.Callback<? extends Object>) args[4]);
+                return null;
+            }
         } else if ("setRegionCachePrefetch".equals(behaviorName)) {
-            return ptClusterConnection.setRegionCachePrefetch();
+            if (args[0] instanceof TableName){
+                ptClusterConnection.setRegionCachePrefetch((TableName) args[0],(Boolean) args[1]);
+                return null;
+            } else if (args[0] instanceof byte[]){
+                ptClusterConnection.setRegionCachePrefetch((byte[]) args[0],(Boolean) args[1]);
+                return null;
+            }
         } else if ("getRegionCachePrefetch".equals(behaviorName)) {
-            return ptClusterConnection.getRegionCachePrefetch();
+            if (args[0] instanceof TableName){
+                return ptClusterConnection.getRegionCachePrefetch((TableName) args[0]);
+            } else if (args[0] instanceof byte[]){
+                return ptClusterConnection.getRegionCachePrefetch((byte[]) args[0]);
+            }
         } else if ("getCurrentNrHRS".equals(behaviorName)) {
             return ptClusterConnection.getCurrentNrHRS();
         } else if ("getHTableDescriptorsByTableName".equals(behaviorName)) {
-            return ptClusterConnection.getHTableDescriptorsByTableName();
+            return ptClusterConnection.getHTableDescriptorsByTableName((List<TableName>) args[0]);
         } else if ("getHTableDescriptors".equals(behaviorName)) {
-            return ptClusterConnection.getHTableDescriptors();
+            return ptClusterConnection.getHTableDescriptors((List<String>) args[0]);
         } else if ("isClosed".equals(behaviorName)) {
             return ptClusterConnection.isClosed();
         } else if ("getBufferedMutator".equals(behaviorName)) {
-            return ptClusterConnection.getBufferedMutator();
+            if (args[0] instanceof TableName){
+                return ptClusterConnection.getBufferedMutator((TableName) args[0]);
+            } else if (args[0] instanceof BufferedMutatorParams){
+                return ptClusterConnection.getBufferedMutator((BufferedMutatorParams) args[0]);
+            }
         } else if ("close".equals(behaviorName)) {
             ptClusterConnection.close();
             return null;

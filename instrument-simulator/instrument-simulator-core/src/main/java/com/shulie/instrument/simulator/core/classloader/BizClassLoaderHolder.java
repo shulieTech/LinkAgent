@@ -90,8 +90,12 @@ public class BizClassLoaderHolder {
     public static ClassLoader getBizClassLoader() {
         ClassLoaderNode stack = holder.get();
         if (stack == null) {
-            LOGGER.warn("getBizClassLoader stack is null! this should never happen!", new Exception());
-            throw new IllegalStateException("getBizClassLoader stack is null! this should never happen!");
+            LOGGER.warn("getBizClassLoader stack is null! maybe is mock plugin unload!", new Exception());
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
+                return null;
+            }
+            return classLoader;
         }
         ClassLoader classLoader = stack.getClassLoader();
         ClassLoader bizClassLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;

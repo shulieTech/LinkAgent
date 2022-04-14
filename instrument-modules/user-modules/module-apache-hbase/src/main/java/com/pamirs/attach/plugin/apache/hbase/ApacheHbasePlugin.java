@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.apache.hbase;
 
 import com.pamirs.attach.plugin.apache.hbase.interceptor.ConnectionShadowInterceptor;
+import com.pamirs.attach.plugin.apache.hbase.interceptor.HConnectionShadowReplaceInterceptor;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
@@ -58,10 +59,34 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
                     "org.apache.hadoop.conf.Configuration", "java.util.concurrent.ExecutorService",
                     "org.apache.hadoop.hbase.security.User");
                 connectionMethod.addInterceptor(
-                    Listeners.of(ConnectionShadowInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    Listeners.of(ConnectionShadowInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY,
+                        Interceptors.SCOPE_CALLBACK));
             }
 
         });
+
+        this.enhanceTemplate.enhance(this, "org.apache.hadoop.hbase.client.ConnectionManager$HConnectionImplementation",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod connectionMethod = target.getDeclaredMethods("isMasterRunning",
+                        "isTableAvailable", "locateRegion", "clearRegionCache", "cacheLocation",
+                        "deleteCachedRegionLocation", "relocateRegion", "updateCachedLocations", "locateRegions",
+                        "getMaster", "getAdmin", "getClient", "getRegionLocation", "clearCaches",
+                        "getKeepAliveMasterService", "isDeadServer", "getNonceGenerator", "getAsyncProcess",
+                        "getNewRpcRetryingCallerFactory", "getRpcRetryingCallerFactory", "getRpcControllerFactory",
+                        "getConnectionConfiguration", "isManaged", "getStatisticsTracker", "getBackoffPolicy",
+                        "getConnectionMetrics", "hasCellBlockSupport", "getConfiguration", "getTable", "getRegionLocator",
+                        "isTableEnabled", "isTableDisabled", "listTables", "getTableNames", "listTableNames",
+                        "getHTableDescriptor", "processBatch", "processBatchCallback", "setRegionCachePrefetch",
+                        "getRegionCachePrefetch", "getCurrentNrHRS", "getHTableDescriptorsByTableName",
+                        "getHTableDescriptors", "isClosed", "getBufferedMutator", "close");
+                    connectionMethod.addInterceptor(
+                        Listeners.of(HConnectionShadowReplaceInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY,
+                            Interceptors.SCOPE_CALLBACK));
+                }
+
+            });
 
         initEventListener();
         return true;

@@ -37,8 +37,12 @@ import org.slf4j.Logger;
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2022/04/14 4:37 PM
+ * 这个切点是对Hbase影子集群的补充，针对获取一次连接多次使用的场景，没有走ConnectionFactory.createConnection()
+ * 因为这个切点版本兼容起来比较麻烦，并且有可能业务不使用hbase底层的connection，
+ * 所以影子集群功能我们希望还是尽可能走ConnectionShadowInterceptor
+ * 这个需要对ConnectionShadowInterceptor的影子connection做兼容
+ * see com.pamirs.attach.plugin.apache.hbase.interceptor.ConnectionShadowInterceptor
  */
-
 @ListenerBehavior(isFilterClusterTest = true)
 public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdaptor {
 

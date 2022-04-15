@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -15,7 +16,7 @@ public class ShadowConnectionHolder {
 
     private static final Map<ClusterConnection, ClusterConnection> CACHE
         = new HashMap<ClusterConnection, ClusterConnection>();
-    private static final Set<ClusterConnection> allPtConnection = new HashSet<ClusterConnection>();
+    private static final Set<Connection> allPtConnection = new HashSet<Connection>();
 
     public static ClusterConnection computeIfAbsent(ClusterConnection busClusterConnection, Supplier supplier) {
         ClusterConnection ptClusterConnection = CACHE.get(busClusterConnection);
@@ -34,13 +35,17 @@ public class ShadowConnectionHolder {
         return ptClusterConnection;
     }
 
+    public static void setShadowConnection(Connection prefConnection) {
+        allPtConnection.add(prefConnection);
+    }
+
     public interface Supplier {
 
         ClusterConnection get(ClusterConnection busClusterConnection);
 
     }
 
-    public static boolean isPtConnection(ClusterConnection connection) {
+    public static boolean isPtConnection(Connection connection) {
         return allPtConnection.contains(connection);
     }
 

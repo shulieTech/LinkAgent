@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.apache.hbase.interceptor;
 
 import com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver.HbaseMediatorConnection;
+import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.InvokeSwitcher;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
 import com.pamirs.attach.plugin.dynamic.Attachment;
@@ -84,6 +85,7 @@ public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
             if (null != ptConfiguration) {
                 Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration, (ExecutorService) args[1], (User) args[2]);
                 // 如果查询影子库配置则使用影子库模式，否则未影子表模式
+                ShadowConnectionHolder.setShadowConnection(prefConnection);
                 mediatorConnection.setPerformanceTestConnection(prefConnection);
             }
             mediatorConnection.setArgs(args);

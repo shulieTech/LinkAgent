@@ -130,7 +130,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
 
     private String[] dealClassName(String... classNames) {
         for (int i = 0; i < classNames.length; i++) {
-            classNames[i] = dealClassName(classNames[1]);
+            classNames[i] = dealClassName(classNames[i]);
         }
         return classNames;
     }

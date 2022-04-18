@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,6 +15,7 @@
 package com.pamirs.pradar.pressurement.mock;
 
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
@@ -23,7 +24,6 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 
 /**
@@ -37,19 +37,20 @@ public class ForwardStrategy implements ExecutionStrategy {
     public Object processBlock(Class returnType, ClassLoader classLoader, Object params) {
         if (Pradar.isClusterTest()) {
             MatchConfig config = (MatchConfig) params;
-            Object request = config.getArgs().get("request");
-            String method = (String) config.getArgs().get("method");
-            if (null != config.getForwarding() && null != request) {
-                try {
-                    URL url = new URL(config.getForwarding());
-                    Reflect.on(request).set(method, url);
-                } catch (Exception e) {
+            try {
+                Object request = config.getArgs().get("request");
+                String method = (String) config.getArgs().get("method");
+                if (null != config.getForwarding() && null != request) {
                     try {
+                        URL url = new URL(config.getForwarding());
+                        Reflect.on(request).set(method, url);
+                    } catch (Exception e) {
                         URI uri = new URI(config.getForwarding());
                         Reflect.on(request).set(method, uri);
-                    } catch (URISyntaxException uriSyntaxException) {
                     }
                 }
+            } catch (Throwable t) {
+                throw new PressureMeasureError("not support forward type. params: " + config);
             }
         }
         return null;

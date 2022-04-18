@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.guava.interceptor;
 
-import com.google.common.collect.Maps;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -25,6 +24,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -47,7 +47,7 @@ public class CacheAsMapInterceptor extends ResultInterceptorAdaptor {
         boolean clusterTest = Pradar.isClusterTest();
         ConcurrentMap returnObj = (ConcurrentMap) advice.getReturnObj();
         Set<Map.Entry> set = returnObj.entrySet();
-        ConcurrentMap concurrentMap = Maps.newConcurrentMap();
+        ConcurrentMap concurrentMap = new ConcurrentHashMap();
         for (Map.Entry o : set) {
             if (clusterTest && o.getKey() instanceof ClusterTestCacheWrapperKey) {
                 concurrentMap.put(((ClusterTestCacheWrapperKey) o.getKey()).getKey(), o.getValue());

@@ -124,8 +124,8 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                     Field groupId = ReflectUtil.getField(consumer, "groupId");
                     group = (String)groupId.get(consumer);
                 } catch (Throwable e) {
-                    Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
-                    group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+//                    Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
+//                    group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
                     groupGlobal = Thread.currentThread().getName().split("-")[0];
                 }
             }

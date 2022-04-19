@@ -98,7 +98,7 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
         values[0] = cmd;
 
         Object array;
-        if (args[1] instanceof byte[]) {
+        if (args[0] instanceof byte[]) {
             array = new byte[args.length][];
         } else {
             array = new String[args.length];

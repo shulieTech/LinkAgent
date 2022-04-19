@@ -150,11 +150,16 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
                             HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
                             args[0] = httpHost1;
 
-                            try {
-                                Reflect.on(request).set("uri", uri);
-                            } catch (Exception e) {
-                                URL url = new URL(forwarding);
-                                Reflect.on(request).set("uri", url);
+                            Object uriField = Reflect.on(request).get("uri");
+                            if (uriField instanceof String) {
+                                Reflect.on(request).set("uri", uri.toASCIIString());
+                            } else {
+                                try {
+                                    Reflect.on(request).set("uri", uri);
+                                } catch (Exception e) {
+                                    URL url = new URL(forwarding);
+                                    Reflect.on(request).set("uri", url);
+                                }
                             }
                         }
                     } catch (Throwable t) {

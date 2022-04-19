@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -69,7 +69,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                     if (config.getScriptContent().contains("return")) {
                         return null;
                     }
-                    if (null == config.getArgs().get("futureCallback")){
+                    if (null == config.getArgs().get("futureCallback")) {
                         return null;
                     }
                     //现在先暂时注释掉因为只有jdk8以上才能用
@@ -87,8 +87,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                         ProcessController.returnImmediately(returnType, future);
                     } catch (ProcessControlException pe) {
                         throw pe;
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                     }
                     return null;
                 }
@@ -124,12 +123,12 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        if (args.length == 3){
+        if (args.length == 3) {
             config.addArgs("futureCallback", args[2]);
-        } else if (args.length == 4){
+        } else if (args.length == 4) {
             config.addArgs("futureCallback", args[3]);
         }
-        if (config.getStrategy() instanceof JsonMockStrategy){
+        if (config.getStrategy() instanceof JsonMockStrategy) {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
@@ -143,11 +142,16 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                             HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
                             args[0] = httpHost1;
 
-                            try {
-                                Reflect.on(request).set("uri", uri);
-                            } catch (Exception e) {
-                                URL url = new URL(forwarding);
-                                Reflect.on(request).set("uri", url);
+                            Object uriField = Reflect.on(request).get("uri");
+                            if (uriField instanceof String) {
+                                Reflect.on(request).set("uri", uri.toASCIIString());
+                            } else {
+                                try {
+                                    Reflect.on(request).set("uri", uri);
+                                } catch (Exception e) {
+                                    URL url = new URL(forwarding);
+                                    Reflect.on(request).set("uri", url);
+                                }
                             }
                         }
                     } catch (Throwable t) {
@@ -159,7 +163,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
 
             @Override
             public Object call(Object param) {
-                if (null == config.getArgs().get("futureCallback")){
+                if (null == config.getArgs().get("futureCallback")) {
                     return null;
                 }
                 //现在先暂时注释掉因为只有jdk8以上才能用

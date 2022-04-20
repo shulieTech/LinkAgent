@@ -15,18 +15,8 @@
 
 package com.shulie.instrument.module.log.data.pusher.push.http;
 
-import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.text.SimpleDateFormat;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.remoting.protocol.CommandCode;
 import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
@@ -51,6 +41,15 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Description
@@ -101,8 +100,8 @@ public class HttpDataPusher implements DataPusher {
         try {
             if (StringUtil.isEmpty(httpPushOptions.getHttpPath())) {
                 LOGGER.error(
-                    "File: 'simulator-agent/agent/simulator/config/simulator.properties',"
-                        + "config: 'pradar.push.server.http.path' is empty!!");
+                        "File: 'simulator-agent/agent/simulator/config/simulator.properties',"
+                                + "config: 'pradar.push.server.http.path' is empty!!");
                 return false;
             }
             hostIp = PradarCoreUtils.getLocalAddress();
@@ -114,18 +113,18 @@ public class HttpDataPusher implements DataPusher {
             // setConnectionRequestTimeout表示从连接池中拿连接的等待超时时间
             // setSocketTimeout表示发出请求后等待对端应答的超时时间
             RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(serverOptions.getTimeout())
-                .setConnectionRequestTimeout(serverOptions.getTimeout())
-                .setSocketTimeout(serverOptions.getTimeout())
-                .build();
+                    .setConnectTimeout(serverOptions.getTimeout())
+                    .setConnectionRequestTimeout(serverOptions.getTimeout())
+                    .setSocketTimeout(serverOptions.getTimeout())
+                    .build();
             // 重试处理器，StandardHttpRequestRetryHandler这个是官方提供的，看了下感觉比较挫，很多错误不能重试，可自己实现HttpRequestRetryHandler接口去做
             HttpRequestRetryHandler retryHandler = new StandardHttpRequestRetryHandler();
 
             httpClient = HttpClients.custom()
-                .setConnectionManager(connectionManager)
-                .setDefaultRequestConfig(requestConfig)
-                .setRetryHandler(retryHandler)
-                .build();
+                    .setConnectionManager(connectionManager)
+                    .setDefaultRequestConfig(requestConfig)
+                    .setRetryHandler(retryHandler)
+                    .build();
 
             // 服务端假设关闭了连接，对客户端是不透明的，HttpClient为了缓解这一问题，在某个连接使用前会检测这个连接是否过时，如果过时则连接失效，但是这种做法会为每个请求
             // 增加一定额外开销，因此有一个定时任务专门回收长时间不活动而被判定为失效的连接，可以某种程度上解决这个问题
@@ -214,7 +213,9 @@ public class HttpDataPusher implements DataPusher {
                         return true;
                     }
                 } catch (Throwable e) {
-                    LOGGER.error("http log push error", e);
+                    if (LOGGER.isInfoEnabled()) {
+                        LOGGER.info("http log push error", e);
+                    }
                     if (response != null) {
                         try {
                             EntityUtils.consume(response.getEntity());

@@ -8,6 +8,10 @@ redis-jedis 中间件支持模块，
 支持connection execute方式
 工单解决：https://devops.aliyun.com/task/620b71fa87f6ef003fb05387
 
+2.0.0.2版本：
+解决jedis的getParameter 抛 java.lang.ArrayIndexOutOfBoundsException
+https://shulietech.feishu.cn/wiki/wikcnkeqdNkw5MZ4dghv146pHdf
+
 2.0.1.0版本：
 支持影子库账密前缀处理。
 仿真系统新增配置项：

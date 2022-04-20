@@ -17,6 +17,7 @@
 
 package com.pamirs.attach.plugin.es.interceptor;
 
+import com.pamirs.attach.plugin.es.common.RestClientHighLowFlag;
 import com.pamirs.attach.plugin.es.utils.AsyncLowTraceUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.ResultCode;
@@ -49,6 +50,10 @@ public class RestClientPerformAsyncLowVersionRequestTraceInterceptor extends Tra
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
+        //高版本的trace已经有了
+        if (RestClientHighLowFlag.isHigh){
+            return null;
+        }
         SpanRecord spanRecord = new SpanRecord();
         Object hostTuple = advice.getParameterArray()[1];
         HttpRequestBase requestBase = (HttpRequestBase) advice.getParameterArray()[2];
@@ -102,6 +107,9 @@ public class RestClientPerformAsyncLowVersionRequestTraceInterceptor extends Tra
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if (RestClientHighLowFlag.isHigh){
+            return null;
+        }
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         return spanRecord;
@@ -110,6 +118,9 @@ public class RestClientPerformAsyncLowVersionRequestTraceInterceptor extends Tra
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
+        if (RestClientHighLowFlag.isHigh){
+            return null;
+        }
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
         spanRecord.setResponse(advice.getThrowable());

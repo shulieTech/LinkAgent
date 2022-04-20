@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -20,9 +20,10 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
-import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
@@ -30,6 +31,7 @@ import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -40,6 +42,8 @@ import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
 
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.URL;
 import java.util.Map;
 
 /**
@@ -65,7 +69,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                     if (config.getScriptContent().contains("return")) {
                         return null;
                     }
-                    if (null == config.getArgs().get("futureCallback")){
+                    if (null == config.getArgs().get("futureCallback")) {
                         return null;
                     }
                     //现在先暂时注释掉因为只有jdk8以上才能用
@@ -83,8 +87,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                         ProcessController.returnImmediately(returnType, future);
                     } catch (ProcessControlException pe) {
                         throw pe;
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                     }
                     return null;
                 }
@@ -92,7 +95,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(final Advice advice) throws ProcessControlException {
-        Object[] args = advice.getParameterArray();
+        final Object[] args = advice.getParameterArray();
         HttpHost httpHost = (HttpHost) args[0];
         final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
@@ -120,18 +123,47 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        if (args.length == 3){
+        if (args.length == 3) {
             config.addArgs("futureCallback", args[2]);
-        } else if (args.length == 4){
+        } else if (args.length == 4) {
             config.addArgs("futureCallback", args[3]);
         }
-        if (config.getStrategy() instanceof JsonMockStrategy){
+        if (config.getStrategy() instanceof JsonMockStrategy) {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
-        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
+            @Override
+            public Object forward(Object param) throws ProcessControlException {
+                if (Pradar.isClusterTest()) {
+                    String forwarding = config.getForwarding();
+                    try {
+                        if (null != forwarding && null != request) {
+                            URI uri = new URI(forwarding);
+                            HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
+                            args[0] = httpHost1;
+
+                            Object uriField = Reflect.on(request).get("uri");
+                            if (uriField instanceof String) {
+                                Reflect.on(request).set("uri", uri.toASCIIString());
+                            } else {
+                                try {
+                                    Reflect.on(request).set("uri", uri);
+                                } catch (Exception e) {
+                                    URL url = new URL(forwarding);
+                                    Reflect.on(request).set("uri", url);
+                                }
+                            }
+                        }
+                    } catch (Throwable t) {
+                        throw new PressureMeasureError("not support forward type. params: " + param);
+                    }
+                }
+                return null;
+            }
+
             @Override
             public Object call(Object param) {
-                if (null == config.getArgs().get("futureCallback")){
+                if (null == config.getArgs().get("futureCallback")) {
                     return null;
                 }
                 //现在先暂时注释掉因为只有jdk8以上才能用

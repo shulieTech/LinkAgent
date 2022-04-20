@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.httpclient.interceptor;
 
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
@@ -23,8 +24,8 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
-import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
@@ -45,6 +46,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -108,7 +111,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        Object[] args = advice.getParameterArray();
+        final Object[] args = advice.getParameterArray();
         HttpHost httpHost = (HttpHost) args[0];
         final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
@@ -124,7 +127,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         //判断是否在白名单中
         String url = getService(httpHost.getSchemeName(), host, port, path);
 
-        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
         Header[] headers = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
         if (headers != null && headers.length > 0) {
             config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, headers[0].getValue());
@@ -133,10 +136,39 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        if (config.getStrategy() instanceof JsonMockStrategy){
+        if (config.getStrategy() instanceof JsonMockStrategy) {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
-        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
+            @Override
+            public Object forward(Object param) {
+                if (Pradar.isClusterTest()) {
+                    String forwarding = config.getForwarding();
+                    try {
+                        if (null != forwarding && null != request) {
+                            URI uri = new URI(forwarding);
+                            HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
+                            args[0] = httpHost1;
+
+                            Object uriField = Reflect.on(request).get("uri");
+                            if (uriField instanceof String) {
+                                Reflect.on(request).set("uri", uri.toASCIIString());
+                            } else {
+                                try {
+                                    Reflect.on(request).set("uri", uri);
+                                } catch (Exception e) {
+                                    URL url = new URL(forwarding);
+                                    Reflect.on(request).set("uri", url);
+                                }
+                            }
+                        }
+                    } catch (Throwable t) {
+                        throw new PressureMeasureError("not support forward type. params: " + param);
+                    }
+                }
+                return null;
+            }
+
             @Override
             public Object call(Object param) {
                 StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");

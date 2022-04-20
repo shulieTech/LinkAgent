@@ -153,6 +153,12 @@
                             <pattern>org.slf4j</pattern>
                             <shadedPattern>com.shulie.instrument.simulator.dependencies.org.slf4j</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <!-- 修改 guava 包名 -->
+                            <pattern>com.google.common</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common
+                            </shadedPattern>
+                        </relocation>
                     </relocations>
                     <shadedArtifactAttached>true</shadedArtifactAttached>
                     <shadedClassifierName>jar-with-dependencies</shadedClassifierName>

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,21 +14,14 @@
  */
 package com.pamirs.attach.plugin.guava.interceptor;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.CutOffResult;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
-import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.pamirs.pradar.Pradar;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 
-import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -59,7 +52,7 @@ public class CacheOperationGetAllResInterceptor extends ParametersWrapperInterce
         if (parameterArray[0] instanceof Map) {
             Map o = (Map) parameterArray[0];
             Set<Map.Entry> set = o.entrySet();
-            LinkedHashMap<Object, Object> objectObjectLinkedHashMap = Maps.newLinkedHashMap();
+            LinkedHashMap<Object, Object> objectObjectLinkedHashMap = new LinkedHashMap();
             for (Map.Entry o1 : set) {
                 if (o1.getKey() instanceof ClusterTestCacheWrapperKey) {
                     objectObjectLinkedHashMap.put(((ClusterTestCacheWrapperKey) o1.getKey()).getKey(), o1.getValue());
@@ -71,9 +64,9 @@ public class CacheOperationGetAllResInterceptor extends ParametersWrapperInterce
         } else if (parameterArray[0] instanceof Iterable) {
             Iterable<? extends Map.Entry> o = (Iterable) parameterArray[0];
             if (null != o) {
-                ArrayList<? extends Map.Entry> objects = Lists.newArrayList();
+                ArrayList<? extends Map.Entry> objects = new ArrayList();
                 Iterator iterator = o.iterator();
-                HashMap objectObjectHashMap = Maps.newHashMap();
+                HashMap objectObjectHashMap = new HashMap();
                 while (iterator.hasNext()) {
                     Map.Entry next = (Map.Entry) iterator.next();
                     Object key = next.getKey();

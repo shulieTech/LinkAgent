@@ -14,17 +14,23 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.internal.adapter.JobAdapter;
-import com.pamirs.pradar.internal.config.*;
-import com.pamirs.pradar.spi.ShadowDataSourceSPIManager;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.internal.adapter.JobAdapter;
+import com.pamirs.pradar.internal.config.MatchConfig;
+import com.pamirs.pradar.internal.config.MockConfig;
+import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
+import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
+import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
+import com.pamirs.pradar.internal.config.ShadowJob;
+import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.spi.ShadowDataSourceSPIManager;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * 所有的全局共享配置
@@ -47,7 +53,6 @@ public final class GlobalConfig {
      * rpc name list，包含 dubbo、grpc 等
      */
     private Set<MatchConfig> rpcNameWhiteList = new HashSet<MatchConfig>();
-
 
     /**
      * context path block list
@@ -85,8 +90,8 @@ public final class GlobalConfig {
     private Map<String, ShadowDatabaseConfig> shadowDatabaseConfigs = new ConcurrentHashMap<String, ShadowDatabaseConfig>();
     private Map<String, ShadowRedisConfig> shadowRedisConfigs = new ConcurrentHashMap<String, ShadowRedisConfig>();
     private Map<String, ShadowEsServerConfig> shadowEsServerConfigs = new ConcurrentHashMap<String, ShadowEsServerConfig>();
-    public static Map<String, ShadowHbaseConfig> shadowHbaseServerConfigs = new ConcurrentHashMap<String, ShadowHbaseConfig>();
-
+    public static Map<String, ShadowHbaseConfig> shadowHbaseServerConfigs
+        = new ConcurrentHashMap<String, ShadowHbaseConfig>();
 
     //应用启动特定埋点状态信息，如数据库启动对应影子库数据源加入应用是否正常
     private Map<String, String> applicationAccessStatus = new ConcurrentHashMap<String, String>();
@@ -109,7 +114,6 @@ public final class GlobalConfig {
     private Map<String, Set<String>> shadowTable = new HashMap<String, Set<String>>();
 
     private volatile Set<String> apis = new HashSet<String>();
-
 
     /**
      * redis压测数据最大过期时间
@@ -229,7 +233,6 @@ public final class GlobalConfig {
         needRegisterJobs.put(shadowJob.getClassName(), shadowJob);
     }
 
-
     public Map<String, ShadowJob> getNeedStopJobs() {
         return needStopJobs;
     }
@@ -240,7 +243,6 @@ public final class GlobalConfig {
         }
         needStopJobs.put(shadowJob.getClassName(), shadowJob);
     }
-
 
     public void removeRegisteredJob(ShadowJob shadowJob) {
         registerdJobs.remove(shadowJob.getClassName());
@@ -357,11 +359,9 @@ public final class GlobalConfig {
         return urlWhiteList;
     }
 
-
     public void setUrlWhiteList(Set<MatchConfig> urlWhiteList) {
         this.urlWhiteList = urlWhiteList;
     }
-
 
     public Set<MatchConfig> getRpcNameWhiteList() {
         return rpcNameWhiteList;
@@ -384,7 +384,7 @@ public final class GlobalConfig {
     }
 
     public void setShadowEsServerConfigs(
-            Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
+        Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
         this.shadowEsServerConfigs = shadowEsServerConfigs;
     }
 
@@ -394,6 +394,41 @@ public final class GlobalConfig {
 
     public boolean isShadowHbaseServer() {
         return isShadowHbaseServer;
+    }
+
+    /**
+     * hbase是否使用影子表替换
+     * 影子库里的影子表模式 或者影子表模式
+     *
+     * @returnx
+     */
+    public boolean isShadowTableReplace() {
+        if (isShadowHbaseServer) {
+            //影子库影子表
+            return isShadowTableInShadowDbHbaseServerMode();
+        }
+        //影子表
+        return true;
+    }
+
+    /**
+     * 是否为影子库下的影子表模式
+     */
+    static public boolean isShadowTableInShadowDbHbaseServerMode() {
+        String s = System.getenv("shadowtable_in_shadowdbhbaseserver_mode");
+        if (StringUtils.isNotBlank(s)) {
+            return Boolean.parseBoolean(s);
+        }
+        s = getSystemProperty("shadowtable_in_shadowdbhbaseserver_mode", "false");
+        return Boolean.parseBoolean(s);
+    }
+
+    static private String getSystemProperty(String key, String defau) {
+        try {
+            return System.getProperty(key, defau);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public void setShadowHbaseServer(boolean shadowHbaseServer) {
@@ -412,7 +447,6 @@ public final class GlobalConfig {
         GlobalConfig.maxRedisExpireTime = maxRedisExpireTime;
     }
 
-
     public SimulatorDynamicConfig getSimulatorDynamicConfig() {
         return simulatorDynamicConfig;
     }
@@ -423,7 +457,8 @@ public final class GlobalConfig {
 
     public boolean allowTraceRequestResponse() {
         return (Pradar.isClusterTest() &&
-                GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
-                || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig().isBusRequestResponseDataAllowTrace());
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
+            || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig()
+            .isBusRequestResponseDataAllowTrace());
     }
 }

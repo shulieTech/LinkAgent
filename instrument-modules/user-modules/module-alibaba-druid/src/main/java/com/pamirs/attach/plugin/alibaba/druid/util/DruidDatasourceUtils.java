@@ -234,8 +234,12 @@ public class DruidDatasourceUtils {
                     target.setConnectProperties(properties);
                 }
             } else {
-                target.setConnectProperties(sourceDatasource.getConnectProperties());
+                if (!"true".equals(System.getProperty("simulator.druid.notCopy.bizConProperties"))) {
+                    // TODO 临时方案 druid业务库如果有加密逻辑，影子库不需要，后续等控制台开发
+                    target.setConnectProperties(sourceDatasource.getConnectProperties());
+                }
             }
+
 
             String connectionInitSqls = ptDataSourceConf.getProperty("connectionInitSqls");
             if (StringUtils.isNotBlank(connectionInitSqls)) {

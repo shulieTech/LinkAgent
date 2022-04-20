@@ -7,3 +7,6 @@ apache-kafka中间件支持模块，
 2.0.0.1
 修复kafka打印中间件名称的问题
 https://devops.aliyun.com/task/6229a5dcde04a9003f82e6aa
+
+2.0.0.2
+支持 kafka_2.10-0.8.2.1的kafka.javaapi.producer.Producer send方法

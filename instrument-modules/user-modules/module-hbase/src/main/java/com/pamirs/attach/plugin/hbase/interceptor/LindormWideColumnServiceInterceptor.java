@@ -38,7 +38,7 @@ public class LindormWideColumnServiceInterceptor extends ParametersWrapperInterc
         if (!(arg0 instanceof String)) {
             return args;
         }
-        if (GlobalConfig.getInstance().isShadowHbaseServer()) {
+        if (!GlobalConfig.getInstance().isShadowTableReplace()) {
             return args;
         }
         if (!Pradar.isClusterTest()) {

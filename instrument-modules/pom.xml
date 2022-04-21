@@ -19,7 +19,7 @@
         <biz.classloader.inject.shadow.job.version>1.0.0</biz.classloader.inject.shadow.job.version>
         <module.datasource.common.version>2.0.0.0</module.datasource.common.version>
         <module.servlet.common.version>2.0.0.0</module.servlet.common.version>
-        <module.log.data.pusher>2.0.0.0</module.log.data.pusher>
+        <module.log.data.pusher>2.0.0.1</module.log.data.pusher>
         <module.pradar.config.fetcher>2.0.0.1</module.pradar.config.fetcher>
     </properties>
 

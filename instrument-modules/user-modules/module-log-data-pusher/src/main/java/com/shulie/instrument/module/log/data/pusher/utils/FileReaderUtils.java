@@ -119,6 +119,35 @@ public class FileReaderUtils {
         return log;
     }
 
+    /**
+     * 文件读取 小文件 全部读取
+     * @param filePath
+     * @return
+     */
+    public static String readToEnd(String filePath) {
+        BufferedReader reader = null;
+        try {
+            StringBuilder builder = new StringBuilder();
+            reader = new BufferedReader(new FileReader(filePath));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line).append("\n");
+            }
+            return builder.toString();
+        } catch (Exception e) {
+            LOGGER.error("文件读取异常："+ filePath,e);
+        } finally {
+            try {
+                if (reader != null) {
+                    reader.close();
+                }
+            } catch (Exception e) {
+            }
+        }
+        return "";
+    }
+
+
     public static int countTotalLines(String filePath) {
         File file = new File(filePath);
         try {

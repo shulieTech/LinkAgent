@@ -22,14 +22,12 @@ import com.pamirs.pradar.log.parser.DataType;
 import com.pamirs.pradar.remoting.protocol.ProtocolCode;
 import com.shulie.instrument.module.log.data.pusher.log.AgentLogFileEnum;
 import com.shulie.instrument.module.log.data.pusher.log.JVMLogResponse;
-import com.shulie.instrument.module.log.data.pusher.log.LogScript;
 import com.shulie.instrument.module.log.data.pusher.log.PullLogResponse;
 import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
 import com.shulie.instrument.module.log.data.pusher.push.DataPushManager;
 import com.shulie.instrument.module.log.data.pusher.push.impl.DefaultDataPushManager;
 import com.shulie.instrument.module.log.data.pusher.server.PusherOptions;
 import com.shulie.instrument.module.log.data.pusher.utils.FileReaderUtils;
-import com.shulie.instrument.module.log.data.pusher.utils.FileWriterUtils;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -43,7 +41,9 @@ import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -225,7 +225,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
     public CommandResponse pullLog(final Map<String, String> params) {
 
         String logName = params.get("logName");
-        String logFile = AgentLogFileEnum.find(logName,simulatorConfig.getLogPath());
+        String fileRegx = AgentLogFileEnum.find(logName);
         String rowNumStr = params.get("rowNum");
         if(StringUtils.isEmpty(rowNumStr)){
             return CommandResponse.failure("rowNum can't be null");
@@ -238,17 +238,20 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         }
         List<String> grepParam = StringUtils.isEmpty(params.get("grepParam")) ? Collections.EMPTY_LIST
                 : JSON.parseArray(params.get("grepParam"),String.class);
-        String uuid = UUID.randomUUID().toString();
-        //筛选日志
-        String resultLog = simulatorConfig.getLogPath() + File.separator + "result_"+uuid+".log";
-        //读取的文件信息
-        String targetLog = simulatorConfig.getLogPath() + File.separator + "target_"+uuid+".log";
-        //拼接执行脚本
-        String script = LogScript.script(logFile, resultLog, targetLog, grepParam, rowNum);
         try {
-            //执行并返回
-            execute(script);
-            PullLogResponse pullLogResponse = readLog(resultLog, targetLog, rowNum);
+            File file = FileReaderUtils.findNewestFile(simulatorConfig.getLogPath(),fileRegx);
+            if(file == null){
+                return CommandResponse.failure("log file not found");
+            }
+            String logContent = FileReaderUtils.reverseReadLinesWithGrep(file, rowNum, grepParam);
+            PullLogResponse pullLogResponse = new PullLogResponse();
+            pullLogResponse.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
+            pullLogResponse.setAppName(AppNameUtils.appName());
+            PullLogResponse.Log log = new PullLogResponse.Log();
+            log.setFileName(file.getName());
+            log.setFilePath(file.getAbsolutePath());
+            log.setLogContent(logContent);
+            pullLogResponse.setLogs(Collections.singletonList(log));
             return CommandResponse.success(pullLogResponse);
         } catch (Exception e) {
             logger.error("SIMULATOR: pull log occur a unknown error! ", e);
@@ -265,76 +268,37 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         }
         int pid = RuntimeUtils.getPid();
         String script = method.replace("${pid}", pid + "");
-        String uuid = UUID.randomUUID().toString();
-        String resultLog = simulatorConfig.getLogPath() + File.separator + "jvm_"+uuid+".log";
         try {
             //执行并返回
-            execute(script + " > " + resultLog);
-            //读取并返回
-            String log = FileReaderUtils.readToEnd(resultLog);
+            String info = execute(script);
             JVMLogResponse response = new JVMLogResponse();
             response.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
             response.setAppName(AppNameUtils.appName());
-            response.setInfo(log);
-            //删除
-            FileWriterUtils.delete(resultLog);
+            response.setInfo(info);
             return CommandResponse.success(response);
         } catch (Exception e) {
             logger.error("SIMULATOR: pull log occur a unknown error! ", e);
             return CommandResponse.failure("pull log occur a unknown error");
         }
-
-
     }
 
     /**
      * 脚本执行
      * @param script shell
      */
-    private void execute(String script) throws Exception {
-        String uuid = UUID.randomUUID().toString();
-        String grepShell= simulatorConfig.getLogPath() + File.separator + "script_"+uuid+".sh";
-        FileWriterUtils.writeScript(grepShell,script);
-        Process process = Runtime.getRuntime().exec(grepShell);
-        //wait end 最多等待5s  1.8版本可用waitFor(long timeout, TimeUnit unit)  此处兼容1.6
-        //脚本退出返回1
-        int exitCode = 0;
+    private String execute(String script) throws Exception {
+        Process process = Runtime.getRuntime().exec(script);
+        BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+        StringBuilder builder = new StringBuilder();
         long startTime = System.nanoTime();
         long rem = TimeUnit.SECONDS.toNanos(5L);
-        do {
-            try {
-                exitCode =  process.exitValue();
-            } catch(IllegalThreadStateException ex) {
-                if (rem > 0)
-                    Thread.sleep( Math.min(TimeUnit.NANOSECONDS.toMillis(rem) + 1, 100));
-            }
+        while ((line = br.readLine()) != null && rem > 0) {
+            builder.append(line).append('\n');
             rem = TimeUnit.SECONDS.toNanos(5L) - (System.nanoTime() - startTime);
-        } while (rem > 0 && exitCode != 1);
+        }
         process.destroy();
-        //删除脚本
-        FileWriterUtils.delete(grepShell);
-    }
-
-
-    /**
-     * 读取结果
-     * @param resultLog 日志结果
-     * @return
-     */
-    private PullLogResponse readLog(String resultLog, String targetLog ,int rowNum){
-        PullLogResponse pullLogResponse = new PullLogResponse();
-        pullLogResponse.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
-        pullLogResponse.setAppName(AppNameUtils.appName());
-        PullLogResponse.Log log = FileReaderUtils.readLines(resultLog, 0, rowNum);
-        PullLogResponse.Log target = FileReaderUtils.readLines(targetLog, 0, rowNum);
-        String[] split = target.getLogContent().split("\n");
-        log.setFilePath(split[0]);
-        log.setFileName(split[1]);
-        pullLogResponse.setLogs(Collections.singletonList(log));
-        //删除日志
-        FileWriterUtils.delete(resultLog);
-        FileWriterUtils.delete(targetLog);
-        return pullLogResponse;
+        return builder.toString();
     }
 
 }

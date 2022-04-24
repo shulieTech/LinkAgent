@@ -38,13 +38,20 @@ public class AtomikosPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
-        enhanceTemplate.enhance(this, "com.atomikos.jdbc.AbstractDataSourceBean", new EnhanceCallback() {
+        enhanceTemplate.enhance(this, "com.atomikos.jdbc.nonxa.AtomikosNonXADataSourceBean", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod getConnectionMethod = target.getDeclaredMethod("getConnection");
                 getConnectionMethod.addInterceptor(Listeners.of(DataSourceGetConnectionCutoffInterceptor.class, "Atomikos_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
+        enhanceTemplate.enhance(this, "com.atomikos.jdbc.AbstractDataSourceBean", new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod getConnectionMethod = target.getDeclaredMethod("getConnection");
+                    getConnectionMethod.addInterceptor(Listeners.of(DataSourceGetConnectionCutoffInterceptor.class, "Atomikos_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                }
+            });
         return true;
     }
 

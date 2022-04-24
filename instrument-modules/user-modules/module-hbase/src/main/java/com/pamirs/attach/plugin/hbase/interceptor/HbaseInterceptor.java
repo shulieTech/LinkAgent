@@ -108,7 +108,7 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
             return;
         }
         tableName = HBaseTableNameUtils.getTableNameNoContainsNameSpace(tableName);
-        if (GlobalConfig.getInstance().isShadowHbaseServer()) {
+        if (!GlobalConfig.getInstance().isShadowTableReplace()) {
             return;
         }
         if (Pradar.isClusterTest()) {

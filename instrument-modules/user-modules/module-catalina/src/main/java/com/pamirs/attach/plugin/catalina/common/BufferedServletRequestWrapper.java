@@ -47,6 +47,8 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
     private byte[] buffer;
     private final Request request;
     protected RequestFacade facade;
+    private ServletInputStream inputStream;
+
 
     public BufferedServletRequestWrapper(Request request) {
         this.request = request;
@@ -394,7 +396,12 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
         if (buffer == null) {
             initBuffer();
         }
-        return new BufferedServletInputStream(this.buffer);
+        if (this.inputStream == null) {
+            this.inputStream = new BufferedServletInputStream(this.buffer);
+        }
+
+        return this.inputStream;
+//        return new BufferedServletInputStream(this.buffer);
     }
 
     @Override

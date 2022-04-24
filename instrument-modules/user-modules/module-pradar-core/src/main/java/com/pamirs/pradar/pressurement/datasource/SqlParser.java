@@ -66,6 +66,9 @@ public class SqlParser {
                         String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
                         String sql = args[0];
                         String dbType = args[1];
+                        if("null".equals(dbType)){
+                            dbType = null;
+                        }
                         return parseTables(sql, dbType);
                     } catch (SQLException e) {
                         return TableParserResult.EMPTY;
@@ -84,6 +87,9 @@ public class SqlParser {
                     String sql = args[0];
                     String key = args[1];
                     String dbType = args[2];
+                    if("null".equals(dbType)){
+                        dbType = null;
+                    }
                     String midType = args[3];
                     return parseAndReplaceTableNames(sql, key, dbType, midType);
                 }
@@ -100,6 +106,9 @@ public class SqlParser {
                     String sql = args[0];
                     String key = args[1];
                     String dbType = args[2];
+                    if("null".equals(dbType)){
+                        dbType = null;
+                    }
                     return parseAndReplaceSchema(sql, key, dbType);
                 }
             }

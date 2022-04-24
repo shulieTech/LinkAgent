@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar.utils;
 
+import com.sun.management.OperatingSystemMXBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import oshi.util.FileUtil;
@@ -23,10 +24,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.management.ManagementFactory;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -94,6 +97,13 @@ public class ContainerStatsInfoCollector {
         BigDecimal systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
 
         statsInfo.cpuUsagePercent = containerCpuDelta.multiply(new BigDecimal(100)).divide(systemCpuDelta, 2, BigDecimal.ROUND_HALF_UP).doubleValue();
+        if (statsInfo.cpuUsagePercent  < 2){
+            OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+            double systemCpuLoad = osBean.getSystemCpuLoad();
+            if (systemCpuLoad != 0){
+                statsInfo.cpuUsagePercent = new BigDecimal(systemCpuLoad).multiply(new BigDecimal(100),new MathContext(2, RoundingMode.HALF_UP)).doubleValue();
+            }
+        }
 
         statsInfo.cpuIoWaitUsagePercent = Double.parseDouble(format.format(100 * (latest.systemIoWaitCpuValue - previous.systemIoWaitCpuValue) / (latest.systemCpuValue - previous.systemCpuValue)));
 

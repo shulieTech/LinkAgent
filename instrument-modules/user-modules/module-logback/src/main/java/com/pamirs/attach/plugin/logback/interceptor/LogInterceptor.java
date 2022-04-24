@@ -17,10 +17,15 @@ package com.pamirs.attach.plugin.logback.interceptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.util.COWArrayList;
 import com.pamirs.attach.plugin.logback.utils.AppenderHolder;
 import com.pamirs.pradar.CutOffResult;
+import com.pamirs.pradar.InvokeContext;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -38,11 +43,14 @@ public class LogInterceptor extends CutoffInterceptorAdaptor {
 
     protected String bizShadowLogPath;
     private static volatile Field appenderListField;
-    private static volatile Method doAppendMethod;
+    public static volatile Method doAppendMethod;
+    public static String customizedAppenderClasses;
+    public static Map<Object, InvokeContext> logEventInvokeContextMappings = new ConcurrentHashMap<Object, InvokeContext>();
     private final Logger log = LoggerFactory.getLogger(LogInterceptor.class);
 
-    public LogInterceptor(String bizShadowLogPath) {
+    public LogInterceptor(String bizShadowLogPath, String customizedAppenderClasses) {
         this.bizShadowLogPath = bizShadowLogPath;
+        LogInterceptor.customizedAppenderClasses = customizedAppenderClasses;
     }
 
     @Override
@@ -104,6 +112,10 @@ public class LogInterceptor extends CutoffInterceptorAdaptor {
         for (Object objectAppender : appenderArray) {
             try {
                 initDoAppendMethod(objectAppender);
+                // 异步压测流量,传上下文
+                if (customizedAppenderClasses != null && objectAppender.getClass().getSimpleName().equals("AsyncAppender")) {
+                    logEventInvokeContextMappings.put(e, Pradar.getInvokeContext());
+                }
                 doAppendMethod.invoke(objectAppender, e);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -121,11 +133,11 @@ public class LogInterceptor extends CutoffInterceptorAdaptor {
         }
     }
 
-    private static void initDoAppendMethod(Object objectAppender) throws NoSuchMethodException {
+    private static void initDoAppendMethod(Object objectAppender) throws NoSuchMethodException, ClassNotFoundException {
         if (doAppendMethod == null) {
             synchronized (LogInterceptor.class) {
                 if (doAppendMethod == null) {
-                    doAppendMethod = Reflect.on(objectAppender).exactMethod("doAppend", new Class[] {Object.class});
+                    doAppendMethod = objectAppender.getClass().getClassLoader().loadClass("ch.qos.logback.core.Appender").getDeclaredMethod("doAppend", new Class[] {Object.class});
                 }
             }
         }

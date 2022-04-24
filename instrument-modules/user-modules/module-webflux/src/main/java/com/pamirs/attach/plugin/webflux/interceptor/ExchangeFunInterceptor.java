@@ -16,11 +16,15 @@
 package com.pamirs.attach.plugin.webflux.interceptor;
 
 import com.pamirs.attach.plugin.webflux.common.WebFluxConstants;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.config.ExecutionCall;
+import com.pamirs.pradar.internal.config.MatchConfig;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -51,56 +55,35 @@ public class ExchangeFunInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
+        Object[] args = advice.getParameterArray();
+        final ClientRequest request = (ClientRequest) args[0];
+        if (request == null) {
+            return;
+        }
 
-        return;
-//        if (!Pradar.isClusterTest()) {
-//            return;
-//        }
-//        Object[] args = advice.getParameterArray();
-//        final ClientRequest request = (ClientRequest) args[0];
-//        if (request == null) {
-//            return;
-//        }
-//
-//        String host = request.url().getHost();
-//        int port = request.url().getPort();
-//        String path = request.url().getPath();
-//
-//        //判断是否在白名单中
-//        String url = getService(request.url().getScheme(), host, port, path);
-//
-//        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
-//
-//        config.addArgs("url", url);
-//        config.addArgs("request", request);
-//        config.addArgs("method", "uri");
-//        config.addArgs("isInterface", Boolean.FALSE);
-//        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
-//                new ExecutionCall() {
-//                    @Override
-//                    public Object call(Object param) {
-//                        StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
-//
-//                        try {
-//                            HttpEntity entity = null;
-//                            if (param instanceof String) {
-//                                entity = new StringEntity(String.valueOf(param), "UTF-8");
-//                            } else {
-//                                entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
-//                            }
-//                            BasicHttpResponse response = new BasicHttpResponse(statusline);
-//                            response.setEntity(entity);
-//
-//                            if (HttpClientConstants.clazz == null) {
-//                                HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
-//                            }
-//                            return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
-//
-//                        } catch (Exception e) {
-//                        }
-//                        return null;
-//                    }
-//                });
+        String host = request.url().getHost();
+        int port = request.url().getPort();
+        String path = request.url().getPath();
+
+        //判断是否在白名单中
+        String url = getService(request.url().getScheme(), host, port, path);
+
+        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+
+        config.addArgs("url", url);
+        config.addArgs("request", request);
+        config.addArgs("method", "url");
+        config.addArgs("isInterface", Boolean.FALSE);
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
+                new ExecutionCall() {
+                    @Override
+                    public Object call(Object param) {
+                        return param;
+                    }
+                });
     }
 
     @Override

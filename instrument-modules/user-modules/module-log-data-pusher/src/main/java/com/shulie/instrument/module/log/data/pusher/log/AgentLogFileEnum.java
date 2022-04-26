@@ -11,44 +11,44 @@ public enum AgentLogFileEnum {
     /**
      * 获取trace日志的最近一个文件
      */
-    PRADAR_TRACE("pradar_trace","$(ls -t  %s/pradar_trace.log.[0-9]* |head -n 1)"),
+    PRADAR_TRACE("pradar_trace","^pradar_trace.log.\\d+$"),
     /**
      * 获取trace推送记录文件
      */
-    PRADAR_TRACE_IDX("pradar_trace_idx","$(ls %s/pradar_trace.log.idx)"),
+    PRADAR_TRACE_IDX("pradar_trace_idx","^pradar_trace.log.idx"),
     /**
      * 获取monitor日志的最近一个文件
      */
-    PRADAR_MONITOR("pradar_monitor","$(ls -t  %s/pradar_monitor.log.[0-9]* |head -n 1)"),
+    PRADAR_MONITOR("pradar_monitor","^pradar_monitor.log.\\d+$"),
 
     /**
      * 获取monitor推送记录文件
      */
-    PRADAR_MONITOR_IDX("pradar_monitor_idx","$(ls %s/pradar_monitor.log.idx)"),
+    PRADAR_MONITOR_IDX("pradar_monitor_idx","^pradar_monitor.log.idx"),
 
     /**
      * 获取simulator日志文件
      */
-    SIMULATOR("simulator","$(ls %s/simulator.log)"),
-    SIMULATOR_ERROR("simulator_error","$(ls -t  %s/simulator-error.log.[0-9]* |head -n 1)"),
+    SIMULATOR("simulator","^simulator.log"),
+    SIMULATOR_ERROR("simulator_error","^simulator-error.log.\\d+$"),
 
     /**
      * 获取simulator-agent日志文件
      */
-    SIMULATOR_AGENT("simulator_agent","$(ls %s/simulator-agent.log)"),
-    SIMULATOR_AGENT_ERROR("simulator_agent_error","$(ls -t %s/simulator-agent-error.log.[0-9]* |head -n 1)"),
+    SIMULATOR_AGENT("simulator_agent","^simulator-agent.log"),
+    SIMULATOR_AGENT_ERROR("simulator_agent_error","^simulator-agent-error.log.\\d+$"),
 
     ;
 
 
     private String code;
 
-    private String fileScript;
+    private String regx;
 
 
-    AgentLogFileEnum(String code, String fileScript) {
+    AgentLogFileEnum(String code, String regx) {
         this.code = code;
-        this.fileScript = fileScript;
+        this.regx = regx;
     }
 
 
@@ -56,8 +56,8 @@ public enum AgentLogFileEnum {
         return code;
     }
 
-    public String getFileScript() {
-        return fileScript;
+    public String getRegx() {
+        return regx;
     }
 
     /**
@@ -65,13 +65,13 @@ public enum AgentLogFileEnum {
      * @param code
      * @return
      */
-    public static String find(String code,String rootPath){
+    public static String find(String code){
         if(StringUtils.isEmpty(code)){
             return null;
         }
         for (AgentLogFileEnum value : AgentLogFileEnum.values()) {
             if(value.getCode().equals(code)){
-                return String.format(value.getFileScript(),rootPath);
+                return value.getRegx();
             }
         }
         return code;

@@ -24,7 +24,7 @@ import org.apache.commons.lang.ArrayUtils;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/03/22 5:28 下午
  */
-public abstract class AbstractFilterInterceptor extends ParametersWrapperInterceptorAdaptor {
+public abstract class AbstractFilterInterceptor extends ModificationInterceptorAdaptor {
 
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {

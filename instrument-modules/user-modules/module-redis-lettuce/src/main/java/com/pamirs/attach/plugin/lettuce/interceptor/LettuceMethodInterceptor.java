@@ -19,6 +19,7 @@ import com.pamirs.attach.plugin.dynamic.ResourceManager;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
+import com.pamirs.attach.plugin.lettuce.utils.ReflectFieldCache;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
@@ -177,9 +178,9 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
 
     protected void appendEndPoint(Object target, final SpanRecord spanRecord) {
         try {
-            final Object connection = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_CONNECTION);
+            final Object connection = Reflect.on(target).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_CONNECTION, target));
 
-            final Object t = Reflect.on(connection).get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
+            final Object t = Reflect.on(connection).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER, connection));
             ;
             DefaultEndpoint endpoint = null;
             if ("io.lettuce.core.masterslave.MasterSlaveChannelWriter".equals(t.getClass().getName())) {
@@ -187,8 +188,8 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                     /**
                      * 这是主从的
                      */
-                    MasterSlaveConnectionProvider provider = Reflect.on(t).get("masterSlaveConnectionProvider");
-                    RedisURI redisUri = Reflect.on(provider).get("initialRedisUri");
+                    MasterSlaveConnectionProvider provider = Reflect.on(t).get(ReflectFieldCache.get("masterSlaveConnectionProvider", t));
+                    RedisURI redisUri = Reflect.on(provider).get(ReflectFieldCache.get("initialRedisUri", provider));
                     spanRecord.setRemoteIp(redisUri.getHost());
                     spanRecord.setPort(redisUri.getPort());
                 } catch (Throwable thx) {
@@ -200,8 +201,8 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                  */
             } else if ("io.lettuce.core.masterslave.SentinelConnector$1".equals(t.getClass().getName())) {
                 try {
-                    Object sentinelConnector = Reflect.on(t).get("this$0");
-                    RedisURI redisURI = Reflect.on(sentinelConnector).get("redisURI");
+                    Object sentinelConnector = Reflect.on(t).get(ReflectFieldCache.get("this$0", t));
+                    RedisURI redisURI = Reflect.on(sentinelConnector).get(ReflectFieldCache.get("redisURI", sentinelConnector));
                     List<RedisURI> sentinels = redisURI.getSentinels();
                     RedisURI current = sentinels.get(0);
                     spanRecord.setRemoteIp(current.getHost());
@@ -215,16 +216,16 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                 endpoint = (DefaultEndpoint) t;
             } else {
                 try {
-                    endpoint = Reflect.on(t).get(LettuceConstants.REFLECT_FIELD_DEFAULT_WRITER);
+                    endpoint = Reflect.on(t).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_DEFAULT_WRITER, t));
                 } catch (Throwable w) {
-                    endpoint = Reflect.on(t).get(LettuceConstants.REFLECT_FIELD_WRITER);
+                    endpoint = Reflect.on(t).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_WRITER, t));
                 }
             }
             if (endpoint == null) {
                 spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
                 return;
             }
-            Channel channel = Reflect.on(endpoint).get(LettuceConstants.REFLECT_FIELD_CHANNEL);
+            Channel channel = Reflect.on(endpoint).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_CHANNEL, endpoint));
             if (channel == null) {
                 spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
                 return;

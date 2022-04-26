@@ -26,7 +26,7 @@ abstract class ResultInterceptor extends BaseInterceptor {
     @Override
     public final void doAfter(Advice advice) throws Throwable {
         Object result = getResult(advice);
-        ProcessController.returnImmediately(advice.getBehavior().getReturnType(), result);
+        advice.returnImmediately(result);
     }
 
     /**

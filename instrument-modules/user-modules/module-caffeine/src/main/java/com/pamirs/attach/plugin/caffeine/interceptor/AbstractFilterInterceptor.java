@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.caffeine.interceptor;
 
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ModificationInterceptorAdaptor;
+import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ArrayUtils;
 
@@ -23,7 +24,7 @@ import org.apache.commons.lang.ArrayUtils;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/03/22 5:28 下午
  */
-public abstract class AbstractFilterInterceptor extends ModificationInterceptorAdaptor {
+public abstract class AbstractFilterInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {

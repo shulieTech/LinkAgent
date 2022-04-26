@@ -141,7 +141,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         } catch (ReflectException e) {
         }
         if(groupId == null){
-            groupId = fetchGroupId(containerProperties);
+            groupId = fetchGroupIdFromConfig(containerProperties);
         }
         if(groupId == null){
             logger.warn("SIMULATOR: shadow kafka consumer config cant find groupId, containerProperties : {}",containerProperties );
@@ -403,7 +403,13 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         return topicList;
     }
 
-    private String fetchGroupId(Object object){
+    /**
+     * 如果最终都没有取到groupId, 则从控制台配置上获取
+     *
+     * @param object
+     * @return
+     */
+    private String fetchGroupIdFromConfig(Object object){
         String[] topics = null;
         try {
             topics = Reflect.on(object).call(KafkaConstants.REFLECT_METHOD_GET_TOPICS).get();

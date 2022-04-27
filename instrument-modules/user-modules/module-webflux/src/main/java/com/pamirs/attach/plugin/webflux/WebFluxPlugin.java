@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,10 +16,7 @@ package com.pamirs.attach.plugin.webflux;
 
 
 import com.pamirs.attach.plugin.webflux.common.WebFluxConstants;
-import com.pamirs.attach.plugin.webflux.interceptor.AbstractServerHttpRequestInterceptor;
-import com.pamirs.attach.plugin.webflux.interceptor.HandlerResultInterceptor;
-import com.pamirs.attach.plugin.webflux.interceptor.HandlerStartInterceptor;
-import com.pamirs.attach.plugin.webflux.interceptor.HeaderMethodInterceptor;
+import com.pamirs.attach.plugin.webflux.interceptor.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -39,7 +36,7 @@ import java.util.List;
  * @Description:
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = WebFluxConstants.MODULE_NAME, version = "1.0.0", author = "angju@shulie.io",description = "webflux,spring cloud gateway 容器")
+@ModuleInfo(id = WebFluxConstants.MODULE_NAME, version = "1.0.0", author = "angju@shulie.io", description = "webflux,spring cloud gateway 容器")
 public class WebFluxPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
 
@@ -102,11 +99,28 @@ public class WebFluxPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
+//        enhanceTemplate.enhance(this, "org.springframework.web.reactive.function.client.DefaultClientRequestBuilder$BodyInserterRequest", new EnhanceCallback() {
+//            @Override
+//            public void doEnhance(InstrumentClass target) {
+//                //final InstrumentMethod buildMethod = target.getConstructor("org.springframework.http.HttpMethod", "java.net.URI", "org.springframework.http.HttpHeaders", "org.springframework.util.MultiValueMap", "org.springframework.web.reactive.function.BodyInserter", "java.util.Map");
+//                final InstrumentMethod buildMethod = target.getConstructors();
+//                buildMethod.addInterceptor(Listeners.of(RequestBuildInterceptor.class));
+//            }
+//        });
+
+
+        enhanceTemplate.enhance(this, "org.springframework.web.reactive.function.client.ExchangeFunctions$DefaultExchangeFunction", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                final InstrumentMethod invokeHandler = target.getDeclaredMethod("exchange",
+                        "org.springframework.web.reactive.function.client.ClientRequest");
+                invokeHandler.addInterceptor(Listeners.of(ExchangeFunInterceptor.class));
+            }
+        });
 
 
         return true;
     }
-
 
 
 }

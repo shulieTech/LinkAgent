@@ -37,7 +37,6 @@ public class HeaderMethodInterceptor extends CutoffInterceptorAdaptor {
         }
         HttpHeaders headers = (HttpHeaders) advice.getTarget();
 
-
         HttpHeaders writableHttpHeaders = HttpHeaders.writableHttpHeaders(headers);
 
         writableHttpHeaders.add(String.valueOf(advice.getParameterArray()[0]), String.valueOf(advice.getParameterArray()[1]));

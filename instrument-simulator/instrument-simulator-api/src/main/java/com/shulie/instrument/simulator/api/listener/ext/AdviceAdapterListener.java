@@ -121,10 +121,13 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
             case IMMEDIATELY_RETURN: {
                 final InvokeEvent invokeEvent = (InvokeEvent) event;
                 Advice advice = opStack.popByExpectInvokeId(invokeEvent.getInvokeId());
-                if (advice != null) {
-                    advice.destroy();
+                try {
+                    return ProcessControlEntity.fromAdvice(advice);
+                } finally {
+                    if (advice != null) {
+                        advice.destroy();
+                    }
                 }
-                return ProcessControlEntity.fromAdvice(advice);
             }
 
             case RETURN: {
@@ -137,8 +140,11 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                     } finally {
                         adviceListener.after(advice);
                     }
-                    wrapAdvice.destroy();
-                    return ProcessControlEntity.fromAdvice(wrapAdvice);
+                    try {
+                        return ProcessControlEntity.fromAdvice(wrapAdvice);
+                    } finally {
+                        wrapAdvice.destroy();
+                    }
                 }
             }
             case THROWS: {
@@ -151,8 +157,11 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                     } finally {
                         adviceListener.after(advice);
                     }
-                    wrapAdvice.destroy();
-                    return ProcessControlEntity.fromAdvice(wrapAdvice);
+                    try {
+                        return ProcessControlEntity.fromAdvice(wrapAdvice);
+                    } finally {
+                        wrapAdvice.destroy();
+                    }
                 }
             }
 

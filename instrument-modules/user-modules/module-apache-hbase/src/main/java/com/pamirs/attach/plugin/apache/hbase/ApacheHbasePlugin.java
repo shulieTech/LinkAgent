@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.apache.hbase;
 
 import com.pamirs.attach.plugin.apache.hbase.interceptor.ConnectionShadowInterceptor;
 import com.pamirs.attach.plugin.apache.hbase.interceptor.HConnectionShadowReplaceInterceptor;
+import com.pamirs.attach.plugin.apache.hbase.interceptor.TableCutoffInterceptor;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
@@ -56,37 +57,48 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
             @Override
             public void doEnhance(InstrumentClass target) {
                 final InstrumentMethod connectionMethod = target.getDeclaredMethod("createConnection",
-                    "org.apache.hadoop.conf.Configuration", "java.util.concurrent.ExecutorService",
-                    "org.apache.hadoop.hbase.security.User");
+                        "org.apache.hadoop.conf.Configuration", "java.util.concurrent.ExecutorService",
+                        "org.apache.hadoop.hbase.security.User");
                 connectionMethod.addInterceptor(
-                    Listeners.of(ConnectionShadowInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
+                        Listeners.of(ConnectionShadowInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
             }
 
         });
 
         this.enhanceTemplate.enhance(this, "org.apache.hadoop.hbase.client.ConnectionManager$HConnectionImplementation",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    final InstrumentMethod connectionMethod = target.getDeclaredMethods("isMasterRunning",
-                        "isTableAvailable", "locateRegion", "clearRegionCache", "cacheLocation",
-                        "deleteCachedRegionLocation", "relocateRegion", "updateCachedLocations", "locateRegions",
-                        "getMaster", "getAdmin", "getClient", "getRegionLocation", "clearCaches",
-                        "getKeepAliveMasterService", "isDeadServer", "getNonceGenerator", "getAsyncProcess",
-                        "getNewRpcRetryingCallerFactory", "getRpcRetryingCallerFactory", "getRpcControllerFactory",
-                        "getConnectionConfiguration", "isManaged", "getStatisticsTracker", "getBackoffPolicy",
-                        "getConnectionMetrics", "hasCellBlockSupport", "getConfiguration", "getTable", "getRegionLocator",
-                        "isTableEnabled", "isTableDisabled", "listTables", "getTableNames", "listTableNames",
-                        "getHTableDescriptor", "processBatch", "processBatchCallback", "setRegionCachePrefetch",
-                        "getRegionCachePrefetch", "getCurrentNrHRS", "getHTableDescriptorsByTableName",
-                        "getHTableDescriptors", "isClosed", "getBufferedMutator", "close");
-                    connectionMethod.addInterceptor(
-                        Listeners.of(HConnectionShadowReplaceInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY,
-                            Interceptors.SCOPE_CALLBACK));
-                }
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod connectionMethod = target.getDeclaredMethods("isMasterRunning",
+                                "isTableAvailable", "locateRegion", "clearRegionCache", "cacheLocation",
+                                "deleteCachedRegionLocation", "relocateRegion", "updateCachedLocations", "locateRegions",
+                                "getMaster", "getAdmin", "getClient", "getRegionLocation", "clearCaches",
+                                "getKeepAliveMasterService", "isDeadServer", "getNonceGenerator", "getAsyncProcess",
+                                "getNewRpcRetryingCallerFactory", "getRpcRetryingCallerFactory", "getRpcControllerFactory",
+                                "getConnectionConfiguration", "isManaged", "getStatisticsTracker", "getBackoffPolicy",
+                                "getConnectionMetrics", "hasCellBlockSupport", "getConfiguration", "getTable", "getRegionLocator",
+                                "isTableEnabled", "isTableDisabled", "listTables", "getTableNames", "listTableNames",
+                                "getHTableDescriptor", "processBatch", "processBatchCallback", "setRegionCachePrefetch",
+                                "getRegionCachePrefetch", "getCurrentNrHRS", "getHTableDescriptorsByTableName",
+                                "getHTableDescriptors", "isClosed", "getBufferedMutator", "close");
+                        connectionMethod.addInterceptor(
+                                Listeners.of(HConnectionShadowReplaceInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY,
+                                        Interceptors.SCOPE_CALLBACK));
+                    }
 
-            });
+                });
+
+        enhanceTemplate.enhance(this, "org.apache.hadoop.hbase.client.HTable", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("get", "org.apache.hadoop.hbase.client.Get");
+                getMethod.addInterceptor(Listeners.of(TableCutoffInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod method = target.getDeclaredMethods("append", "increment", "exists", "existsAll", "getScanner", "put", "checkAndPut", "delete", "checkAndDelete", "mutateRow", "checkAndMutate");
+                method.addInterceptor(Listeners.of(TableCutoffInterceptor.class, "hbase", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            }
+        });
 
         initEventListener();
         return true;
@@ -105,7 +117,7 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
                 }
 
                 try {
-                    MediatorConnection.dynamic((ShadowHbaseConfig)event.getTarget());
+                    MediatorConnection.dynamic((ShadowHbaseConfig) event.getTarget());
                 } catch (Exception e) {
                 }
                 return EventResult.success(event.getTarget());
@@ -125,7 +137,7 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
                     return EventResult.IGNORE;
                 }
                 try {
-                    MediatorConnection.disable((String)event.getTarget());
+                    MediatorConnection.disable((String) event.getTarget());
                 } catch (Exception e) {
                 }
                 return EventResult.success(event.getTarget());

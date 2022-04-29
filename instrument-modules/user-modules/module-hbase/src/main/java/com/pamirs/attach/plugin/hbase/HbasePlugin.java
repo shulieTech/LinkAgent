@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -99,19 +99,19 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod valueOfMethod0 = target.getDeclaredMethod("valueOf", "byte[]");
-                valueOfMethod0.addInterceptor(Listeners.of(HbaseTableInterceptor.class, "HBASE_OP_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                valueOfMethod0.addInterceptor(Listeners.of(HbaseTableInterceptor.class));
 
                 InstrumentMethod valueOfMethod1 = target.getDeclaredMethod("valueOf", "java.lang.String");
-                valueOfMethod1.addInterceptor(Listeners.of(HbaseTableInterceptor.class, "HBASE_OP_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                valueOfMethod1.addInterceptor(Listeners.of(HbaseTableInterceptor.class));
 
                 InstrumentMethod valueOfMethod2 = target.getDeclaredMethod("valueOf", "java.lang.String", "java.lang.String");
-                valueOfMethod2.addInterceptor(Listeners.of(HbaseTableValueOfInterceptor.class, "HBASE_OP_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                valueOfMethod2.addInterceptor(Listeners.of(HbaseTableValueOfInterceptor.class));
 
                 InstrumentMethod valueOfMethod3 = target.getDeclaredMethod("valueOf", "byte[]", "byte[]");
-                valueOfMethod3.addInterceptor(Listeners.of(HbaseTableValueOfInterceptor.class, "HBASE_OP_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                valueOfMethod3.addInterceptor(Listeners.of(HbaseTableValueOfInterceptor.class));
 
                 InstrumentMethod valueOfMethod4 = target.getDeclaredMethod("valueOf", "java.nio.ByteBuffer", "java.nio.ByteBuffer");
-                valueOfMethod4.addInterceptor(Listeners.of(HbaseTableValueOfInterceptor.class, "HBASE_OP_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                valueOfMethod4.addInterceptor(Listeners.of(HbaseTableValueOfInterceptor.class));
             }
         });
 

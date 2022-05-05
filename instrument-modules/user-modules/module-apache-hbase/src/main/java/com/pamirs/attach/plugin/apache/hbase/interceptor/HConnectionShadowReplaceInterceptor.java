@@ -1,11 +1,5 @@
 package com.pamirs.attach.plugin.apache.hbase.interceptor;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-
 import com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver.HbaseMediatorConnection;
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder;
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder.Supplier;
@@ -13,26 +7,20 @@ import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
-import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.BufferedMutatorParams;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.security.User;
 import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -47,10 +35,6 @@ import org.slf4j.Logger;
 public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdaptor {
 
     private final Logger logger = org.slf4j.LoggerFactory.getLogger(HConnectionShadowReplaceInterceptor.class);
-
-    public static final String sf_token = "hbase.sf.token";
-
-    public static final String sf_username = "hbase.sf.username";
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
@@ -75,7 +59,7 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
                 @Override
                 public ClusterConnection get(ClusterConnection busClusterConnection) {
                     Configuration busConfiguration = busClusterConnection.getConfiguration();
-                    Configuration ptConfiguration = matching(busConfiguration);
+                    Configuration ptConfiguration = ShadowConnectionHolder.matching(busConfiguration);
                     if (ptConfiguration != null) {
                         try {
                             Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration,
@@ -99,7 +83,7 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
             String znode = busConfiguration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
 
             throw new PressureMeasureError(
-                "hbase未配置影子库, HConnectionShadowReplaceInterceptor business config quorums:  " + quorum
+                "[hbase]hbase未配置影子库, HConnectionShadowReplaceInterceptor business config quorums:  " + quorum
                     + " +, port: " + port + ", znode:" + znode + " ---------- ");
         }
     }
@@ -340,68 +324,5 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
         }
         return new RuntimeException(
             "[hbase] shadow connection method invoke process error! behaviorName : " + behaviorName + " args : " + sb);
-    }
-
-    private Configuration matching(Configuration configuration) {
-        String quorum = configuration.get(HConstants.ZOOKEEPER_QUORUM);
-        String port = configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT);
-        String znode = configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
-        Map<String, ShadowHbaseConfig> hbaseConfigMap = GlobalConfig.getInstance().getShadowHbaseServerConfigs();
-
-        ShadowHbaseConfig ptConfig = null;
-        SS:
-        for (Map.Entry<String, ShadowHbaseConfig> entry : hbaseConfigMap.entrySet()) {
-            String[] split = entry.getKey().split("\\|");
-            ShadowHbaseConfig shadowHbaseConfig = entry.getValue();
-            if (split.length == 3) {
-                if (logger.isInfoEnabled()) {
-                    logger.info(
-                        "HConnectionShadowReplaceInterceptor business config quorums:{}, port:{}, znode:{} ---------- "
-                            + "perfomanceTest config quorums:{}, port:{}, znode:{}", quorum, port, znode,
-                        shadowHbaseConfig.getQuorum(), shadowHbaseConfig.getPort(), shadowHbaseConfig.getZnode());
-                }
-                if (!split[1].equals(port) || !split[2].equals(znode)) {
-                    continue;
-                }
-                List<String> quorums = Arrays.asList(split[0].split(","));
-                String[] bquorums = quorum.split(",");
-                for (String bquorum : bquorums) {
-                    if (!quorums.contains(bquorum)) {
-                        continue SS;
-                    }
-                }
-                ptConfig = entry.getValue();
-                break;
-            } else {
-                logger.error("business config key is error:{}", entry.getKey());
-            }
-        }
-
-        if (ptConfig == null) {
-            logger.warn("hbase shadow base config not find , business config key is {}", quorum + "|" + port + "|" + znode);
-        }
-
-        if (ptConfig != null) {
-            Configuration ptConfiguration = HBaseConfiguration.create();
-            ptConfiguration.addResource(configuration);
-
-            ptConfiguration.set(HConstants.ZOOKEEPER_CLIENT_PORT, ptConfig.getPort());
-            ptConfiguration.set(HConstants.ZOOKEEPER_QUORUM, ptConfig.getQuorum());
-            ptConfiguration.set(HConstants.ZOOKEEPER_ZNODE_PARENT, ptConfig.getZnode());
-            if (null != ptConfig.getToken()) {
-                ptConfiguration.set(sf_token, ptConfig.getToken());
-            }
-            if (null != ptConfig.getUsername()) {
-                ptConfiguration.set(sf_username, ptConfig.getUsername());
-            }
-
-            if (null != ptConfig.getParams()) {
-                for (Map.Entry<String, String> entry : ptConfig.getParams().entrySet()) {
-                    ptConfiguration.set(entry.getKey(), entry.getValue());
-                }
-            }
-            return ptConfiguration;
-        }
-        return null;
     }
 }

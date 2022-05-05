@@ -21,10 +21,12 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.log.parser.DataType;
 import com.pamirs.pradar.remoting.protocol.ProtocolCode;
+import com.shulie.instrument.module.log.data.pusher.log.AgentLogFileEnum;
 import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
 import com.shulie.instrument.module.log.data.pusher.log.PullLogResponse;
 import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
@@ -41,9 +43,18 @@ import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import com.shulie.instrument.simulator.api.util.ParameterUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -227,8 +238,48 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
             }
             return CommandResponse.success(pullLogResponse);
         } catch (Throwable e) {
-            logger.error("SIMULATOR: pullAgentLog occured a unknow error! ", e);
-            return CommandResponse.failure("pullAgentLog occured a unknow error! " + e.getMessage());
+            logger.error("SIMULATOR: pullAgentLog occur a unknown error! ", e);
+            return CommandResponse.failure("pullAgentLog occur a unknown error! " + e.getMessage());
         }
     }
+
+    @Command("pullLog")
+    public CommandResponse pullLog(final Map<String, String> params) {
+
+        String logName = params.get("logName");
+        String fileRegx = AgentLogFileEnum.find(logName);
+        String rowNumStr = params.get("rowNum");
+        if(StringUtils.isEmpty(rowNumStr)){
+            return CommandResponse.failure("rowNum can't be null");
+        }
+        int rowNum;
+        try {
+            rowNum = Integer.parseInt(rowNumStr);
+        } catch (NumberFormatException e) {
+            return CommandResponse.failure("rowNum invalid");
+        }
+        List<String> grepParam = StringUtils.isEmpty(params.get("grepParam")) ? Collections.EMPTY_LIST
+                : JSON.parseArray(params.get("grepParam"),String.class);
+        try {
+            File file = FileReaderUtils.findNewestFile(simulatorConfig.getLogPath(),fileRegx);
+            if(file == null){
+                return CommandResponse.failure("log file not found");
+            }
+            String logContent = FileReaderUtils.reverseReadLinesWithGrep(file, rowNum, grepParam);
+            PullLogResponse pullLogResponse = new PullLogResponse();
+            pullLogResponse.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
+            pullLogResponse.setAppName(AppNameUtils.appName());
+            PullLogResponse.Log log = new PullLogResponse.Log();
+            log.setFileName(file.getName());
+            log.setFilePath(file.getAbsolutePath());
+            log.setLogContent(logContent);
+            pullLogResponse.setLogs(Collections.singletonList(log));
+            return CommandResponse.success(pullLogResponse);
+        } catch (Exception e) {
+            logger.error("SIMULATOR: pull log occur a unknown error! ", e);
+            return CommandResponse.failure("pull log occur a unknown error");
+        }
+    }
+
+
 }

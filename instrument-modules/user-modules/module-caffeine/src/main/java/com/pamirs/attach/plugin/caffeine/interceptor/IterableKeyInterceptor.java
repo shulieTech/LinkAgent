@@ -18,12 +18,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/03/22 5:25 下午
  */
+@ListenerBehavior(isFilterClusterTest = true)
 public class IterableKeyInterceptor extends AbstractFilterInterceptor {
 
     @Override

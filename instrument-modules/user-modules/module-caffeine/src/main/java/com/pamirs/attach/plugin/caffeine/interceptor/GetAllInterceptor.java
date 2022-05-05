@@ -20,6 +20,7 @@ import java.util.Set;
 
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -27,6 +28,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
  * @since 2021/03/24 2:37 下午
  */
 @SuppressWarnings({"rawtypes","unchecked"})
+@ListenerBehavior(isFilterClusterTest = true)
 public class GetAllInterceptor extends IterableKeyInterceptor {
 
     @Override

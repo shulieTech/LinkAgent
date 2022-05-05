@@ -14,10 +14,11 @@
  */
 package com.shulie.instrument.module.log.data.pusher.server;
 
-import com.pamirs.pradar.remoting.protocol.ProtocolCode;
-import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
-
 import java.util.List;
+
+import com.pamirs.pradar.remoting.protocol.ProtocolCode;
+import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
+import com.shulie.instrument.module.log.data.pusher.log.reader.impl.LogPusherOptions;
 
 /**
  * @Description
@@ -47,7 +48,7 @@ public class PusherOptions {
     /**
      * 使用的data pusher
      */
-    private String dataPusher;
+    private DataPushEnum dataPusher;
 
     /**
      * 调用超时时间
@@ -58,6 +59,19 @@ public class PusherOptions {
      * 序列化协议
      */
     private int protocolCode = ProtocolCode.JAVA;
+
+    public HttpPushOptions getHttpPushOptions() {
+        return httpPushOptions;
+    }
+
+    public void setHttpPushOptions(HttpPushOptions httpPushOptions) {
+        this.httpPushOptions = httpPushOptions;
+    }
+
+    /**
+     * http通道配置信息
+     */
+    private HttpPushOptions httpPushOptions;
 
     /**
      * 日志推送启动参数
@@ -96,11 +110,11 @@ public class PusherOptions {
         this.serverZkPath = serverZkPath;
     }
 
-    public String getDataPusher() {
+    public DataPushEnum getDataPusher() {
         return dataPusher;
     }
 
-    public void setDataPusher(String dataPusher) {
+    public void setDataPusher(DataPushEnum dataPusher) {
         this.dataPusher = dataPusher;
     }
 

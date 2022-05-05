@@ -96,7 +96,7 @@
         <appender-ref ref="ASYNC-TIME-CONSUMING-APPENDER"/>
     </logger>
 
-    <logger name="com.shulie.instrument.module.config.fetcher.config" level="warn" additivity="false"/>
+<!--    <logger name="com.shulie.instrument.module.config.fetcher.config" level="warn" additivity="false"/>-->
 
     <root level="${SIMULATOR_LOG_LEVEL}">
         <appender-ref ref="ASYNC-SIMULATOR-FILE-APPENDER"/>

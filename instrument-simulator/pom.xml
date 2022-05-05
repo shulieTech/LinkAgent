@@ -5,7 +5,7 @@
 
     <groupId>io.shulie.instrument.simulator</groupId>
     <artifactId>simulator</artifactId>
-    <version>5.3.0</version>
+    <version>5.3.1</version>
     <packaging>pom</packaging>
 
     <name>simulator ${project.version}</name>
@@ -17,8 +17,8 @@
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
-        <simulator.major.version>5.3.0</simulator.major.version>
-        <simulator.minor.version>2</simulator.minor.version>
+        <simulator.major.version>5.3.1</simulator.major.version>
+        <simulator.minor.version>0</simulator.minor.version>
     </properties>
 
     <profiles>

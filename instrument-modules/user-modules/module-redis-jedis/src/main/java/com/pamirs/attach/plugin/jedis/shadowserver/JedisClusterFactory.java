@@ -75,16 +75,17 @@ public class JedisClusterFactory extends AbstractRedisServerFactory<JedisSlotBas
         if (connection instanceof JedisSlotBasedConnectionHandler) {
             Reflect reflect = Reflect.on(Reflect.on(connection).get("cache"));
 
-
             GenericObjectPoolConfig poolConfig = reflect.get("poolConfig");
             int connectionTimeout = reflect.get("connectionTimeout");
             int soTimeout = reflect.get("soTimeout");
-            JedisSlotBasedConnectionHandler pressureJedisPool = null;
-            String shadowPassword = shadowConfig.getPassword();
+            // 原业务密码
+            String password = reflect.get("password");
+            JedisSlotBasedConnectionHandler pressureJedisPool;
+            String shadowPassword = shadowConfig.getPassword(password);
             if (!StringUtil.isEmpty(shadowPassword)) {
                 pressureJedisPool = new JedisSlotBasedConnectionHandler(convert(shadowConfig.getNodeNums()),
                         poolConfig, connectionTimeout, soTimeout,
-                        shadowConfig.getPassword());
+                        shadowConfig.getPassword(password));
             } else {
                 pressureJedisPool = new JedisSlotBasedConnectionHandler(convert(shadowConfig.getNodeNums()),
                         poolConfig, connectionTimeout, soTimeout);

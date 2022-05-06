@@ -119,6 +119,16 @@ public class ShadowDatabaseConfig {
     private String shadowPassword;
 
     /**
+     * 影子库账号前缀
+     */
+    private String shadowAccountPrefix;
+
+    /**
+     * 影子库账号后缀
+     */
+    private String shadowAccountSuffix;
+
+    /**
      * 影子库schema
      */
     private String shadowSchema;
@@ -254,16 +264,40 @@ public class ShadowDatabaseConfig {
         this.shadowDriverClassName = shadowDriverClassName;
     }
 
-    public String getShadowUsername() {
-        return shadowUsername;
+    /**
+     * 获取影子库用户名，可在业务用户名上加载固定前后缀生成
+     * oracle的用户名必须以 c## 开头
+     *
+     * @param bizUserName 业务库用户名，非必填
+     * @return 影子库用户名
+     */
+    public String getShadowUsername(String bizUserName) {
+        if (stringIsEmpty(bizUserName) || !stringIsEmpty(shadowUsername)) {
+            return shadowUsername;
+        }
+        // oracle 原用户名为 c##admin，处理以后的用户名为 c##PT_admin
+        if (isOracle() && bizUserName.toUpperCase().startsWith("C##")) {
+            return bizUserName.substring(0, 3) + this.shadowAccountPrefix + bizUserName.substring(3)
+                + this.shadowAccountSuffix;
+        }
+        return this.shadowAccountPrefix + bizUserName + this.shadowAccountSuffix;
     }
 
     public void setShadowUsername(String shadowUsername) {
         this.shadowUsername = shadowUsername;
     }
 
-    public String getShadowPassword() {
-        return shadowPassword;
+    /**
+     * 获取影子库密码，可在业务密码上加载固定前后缀生成
+     *
+     * @param bizPassword 业务库密码，非必填
+     * @return 影子库密码
+     */
+    public String getShadowPassword(String bizPassword) {
+        if (stringIsEmpty(bizPassword) || !stringIsEmpty(shadowPassword)) {
+            return shadowPassword;
+        }
+        return this.shadowAccountPrefix + bizPassword + this.shadowAccountSuffix;
     }
 
     public void setShadowPassword(String shadowPassword) {
@@ -338,6 +372,22 @@ public class ShadowDatabaseConfig {
         return Boolean.valueOf(property);
     }
 
+    public String getShadowAccountPrefix() {
+        return shadowAccountPrefix;
+    }
+
+    public void setShadowAccountPrefix(String shadowAccountPrefix) {
+        this.shadowAccountPrefix = shadowAccountPrefix;
+    }
+
+    public String getShadowAccountSuffix() {
+        return shadowAccountSuffix;
+    }
+
+    public void setShadowAccountSuffix(String shadowAccountSuffix) {
+        this.shadowAccountSuffix = shadowAccountSuffix;
+    }
+
     public Boolean getBooleanProperty(String key, Boolean defaultValue) {
         String property = getProperty(key);
         if (property == null) {
@@ -399,6 +449,12 @@ public class ShadowDatabaseConfig {
 
         ShadowDatabaseConfig that = (ShadowDatabaseConfig)o;
 
+        // 根据影子库账密前后缀匹配是否变化
+        if (shadowAccountPrefix != null ? !shadowAccountPrefix.equals(that.shadowAccountPrefix)
+            : that.shadowAccountPrefix != null) {return false;}
+        if (shadowAccountSuffix != null ? !shadowAccountSuffix.equals(that.shadowAccountSuffix)
+            : that.shadowAccountSuffix != null) {return false;}
+
         if (dsType != that.dsType) {return false;}
         if (applicationName != null ? !applicationName.equals(that.applicationName) : that.applicationName != null) {
             return false;
@@ -412,18 +468,18 @@ public class ShadowDatabaseConfig {
 
         if (shadowSchema != null ? !shadowSchema.equals(that.shadowSchema) : that.shadowSchema != null) {return false;}
         if (businessShadowTables != null ? !businessShadowTables.equals(that.businessShadowTables)
-                : that.businessShadowTables != null) {return false;}
+            : that.businessShadowTables != null) {return false;}
 
-        if((properties == null && that.properties != null) || (properties != null && that.properties == null)){
+        if ((properties == null && that.properties != null) || (properties != null && that.properties == null)) {
             return false;
         }
 
-        if(properties == null && that.properties == null){
+        if (properties == null && that.properties == null) {
             return true;
         }
 
         // shadow username 和 password 会被替换
-        if(properties.containsKey("extra") && !properties.get("extra").equals(that.properties.get("extra"))){
+        if (properties.containsKey("extra") && !properties.get("extra").equals(that.properties.get("extra"))) {
             return false;
         }
         return true;
@@ -443,6 +499,8 @@ public class ShadowDatabaseConfig {
         result = 31 * result + (shadowSchema != null ? shadowSchema.hashCode() : 0);
         result = 31 * result + (businessShadowTables != null ? businessShadowTables.hashCode() : 0);
         result = 31 * result + (properties != null ? properties.hashCode() : 0);
+        result = 31 * result + (shadowAccountPrefix != null ? shadowAccountPrefix.hashCode() : 0);
+        result = 31 * result + (shadowAccountSuffix != null ? shadowAccountSuffix.hashCode() : 0);
         return result;
     }
 
@@ -461,7 +519,23 @@ public class ShadowDatabaseConfig {
             ", shadowSchema='" + shadowSchema + '\'' +
             ", businessShadowTables=" + businessShadowTables +
             ", properties=" + properties +
+            ", shadowAccountPrefix=" + shadowAccountPrefix +
+            ", shadowAccountSuffix=" + shadowAccountSuffix +
             '}';
+    }
+
+    /**
+     * 判断当前配置是否为oracle配置
+     *
+     * @return true oracle配置，false 不是
+     */
+    private boolean isOracle() {
+        return !stringIsEmpty(this.url) && this.url.startsWith("jdbc:oracle:thin:");
+    }
+
+    private boolean stringIsEmpty(String string) {
+        return null == string
+            || string.isEmpty();
     }
 }
 

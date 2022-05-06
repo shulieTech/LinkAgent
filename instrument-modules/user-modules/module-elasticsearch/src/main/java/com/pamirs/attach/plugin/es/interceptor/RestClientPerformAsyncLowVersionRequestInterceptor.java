@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
+import com.pamirs.attach.plugin.es.common.RestClientHighLowFlag;
 import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
@@ -42,16 +43,19 @@ public class RestClientPerformAsyncLowVersionRequestInterceptor extends Abstract
 
     @Override
     public CutOffResult doShadowIndexInterceptor(Advice advice){
-        String endpoint = (String) advice.getParameterArray()[1];
-        if (endpoint.startsWith("/")){
-            //es索引名称得小写
-            endpoint = endpoint.replaceFirst("/", "/" + Pradar.CLUSTER_TEST_PREFIX_LOWER);
-        } else if (!endpoint.startsWith(Pradar.CLUSTER_TEST_PREFIX_LOWER)){
+        if (!RestClientHighLowFlag.isHigh){
+            String endpoint = (String) advice.getParameterArray()[1];
+            if (endpoint.startsWith("/")){
+                //es索引名称得小写
+                endpoint = endpoint.replaceFirst("/", "/" + Pradar.CLUSTER_TEST_PREFIX_LOWER);
+            } else if (!endpoint.startsWith(Pradar.CLUSTER_TEST_PREFIX_LOWER)){
                 endpoint = Pradar.addClusterTestPrefix(endpoint);
-        }
+            }
 
-        advice.changeParameter(1, endpoint);
+            advice.changeParameter(1, endpoint);
+        }
         return CutOffResult.PASSED;
+
     }
 
     @Override

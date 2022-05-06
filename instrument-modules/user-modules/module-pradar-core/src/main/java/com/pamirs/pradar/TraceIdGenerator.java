@@ -14,11 +14,11 @@
  */
 package com.pamirs.pradar;
 
-import org.apache.commons.lang.StringUtils;
-
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.commons.lang.StringUtils;
 
 public class TraceIdGenerator {
 
@@ -79,10 +79,28 @@ public class TraceIdGenerator {
         return pid;
     }
 
-    private static String getTraceId(String ip, long timestamp, int nextId) {
+    private static String getTraceId(String ip, long timestamp, int nextId, boolean isClusterTestRequest) {
         StringBuilder appender = new StringBuilder(32);
         appender.append(ip).append(timestamp).append(getNextIdStr(nextId)).append(PID_FLAG).append(PID);
+        if (isClusterTestRequest) {
+            appender.append(dealSamplingInterval(PradarSwitcher.getClusterTestSamplingInterval()));
+        } else {
+            appender.append(dealSamplingInterval(PradarSwitcher.getSamplingInterval()));
+        }
         return appender.toString();
+    }
+
+    /**
+     * 处理采用率，输出4位字符串。
+     *
+     * @param samplingInterval 采样率
+     * @return 4位字符串
+     */
+    private static String dealSamplingInterval(int samplingInterval) {
+        if (samplingInterval < 0 || samplingInterval > 10000) {
+            return "0000";
+        }
+        return String.format("%04d", samplingInterval);
     }
 
     /**
@@ -94,7 +112,7 @@ public class TraceIdGenerator {
      * @return
      */
     public static String generate(boolean isClusterTestRequest) {
-        return getTraceId(IP_16, System.currentTimeMillis(), getNextId(isClusterTestRequest));
+        return getTraceId(IP_16, System.currentTimeMillis(), getNextId(isClusterTestRequest), isClusterTestRequest);
     }
 
     /**
@@ -109,8 +127,9 @@ public class TraceIdGenerator {
     public static String generate(String ip, boolean isClusterTestRequest) {
         if (StringUtils.isNotBlank(ip) && validate(ip)) {
             try {
-                return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId(isClusterTestRequest));
-            }catch (Throwable t){
+                return getTraceId(getIP_16(ip), System.currentTimeMillis(), getNextId(isClusterTestRequest),
+                    isClusterTestRequest);
+            } catch (Throwable t) {
                 //说明ip格式有问题
                 return generate(isClusterTestRequest);
             }

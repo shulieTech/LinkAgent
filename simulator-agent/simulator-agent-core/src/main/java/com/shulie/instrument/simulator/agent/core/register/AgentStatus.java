@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -144,6 +144,12 @@ public class AgentStatus {
         trigger();
     }
 
+    public static void checkError(String errorMessage) {
+        AGENT_STATUS = INSTALL_FAILED;
+        ERROR_CODE = "AGENT-00000";
+        ERROR_MESSAGE = errorMessage;
+    }
+
     /**
      * 获取 agent 状态
      *
@@ -167,7 +173,7 @@ public class AgentStatus {
      * 是否安装操作完成，安装失败或者安装成功
      * @return
      */
-    public static boolean doInstall(){
+    public static boolean doInstall() {
         return INSTALLED.equals(AGENT_STATUS) || INSTALL_FAILED.equals(AGENT_STATUS);
     }
 

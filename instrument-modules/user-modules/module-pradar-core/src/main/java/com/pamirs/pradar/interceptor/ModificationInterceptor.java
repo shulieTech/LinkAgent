@@ -46,7 +46,7 @@ abstract class ModificationInterceptor extends AdviceListener {
     public final void afterReturning(Advice advice) throws Throwable {
         Object result = getResult(advice);
         if (result != null) {
-            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), result);
+            advice.returnImmediately(result);
         }
     }
 
@@ -54,7 +54,7 @@ abstract class ModificationInterceptor extends AdviceListener {
     public final void afterThrowing(Advice advice) throws Throwable {
         Object result = getExceptionResult(advice);
         if (result != null) {
-            ProcessController.returnImmediately(advice.getBehavior().getReturnType(), result);
+            advice.returnImmediately(result);
         }
 
     }

@@ -43,8 +43,8 @@ public class DruidDatasourceUtils {
             return null;
         }
         String url = ptDataSourceConf.getShadowUrl();
-        String username = ptDataSourceConf.getShadowUsername();
-        String password = ptDataSourceConf.getShadowPassword();
+        String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
+        String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
         if (StringUtils.isBlank(url) || StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
             logger.error("[druid] shadow datasource config is invalid. [url/username/password] one in them or more is blank. url:{} username:{} password:{}", url, username, password);
             return null;
@@ -234,8 +234,12 @@ public class DruidDatasourceUtils {
                     target.setConnectProperties(properties);
                 }
             } else {
-                target.setConnectProperties(sourceDatasource.getConnectProperties());
+                if (!"true".equals(System.getProperty("simulator.druid.notCopy.bizConProperties"))) {
+                    // TODO 临时方案 druid业务库如果有加密逻辑，影子库不需要，后续等控制台开发
+                    target.setConnectProperties(sourceDatasource.getConnectProperties());
+                }
             }
+
 
             String connectionInitSqls = ptDataSourceConf.getProperty("connectionInitSqls");
             if (StringUtils.isNotBlank(connectionInitSqls)) {

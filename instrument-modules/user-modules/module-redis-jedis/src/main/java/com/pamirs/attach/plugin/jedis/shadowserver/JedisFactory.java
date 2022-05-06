@@ -65,16 +65,17 @@ public class JedisFactory extends AbstractRedisServerFactory<JedisPool> {
 
     @Override
     public RedisClientMediator<JedisPool> createMediator(Object client, ShadowRedisConfig shadowConfig) {
-        RedisClientMediator mediator = null;
+        RedisClientMediator mediator;
         String className = client.getClass().getName();
-        Object shadowClient = null;
+        BinaryJedis shadowClient = null;
         Integer shadowDb = shadowConfig.getDatabase();
         /**
          * 反射是为了兼容没有getDb的版本
          * 向下转为Integer是为了兼容Long类型的入参
          */
-        Integer bizDb = Integer.parseInt(String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("db")));
-        String shadowPassword = shadowConfig.getPassword();
+        int bizDb = Integer.parseInt(String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("db")));
+        String bizPassword = String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("password"));
+        String shadowPassword = shadowConfig.getPassword(bizPassword);
         if (JedisConstant.JEDIS.equals(className)) {
             //单节点
             String nodes = shadowConfig.getNodes();
@@ -82,17 +83,17 @@ public class JedisFactory extends AbstractRedisServerFactory<JedisPool> {
                 shadowClient = new Jedis(nodes);
             } else {
                 String[] splitter = nodes.split(":");
-                shadowClient = new Jedis(splitter[0], Integer.valueOf(splitter[1]));
+                shadowClient = new Jedis(splitter[0], Integer.parseInt(splitter[1]));
             }
             if (!StringUtil.isEmpty(shadowPassword)) {
-                ((Jedis) shadowClient).auth(shadowPassword);
+                shadowClient.auth(shadowPassword);
             }
 
             if (shadowDb != null) {
-                ((Jedis) shadowClient).select(shadowDb);
+                shadowClient.select(shadowDb);
             } else {
                 //用业务的db
-                ((Jedis) shadowClient).select(bizDb);
+                shadowClient.select(bizDb);
             }
 
 
@@ -102,21 +103,20 @@ public class JedisFactory extends AbstractRedisServerFactory<JedisPool> {
                 shadowClient = new Jedis(nodes);
             } else {
                 String[] splitter = nodes.split(":");
-                shadowClient = new BinaryJedis(splitter[0], Integer.valueOf(splitter[1]));
+                shadowClient = new BinaryJedis(splitter[0], Integer.parseInt(splitter[1]));
             }
             if (shadowDb != null) {
-                ((BinaryJedis) shadowClient).select(shadowDb);
+                shadowClient.select(shadowDb);
             } else {
                 //用业务的db
-                ((BinaryJedis) shadowClient).select(bizDb);
+                shadowClient.select(bizDb);
             }
 
             if (!StringUtil.isEmpty(shadowPassword)) {
-                ((BinaryJedis) shadowClient).auth(shadowPassword);
+                shadowClient.auth(shadowPassword);
             }
         }
-        mediator = new RedisClientMediator(client, shadowClient);
-        return mediator;
+        return new RedisClientMediator(client, shadowClient);
     }
 
     @Override

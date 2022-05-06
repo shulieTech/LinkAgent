@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.es.interceptor;
 import com.pamirs.attach.plugin.es.ElasticsearchConstants;
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
+import com.pamirs.attach.plugin.es.common.RestClientHighLowFlag;
 import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
@@ -71,6 +72,7 @@ public class RestHighLevelClientInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(Advice advice) {
+        RestClientHighLowFlag.isHigh = true;
         Object[] args = advice.getParameterArray();
         ClusterTestUtils.validateClusterTest();
         if (!Pradar.isClusterTest()) {

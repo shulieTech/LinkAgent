@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.webflux.interceptor;
 
 
 import com.pamirs.attach.plugin.webflux.common.StaticFileFilter;
+import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
@@ -33,15 +34,33 @@ import java.util.List;
  */
 public class BaseHandlerInjector extends AroundInterceptor {
 
+    public static final String WEB_CONTEXT = "p-gateway-context";
+
     protected void doBefore(ServerWebExchange exchange) {
-        List<String> list = exchange.getRequest().getHeaders().get(PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY);
-        if (CollectionUtils.isNotEmpty(list) && list.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+        if (isClusterTest(exchange)) {
+            final InvokeContext context = exchange.getAttribute(WEB_CONTEXT);
+            if (context != null && !context.isEmpty()) {
+                Pradar.setInvokeContext(context);
+            }
             Pradar.setClusterTest(true);
         }
     }
 
     protected void doAfter(ServerWebExchange exchange, ServerHttpResponse response, Throwable throwable) {
-        Pradar.setClusterTest(false);
+//        Pradar.setClusterTest(false);
+    }
+
+    private boolean isClusterTest(ServerWebExchange exchange) {
+        List<String> ua = exchange.getRequest().getHeaders().get(PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY);
+        if (CollectionUtils.isNotEmpty(ua) && ua.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+            return true;
+        }
+
+        List<String> clusterTest = exchange.getRequest().getHeaders().get(PradarService.PRADAR_CLUSTER_TEST_KEY);
+        if (CollectionUtils.isNotEmpty(clusterTest) && clusterTest.contains("1")) {
+            return true;
+        }
+        return false;
     }
 
     private boolean isNeedFilter(ServerWebExchange exchange) {

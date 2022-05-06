@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -226,9 +226,9 @@ public class CoreConfigure {
     private void dumpToSystemProperty(Map<String, String> featureMap) {
         for (Map.Entry<String, String> entry : featureMap.entrySet()) {
             /**
-             * 如果值不为空，则将值写入 System property 中
+             * 环境变量中的值优先级高于配置文件里的优先级。
              */
-            if (entry.getValue() != null) {
+            if (entry.getValue() != null && System.getProperty(entry.getKey()) == null) {
                 System.setProperty(entry.getKey(), entry.getValue());
             }
         }

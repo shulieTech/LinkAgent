@@ -22,6 +22,7 @@ public class ProxoolConst {
 
     public final static String REFLECT_GET_URL_METHOD = "getUrl";
     public final static String REFLECT_GET_USER_METHOD = "getUser";
+    public final static String REFLECT_GET_PASSWORD_METHOD = "getPassword";
     public final static String REFLECT_GET_DRIVER_METHOD = "getDriver";
     public final static String REFLECT_GET_DEFINITION_METHOD = "getDefinition";
     public final static String REFLECT_GET_CONNECTION_POOL_METHOD = "getConnectionPool";

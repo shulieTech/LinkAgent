@@ -55,6 +55,15 @@ public class JettyPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+        // jetty 6.x
+        enhanceTemplate.enhance(this, "org.mortbay.jetty.handler.HandlerWrapper", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod handleMethod = target.getDeclaredMethod("handle", "java.lang.String", "javax.servlet.http.HttpServletRequest", "javax.servlet.http.HttpServletResponse", "int");
+                handleMethod.addInterceptor(Listeners.of(Jetty6xServerHandleInterceptor.class));
+            }
+        });
+
         enhanceTemplate.enhance(this, "org.eclipse.jetty.server.Request", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

@@ -103,7 +103,7 @@ class FactoryInitializer extends MatchStrategy {
             }
             ShadowRedisConfig shadowRedisConfig = matcher.getConfig(keys);
 
-            String shadowPassword = shadowRedisConfig.getPassword();
+            String shadowPassword = shadowRedisConfig.getPassword(password);
 
 
             /**
@@ -182,7 +182,7 @@ class FactoryInitializer extends MatchStrategy {
                 String shadowHost = spilter[0];
                 Integer shadowPort = Integer.valueOf(spilter[1]);
                 Integer shadowDb = shadowRedisConfig.getDatabase();
-                String shadowPassword = shadowRedisConfig.getPassword();
+                String shadowPassword = shadowRedisConfig.getPassword(password);
 
                 LettuceConnectionFactory shadowConnectionFactory = new LettuceConnectionFactory();
                 shadowConnectionFactory.setHostName(shadowHost);

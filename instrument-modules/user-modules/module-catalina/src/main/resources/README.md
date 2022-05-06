@@ -26,3 +26,6 @@ try {
 
         return "{\"code\":200,\"msg\":\"ok\",\"data\":[\"JSON.IM\",\"json格式化\"]}";
     }
+
+2.0.1.0版本：
+支持Spring MVC 5.3.9版本

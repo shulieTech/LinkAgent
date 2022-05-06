@@ -15,16 +15,16 @@
 
 package com.pamirs.attach.plugin.catalina.interceptor;
 
+import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import com.pamirs.pradar.interceptor.AroundInterceptor;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 
 /**
  * @Description 获取入口规则
@@ -36,7 +36,7 @@ public class SpringMvcApiInterceptor extends AroundInterceptor {
     @Override
     public void doBefore(Advice advice) {
         if (GlobalConfig.getInstance().getApis() != null &&
-            GlobalConfig.getInstance().getApis().size() > 0) {
+                GlobalConfig.getInstance().getApis().size() > 0) {
             return;
         }
         Set<String> apis = new HashSet<String>();
@@ -44,6 +44,9 @@ public class SpringMvcApiInterceptor extends AroundInterceptor {
         if (arg.size() > 0) {
             Set<RequestMappingInfo> sets = arg.keySet();
             for (RequestMappingInfo info : sets) {
+                if (info.getPatternsCondition() == null) {
+                    continue;
+                }
                 String url = info.getPatternsCondition().toString();
                 String api = (url).substring(1, url.length() - 1);
                 String type = info.getMethodsCondition().toString();
@@ -62,7 +65,7 @@ public class SpringMvcApiInterceptor extends AroundInterceptor {
             getMappingsMethod = target.getClass().getDeclaredMethod("getRegistrations");
             access = getMappingsMethod.isAccessible();
             getMappingsMethod.setAccessible(true);
-            Map<RequestMappingInfo, Object> map = (Map<RequestMappingInfo, Object>)getMappingsMethod.invoke(target);
+            Map<RequestMappingInfo, Object> map = (Map<RequestMappingInfo, Object>) getMappingsMethod.invoke(target);
             r = true;
             return map;
         } catch (Throwable t) {

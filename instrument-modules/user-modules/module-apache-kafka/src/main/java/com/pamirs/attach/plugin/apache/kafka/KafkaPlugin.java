@@ -152,6 +152,15 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+        // 樊登的特殊逻辑，不能通用,还有 com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy.createPtConsumer里一段代码
+        /*this.enhanceTemplate.enhance(this, "org.apache.kafka.common.config.AbstractConfig", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("getConfiguredInstances","java.lang.String","java.lang.Class");
+                method.addInterceptor(Listeners.of(AbstractConfigGetInstanceInterceptor.class));
+            }
+        });*/
+
         return true;
     }
 

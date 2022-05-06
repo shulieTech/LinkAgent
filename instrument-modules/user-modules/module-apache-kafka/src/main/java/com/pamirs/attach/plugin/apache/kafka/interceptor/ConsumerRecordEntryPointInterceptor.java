@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -46,6 +46,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -55,6 +57,9 @@ import org.apache.kafka.common.header.Headers;
 @Destroyable(KafkaDestroy.class)
 @ListenerBehavior(isNoSilence = true)
 public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(ConsumerRecordEntryPointInterceptor.class.getName());
+
     @Resource
     protected DynamicFieldManager manager;
 
@@ -83,7 +88,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        ConsumerRecord consumerRecord = (ConsumerRecord)args[0];
+        ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
         Object consumer = advice.getParameterArray()[2];
         if (consumer instanceof Consumer && consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {
             consumer = Reflect.on(consumer).get("delegate");
@@ -109,7 +114,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             if (nodes != null) {
                 for (Node node : nodes) {
                     sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
-                        .toString()).append(",");
+                            .toString()).append(",");
                 }
                 remoteAddress = sb.toString();
             }
@@ -122,10 +127,14 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             if (group == null) {
                 try {
                     Field groupId = ReflectUtil.getField(consumer, "groupId");
-                    group = (String)groupId.get(consumer);
+                    group = (String) groupId.get(consumer);
                 } catch (Throwable e) {
-                    Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
-                    group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+                    try {
+                        Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
+                        group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+                    } catch (Exception exp) {
+                        LOGGER.warn("get kafka group id by reflection failed, using groupGlobal instead.", e);
+                    }
                     groupGlobal = Thread.currentThread().getName().split("-")[0];
                 }
             }
@@ -149,7 +158,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
         Object result = advice.getReturnObj();
-        ConsumerRecord consumerRecord = (ConsumerRecord)args[0];
+        ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setRequest(consumerRecord);
         spanRecord.setResponse(result);
@@ -161,7 +170,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
         Throwable throwable = advice.getThrowable();
-        ConsumerRecord consumerRecord = (ConsumerRecord)args[0];
+        ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setRequest(consumerRecord);
         spanRecord.setResponse(throwable);
@@ -173,7 +182,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     public void beforeLast(Advice advice) {
         Object[] args = advice.getParameterArray();
         ClusterTestUtils.validateClusterTest();
-        ConsumerRecord consumerRecord = (ConsumerRecord)args[0];
+        ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
         String topic = consumerRecord.topic();
         boolean isClusterTest = Pradar.isClusterTestPrefix(topic);
         if (PradarSwitcher.isKafkaMessageHeadersEnabled()) {

@@ -177,7 +177,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         try {
             ConsumerRecords consumerRecords = ptConsumer.poll(Math.min(timeout, ptMaxPollTimeout));
             //没数据，不要设置压测标，避免不必要的上下文创建
-            if (!consumerRecords.isEmpty()) {
+            if (!consumerRecords.isEmpty()){
                 Pradar.setClusterTest(true);
             }
             return consumerRecords;
@@ -552,6 +552,13 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         } catch (Exception e) {
             kafkaConsumer = new KafkaConsumer(config);
         }
+
+        // 樊登特殊逻辑，不通用
+        /*if (interceptors != null) {
+            log.info("set kafka interceptors:{}",interceptors);
+            Reflect.on(kafkaConsumer).set("interceptors",interceptors);
+        }*/
+
         kafkaConsumer.subscribe(consumerMetaData.getShadowTopics());
         return new WithTryCatchConsumerProxy(kafkaConsumer);
     }

@@ -18,19 +18,7 @@ import com.pamirs.attach.plugin.apache.kafka.destroy.ShadowConsumerDisableListen
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProvider;
 
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerCommitAsyncInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerCommitSyncInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerConstructorInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerMultiRecordEntryPointInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerOtherMethodInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerPollInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerRecordEntryPointInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerRecordEntryPointInterceptor2;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ConsumerTraceInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.KafkaListenerContainerInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.ProducerSendInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.SpringKafkaPollAndInvokeInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.interceptor.SpringKafkaProcessSeeksInterceptor;
+import com.pamirs.attach.plugin.apache.kafka.interceptor.*;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -152,6 +140,15 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
             }
         });
+
+        // 樊登的特殊逻辑，不能通用
+        /*this.enhanceTemplate.enhance(this, "org.apache.kafka.common.config.AbstractConfig", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("getConfiguredInstances","java.lang.String","java.lang.Class");
+                method.addInterceptor(Listeners.of(AbstractConfigGetInstanceInterceptor.class));
+            }
+        });*/
 
         return true;
     }

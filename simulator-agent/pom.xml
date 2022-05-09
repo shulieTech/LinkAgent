@@ -13,7 +13,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <agent.major.version>${project.version}</agent.major.version>
-        <agent.minor.version>0</agent.minor.version>
+        <agent.minor.version>1</agent.minor.version>
         <jdk.version>1.6</jdk.version>
     </properties>
 

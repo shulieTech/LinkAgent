@@ -512,8 +512,14 @@ public class HttpAgentScheduler implements AgentScheduler {
         CommandPacket startCommandPacket;
         //直到成功为止，控制台可能重启、网络问题等原因
         //TODO
+        int time = 0;
         while ((startCommandPacket = getStartCommandPacket()) == null){
             try {
+                time ++;
+                if(time == 20){
+                    logger.error("经过10s尝试启动simulator失败, 请确认控制台是否正常");
+                    break;
+                }
                 logger.error("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");
                 Thread.sleep(500 );
             } catch (InterruptedException ignore) {

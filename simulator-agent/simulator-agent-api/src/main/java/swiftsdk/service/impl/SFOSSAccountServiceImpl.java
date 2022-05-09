@@ -41,7 +41,6 @@ public class SFOSSAccountServiceImpl extends SFOSSMasterService implements SFOSS
     public Map<String, String> headAccountMeta(String url, String token, SwiftConfiguration conf) throws SfOssException {
         HttpHead head = new HttpHead(url);
         HashMap resultMap = new HashMap();
-
         try {
             ResponseResult responseResult = super.doHttp(head, token, conf.getSecure(), conf.getTimeOutOption());
             int statusCode = responseResult.getStatusCode();

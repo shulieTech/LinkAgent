@@ -52,6 +52,9 @@ public class TableCutoffInterceptor extends CutoffInterceptorAdaptor {
         if ("hbase:meta".equals(tableName)) {
             return CutOffResult.PASSED;
         }
+        if (!Pradar.isClusterTest()) {
+            return CutOffResult.PASSED;
+        }
         // 是否用影子表
         if (GlobalConfig.getInstance().isShadowTableReplace() && Pradar.isClusterTestPrefix(tableName)) {
             return CutOffResult.PASSED;

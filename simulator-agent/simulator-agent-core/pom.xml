@@ -156,8 +156,7 @@
                         <relocation>
                             <!-- 修改 guava 包名 -->
                             <pattern>com.google.common</pattern>
-                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common
-                            </shadedPattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common</shadedPattern>
                         </relocation>
                         <relocation>
                             <!-- 修改 guava 包名 -->

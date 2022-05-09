@@ -159,6 +159,11 @@
                             <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common
                             </shadedPattern>
                         </relocation>
+                        <relocation>
+                            <!-- 修改 guava 包名 -->
+                            <pattern>org.apache.http</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.org.apache.http</shadedPattern>
+                        </relocation>
                     </relocations>
                     <shadedArtifactAttached>true</shadedArtifactAttached>
                     <shadedClassifierName>jar-with-dependencies</shadedClassifierName>

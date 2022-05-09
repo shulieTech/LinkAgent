@@ -14,10 +14,13 @@
  */
 package com.pamirs.attach.plugin.webflux.common;
 
+import com.pamirs.pradar.MiddlewareType;
+
 /**
  * @author angju
  * @date 2021/7/21 17:57
  */
 public class WebFluxConstants {
     public static final String MODULE_NAME = "webflux";
+    public static final int PLUGIN_TYPE = MiddlewareType.TYPE_RPC;
 }

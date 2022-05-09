@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.webflux.interceptor;
 
-import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -26,7 +25,7 @@ import org.springframework.web.server.ServerWebExchange;
 public class HandlerStartInterceptor extends BaseHandlerInjector {
     @Override
     public void doBefore(Advice advice) throws Exception {
-        Pradar.setClusterTest(false);
+//        Pradar.setClusterTest(false);
         if (advice.getParameterArray()[0] instanceof ServerWebExchange) {
             ServerWebExchange exchange = (ServerWebExchange) advice.getParameterArray()[0];
             doBefore(exchange);

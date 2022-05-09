@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,19 +14,6 @@
  */
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
-
-import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.lang.management.ManagementFactory;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
@@ -73,17 +60,17 @@ public class ZookeeperRegister implements Register {
 
     public static void main(String[] args) throws Exception {
         CuratorFramework client = CuratorFrameworkFactory.builder()
-            .connectString("127.0.01:2181")
-            .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-            .connectionTimeoutMs(60000)
-            .sessionTimeoutMs(30000)
-            .threadFactory(new ThreadFactory() {
-                @Override
-                public Thread newThread(Runnable r) {
-                    return new Thread(r, "2222");
-                }
-            })
-            .build();
+                .connectString("127.0.01:2181")
+                .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                .connectionTimeoutMs(60000)
+                .sessionTimeoutMs(30000)
+                .threadFactory(new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "2222");
+                    }
+                })
+                .build();
         client.start();
         GetChildrenBuilder children = client.getChildren();
         for (String s : children.forPath("/config")) {
@@ -132,7 +119,7 @@ public class ZookeeperRegister implements Register {
 
     private byte[] getHeartbeatDatas() {
         jvmArgsCheck = jvmArgsCheck == null ? JSON.toJSONString(
-            JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
+                JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
 
         Map<String, String> map = new HashMap<String, String>();
         map.put("address", AddressUtils.getLocalAddress());
@@ -169,12 +156,15 @@ public class ZookeeperRegister implements Register {
         if (!JvmArgsCheckUtils.getCheckJvmArgsStatus()) {
             agentStatus = AgentStatus.INSTALL_FAILED;
             errorMsg.append("启动参数校验失败：").append(jvmArgsCheck);
+            AgentStatus.checkError("启动参数校验失败：" + jvmArgsCheck);
         }
         //校验日志目录是否存在并且有权限
         String checkSimulatorLogPathResult = checkSimulatorLogPath(agentConfig.getLogPath());
         if (checkSimulatorLogPathResult != null) {
             agentStatus = AgentStatus.INSTALL_FAILED;
             errorMsg.append("启动参数日志目录校验异常：").append(checkSimulatorLogPathResult);
+            AgentStatus.checkError("启动参数日志目录校验异常：" + checkSimulatorLogPathResult);
+
         }
         map.put("agentStatus", agentStatus);
         map.put("errorMsg", errorMsg.toString());
@@ -215,11 +205,11 @@ public class ZookeeperRegister implements Register {
         //当前agent使用配置文件的配置
         Map<String, String> agentFileConfigs = agentConfig.getAgentFileConfigs();
         Map<String, Object> agentConfigFromUrl =
-            ConfigUtils.getFixedAgentConfigFromUrl(agentConfig.getTroWebUrl(), agentConfig.getAppName()
-                , agentConfig.getAgentVersion(), agentConfig.getHttpMustHeaders());
+                ConfigUtils.getFixedAgentConfigFromUrl(agentConfig.getTroWebUrl(), agentConfig.getAppName()
+                        , agentConfig.getAgentVersion(), agentConfig.getHttpMustHeaders());
         if (agentConfigFromUrl == null
-            || agentConfigFromUrl.get("success") == null
-            || !Boolean.parseBoolean(agentConfigFromUrl.get("success").toString())) {
+                || agentConfigFromUrl.get("success") == null
+                || !Boolean.parseBoolean(agentConfigFromUrl.get("success").toString())) {
             result.put("status", "false");
             result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
             return result;
@@ -227,9 +217,9 @@ public class ZookeeperRegister implements Register {
         boolean status = true;
         StringBuilder unEqualConfigs = new StringBuilder();
 
-        JSONObject jsonObject = (JSONObject)agentConfigFromUrl.get("data");
+        JSONObject jsonObject = (JSONObject) agentConfigFromUrl.get("data");
         for (Map.Entry<String, String> entry : agentFileConfigs.entrySet()) {
-            String value = (String)jsonObject.get(entry.getKey());
+            String value = (String) jsonObject.get(entry.getKey());
             if (entry.getValue().equals(value)) {
                 result.put(entry.getKey(), "true");
             } else {
@@ -237,7 +227,7 @@ public class ZookeeperRegister implements Register {
                 result.put(entry.getKey(), "false");
                 unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
                         entry.getValue())
-                    .append(",").append("远程参数值:").append(value).append(",");
+                        .append(",").append("远程参数值:").append(value).append(",");
             }
         }
         result.put("status", String.valueOf(result));
@@ -271,8 +261,8 @@ public class ZookeeperRegister implements Register {
         if (needUserInfo && !StringUtils.isBlank(agentConfig.getEnvCode())) {
             // agentId中加上tenantAppKey、userId和currentEnv
             agentId += "&" + agentConfig.getEnvCode()
-                + ":" + (StringUtils.isBlank(agentConfig.getUserId()) ? "" : agentConfig.getUserId())
-                + ":" + (StringUtils.isBlank(agentConfig.getTenantAppKey()) ? "" : agentConfig.getTenantAppKey());
+                    + ":" + (StringUtils.isBlank(agentConfig.getUserId()) ? "" : agentConfig.getUserId())
+                    + ":" + (StringUtils.isBlank(agentConfig.getTenantAppKey()) ? "" : agentConfig.getTenantAppKey());
         }
         return agentId;
     }
@@ -428,7 +418,7 @@ public class ZookeeperRegister implements Register {
                         heartbeatNode.setData(getHeartbeatDatas());
                     } catch (Exception e) {
                         LOGGER.error("[register] refresh node data to zk for heartbeat node err: {}!", heartbeatPath,
-                            e);
+                                e);
                         executorService.schedule(this, 5, TimeUnit.SECONDS);
                     }
                 }

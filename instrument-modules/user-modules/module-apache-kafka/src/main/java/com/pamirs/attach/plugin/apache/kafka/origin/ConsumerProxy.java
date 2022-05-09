@@ -14,6 +14,19 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollingSelector;
@@ -23,20 +36,24 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.kafka.clients.CommonClientConfigs;
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
+import org.apache.kafka.clients.consumer.OffsetCommitCallback;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.security.JaasContext;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -127,14 +144,14 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     @Override
     public void subscribe(Collection topics, ConsumerRebalanceListener callback) {
         this.bizConsumer.subscribe(topics, callback);
-        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer) bizConsumer);
+        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer)bizConsumer);
         this.ptConsumer.subscribe(this.topicAndGroup.getShadowTopics());
     }
 
     @Override
     public void subscribe(Collection topics) {
         this.bizConsumer.subscribe(topics);
-        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer) bizConsumer);
+        this.topicAndGroup = ConsumerMetaData.build((KafkaConsumer)bizConsumer);
         this.ptConsumer.subscribe(this.topicAndGroup.getShadowTopics());
     }
 
@@ -439,17 +456,21 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         Object kafkaClient = Reflect.on(client).get("client");
         Object fetcher = Reflect.on(consumer).get("fetcher");
         Object metadata = Reflect.on(consumer).get("metadata");
+        Object keyDeserializer = Reflect.on(consumer).get("keyDeserializer");
+        Object valueDeserializer = Reflect.on(consumer).get("valueDeserializer");
 
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG
-                , Reflect.on(consumer).get("keyDeserializer").getClass());
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG
-                , Reflect.on(consumer).get("valueDeserializer").getClass());
+        if (keyDeserializer != null) {
+            config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getClass());
+        }
+        if (valueDeserializer != null) {
+            config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getClass());
+        }
         config.put(ConsumerConfig.CLIENT_ID_CONFIG,
-                Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(consumer).get("clientId"))));
+            Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(consumer).get("clientId"))));
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, consumerMetaData.getBootstrapServers());
         config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (this.allowMaxLag * 2 * 3) + "");
         config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
-                (Math.max(this.allowMaxLag * 2, this.currentPollTime * 2) + 5000) + "");
+            (Math.max(this.allowMaxLag * 2, this.currentPollTime * 2) + 5000) + "");
         config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, (this.allowMaxLag * 3) + "");
         putSlience(config, ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, consumer, "requestTimeoutMs");
         putSlience(config, ConsumerConfig.RETRY_BACKOFF_MS_CONFIG, consumer, "retryBackoffMs");
@@ -463,19 +484,19 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             String clientSaslMechanism = Reflect.on(channelBuilder).get("clientSaslMechanism");
             config.put(SaslConfigs.SASL_MECHANISM, clientSaslMechanism);
             config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
-                    Reflect.on(channelBuilder).get("securityProtocol").toString());
+                Reflect.on(channelBuilder).get("securityProtocol").toString());
             if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
                 Map jaasContexts = ReflectUtil.reflectSlience(channelBuilder, "jaasContexts");
                 if (jaasContexts == null) {
                     throw new RuntimeException("未支持的kafka版本，无法获取jaasContexts");
                 }
-                JaasContext jaasContext = (JaasContext) jaasContexts.get(clientSaslMechanism);
+                JaasContext jaasContext = (JaasContext)jaasContexts.get(clientSaslMechanism);
                 if (jaasContext != null) {
                     String password = jaasContext.dynamicJaasConfig().value();
                     config.put(SaslConfigs.SASL_JAAS_CONFIG, password);
                 } else {
                     log.warn("business kafka consumer using sasl but jaasContext not found jaasContexts is : {}",
-                            jaasContexts);
+                        jaasContexts);
                 }
             } else {
                 log.warn("business kafka consumer using sasl but clientSaslMechanism is blank");
@@ -507,7 +528,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             Object defaultResetStrategy = ReflectUtil.reflectSlience(subscriptions, "defaultResetStrategy");
             if (defaultResetStrategy != null) {
                 putSlience(config, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                        defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
+                    defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
             }
         }
 
@@ -524,7 +545,20 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         putSlience(config, ConsumerConfig.MAX_POLL_RECORDS_CONFIG, fetcher, "maxPollRecords");
         putSlience(config, ConsumerConfig.CHECK_CRCS_CONFIG, fetcher, "checkCrcs");
 
-        KafkaConsumer kafkaConsumer = new KafkaConsumer(config);
+        KafkaConsumer kafkaConsumer;
+        try {
+            kafkaConsumer = new KafkaConsumer(config, (Deserializer)keyDeserializer,
+                (Deserializer)valueDeserializer);
+        } catch (Exception e) {
+            kafkaConsumer = new KafkaConsumer(config);
+        }
+
+        // 樊登特殊逻辑，不通用
+        /*if (interceptors != null) {
+            log.info("set kafka interceptors:{}",interceptors);
+            Reflect.on(kafkaConsumer).set("interceptors",interceptors);
+        }*/
+
         kafkaConsumer.subscribe(consumerMetaData.getShadowTopics());
         return new WithTryCatchConsumerProxy(kafkaConsumer);
     }
@@ -549,7 +583,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         private final Collection<TopicPartition> ptCollection;
 
         private TopicPartitions(Collection<TopicPartition> bizCollection,
-                                Collection<TopicPartition> ptCollection) {
+            Collection<TopicPartition> ptCollection) {
             this.bizCollection = bizCollection;
             this.ptCollection = ptCollection;
         }

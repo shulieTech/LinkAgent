@@ -17,11 +17,13 @@ package com.pamirs.attach.plugin.caffeine.interceptor;
 import java.util.function.BiFunction;
 
 import com.pamirs.attach.plugin.caffeine.utils.WrapBiFunction;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/03/30 8:13 下午
  */
+@ListenerBehavior(isFilterClusterTest = true)
 public class FirstKeyWithBiFunctionInterceptor extends AbstractChangeCacheKeyAndLambdaInterceptor {
 
     @Override

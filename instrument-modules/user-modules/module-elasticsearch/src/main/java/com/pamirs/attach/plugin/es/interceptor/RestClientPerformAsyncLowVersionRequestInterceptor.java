@@ -14,9 +14,13 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
+import com.pamirs.attach.plugin.es.common.RestClientHighLowFlag;
 import com.pamirs.attach.plugin.es.destroy.ElasticSearchDestroy;
+import com.pamirs.pradar.CutOffResult;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
+import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
@@ -35,6 +39,24 @@ import java.util.Map;
 public class RestClientPerformAsyncLowVersionRequestInterceptor extends AbstractRestClientShadowServerInterceptor {
 
     private volatile Method performRequestAsyncMethod;
+
+
+    @Override
+    public CutOffResult doShadowIndexInterceptor(Advice advice){
+        if (!RestClientHighLowFlag.isHigh){
+            String endpoint = (String) advice.getParameterArray()[1];
+            if (endpoint.startsWith("/")){
+                //es索引名称得小写
+                endpoint = endpoint.replaceFirst("/", "/" + Pradar.CLUSTER_TEST_PREFIX_LOWER);
+            } else if (!endpoint.startsWith(Pradar.CLUSTER_TEST_PREFIX_LOWER)){
+                endpoint = Pradar.addClusterTestPrefix(endpoint);
+            }
+
+            advice.changeParameter(1, endpoint);
+        }
+        return CutOffResult.PASSED;
+
+    }
 
     @Override
     protected Object doCutoff(RestClient restClient, String methodName, Object[] args) throws IOException {

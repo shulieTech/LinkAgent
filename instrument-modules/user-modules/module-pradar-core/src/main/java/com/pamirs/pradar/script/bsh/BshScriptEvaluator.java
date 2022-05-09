@@ -19,6 +19,7 @@ import bsh.Interpreter;
 import com.pamirs.pradar.script.ScriptEvaluator;
 
 import java.io.StringReader;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -27,6 +28,8 @@ import java.util.Map;
  */
 public class BshScriptEvaluator implements ScriptEvaluator {
     private ClassLoader classLoader;
+
+    private ThreadLocal<Map<ClassLoader,Interpreter>> tt = new ThreadLocal<Map<ClassLoader,Interpreter>>();
 
     /**
      * Construct a new BshScriptEvaluator.
@@ -62,7 +65,7 @@ public class BshScriptEvaluator implements ScriptEvaluator {
     @Override
     public Object evaluate(String script, Map<String, Object> arguments) {
         try {
-            Interpreter interpreter = new Interpreter();
+            Interpreter interpreter = fetchInterpreter(classLoader);
             interpreter.setClassLoader(this.classLoader);
             if (arguments != null) {
                 for (Map.Entry<String, Object> entry : arguments.entrySet()) {
@@ -78,8 +81,9 @@ public class BshScriptEvaluator implements ScriptEvaluator {
     @Override
     public Object evaluate(ClassLoader classLoader, String script, Map<String, Object> arguments) {
         try {
-            Interpreter interpreter = new Interpreter();
-            interpreter.setClassLoader(classLoader);
+            Interpreter interpreter = fetchInterpreter(classLoader);
+//            Interpreter interpreter = new Interpreter();
+//            interpreter.setClassLoader(classLoader);
             if (arguments != null) {
                 for (Map.Entry<String, Object> entry : arguments.entrySet()) {
                     interpreter.set(entry.getKey(), entry.getValue());
@@ -89,5 +93,20 @@ public class BshScriptEvaluator implements ScriptEvaluator {
         } catch (EvalError ex) {
             throw new RuntimeException(script, ex);
         }
+    }
+
+    private Interpreter fetchInterpreter(ClassLoader classLoader){
+        Map<ClassLoader, Interpreter> map = tt.get();
+        if (map == null) {
+            map = new HashMap<ClassLoader, Interpreter>();
+            tt.set(map);
+        }
+        Interpreter interpreter = map.get(classLoader);
+        if (interpreter == null) {
+            interpreter = new Interpreter();
+            interpreter.setClassLoader(classLoader);
+            map.put(classLoader, interpreter);
+        }
+        return interpreter;
     }
 }

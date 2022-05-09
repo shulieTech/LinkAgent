@@ -33,6 +33,8 @@ import com.pamirs.pradar.upload.uploader.AgentOnlineUploader;
 import com.pamirs.pradar.utils.MonitorCollector;
 import com.shulie.instrument.module.pradar.core.handler.DefaultExceptionHandler;
 import com.shulie.instrument.module.pradar.core.handler.DefaultExecutionTagSupplier;
+import com.shulie.instrument.module.pradar.core.handler.EmptyExecutionTagSupplier;
+import com.shulie.instrument.module.pradar.core.handler.OnlySilenceExecutionTagSupplier;
 import com.shulie.instrument.module.pradar.core.service.DefaultGlobalConfigService;
 import com.shulie.instrument.module.pradar.core.service.DefaultPradarInternalService;
 import com.shulie.instrument.module.pradar.core.service.DefaultPradarService;
@@ -102,7 +104,16 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         /**
          * 注册自定义的执行 tag 提供者
          */
-        Messager.registerExecutionTagSupplier(new DefaultExecutionTagSupplier());
+        String key = System.getProperty("simulator.execution.type");
+        if ("empty".equals(key)) {
+            Messager.registerExecutionTagSupplier(new EmptyExecutionTagSupplier());
+            logger.info("use execution type : {}", key);
+        } else if ("silence".equals(key)) {
+            Messager.registerExecutionTagSupplier(new OnlySilenceExecutionTagSupplier());
+            logger.info("use execution type : {}", key);
+        } else {
+            Messager.registerExecutionTagSupplier(new DefaultExecutionTagSupplier());
+        }
 
         monitorCollector = MonitorCollector.getInstance();
         monitorCollector.start();

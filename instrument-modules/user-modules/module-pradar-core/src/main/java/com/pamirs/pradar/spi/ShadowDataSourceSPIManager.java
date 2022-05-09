@@ -56,8 +56,8 @@ public class ShadowDataSourceSPIManager {
         for (Map.Entry<String, ShadowDatabaseConfig> entry : datasourceConfigs.entrySet()) {
             ShadowDatabaseConfig config = entry.getValue();
             boolean shadowTable = config.getDsType() == 1;
-            boolean emptyConfig = StringUtils.isEmpty(config.getShadowUsername()) || StringUtils.isEmpty(config.getShadowPassword());
-            if(shadowTable || emptyConfig || !config.getShadowUsername().startsWith("$") && !config.getShadowPassword().startsWith("$")){
+            boolean emptyConfig = StringUtils.isEmpty(config.getShadowUsername(null)) || StringUtils.isEmpty(config.getShadowPassword(null));
+            if(shadowTable || emptyConfig || !config.getShadowUsername(null).startsWith("$") && !config.getShadowPassword(null).startsWith("$")){
                 newConfig.put(entry.getKey(), entry.getValue());
                 continue;
             }
@@ -66,10 +66,10 @@ public class ShadowDataSourceSPIManager {
             if (result) {
                 String key = DbUrlUtils.getKey(config.getUrl(), config.getUsername());
                 logger.info("success process shadow datasource config, url:{}, shadow userName{}, shadow password length :{}",
-                        config.getShadowUrl(), config.getShadowUsername(), config.getShadowPassword().length());
+                        config.getShadowUrl(), config.getShadowUsername(null), config.getShadowPassword(null).length());
                 newConfig.put(key, config);
             }else{
-                logger.error("failed process shadow datasource config, shadow userName:{}", config.getShadowUsername());
+                logger.error("failed process shadow datasource config, shadow userName:{}", config.getShadowUsername(null));
             }
         }
 
@@ -78,8 +78,8 @@ public class ShadowDataSourceSPIManager {
     }
 
     public static boolean refreshShadowDatabaseConfig(ShadowDatabaseConfig config) {
-        String userName = config.getShadowUsername();
-        String pwd = config.getShadowPassword();
+        String userName = config.getShadowUsername(null);
+        String pwd = config.getShadowPassword(null);
         Map.Entry<String, String> userValue = extractConfigValue(userName);
 
         String providerName = userValue.getKey();
@@ -99,7 +99,7 @@ public class ShadowDataSourceSPIManager {
         }
 
         logger.info("process shadow datasource with spi, username:{}, password:{}, providerName:{}",
-                config.getShadowUsername(), config.getShadowPassword(), providerName);
+                config.getShadowUsername(null), config.getShadowPassword(null), providerName);
 
         boolean result = serviceProviders.get(providerName).processShadowDatabaseConfig(config);
         if (result) {
@@ -112,7 +112,7 @@ public class ShadowDataSourceSPIManager {
             properties.put(ShadowDataSourceServiceProvider.spi_key, providerName);
         } else {
             logger.error("failed process shadow datasource by service provider {}, shadow url:{}, shadow userName:{}, shadow password:{}",
-                    providerName, config.getShadowUrl(), config.getShadowUsername(), config.getShadowPassword());
+                    providerName, config.getShadowUrl(), config.getShadowUsername(null), config.getShadowPassword(null));
         }
         return result;
     }

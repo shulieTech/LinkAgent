@@ -14,6 +14,12 @@
  */
 package com.pamirs.attach.plugin.lettuce.shadowserver;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
@@ -34,12 +40,6 @@ import io.lettuce.core.codec.RedisCodec;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Author qianfan
@@ -70,7 +70,6 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
     private final List<Object> lettucePools = new ArrayList<Object>();
 
     private final Map<Object, Object> connectionMap = new ConcurrentHashMap<Object, Object>();
-
 
     public static void release() {
         LettuceFactory.destroy();
@@ -110,27 +109,30 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
     }
 
     public Object getClient(Object target, String method, Object[] args, Object result) {
-        AbstractRedisClient abstractRedisClient = (AbstractRedisClient) getClient(target);
+        AbstractRedisClient abstractRedisClient = (AbstractRedisClient)getClient(target);
         if (!RedisClientMediator.isShadowDb()) {
             return result;
         }
         if (abstractRedisClient instanceof RedisClusterClient) {
-            RedisClusterClient client = (RedisClusterClient) abstractRedisClient;
+            RedisClusterClient client = (RedisClusterClient)abstractRedisClient;
             Object performanceClient = redisClusterConnect(client, method, args);
             if (performanceClient instanceof StatefulRedisClusterConnection) {
-                LettuceClusterConnectionMediator mediator = new LettuceClusterConnectionMediator((StatefulRedisClusterConnection) performanceClient, (StatefulRedisClusterConnection) result);
+                LettuceClusterConnectionMediator mediator = new LettuceClusterConnectionMediator(
+                    (StatefulRedisClusterConnection)performanceClient, (StatefulRedisClusterConnection)result);
                 LettuceFactory.getFactory().add(mediator);
                 return mediator;
             } else if (performanceClient instanceof StatefulRedisConnection) {
-                LettuceConnectionMediator mediator = new LettuceConnectionMediator((StatefulRedisConnection) performanceClient, (StatefulRedisConnection) result);
+                LettuceConnectionMediator mediator = new LettuceConnectionMediator(
+                    (StatefulRedisConnection)performanceClient, (StatefulRedisConnection)result);
                 LettuceFactory.getFactory().add(mediator);
                 return mediator;
             }
         } else if (abstractRedisClient instanceof RedisClient) {
-            RedisClient client = (RedisClient) abstractRedisClient;
+            RedisClient client = (RedisClient)abstractRedisClient;
             Object performanceClient = redisClientConnect(client, method, args);
             if (performanceClient instanceof StatefulRedisConnection) {
-                LettuceConnectionMediator mediator = new LettuceConnectionMediator((StatefulRedisConnection) redisClientConnect(client, method, args), (StatefulRedisConnection) result);
+                LettuceConnectionMediator mediator = new LettuceConnectionMediator(
+                    (StatefulRedisConnection)redisClientConnect(client, method, args), (StatefulRedisConnection)result);
                 LettuceFactory.getFactory().add(mediator);
                 return mediator;
             }
@@ -148,7 +150,7 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         String method = manager.removeField(object, LettuceConstants.DYNAMIC_FIELD_LETTUCE_METHOD);
         Object[] args = manager.removeField(object, LettuceConstants.DYNAMIC_FIELD_LETTUCE_ARGS);
         Object result = manager.removeField(object, LettuceConstants.DYNAMIC_FIELD_LETTUCE_RESULT);
-        RedisClientMediator mediator = (RedisClientMediator) getClient(target, method, args, result);
+        RedisClientMediator mediator = (RedisClientMediator)getClient(target, method, args, result);
         Object performanceRedisClient = mediator.getPerformanceRedisClient();
         connectionMap.put(target, performanceRedisClient);
         return performanceRedisClient;
@@ -157,36 +159,40 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
     @Override
     public RedisClientMediator<AbstractRedisClient> createMediator(Object obj, ShadowRedisConfig shadowRedisConfig) {
 
-        AbstractRedisClient client = (AbstractRedisClient) obj;
+        AbstractRedisClient client = (AbstractRedisClient)obj;
         RedisClientMediator<AbstractRedisClient> mediator = null;
         try {
 
             if (client instanceof RedisClusterClient) {
-                RedisClusterClient redisClient = (RedisClusterClient) client;
+                RedisClusterClient redisClient = (RedisClusterClient)client;
                 Iterable<RedisURI> redisURIS = Reflect.on(redisClient).call("getInitialUris").get();
                 Iterable<RedisURI> performanceRedisUris = performanceRedisUris(redisURIS, shadowRedisConfig);
                 // redisURIS需要修改ip:port等信息
-                RedisClusterClient performanceRedisClient = RedisClusterClient.create(redisClient.getResources(), performanceRedisUris);
+                RedisClusterClient performanceRedisClient = RedisClusterClient.create(redisClient.getResources(),
+                    performanceRedisUris);
                 mediator = new RedisClientMediator<AbstractRedisClient>(performanceRedisClient, client, true);
 
             } else if (client instanceof RedisClient) {
-                RedisClient redisClient = (RedisClient) client;
+                RedisClient redisClient = (RedisClient)client;
                 RedisURI redisURI = Reflect.on(redisClient).get("redisURI");
 
+                String password = new String(redisURI.getPassword());
 
                 // 单机redisUri，如果控制台配置多个，只取第一个node节点
-                RedisURI performanceRedisUri = performanceRedisUri(redisURI, shadowRedisConfig.getNodeNums(), 0, shadowRedisConfig.getDatabase(), shadowRedisConfig.getPassword());
-                RedisClient performanceRedisClient = RedisClient.create(redisClient.getResources(), performanceRedisUri);
+                RedisURI performanceRedisUri = performanceRedisUri(redisURI, shadowRedisConfig.getNodeNums(), 0,
+                    shadowRedisConfig.getDatabase(), shadowRedisConfig.getPassword(password));
+                RedisClient performanceRedisClient = RedisClient.create(redisClient.getResources(),
+                    performanceRedisUri);
                 mediator = new RedisClientMediator<AbstractRedisClient>(performanceRedisClient, client, true);
             }
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
             ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.RedisServer)
-                    .setErrorCode("redisServer-0001")
-                    .setMessage("redis server lettuce error！")
-                    .setDetail(ExceptionUtils.getStackTrace(e))
-                    .report();
+                .setErrorType(ErrorTypeEnum.RedisServer)
+                .setErrorCode("redisServer-0001")
+                .setMessage("redis server lettuce error！")
+                .setDetail(ExceptionUtils.getStackTrace(e))
+                .report();
         }
 
         return mediator;
@@ -216,8 +222,12 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         Iterator<RedisURI> iterator = uris.iterator();
         int index = 0;
         while (iterator.hasNext()) {
-            RedisURI redisURI = performanceRedisUri(iterator.next(), nodes, index, config.getDatabase(), config.getPassword());
-            shadowNodes.add(redisURI);
+            RedisURI redisURI = iterator.next();
+            String password = new String(redisURI.getPassword());
+
+            RedisURI redisURINew = performanceRedisUri(redisURI, nodes, index, config.getDatabase(),
+                config.getPassword(password));
+            shadowNodes.add(redisURINew);
             index++;
         }
         return shadowNodes;
@@ -229,7 +239,8 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
      * @param index
      * @return
      */
-    private RedisURI performanceRedisUri(RedisURI redisURI, List<String> nodes, int index, Integer database, String password) {
+    private RedisURI performanceRedisUri(RedisURI redisURI, List<String> nodes, int index, Integer database,
+        String password) {
         RedisURI newRedisUri = new RedisURI();
         if (null != redisURI && null != nodes) {
             String node = nodes.get(index);
@@ -255,25 +266,24 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         return newRedisUri;
     }
 
-
     public Object redisClusterConnect(RedisClusterClient client, String methodName, Object[] args) {
         if (LettuceConstants.CONNECT.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connect((RedisCodec) args[0]);
+                return client.connect((RedisCodec)args[0]);
             } else {
                 return client.connect();
             }
         } else if (LettuceConstants.CONNECT_ASYNC.equals(methodName)) {
-            return client.connectAsync((RedisCodec) args[0]);
+            return client.connectAsync((RedisCodec)args[0]);
         } else if (LettuceConstants.CONNECT_PUB_SUB.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connectPubSub((RedisCodec) args[0]);
+                return client.connectPubSub((RedisCodec)args[0]);
             } else {
                 return client.connectPubSub();
             }
         } else if (LettuceConstants.CONNECT_PUB_SUB_ASYNC.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connectPubSubAsync((RedisCodec) args[0]);
+                return client.connectPubSubAsync((RedisCodec)args[0]);
             }
         } else if (LettuceConstants.CONNECT_TO_NODE.equals(methodName)) {
 
@@ -290,32 +300,32 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
     public Object redisClientConnect(RedisClient client, String methodName, Object[] args) {
         if (LettuceConstants.CONNECT.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connect((RedisCodec) args[0]);
+                return client.connect((RedisCodec)args[0]);
             } else {
                 return client.connect();
             }
         } else if (LettuceConstants.CONNECT_ASYNC.equals(methodName)) {
-            return client.connectAsync((RedisCodec) args[0], (RedisURI) args[1]);
+            return client.connectAsync((RedisCodec)args[0], (RedisURI)args[1]);
         } else if (LettuceConstants.CONNECT_PUB_SUB.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connectPubSub((RedisCodec) args[0]);
+                return client.connectPubSub((RedisCodec)args[0]);
             } else {
                 return client.connectPubSub();
             }
         } else if (LettuceConstants.CONNECT_PUB_SUB_ASYNC.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connectPubSubAsync((RedisCodec) args[0], (RedisURI) args[1]);
+                return client.connectPubSubAsync((RedisCodec)args[0], (RedisURI)args[1]);
             }
         } else if (LettuceConstants.CONNECT_SENTINEL.equals(methodName)) {
             if (isRedisCodec(args)) {
-                return client.connectSentinel((RedisCodec) args[0], (RedisURI) args[1]);
+                return client.connectSentinel((RedisCodec)args[0], (RedisURI)args[1]);
             } else if (args[0] instanceof RedisURI) {
-                return client.connectSentinel((RedisURI) args[0]);
+                return client.connectSentinel((RedisURI)args[0]);
             } else {
                 return client.connectSentinel();
             }
         } else if (LettuceConstants.CONNECT_SENTINEL_ASYNC.equals(methodName)) {
-            return client.connectSentinelAsync((RedisCodec) args[0], (RedisURI) args[1]);
+            return client.connectSentinelAsync((RedisCodec)args[0], (RedisURI)args[1]);
         }
         return null;
     }

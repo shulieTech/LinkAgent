@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.alibaba.fastjson.JSON;
+
 import com.pamirs.pradar.pressurement.entry.CheckerEntry;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
@@ -51,11 +52,21 @@ public class SimulatorDynamicConfig {
     private static final String SWITCH_SAVE_BUSINESS_TRACE_KEY = "pradar.switch.save.business.trace";
     private static final String BUS_REQUEST_RESPONSE_DATA_ALLOW_TRACE = "pradar.bus.request.response.data.allow.trace";
     private static final String SHADOW_REQUEST_RESPONSE_DATA_ALLOW_TRACE
-            = "pradar.shadow.request.response.data.allow.trace";
+        = "pradar.shadow.request.response.data.allow.trace";
     private static final String SECURITY_FIELD = "securityField";
 
     private static final String FILED_CHECK_RULES_SWITCH = "filed.check.rules.switch";
     private static final String FILED_CHECK_RULES = "filed.check.rules";
+
+    /**
+     * 影子库，账密前缀及后缀
+     */
+    private static final String SHADOW_DATASOURCE_ACCOUNT_PREFIX = "shadow.datasource.account.prefix";
+    private static final String DEFAULT_SHADOW_DATASOURCE_ACCOUNT_PREFIX = "PT_";
+
+    private static final String SHADOW_DATASOURCE_ACCOUNT_SUFFIX = "shadow.datasource.account.suffix";
+    private static final String DEFAULT_SHADOW_DATASOURCE_ACCOUNT_SUFFIX = "";
+
     /**
      * trace 业务流量采样率
      */
@@ -95,6 +106,12 @@ public class SimulatorDynamicConfig {
      */
     private final boolean shadowRequestResponseDataAllowTrace;
 
+    /**
+     * 影子库账号前后缀
+     */
+    private final String shadowDatasourceAccountPrefix;
+    private final String shadowDatasourceAccountSuffix;
+
     private Map<String, CheckerEntry> fieldCheckRules;
     private final List<String> securityFieldCollection;
 
@@ -118,7 +135,58 @@ public class SimulatorDynamicConfig {
         this.fieldCheckRulesSwitcher = getFieldCheckRulesSwithcer(config);
         this.fieldCheckRules = getFieldCheckRules(config);
         this.securityFieldCollection = getSecurityFieldCollection(config);
+        this.shadowDatasourceAccountPrefix = getShadowDatasourceAccountPrefix(config);
+        this.shadowDatasourceAccountSuffix = getShadowDatasourceAccountSuffix(config);
+    }
 
+    public String shadowDatasourceAccountPrefix() {
+        return this.shadowDatasourceAccountPrefix;
+    }
+
+    public String shadowDatasourceAccountSuffix() {
+        return this.shadowDatasourceAccountSuffix;
+    }
+
+    /**
+     * 获取影子库账密前缀
+     *
+     * @return string
+     */
+    private String getShadowDatasourceAccountPrefix(Map<String, String> config) {
+        try {
+            if (config == null) {
+                return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_PREFIX;
+            }
+            String data = getConfig(config, SHADOW_DATASOURCE_ACCOUNT_PREFIX);
+            if (data == null) {
+                return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_PREFIX;
+            }
+            return data;
+        } catch (Exception e) {
+            LOGGER.error("getShadowDatasourceAccountPrefix error {}", e);
+            return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_PREFIX;
+        }
+    }
+
+    /**
+     * 获取影子库账密前缀
+     *
+     * @return string
+     */
+    private String getShadowDatasourceAccountSuffix(Map<String, String> config) {
+        try {
+            if (config == null) {
+                return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_SUFFIX;
+            }
+            String data = getConfig(config, SHADOW_DATASOURCE_ACCOUNT_SUFFIX);
+            if (data == null) {
+                return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_SUFFIX;
+            }
+            return data;
+        } catch (Exception e) {
+            LOGGER.error("getShadowDatasourceAccountSuffix error {}", e);
+            return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_SUFFIX;
+        }
     }
 
     private List<String> getSecurityFieldCollection(Map<String, String> config) {
@@ -171,7 +239,9 @@ public class SimulatorDynamicConfig {
         return result;
     }
 
-    String mockStr = "[{ \"url\":\"jdbc:mysql://114.55.42.181:3306/atester?useUnicode=true\", \"table\":\"m_user\", \"operateType\":\"insert\", \"prefix\":\"PT_\" }]";
+    String mockStr
+        = "[{ \"url\":\"jdbc:mysql://114.55.42.181:3306/atester?useUnicode=true\", \"table\":\"m_user\", "
+        + "\"operateType\":\"insert\", \"prefix\":\"PT_\" }]";
 
     private Map<String, CheckerEntry> getFieldCheckRules(Map<String, String> config) {
         if (!getFieldCheckRulesSwithcer()) {

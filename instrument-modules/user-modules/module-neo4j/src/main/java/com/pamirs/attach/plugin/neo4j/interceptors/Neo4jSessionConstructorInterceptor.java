@@ -14,6 +14,10 @@
  */
 package com.pamirs.attach.plugin.neo4j.interceptors;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import com.pamirs.attach.plugin.neo4j.ListenerRegisterStatus;
 import com.pamirs.attach.plugin.neo4j.Neo4JConstants;
 import com.pamirs.attach.plugin.neo4j.config.Neo4JSessionExt;
@@ -51,10 +55,6 @@ import org.neo4j.ogm.session.Neo4jSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 /**
  * @ClassName: SessionFactoryOpenSessionInterceptor
  * @author: wangjian
@@ -83,18 +83,22 @@ public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor 
         }
         try {
             // 业务库session
-            Neo4jSession sourceSession = (Neo4jSession) target;
-            DriverConfiguration driverConfiguration = ((HttpDriver) args[1]).getConfiguration();
+            Neo4jSession sourceSession = (Neo4jSession)target;
+            DriverConfiguration driverConfiguration = ((HttpDriver)args[1]).getConfiguration();
             String s = driverConfiguration.getURI();
             Credentials credentials = driverConfiguration.getCredentials();
             String username = null;
+            String password = null;
             if (credentials instanceof AuthTokenCredentials) {
-                username = ((AuthTokenCredentials) credentials).credentials();
+                username = ((AuthTokenCredentials)credentials).credentials();
             } else if (credentials instanceof UsernamePasswordCredentials) {
-                username = ((UsernamePasswordCredentials) credentials).getUsername();
+                username = ((UsernamePasswordCredentials)credentials).getUsername();
+                password = ((UsernamePasswordCredentials)credentials).getPassword();
             }
-            DataSourceMeta<Neo4jSession> neo4jSessionDataSourceMeta = new DataSourceMeta<Neo4jSession>(s, username, sourceSession);
-            if (DataSourceWrapUtil.pressureDataSources.containsKey(neo4jSessionDataSourceMeta) && DataSourceWrapUtil.pressureDataSources.get(neo4jSessionDataSourceMeta) != null) {
+            DataSourceMeta<Neo4jSession> neo4jSessionDataSourceMeta = new DataSourceMeta<Neo4jSession>(s, username,
+                sourceSession);
+            if (DataSourceWrapUtil.pressureDataSources.containsKey(neo4jSessionDataSourceMeta)
+                && DataSourceWrapUtil.pressureDataSources.get(neo4jSessionDataSourceMeta) != null) {
                 // 该业务库数据源已经初始化过影子库
                 return;
             }
@@ -103,28 +107,30 @@ public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor 
                 return;
             }
             // 从应用的影子库配置中获取
-            String key = DbUrlUtils.getKey(neo4jSessionDataSourceMeta.getUrl(), neo4jSessionDataSourceMeta.getUsername());
+            String key = DbUrlUtils.getKey(neo4jSessionDataSourceMeta.getUrl(),
+                neo4jSessionDataSourceMeta.getUsername());
             if (!GlobalConfig.getInstance().containsShadowDatabaseConfig(key)) {
                 ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0002")
-                        .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("业务库配置:::url: " + s + "; 中间件类型：other")
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
-                return;
-            }
-            MetaData metaData = (MetaData) args[0];
-            DataSourceWrapUtil.metaDataMap.put(sourceSession, metaData);
-            DataSourceWrapUtil.wrap(neo4jSessionDataSourceMeta);
-        } catch (Throwable e) {
-            ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0003")
-                    .setMessage("影子库配置异常，无法由配置正确生成影子库！")
-                    .setDetail("url: " + ((HttpDriver) args[1]).getConfiguration().getURI() + Throwables.getStackTraceAsString(e))
+                    .setErrorCode("datasource-0002")
+                    .setMessage("没有配置对应的影子表或影子库！")
+                    .setDetail("业务库配置:::url: " + s + "; 中间件类型：other")
                     .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
                     .report();
+                return;
+            }
+            MetaData metaData = (MetaData)args[0];
+            DataSourceWrapUtil.metaDataMap.put(sourceSession, metaData);
+            DataSourceWrapUtil.wrap(neo4jSessionDataSourceMeta, password);
+        } catch (Throwable e) {
+            ErrorReporter.buildError()
+                .setErrorType(ErrorTypeEnum.DataSource)
+                .setErrorCode("datasource-0003")
+                .setMessage("影子库配置异常，无法由配置正确生成影子库！")
+                .setDetail(
+                    "url: " + ((HttpDriver)args[1]).getConfiguration().getURI() + Throwables.getStackTraceAsString(e))
+                .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                .report();
             throw new PressureMeasureError("Neo4J-002:影子库初始化失败:", e);
         }
     }
@@ -136,18 +142,20 @@ public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor 
      * @return
      */
     private boolean isPerformanceDataSource(DriverConfiguration sourceDriverConfig) {
-        for (Map.Entry<DataSourceMeta, DbMediatorDataSource<Neo4jSession>> entry : DataSourceWrapUtil.pressureDataSources.entrySet()) {
+        for (Map.Entry<DataSourceMeta, DbMediatorDataSource<Neo4jSession>> entry :
+            DataSourceWrapUtil.pressureDataSources.entrySet()) {
             DbMediatorDataSource<Neo4jSession> mediatorDataSource = entry.getValue();
             if (mediatorDataSource.getDataSourcePerformanceTest() != null
-                    && compareToShadow(sourceDriverConfig, mediatorDataSource)) {
+                && compareToShadow(sourceDriverConfig, mediatorDataSource)) {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean compareToShadow(DriverConfiguration sourceDriverConfig, DbMediatorDataSource<?> mediatorDataSource) {
-        Neo4JSessionExt dataSourcePerformanceTest = (Neo4JSessionExt) mediatorDataSource.getDataSourcePerformanceTest();
+    private boolean compareToShadow(DriverConfiguration sourceDriverConfig,
+        DbMediatorDataSource<?> mediatorDataSource) {
+        Neo4JSessionExt dataSourcePerformanceTest = (Neo4JSessionExt)mediatorDataSource.getDataSourcePerformanceTest();
         Driver driver = dataSourcePerformanceTest.getDriver();
         DriverConfiguration configuration = driver.getConfiguration();
         return StringUtils.equals(sourceDriverConfig.getURI(), configuration.getURI());
@@ -188,26 +196,33 @@ public class Neo4jSessionConstructorInterceptor extends TraceInterceptorAdaptor 
                 if (!(event instanceof ShadowDataSourceConfigModifyEvent)) {
                     return EventResult.IGNORE;
                 }
-                ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = (ShadowDataSourceConfigModifyEvent) event;
+                ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent
+                    = (ShadowDataSourceConfigModifyEvent)event;
                 Set<ShadowDatabaseConfig> target = shadowDataSourceConfigModifyEvent.getTarget();
                 if (null == target || target.size() == 0) {
                     return EventResult.IGNORE;
                 }
                 for (ShadowDatabaseConfig config : target) {
-                    Iterator<Map.Entry<DataSourceMeta, DbMediatorDataSource<Neo4jSession>>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
+                    Iterator<Map.Entry<DataSourceMeta, DbMediatorDataSource<Neo4jSession>>> it
+                        = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
                     while (it.hasNext()) {
                         Map.Entry<DataSourceMeta, DbMediatorDataSource<Neo4jSession>> entry = it.next();
                         if (StringUtils.equalsIgnoreCase(DbUrlUtils.getKey(config.getUrl(), config.getUsername()),
-                                DbUrlUtils.getKey(entry.getKey().getUrl(), entry.getKey().getUsername()))) {
+                            DbUrlUtils.getKey(entry.getKey().getUrl(), entry.getKey().getUsername()))) {
                             DbMediatorDataSource<Neo4jSession> value = entry.getValue();
                             it.remove();
                             try {
                                 value.close();
                                 if (logger.isInfoEnabled()) {
-                                    logger.info("module-hikariCP: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                    logger.info(
+                                        "module-hikariCP: destroyed shadow table datasource success. url:{} ,"
+                                            + "username:{}",
+                                        entry.getKey().getUrl(), entry.getKey().getUsername());
                                 }
                             } catch (Throwable e) {
-                                logger.error("module-hikariCP: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
+                                logger.error("module-hikariCP: closed datasource err! target:{}, url:{} username:{}",
+                                    entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(),
+                                    entry.getKey().getUsername(), e);
                             }
                             break;
                         }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -29,8 +29,13 @@ public enum DbType {
         @Override
         public SqlMetaData readMetaData(String url) {
             String mainUrl = getMainUrl(url);
-            String dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
-            mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
+            String dbName = null;
+
+            if (mainUrl.contains("/")) {
+                dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
+                mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
+            }
+
             try {
                 String host = null;
                 if (mainUrl.indexOf(':') != -1) {
@@ -414,7 +419,8 @@ public enum DbType {
                 return null;
             }
         }
-    },;
+    },
+    ;
 
 
     protected String[] prefixs;

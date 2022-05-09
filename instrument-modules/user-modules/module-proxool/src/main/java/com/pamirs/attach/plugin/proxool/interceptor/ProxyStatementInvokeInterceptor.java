@@ -48,6 +48,7 @@ public class ProxyStatementInvokeInterceptor extends ParametersWrapperIntercepto
     private Method getUserMethod;
     private Method getConnectionPoolMethod;
     private Method getDefinitionMethod;
+    private Method getPasswordMethod;
 
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {
@@ -87,7 +88,7 @@ public class ProxyStatementInvokeInterceptor extends ParametersWrapperIntercepto
         //因为获取的 url 和 username 有可能是影子的 url 和 username，需要是影子的 url 和 username 需要将是否影子表以及 dbConnectionKey 重新拿业务的 url 和 username计算
         if (!GlobalConfig.getInstance().containsShadowDatabaseConfig(dbConnectionKey)) {
             for (Map.Entry<String, ShadowDatabaseConfig> entry : GlobalConfig.getInstance().getShadowDatasourceConfigs().entrySet()) {
-                if (StringUtils.equals(entry.getValue().getShadowUrl(), url) && StringUtils.equals(entry.getValue().getShadowUsername(), username)) {
+                if (StringUtils.equals(entry.getValue().getShadowUrl(), url) && StringUtils.equals(entry.getValue().getShadowUsername(username), username)) {
                     String bizUrl = entry.getValue().getUrl();
                     String bizUser = entry.getValue().getUsername();
                     dbConnectionKey = DbUrlUtils.getKey(bizUrl, bizUser);
@@ -140,6 +141,10 @@ public class ProxyStatementInvokeInterceptor extends ParametersWrapperIntercepto
             if (getUserMethod == null) {
                 getUserMethod = connectionPoolDefinition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_USER_METHOD);
                 getUserMethod.setAccessible(true);
+            }
+            if (getPasswordMethod == null) {
+                getPasswordMethod = connectionPoolDefinition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_PASSWORD_METHOD);
+                getPasswordMethod.setAccessible(true);
             }
         }
 

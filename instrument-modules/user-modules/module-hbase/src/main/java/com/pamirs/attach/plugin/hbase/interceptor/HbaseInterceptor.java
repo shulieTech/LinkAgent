@@ -94,11 +94,11 @@ public class HbaseInterceptor extends TraceInterceptorAdaptor {
 
     private String getTableName(HTable target) {
         String nameAsString = target.getName().getNameAsString();
-        if ("hbase:meta".equals(nameAsString)) {
+        if ("hbase:meta".equals(nameAsString) || !Pradar.isClusterTest()) {
             return nameAsString;
         }
         if (GlobalConfig.getInstance().isShadowTableReplace()) {
-            nameAsString = Pradar.addClusterTestPrefix(nameAsString);
+            nameAsString = HBaseTableNameUtils.replaceShadowTableName(nameAsString);
         }
         return nameAsString;
     }

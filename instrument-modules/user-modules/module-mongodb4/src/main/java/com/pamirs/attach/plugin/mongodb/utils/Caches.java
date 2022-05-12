@@ -57,7 +57,7 @@ public class Caches {
                     if (!Pradar.isClusterTestPrefix(ptDB)) {
                         ptDB = fetchShadowDatabase(shadowDatabaseConfig);
                     }
-                    if (Pradar.isShadowDatabaseWithShadowTable()) {
+                    if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
                         if (!Pradar.isClusterTestPrefix(ptCOL)) {
                             ptCOL = Pradar.addClusterTestPrefix(ptCOL);
                         }

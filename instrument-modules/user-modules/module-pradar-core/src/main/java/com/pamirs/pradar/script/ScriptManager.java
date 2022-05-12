@@ -69,7 +69,13 @@ public class ScriptManager {
         ExecutorService executorService = Executors.newFixedThreadPool(8);
 
         long l = System.nanoTime();
+//        final Map<String, Object> binding = new HashMap<String, Object>(4, 1.0f);
+//        binding.put("args", new Object[]{"a", String.valueOf(1)});
+//        binding.put("target", "aaa");
+//        binding.put("classLoader", classLoader);
 
+//        test1(1,scriptContent,binding,"1");
+//        test1(1,"import java.util.concurrent.Executors; Executors a=null; return Long.valueOf(aaaL) +\" : \" +args[1]+ a;",binding,"1");
         final CountDownLatch count = new CountDownLatch(num);
         for (int i = 0; i < num; i++) {
             final Map<String, Object> binding = new HashMap<String, Object>(4, 1.0f);

@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
+import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollingSelector;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
@@ -79,6 +80,8 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     private final long allowMaxLag;
 
     private final long currentPollTime;
+
+    private static boolean singleThreadConsumer = System.getProperty(KafkaConstants.SINGLE_THREAD_CONSUMER) != null;
 
     public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup, long maxLagMillSecond, long timeout) {
         this(consumer, topicAndGroup, maxLagMillSecond, new PollingSelector(), timeout);
@@ -166,6 +169,19 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     @Override
     public ConsumerRecords<K, V> poll(long timeout) {
+        // 如果是单线程消费者, 则业务和影子轮流poll一次
+        if(singleThreadConsumer){
+            if (lag > allowMaxLag) {
+                log.warn("biz lag : {} over allowMaxLagMillSecond : {}, so priority use biz consumer", lag, allowMaxLag);
+                return doBizPoll(timeout);
+            }
+            if (consumerSelector.select() == PollConsumerSelector.ConsumerType.SHADOW) {
+                return doShadowPoll(timeout);
+            } else {
+                return doBizPoll(timeout);
+            }
+        }
+
         if (isBiz()) {
             return doBizPoll(timeout);
         } else {
@@ -177,7 +193,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         try {
             ConsumerRecords consumerRecords = ptConsumer.poll(Math.min(timeout, ptMaxPollTimeout));
             //没数据，不要设置压测标，避免不必要的上下文创建
-            if (!consumerRecords.isEmpty()){
+            if (!consumerRecords.isEmpty()) {
                 Pradar.setClusterTest(true);
             }
             return consumerRecords;
@@ -553,11 +569,12 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             kafkaConsumer = new KafkaConsumer(config);
         }
 
-        // 樊登特殊逻辑，不通用
-        /*if (interceptors != null) {
-            log.info("set kafka interceptors:{}",interceptors);
+        Object ptInterceptors = Reflect.on(kafkaConsumer).get("interceptors");
+        List list = Reflect.on(ptInterceptors).get("interceptors");
+        if(list == null || list.isEmpty()){
+            log.info("set kafka biz interceptors to pt consumer:{}",interceptors);
             Reflect.on(kafkaConsumer).set("interceptors",interceptors);
-        }*/
+        }
 
         kafkaConsumer.subscribe(consumerMetaData.getShadowTopics());
         return new WithTryCatchConsumerProxy(kafkaConsumer);

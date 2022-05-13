@@ -1,2 +1,1 @@
-1。 可以通过 pradar.shadow.table.prefix 指定影子表前缀
-2。 修复使用挡板脚本的时候，如果不通脚本内使用了相同变量名字，会因为类型不一致报错。
+指定影子表前缀配置字段修改为大写 PT_PRESSURE_TABLE_PREFIX 适应环境变量 

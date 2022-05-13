@@ -62,7 +62,7 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
             if (Pradar.isClusterTest()) {
                 databaseConfig = getShadowDatabaseConfig(mongoClientDelegate);
                 if (databaseConfig == null) {
-                    return null;
+                    return spanRecord;
                 }
                 String shadowUrl = databaseConfig.getShadowUrl();
                 spanRecord.setRemoteIp(shadowUrl);

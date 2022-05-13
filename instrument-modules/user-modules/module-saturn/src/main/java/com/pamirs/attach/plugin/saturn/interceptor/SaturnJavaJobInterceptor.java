@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -39,22 +39,20 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
     public void beforeFirst(Advice advice) {
         Object[] args = advice.getParameterArray();
         String methodName = advice.getBehaviorName();
-        Object target = advice.getTarget();
         Pradar.setClusterTest(false);
-        if (target instanceof com.vip.saturn.job.java.SaturnJavaJob) {
-            if (methodName.equals("doExecution") && args.length == 5) {
-                Object shardingContextObj = args[3];
-                SaturnExecutionContext context = (SaturnExecutionContext) shardingContextObj;
-                String serviceName = context.getNamespace() + "-" + context.getJobName();
-                String methodNameS = context.getJobConfiguration().getJobClass();
-                Pradar.startTrace(null, serviceName, methodNameS);
-                Pradar.middlewareName(getPluginName());
-                String jobParam = context.getJobConfiguration().getJobParameter();
-                if (jobParam.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
-                    Pradar.setClusterTest(true);
-                }
+        if (methodName.equals("doExecution") && args.length == 5) {
+            Object shardingContextObj = args[3];
+            SaturnExecutionContext context = (SaturnExecutionContext) shardingContextObj;
+            String serviceName = context.getNamespace() + "-" + context.getJobName();
+            String methodNameS = context.getJobConfiguration().getJobClass();
+            Pradar.startTrace(null, serviceName, methodNameS);
+            Pradar.middlewareName(getPluginName());
+            String jobParam = context.getJobConfiguration().getJobParameter();
+            if (jobParam.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+                Pradar.setClusterTest(true);
             }
         }
+
     }
 
     @Override

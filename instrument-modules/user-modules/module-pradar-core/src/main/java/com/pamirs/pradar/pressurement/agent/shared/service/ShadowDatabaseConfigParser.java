@@ -32,7 +32,7 @@ import org.apache.commons.lang.StringUtils;
  */
 public class ShadowDatabaseConfigParser {
 
-    public static final String PT_PRESSURE_TABLE_PREFIX_ENV_CONFIG = "pradar.shadow.table.prefix";
+    public static final String PT_PRESSURE_TABLE_PREFIX_ENV_CONFIG = "PT_PRESSURE_TABLE_PREFIX";
 
     private static ShadowDatabaseConfigParser INSTANCE;
 

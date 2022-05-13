@@ -77,15 +77,18 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
                     MongoNamespace namespace = operationAccessor.getMongoNamespace(args[0]);
                     String service;
 
+                    String collectionName = namespace.getCollectionName();
+                    boolean isPt = Pradar.isClusterTestPrefix(collectionName);
+
                     if (Pradar.isClusterTest()) {
                         if (databaseConfig.isShadowTable()) {
-                            service = namespace.getDatabaseName() + "." + Pradar.addClusterTestPrefix(namespace.getCollectionName());
+                            service = namespace.getDatabaseName() + "." + (isPt ? collectionName : Pradar.addClusterTestPrefix(collectionName));
                         } else if (databaseConfig.isShadowDatabase()) {
                             String shadowSchema = databaseConfig.getShadowSchema();
-                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + namespace.getCollectionName();
+                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + (isPt ? collectionName.substring(Pradar.getClusterTestPrefix().length()) : collectionName);
                         } else {
                             String shadowSchema = databaseConfig.getShadowSchema();
-                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + Pradar.addClusterTestPrefix(namespace.getCollectionName());
+                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + (isPt ? collectionName.substring(Pradar.getClusterTestPrefix().length()) : collectionName);
                         }
                         spanRecord.setService(service);
                     } else {

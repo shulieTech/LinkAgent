@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -59,7 +59,7 @@ public class Caches {
                     if (!Pradar.isClusterTestPrefix(ptDB)) {
                         ptDB = fetchShadowDatabase(shadowDatabaseConfig);
                     }
-                    if (Pradar.isShadowDatabaseWithShadowTable()) {
+                    if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
                         if (!Pradar.isClusterTestPrefix(ptCOL)) {
                             ptCOL = Pradar.addClusterTestPrefix(ptCOL);
                         }
@@ -76,14 +76,14 @@ public class Caches {
                 }
             }
         }
-        if(operation instanceof AggregateOperation){
+        if (operation instanceof AggregateOperation) {
             operation = com.pamirs.attach.plugin.dynamic.reflect.Reflect.on(operation).get("wrapped");
         }
         operationAccessor.setMongoNamespace(operation, executorModule.getPtMongoNamespace());
         return executorModule.getOperationExecutor();
     }
 
-    private static String fetchShadowDatabase(ShadowDatabaseConfig shadowDatabaseConfig){
+    private static String fetchShadowDatabase(ShadowDatabaseConfig shadowDatabaseConfig) {
         String shadowUrl = shadowDatabaseConfig.getShadowUrl();
         String[] split = shadowUrl.split("/");
         String temp = split[split.length - 1];
@@ -115,7 +115,7 @@ public class Caches {
                     try {
                         field = executor.getClass().getDeclaredField("this$0");
                         field.setAccessible(true);
-                        mongoClientDelegate = (MongoClientDelegate)field.get(executor);
+                        mongoClientDelegate = (MongoClientDelegate) field.get(executor);
                     } finally {
                         if (field != null) {
                             field.setAccessible(false);

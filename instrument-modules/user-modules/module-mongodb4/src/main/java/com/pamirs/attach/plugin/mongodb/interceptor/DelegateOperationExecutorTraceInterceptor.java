@@ -74,21 +74,19 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
             OperationAccessor operationAccessor = OperationAccessorFactory.getOperationAccessor(operationClass);
             if (operationAccessor != null) {
                 try {
-                    MongoNamespace namespace = operationAccessor.getMongoNamespace(args[0]);
                     String service;
-
+                    MongoNamespace namespace = operationAccessor.getMongoNamespace(args[0]);
                     String collectionName = namespace.getCollectionName();
-                    boolean isPt = Pradar.isClusterTestPrefix(collectionName);
 
                     if (Pradar.isClusterTest()) {
                         if (databaseConfig.isShadowTable()) {
-                            service = namespace.getDatabaseName() + "." + (isPt ? collectionName : Pradar.addClusterTestPrefix(collectionName));
+                            service = namespace.getDatabaseName() + "." + Pradar.addClusterTestPrefix(collectionName);
                         } else if (databaseConfig.isShadowDatabase()) {
                             String shadowSchema = databaseConfig.getShadowSchema();
-                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + (isPt ? collectionName.substring(Pradar.getClusterTestPrefix().length()) : collectionName);
+                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + collectionName;
                         } else {
                             String shadowSchema = databaseConfig.getShadowSchema();
-                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + (isPt ? collectionName.substring(Pradar.getClusterTestPrefix().length()) : collectionName);
+                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + Pradar.addClusterTestPrefix(collectionName);
                         }
                         spanRecord.setService(service);
                     } else {

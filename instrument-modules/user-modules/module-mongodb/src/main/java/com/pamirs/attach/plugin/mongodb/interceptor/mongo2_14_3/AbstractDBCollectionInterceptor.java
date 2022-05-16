@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -40,10 +40,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorAdaptor {
 
     private final Map<String, MongoClient> clientMapping
-        = new ConcurrentHashMap<String, MongoClient>();
+            = new ConcurrentHashMap<String, MongoClient>();
 
     private final Map<String, DBCollection> collectionMapping
-        = new ConcurrentHashMap<String, DBCollection>();
+            = new ConcurrentHashMap<String, DBCollection>();
 
     private final Object lock = new Object();
 
@@ -55,7 +55,7 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
         if (!check(advice)) {
             return CutOffResult.passed();
         }
-        DBCollection dbCollection = (DBCollection)advice.getTarget();
+        DBCollection dbCollection = (DBCollection) advice.getTarget();
         DBCollection ptCollection = getPtCollection(dbCollection, advice);
         if (ptCollection == null) {
             return CutOffResult.passed();
@@ -72,7 +72,7 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
         }
 
         if (Pradar.isClusterTestPrefix(busCollectionName) || Pradar.isClusterTestPrefix(
-            bizDbCollection.getDB().getName())) {
+                bizDbCollection.getDB().getName())) {
             return null;
         }
 
@@ -92,12 +92,12 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
                             return null;
                         } else {
                             ErrorReporter.buildError()
-                                .setErrorType(ErrorTypeEnum.DataSource)
-                                .setErrorCode("datasource-0002")
-                                .setMessage("mongodb影子库/表未配置！")
-                                .setDetail(
-                                    "业务库配置:::url: " + bizDbCollection.getDB().getMongo().getAddress().toString())
-                                .report();
+                                    .setErrorType(ErrorTypeEnum.DataSource)
+                                    .setErrorCode("datasource-0002")
+                                    .setMessage("mongodb影子库/表未配置！")
+                                    .setDetail(
+                                            "业务库配置:::url: " + bizDbCollection.getDB().getMongo().getAddress().toString())
+                                    .report();
                             throw new PressureMeasureError("mongodb影子库/表未配置");
                         }
                     }
@@ -122,7 +122,7 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
         return ptCollection;
     }
 
-    private Mongo getBusMongoClient(Advice advice){
+    private Mongo getBusMongoClient(Advice advice) {
         Field field = null;
         Field field1 = null;
         try {
@@ -132,14 +132,14 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
             field1 = object.getClass().getDeclaredField("this$0");
             field1.setAccessible(true);
             return (Mongo) field1.get(object);
-        }catch (Exception e){
+        } catch (Exception e) {
             LOGGER.error("getBusMongoClient error ", e);
             throw new PressureMeasureError(e.getMessage());
         } finally {
-            if (field != null){
+            if (field != null) {
                 field.setAccessible(false);
             }
-            if (field1 != null){
+            if (field1 != null) {
                 field1.setAccessible(false);
             }
         }
@@ -150,7 +150,12 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
                                             ShadowDatabaseConfig config, Advice advice) throws Throwable {
         MongoClient ptMongoClient = getPtMongoClient(config);
         if (!ClientManagerUtils.getBusClient2ptClientMapping().containsValue(ptMongoClient)) {
-            ClientManagerUtils.getBusClient2ptClientMapping().put(getBusMongoClient(advice),ptMongoClient);
+            ClientManagerUtils.getBusClient2ptClientMapping().put(getBusMongoClient(advice), ptMongoClient);
+        }
+        if (config.isShadowDatabaseWithTable()) {
+            if (!Pradar.isClusterTestPrefix(busCollectionName)) {
+                busCollectionName = Pradar.addClusterTestPrefix(busCollectionName);
+            }
         }
         return ptMongoClient.getDB(config.getShadowSchema()).getCollection(
                 busCollectionName);
@@ -176,23 +181,23 @@ public abstract class AbstractDBCollectionInterceptor extends CutoffInterceptorA
     }
 
     protected DBCollection doShadowTable(DBCollection dbCollection, String busCollectionName,
-        ShadowDatabaseConfig config) throws Throwable {
+                                         ShadowDatabaseConfig config) throws Throwable {
         if (Pradar.isClusterTestPrefix(busCollectionName)) {
             return null;
         }
         String shadowTableName = getShadowTableName(config, busCollectionName);
         if (shadowTableName == null) {
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.DataSource)
-                .setErrorCode("datasource-0002")
-                .setMessage("mongodb影子表未配置！")
-                .setDetail("表名:" + busCollectionName)
-                .report();
+                    .setErrorType(ErrorTypeEnum.DataSource)
+                    .setErrorCode("datasource-0002")
+                    .setMessage("mongodb影子表未配置！")
+                    .setDetail("表名:" + busCollectionName)
+                    .report();
             throw new PressureMeasureError(String.format("mongodb影子表未配置 ： %s", busCollectionName));
         }
 
         return dbCollection.getDB().getCollection(
-            shadowTableName);
+                shadowTableName);
     }
 
     protected abstract boolean check(Advice advice);

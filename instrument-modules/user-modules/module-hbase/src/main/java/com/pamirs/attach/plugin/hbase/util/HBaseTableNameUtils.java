@@ -69,8 +69,7 @@ public class HBaseTableNameUtils {
     public static String getTableNameNoContainsNameSpace(String tableName) {
         int index = StringUtils.indexOf(tableName, NAMESPACE_SPLIT);
         if (index != -1) {
-            String table = StringUtils.substring(tableName, index + 1);
-            return table;
+            return StringUtils.substring(tableName, index + 1);
         }
         return tableName;
     }

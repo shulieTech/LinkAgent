@@ -5,7 +5,6 @@ import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,11 +17,12 @@ public class AbstractConfigGetInstanceInterceptor extends CutoffInterceptorAdapt
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
-        if (ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG.equals(advice.getParameterArray()[0])) {
-            log.info("拦截interceptor获取, 返回空集合");
-            return CutOffResult.cutoff(new ArrayList());
+        Class<?> clazz = (Class<?>) advice.getParameterArray()[1];
+        if (!"org.apache.kafka.clients.consumer.ConsumerInterceptor".equals(clazz.getName())) {
+            return CutOffResult.PASSED;
         }
-        return CutOffResult.PASSED;
+        log.info("拦截Consumer interceptor获取, 返回空集合");
+        return CutOffResult.cutoff(new ArrayList());
     }
 
 }

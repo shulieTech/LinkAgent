@@ -82,6 +82,9 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
             return null;
         }
         Iterator iterator = consumerRecords.iterator();
+        if(!iterator.hasNext()){
+            return null;
+        }
         Object next = iterator.next();
         if (!(next instanceof ConsumerRecord)) {
             return null;

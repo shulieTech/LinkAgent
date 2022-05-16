@@ -14,7 +14,11 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq;
 
+import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.interceptor.*;
+import com.pamirs.pradar.SyncObjectService;
+import com.pamirs.pradar.bean.SyncObject;
+import com.pamirs.pradar.bean.SyncObjectData;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -22,7 +26,10 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.kohsuke.MetaInfServices;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author vincent
@@ -30,6 +37,8 @@ import org.kohsuke.MetaInfServices;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io")
 public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
+    private static final Logger logger = LoggerFactory.getLogger(RocketMQPlugin.class);
+
     @Override
     public boolean onActive() throws Throwable {
         return addHookRegisterInterceptor();
@@ -162,6 +171,42 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             });
 
         //--for orderly
+        delayToInitShadownConcumer();
         return true;
+    }
+
+    private void delayToInitShadownConcumer() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(60000);
+                } catch (InterruptedException e) {
+                    logger.warn("delayToInitShadownConcumer tnterrupted", e);
+                }
+                ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                try {
+                    logger.info("delayToInitShadownConcumer start ############");
+                    SyncObject syncObject = SyncObjectService.getSyncObject("org.apache.rocketmq.client.consumer.DefaultMQPushConsumer#start");
+                    if (syncObject == null) {
+                        return;
+                    }
+                    Thread.currentThread().setContextClassLoader(syncObject.getClass().getClassLoader());
+                    for (SyncObjectData data : syncObject.getDatas()) {
+                        Object target = data.getTarget();
+                        if (target instanceof DefaultMQPushConsumer) {
+                            logger.info("delayToInitShadownConcumer to init ######### {} ", target);
+                            ConsumerRegistry.registerConsumer((DefaultMQPushConsumer) target);
+                        }
+                    }
+                    logger.info("delayToInitShadownConcumer end ############");
+                } catch (Throwable e) {
+                    logger.error("delayToInitShadownConcumer init fail!", e);
+                } finally {
+                    Thread.currentThread().setContextClassLoader(classLoader);
+                }
+
+            }
+        }).start();
     }
 }

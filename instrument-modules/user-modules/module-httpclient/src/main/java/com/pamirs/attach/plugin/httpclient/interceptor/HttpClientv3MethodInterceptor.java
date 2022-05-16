@@ -14,8 +14,15 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import java.net.SocketTimeoutException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.alibaba.fastjson.JSONObject;
+
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -42,11 +49,6 @@ import org.apache.commons.httpclient.params.DefaultHttpParams;
 import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.lang.StringUtils;
 
-import java.net.SocketTimeoutException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Created by xiaobin on 2016/12/15.
  */
@@ -69,56 +71,96 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         return url + path;
     }
 
-    private static ExecutionStrategy fixJsonStrategy =
-            new JsonMockStrategy() {
-                @Override
-                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
-                    if (params instanceof MatchConfig) {
-                        try {
-                            MatchConfig config = (MatchConfig) params;
-                            if (config.getScriptContent().contains("return")) {
-                                return null;
-                            }
-                            HttpMethod method = (HttpMethod) config.getArgs().get("extraMethod");
-                            byte[] bytes = config.getScriptContent().getBytes();
-                            Reflect.on(method).set("responseBody", bytes);
-                            ProcessController.returnImmediately(int.class, 200);
-                        } catch (ProcessControlException pe) {
-                            throw pe;
-                        } catch (Throwable t) {
-                            throw new PressureMeasureError(t);
-                        }
+    private static ExecutionStrategy fixJsonStrategy = new JsonMockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            if (params instanceof MatchConfig) {
+                try {
+                    MatchConfig config = (MatchConfig)params;
+                    if (config.getScriptContent().contains("return")) {
+                        return null;
                     }
-                    return null;
+                    HttpMethod method = (HttpMethod)config.getArgs().get("extraMethod");
+                    byte[] bytes = config.getScriptContent().getBytes();
+                    Reflect.on(method).set("responseBody", bytes);
+                    ProcessController.returnImmediately(int.class, 200);
+                } catch (ProcessControlException pe) {
+                    throw pe;
+                } catch (Throwable t) {
+                    throw new PressureMeasureError(t);
                 }
-            };
+            }
+            return null;
+        }
+    };
+
+    @Override
+    public void beforeFirst(Advice advice) throws Exception {
+        Object[] args = advice.getParameterArray();
+        final HttpMethod method = (HttpMethod)args[1];
+        String url = getUrl(method);
+        if (url == null) {return;}
+        advice.attach(url);
+        if (BlackHostChecker.isBlackHost(url)) {
+            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
+        }
+    }
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
         Object[] args = advice.getParameterArray();
         try {
-            final HttpMethod method = (HttpMethod) args[1];
-            if (method == null) {
-                return;
+            final HttpMethod method = (HttpMethod)args[1];
+            String url = advice.attachment();
+            if (url == null) {return;}
+            httpClusterTest(advice, method, url);
+        } catch (ProcessControlException pce) {
+            throw pce;
+        } catch (Throwable t) {
+            LOGGER.error("", t);
+            if (Pradar.isClusterTest()) {
+                throw new PressureMeasureError(t);
             }
+        }
+    }
+
+    private String getUrl(HttpMethod method) {
+        if (method == null) {
+            return null;
+        }
+        try {
             int port = method.getURI().getPort();
             String path = method.getURI().getPath();
-            String url = getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
-            final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
-            Header header = method.getRequestHeader(PradarService.PRADAR_WHITE_LIST_CHECK);
+            return getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
+        } catch (URIException e) {
+            LOGGER.error("", e);
+            if (Pradar.isClusterTest()) {
+                throw new PressureMeasureError(e);
+            }
+        }
+        return null;
+    }
 
-            if (header == null) {
-                config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, true);
-            } else {
-                config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());
-            }
-            config.addArgs("url", url);
-            config.addArgs("isInterface", Boolean.FALSE);
-            if (config.getStrategy() instanceof JsonMockStrategy){
-                config.addArgs("extraMethod", method);
-                fixJsonStrategy.processBlock(java.lang.String.class, advice.getClassLoader(), config);
-            }
-            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
+    private void httpClusterTest(Advice advice, final HttpMethod method, String url) throws ProcessControlException {
+        final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        Header header = method.getRequestHeader(PradarService.PRADAR_WHITE_LIST_CHECK);
+
+        if (header == null) {
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, true);
+        } else {
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, header.getValue());
+        }
+        config.addArgs("url", url);
+        config.addArgs("isInterface", Boolean.FALSE);
+        if (config.getStrategy() instanceof JsonMockStrategy) {
+            config.addArgs("extraMethod", method);
+            fixJsonStrategy.processBlock(String.class, advice.getClassLoader(), config);
+        }
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
+            new ExecutionForwardCall() {
                 @Override
                 public Object call(Object param) throws ProcessControlException {
                     byte[] bytes = JSONObject.toJSONBytes(param);
@@ -137,19 +179,6 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                     return null;
                 }
             });
-        } catch (URIException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
-        } catch (ProcessControlException pce) {
-            throw pce;
-        } catch (Throwable t) {
-            LOGGER.error("", t);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(t);
-            }
-        }
     }
 
     private Map toMap(String queryString) {
@@ -191,7 +220,8 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         try {
             hashMap = Reflect.on(httpParams).get(HttpClientConstants.DYNAMIC_FIELD_PARAMETERS);
         } catch (ReflectException e) {
-            LOGGER.warn("{} has not field {}", httpParams.getClass().getName(), HttpClientConstants.DYNAMIC_FIELD_PARAMETERS);
+            LOGGER.warn("{} has not field {}", httpParams.getClass().getName(),
+                HttpClientConstants.DYNAMIC_FIELD_PARAMETERS);
         }
 
         if (hashMap != null) {
@@ -202,7 +232,10 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
-        final HttpMethod method = (HttpMethod) args[1];
+        final HttpMethod method = (HttpMethod)args[1];
+        if (advice.hasMark(BlackHostChecker.BLACK_HOST_MARK)) {
+            return null;
+        }
         if (method == null) {
             return null;
         }
@@ -217,7 +250,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        final HttpMethod method = (HttpMethod) args[1];
+        final HttpMethod method = (HttpMethod)args[1];
         if (method == null) {
             return null;
         }
@@ -234,10 +267,8 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                 } catch (NumberFormatException e) {
                 }
             }
-            if ("get".equals(record.getMethod())
-                    || "GET".equals(record.getMethod())
-                    || "head".equals(record.getMethod())
-                    || "HEAD".equals(record.getMethod())) {
+            if ("get".equals(record.getMethod()) || "GET".equals(record.getMethod()) || "head".equals(record.getMethod())
+                || "HEAD".equals(record.getMethod())) {
                 record.setRequest(toMap(method.getQueryString()));
             } else {
                 Map parameters = new HashMap();
@@ -254,26 +285,26 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         }
     }
 
-
     @Override
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpMethod method = (HttpMethod) args[1];
+        HttpMethod method = (HttpMethod)args[1];
         if (method == null) {
             return null;
         }
         try {
             SpanRecord record = new SpanRecord();
-            Integer code = (Integer) advice.getReturnObj();
+            Integer code = (Integer)advice.getReturnObj();
             String msg = method.getURI().toString() + "->" + code;
             record.setResultCode(code + "");
             record.setResponse(msg);
             InnerWhiteListCheckUtil.check();
             /**
              * http3的getResponseBody的方法会打印一下warn日志，考虑size没啥用，暂时去除
-             * org.apache.commons.httpclient.HttpMethodBase| Going to buffer response body of large or unknown size. Using getResponseBodyAsStream instead is recommended.
+             * org.apache.commons.httpclient.HttpMethodBase| Going to buffer response body of large or unknown size. Using
+             * getResponseBodyAsStream instead is recommended.
              */
-//            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
+            //            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
             return record;
         } catch (Throwable e) {
             Pradar.responseSize(0);
@@ -282,11 +313,10 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         return null;
     }
 
-
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpMethod method = (HttpMethod) args[1];
+        HttpMethod method = (HttpMethod)args[1];
         if (method == null) {
             return null;
         }
@@ -300,7 +330,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             record.setRequest(method.getParams());
             record.setResponse(advice.getThrowable());
             InnerWhiteListCheckUtil.check();
-//            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
+            //            record.setResponseSize(method.getResponseBody() == null ? 0 : method.getResponseBody().length);
             return record;
         } catch (Throwable e) {
             Pradar.responseSize(0);

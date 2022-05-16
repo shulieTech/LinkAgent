@@ -8,9 +8,6 @@ import com.alibaba.rocketmq.common.message.MessageQueue;
 
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.OrderlyTraceContexts;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.exception.PradarException;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -41,21 +38,8 @@ public class OrderlyTraceContextInterceptor extends AroundInterceptor {
             consumeMessageContext.setMq(messageQueue);
             consumeMessageContext.setSuccess(false);
             OrderlyTraceContexts.set(consumeMessageContext);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
         } catch (Throwable e) {
             LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
         }
     }
 
@@ -70,21 +54,8 @@ public class OrderlyTraceContextInterceptor extends AroundInterceptor {
             consumeMessageContext.setStatus("SUCCESS");
             //兜底，以免after没有执行（consumeMessageContext.getMsgList() != null 说明before 已经执行了）
             PushConsumeMessageHookImpl.getInstance().consumeMessageAfter(consumeMessageContext);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
         } catch (Throwable e) {
             LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
         } finally {
             OrderlyTraceContexts.remove();
         }

@@ -17,9 +17,11 @@ package com.pamirs.attach.plugin.alibaba.rocketmq;
 import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.*;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -177,43 +179,63 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
         //--for orderly
 
-        delayToInitShadownConcumer();
+        delayToInitShadowConsumer();
         return true;
     }
 
-    private void delayToInitShadownConcumer() {
-        new Thread(new Runnable() {
+    private void delayToInitShadowConsumer() {
+        final SyncObject syncObject = SyncObjectService.getSyncObject("com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer#start");
+        if (syncObject == null) {
+            return;
+        }
+        Thread thread = new Thread(new Runnable() {
+            boolean isInit;
+            int initTimes;
+
             @Override
             public void run() {
-                try {
-                    Thread.sleep(60000);
-                } catch (InterruptedException e) {
-                    logger.warn("delayToInitShadownConcumer tnterrupted", e);
-                }
-                ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-                try {
-                    logger.info("delayToInitShadownConcumer start ############");
-                    SyncObject syncObject = SyncObjectService.getSyncObject("com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer#start");
-                    if (syncObject == null) {
-                        return;
-                    }
-                    Thread.currentThread().setContextClassLoader(syncObject.getClass().getClassLoader());
-                    for (SyncObjectData data : syncObject.getDatas()) {
-                        Object target = data.getTarget();
-                        if (target instanceof DefaultMQPushConsumer) {
-                            logger.info("delayToInitShadownConcumer to init ######### {} ", target);
-                            ConsumerRegistry.registerConsumer((DefaultMQPushConsumer) target);
+                while (true) {
+                    try {
+                        if (isInit) {
+                            Thread.sleep(300000);
+                        } else {
+                            Thread.sleep(5000);
                         }
+                    } catch (InterruptedException e) {
+                        logger.warn("delayToInitShadowConsumer tnterrupted", e);
                     }
-                    logger.info("delayToInitShadownConcumer end ############");
-                } catch (Throwable e) {
-                    logger.error("delayToInitShadownConcumer init fail!", e);
-                } finally {
-                    Thread.currentThread().setContextClassLoader(classLoader);
+                    if (!PradarSwitcher.isClusterTestReady() || GlobalConfig.getInstance().getMqWhiteList() == null || GlobalConfig.getInstance().getMqWhiteList().isEmpty()) {
+                        if (!isInit && initTimes++ > 20) {
+                            isInit = true;
+                        }
+                        continue;
+                    }
+                    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                    try {
+                        logger.info("delayToInitShadowConsumer start ############");
+                        if (syncObject == null) {
+                            return;
+                        }
+                        Thread.currentThread().setContextClassLoader(syncObject.getClass().getClassLoader());
+                        for (SyncObjectData data : syncObject.getDatas()) {
+                            Object target = data.getTarget();
+                            if (target instanceof DefaultMQPushConsumer) {
+                                logger.info("delayToInitShadowConsumer to init ######### {} ", target);
+                                ConsumerRegistry.registerConsumer((DefaultMQPushConsumer) target);
+                            }
+                        }
+                        logger.info("delayToInitShadowConsumer end ############");
+                    } catch (Throwable e) {
+                        logger.error("delayToInitShadowConsumer init fail!", e);
+                    } finally {
+                        Thread.currentThread().setContextClassLoader(classLoader);
+                        isInit = true;
+                    }
                 }
-
             }
-        }).start();
+        });
+        thread.setName("alibaba-rocketmq-init-shadowConsumer-thread");
+        thread.start();
     }
 
 }

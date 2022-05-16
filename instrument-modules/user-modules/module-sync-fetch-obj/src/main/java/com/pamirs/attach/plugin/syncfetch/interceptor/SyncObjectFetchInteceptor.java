@@ -17,9 +17,25 @@ public class SyncObjectFetchInteceptor extends AdviceListener {
 
     @Override
     public void after(Advice advice) throws Throwable {
-        logger.info("success save sync object from : {}#{}", advice.getTarget().getClass().getName(), advice.getBehaviorName());
         String key = advice.getTarget().getClass().getName() + "#" + advice.getBehaviorName();
+        if (isInLinkAgentInvoke()) {
+            logger.info("in linkAgent invoke ,will not save sync object: {}", key);
+            return;
+        }
+        logger.info("success save sync object from : {}#{}", advice.getTarget().getClass().getName(), advice.getBehaviorName());
         SyncObjectService.saveSyncObject(key, new SyncObject()
                 .addData(new SyncObjectData(advice.getTarget(), advice.getParameterArray(), advice.getReturnObj())));
+    }
+
+    private boolean isInLinkAgentInvoke() {
+//        StackTraceElement[] stackTrace = new Exception().getStackTrace();
+//        int num = 0;
+//        for (StackTraceElement stackTraceElement : stackTrace) {
+//            if (stackTraceElement.getClassName().equals("com.shulie.instrument.simulator.message.Messager")) {
+//                num++;
+//            }
+//        }
+//        return num != 1;
+        return false;
     }
 }

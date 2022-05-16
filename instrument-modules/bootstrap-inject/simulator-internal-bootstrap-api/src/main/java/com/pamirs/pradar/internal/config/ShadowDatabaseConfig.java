@@ -264,6 +264,10 @@ public class ShadowDatabaseConfig {
         this.shadowDriverClassName = shadowDriverClassName;
     }
 
+    public String getShadowUsername() {
+        return shadowUsername;
+    }
+
     /**
      * 获取影子库用户名，可在业务用户名上加载固定前后缀生成
      * oracle的用户名必须以 c## 开头
@@ -285,6 +289,11 @@ public class ShadowDatabaseConfig {
 
     public void setShadowUsername(String shadowUsername) {
         this.shadowUsername = shadowUsername;
+    }
+
+
+    public String getShadowPassword() {
+        return shadowPassword;
     }
 
     /**

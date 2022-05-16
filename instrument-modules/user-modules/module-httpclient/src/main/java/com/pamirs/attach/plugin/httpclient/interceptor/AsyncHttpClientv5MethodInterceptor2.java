@@ -23,6 +23,7 @@ import java.util.Map;
 import com.alibaba.fastjson.JSONObject;
 
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -94,16 +95,7 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
 
         //判断是否在白名单中
         String url = getService(uri.getScheme(), host, port, path);
-        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
-        Header[] wHeaders = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
-        if (wHeaders != null && wHeaders.length > 0) {
-            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, wHeaders[0].getValue());
-        }
-        config.addArgs("url", url);
-
-        config.addArgs("request", request);
-        config.addArgs("method", "uri");
-        config.addArgs("isInterface", Boolean.FALSE);
+        boolean isBlackHost = BlackHostChecker.isBlackHost(url);
         String method = request.getMethod();
         Pradar.startClientInvoke(path, method);
         Pradar.remoteIp(host);
@@ -118,37 +110,18 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
             }
         }
         final Map<String, String> context = Pradar.getInvokeContextMap();
-        for (Map.Entry<String, String> entry : context.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
-                request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
-                request.setHeader(key, value);
+        if (!isBlackHost) {
+            for (Map.Entry<String, String> entry : context.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
+                    request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                    request.setHeader(key, value);
+                }
             }
         }
-        try {
-            config.getStrategy().processBlock(advice.getBehavior().getReturnType(),advice.getClassLoader(), config, new ExecutionCall() {
-                @Override
-                public Object call(Object param) {
-                    //现在先暂时注释掉因为只有jdk8以上才能用
-                    //java.util.concurrent.CompletableFuture<SimpleHttpResponse> future
-                    //    = new java.util.concurrent.CompletableFuture<SimpleHttpResponse>();
-                    //
-                    //SimpleHttpResponse response = null;
-                    //if (param instanceof String) {
-                    //    response = SimpleHttpResponse.create(200, (String)param);
-                    //} else {
-                    //    response = SimpleHttpResponse.create(200, JSONObject.toJSONBytes(param));
-                    //}
-                    //future.complete(response);
-                    //return future;
-                    return null;
-                }
-            });
-        }catch (PressureMeasureError e){
-            Pradar.response(e);
-            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
-            throw e;
+        if (!isBlackHost) {
+            httpClusterTest(advice, request, url);
         }
         Pradar.popInvokeContext();
 
@@ -199,6 +172,43 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
             }
         });
 
+    }
+
+    private void httpClusterTest(Advice advice, HttpRequest request, String url) throws ProcessControlException {
+        MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        Header[] wHeaders = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
+        if (wHeaders != null && wHeaders.length > 0) {
+            config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, wHeaders[0].getValue());
+        }
+        config.addArgs("url", url);
+
+        config.addArgs("request", request);
+        config.addArgs("method", "uri");
+        config.addArgs("isInterface", Boolean.FALSE);
+        try {
+            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
+                @Override
+                public Object call(Object param) {
+                    //现在先暂时注释掉因为只有jdk8以上才能用
+                    //java.util.concurrent.CompletableFuture<SimpleHttpResponse> future
+                    //    = new java.util.concurrent.CompletableFuture<SimpleHttpResponse>();
+                    //
+                    //SimpleHttpResponse response = null;
+                    //if (param instanceof String) {
+                    //    response = SimpleHttpResponse.create(200, (String)param);
+                    //} else {
+                    //    response = SimpleHttpResponse.create(200, JSONObject.toJSONBytes(param));
+                    //}
+                    //future.complete(response);
+                    //return future;
+                    return null;
+                }
+            });
+        }catch (PressureMeasureError e){
+            Pradar.response(e);
+            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);
+            throw e;
+        }
     }
 
     public void afterTrace(HttpRequest request, SimpleHttpResponse response) {

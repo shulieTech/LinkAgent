@@ -91,62 +91,76 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         return url + path;
     }
 
-    private static ExecutionStrategy fixJsonStrategy =
-        new JsonMockStrategy() {
-            @Override
-            public Object processBlock(Class returnType, ClassLoader classLoader, Object params)
-                throws ProcessControlException {
-                if (params instanceof MatchConfig) {
-                    try {
-                        MatchConfig config = (MatchConfig)params;
-                        if (config.getScriptContent().contains("return")) {
-                            return null;
-                        }
-                        StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
-
-                        HttpEntity entity = null;
-                        entity = new StringEntity(String.valueOf(config.getScriptContent()), "UTF-8");
-
-                        BasicHttpResponse response = new BasicHttpResponse(statusline);
-                        response.setEntity(entity);
-
-                        if (HttpClientConstants.clazz == null) {
-                            HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
-                        }
-                        Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
-                        ProcessController.returnImmediately(returnType, object);
-                    } catch (ProcessControlException pe) {
-                        throw pe;
-                    } catch (Throwable t) {
-                        throw new PressureMeasureError(t);
+    private static ExecutionStrategy fixJsonStrategy = new JsonMockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            if (params instanceof MatchConfig) {
+                try {
+                    MatchConfig config = (MatchConfig)params;
+                    if (config.getScriptContent().contains("return")) {
+                        return null;
                     }
+                    StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+
+                    HttpEntity entity = null;
+                    entity = new StringEntity(String.valueOf(config.getScriptContent()), "UTF-8");
+
+                    BasicHttpResponse response = new BasicHttpResponse(statusline);
+                    response.setEntity(entity);
+
+                    if (HttpClientConstants.clazz == null) {
+                        HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                    }
+                    Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                    ProcessController.returnImmediately(returnType, object);
+                } catch (ProcessControlException pe) {
+                    throw pe;
+                } catch (Throwable t) {
+                    throw new PressureMeasureError(t);
                 }
-                return null;
             }
-        };
+            return null;
+        }
+    };
 
     @Override
-    public void beforeLast(Advice advice) throws ProcessControlException {
+    public void beforeFirst(Advice advice) throws Exception {
         final Object[] args = advice.getParameterArray();
         HttpHost httpHost = (HttpHost)args[0];
         final HttpRequest request = (HttpRequest)args[1];
         if (httpHost == null) {
             return;
         }
-
         String host = httpHost.getHostName();
+        String url = getUrl(httpHost, request, host);
+        advice.attach(url);
+        if (BlackHostChecker.isBlackHost(url)) {
+            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
+        }
+    }
+
+    @Override
+    public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
+        final Object[] args = advice.getParameterArray();
+        final HttpRequest request = (HttpRequest)args[1];
+        String url = advice.attachment();
+        if (url == null) {
+            return;
+        }
+        httpClusterTest(advice, args, request, url);
+    }
+
+    private String getUrl(HttpHost httpHost, HttpRequest request, String host) {
         int port = httpHost.getPort();
         String path = httpHost.getHostName();
         if (request instanceof HttpUriRequest) {
             path = ((HttpUriRequest)request).getURI().getPath();
         }
         //判断是否在白名单中
-        String url = getService(httpHost.getSchemeName(), host, port, path);
-        if (BlackHostChecker.isBlackHost(url)) {
-            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
-        } else {
-            httpClusterTest(advice, args, request, url);
-        }
+        return getService(httpHost.getSchemeName(), host, port, path);
     }
 
     private void httpClusterTest(Advice advice, final Object[] args, final HttpRequest request, String url)
@@ -357,8 +371,8 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         return new ContextTransfer() {
             @Override
             public void transfer(String key, String value) {
-                if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
-                    request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null || request.getHeaders(
+                    HeaderMark.DONT_MODIFY_HEADER).length == 0) {
                     request.setHeader(key, value);
                 }
             }

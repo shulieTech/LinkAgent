@@ -14,7 +14,11 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
+import java.net.SocketTimeoutException;
+import java.util.Map;
+
 import com.alibaba.fastjson.JSONObject;
+
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.pradar.Pradar;
@@ -32,7 +36,13 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.*;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
+import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.ByteArrayEntity;
@@ -40,9 +50,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
 import org.apache.http.nio.protocol.HttpAsyncRequestProducer;
-
-import java.net.SocketTimeoutException;
-import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -56,50 +63,57 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         }
         return url + path;
     }
+
     private static ExecutionStrategy fixJsonStrategy =
-            new JsonMockStrategy() {
-                @Override
-                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+        new JsonMockStrategy() {
+            @Override
+            public Object processBlock(Class returnType, ClassLoader classLoader, Object params)
+                throws ProcessControlException {
 
-                    MatchConfig config = (MatchConfig) params;
-                    if (config.getScriptContent().contains("return")) {
-                        return null;
-                    }
-                    if (null == config.getArgs().get("futureCallback")){
-                        return null;
-                    }
-                    //现在先暂时注释掉因为只有jdk8以上才能用
-                    FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
-                    StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
-                    try {
-                        HttpEntity entity = null;
-                        entity = new StringEntity(config.getScriptContent());
-
-                        BasicHttpResponse response = new BasicHttpResponse(statusline);
-                        response.setEntity(entity);
-                        java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
-                        future.complete(response);
-                        futureCallback.completed(response);
-                        ProcessController.returnImmediately(returnType, future);
-                    } catch (ProcessControlException pe) {
-                        throw pe;
-                    } catch (Exception e) {
-                    }
+                MatchConfig config = (MatchConfig)params;
+                if (config.getScriptContent().contains("return")) {
                     return null;
                 }
-            };
+                if (null == config.getArgs().get("futureCallback")) {
+                    return null;
+                }
+                //现在先暂时注释掉因为只有jdk8以上才能用
+                FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get(
+                    "futureCallback");
+                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+                try {
+                    HttpEntity entity = null;
+                    entity = new StringEntity(config.getScriptContent());
+
+                    BasicHttpResponse response = new BasicHttpResponse(statusline);
+                    response.setEntity(entity);
+                    java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
+                    future.complete(response);
+                    futureCallback.completed(response);
+                    ProcessController.returnImmediately(returnType, future);
+                } catch (ProcessControlException pe) {
+                    throw pe;
+                } catch (Exception e) {
+                }
+                return null;
+            }
+        };
 
     @Override
     public void doBefore(final Advice advice) throws ProcessControlException {
         Object[] args = advice.getParameterArray();
-        HttpAsyncRequestProducer httpAsyncRequestProducer = (HttpAsyncRequestProducer) args[0];
+        HttpAsyncRequestProducer httpAsyncRequestProducer = (HttpAsyncRequestProducer)args[0];
 
         HttpHost httpHost = httpAsyncRequestProducer.getTarget();
         HttpRequest request = null;
         try {
             request = httpAsyncRequestProducer.generateRequest();
         } catch (Throwable e) {
-            LOGGER.error("AsyncHttpClient org.apache.http.impl.nio.client.CloseableHttpAsyncClient.execute(org.apache.http.nio.protocol.HttpAsyncRequestProducer, org.apache.http.nio.protocol.HttpAsyncResponseConsumer<T>, org.apache.http.concurrent.FutureCallback<T>) generateRequest error. ignore it", e);
+            LOGGER.error(
+                "AsyncHttpClient org.apache.http.impl.nio.client.CloseableHttpAsyncClient.execute(org.apache.http.nio"
+                    + ".protocol.HttpAsyncRequestProducer, org.apache.http.nio.protocol.HttpAsyncResponseConsumer<T>, org"
+                    + ".apache.http.concurrent.FutureCallback<T>) generateRequest error. ignore it",
+                e);
         }
 
         if (httpHost == null) {
@@ -112,16 +126,14 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         String reqStr = request.toString();
         String method = StringUtils.upperCase(reqStr.substring(0, reqStr.indexOf(" ")));
         if (request instanceof HttpUriRequest) {
-            path = ((HttpUriRequest) request).getURI().getPath();
-            method = ((HttpUriRequest) request).getMethod();
+            path = ((HttpUriRequest)request).getURI().getPath();
+            method = ((HttpUriRequest)request).getMethod();
         }
 
         //判断是否在白名单中
         String url = getService(httpHost.getSchemeName(), host, port, path);
         boolean isBlackHost = BlackHostChecker.isBlackHost(url);
-        if (!isBlackHost) {
-            httpClusterTest(advice, args, request, url);
-        }
+        httpClusterTest(advice, args, request, url);
 
         Pradar.startClientInvoke(path, method);
         Pradar.remoteIp(host);
@@ -141,7 +153,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
                 String key = entry.getKey();
                 String value = entry.getValue();
                 if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
-                        request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                    request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
                     request.setHeader(key, value);
                 }
             }
@@ -160,7 +172,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
                 ((FutureCallback)future).completed(result);
                 try {
                     if (result instanceof HttpResponse) {
-                        afterTrace(finalRequest, (HttpResponse) result);
+                        afterTrace(finalRequest, (HttpResponse)result);
                     } else {
                         afterTrace(finalRequest, null);
                     }
@@ -197,7 +209,8 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
 
     }
 
-    private void httpClusterTest(Advice advice, Object[] args, HttpRequest request, String url) throws ProcessControlException {
+    private void httpClusterTest(Advice advice, Object[] args, HttpRequest request, String url)
+        throws ProcessControlException {
         final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
         Header[] wHeaders = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
         if (wHeaders != null && wHeaders.length > 0) {
@@ -208,38 +221,40 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
-        if (args.length == 3){
+        if (args.length == 3) {
             config.addArgs("futureCallback", args[2]);
         }
-        if (config.getStrategy() instanceof JsonMockStrategy){
+        if (config.getStrategy() instanceof JsonMockStrategy) {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
-        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
-            @Override
-            public Object call(Object param) {
-                if (null == config.getArgs().get("futureCallback")){
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
+            new ExecutionCall() {
+                @Override
+                public Object call(Object param) {
+                    if (null == config.getArgs().get("futureCallback")) {
+                        return null;
+                    }
+                    FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get(
+                        "futureCallback");
+                    StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+                    try {
+                        HttpEntity entity = null;
+                        if (param instanceof String) {
+                            entity = new StringEntity(String.valueOf(param));
+                        } else {
+                            entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                        }
+                        BasicHttpResponse response = new BasicHttpResponse(statusline);
+                        response.setEntity(entity);
+                        futureCallback.completed(response);
+                        java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
+                        future.complete(response);
+                        return future;
+                    } catch (Exception e) {
+                    }
                     return null;
                 }
-                FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
-                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
-                try {
-                    HttpEntity entity = null;
-                    if (param instanceof String) {
-                        entity = new StringEntity(String.valueOf(param));
-                    } else {
-                        entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
-                    }
-                    BasicHttpResponse response = new BasicHttpResponse(statusline);
-                    response.setEntity(entity);
-                    futureCallback.completed(response);
-                    java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
-                    future.complete(response);
-                    return future;
-                } catch (Exception e) {
-                }
-                return null;
-            }
-        });
+            });
     }
 
     public void afterTrace(HttpRequest request, HttpResponse response) {
@@ -254,7 +269,6 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         Pradar.endClientInvoke(code + "", HttpClientConstants.PLUGIN_TYPE);
 
     }
-
 
     public void exceptionTrace(HttpRequest request, Throwable throwable) {
         Pradar.request(request.getParams());

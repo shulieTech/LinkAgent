@@ -102,9 +102,7 @@ AsyncHttpClientv5MethodInterceptor1 extends AroundInterceptor {
                 }
             }
         }
-        if (!isBlackHost) {
-            httpClusterTest(advice, request, url);
-        }
+        httpClusterTest(advice, request, url);
 
         Pradar.popInvokeContext();
 

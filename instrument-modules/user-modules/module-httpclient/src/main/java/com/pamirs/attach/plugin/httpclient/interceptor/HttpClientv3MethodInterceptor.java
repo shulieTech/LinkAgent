@@ -71,52 +71,52 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
         return url + path;
     }
 
-    private static ExecutionStrategy fixJsonStrategy =
-        new JsonMockStrategy() {
-            @Override
-            public Object processBlock(Class returnType, ClassLoader classLoader, Object params)
-                throws ProcessControlException {
-                if (params instanceof MatchConfig) {
-                    try {
-                        MatchConfig config = (MatchConfig)params;
-                        if (config.getScriptContent().contains("return")) {
-                            return null;
-                        }
-                        HttpMethod method = (HttpMethod)config.getArgs().get("extraMethod");
-                        byte[] bytes = config.getScriptContent().getBytes();
-                        Reflect.on(method).set("responseBody", bytes);
-                        ProcessController.returnImmediately(int.class, 200);
-                    } catch (ProcessControlException pe) {
-                        throw pe;
-                    } catch (Throwable t) {
-                        throw new PressureMeasureError(t);
+    private static ExecutionStrategy fixJsonStrategy = new JsonMockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            if (params instanceof MatchConfig) {
+                try {
+                    MatchConfig config = (MatchConfig)params;
+                    if (config.getScriptContent().contains("return")) {
+                        return null;
                     }
+                    HttpMethod method = (HttpMethod)config.getArgs().get("extraMethod");
+                    byte[] bytes = config.getScriptContent().getBytes();
+                    Reflect.on(method).set("responseBody", bytes);
+                    ProcessController.returnImmediately(int.class, 200);
+                } catch (ProcessControlException pe) {
+                    throw pe;
+                } catch (Throwable t) {
+                    throw new PressureMeasureError(t);
                 }
-                return null;
             }
-        };
+            return null;
+        }
+    };
+
+    @Override
+    public void beforeFirst(Advice advice) throws Exception {
+        Object[] args = advice.getParameterArray();
+        final HttpMethod method = (HttpMethod)args[1];
+        String url = getUrl(method);
+        if (url == null) {return;}
+        advice.attach(url);
+        if (BlackHostChecker.isBlackHost(url)) {
+            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
+        }
+    }
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
+            return;
+        }
         Object[] args = advice.getParameterArray();
         try {
             final HttpMethod method = (HttpMethod)args[1];
-            if (method == null) {
-                return;
-            }
-            int port = method.getURI().getPort();
-            String path = method.getURI().getPath();
-            String url = getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
-            if (BlackHostChecker.isBlackHost(url)) {
-                advice.mark(BlackHostChecker.BLACK_HOST_MARK);
-            } else {
-                httpClusterTest(advice, method, url);
-            }
-        } catch (URIException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
+            String url = advice.attachment();
+            if (url == null) {return;}
+            httpClusterTest(advice, method, url);
         } catch (ProcessControlException pce) {
             throw pce;
         } catch (Throwable t) {
@@ -125,6 +125,23 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                 throw new PressureMeasureError(t);
             }
         }
+    }
+
+    private String getUrl(HttpMethod method) {
+        if (method == null) {
+            return null;
+        }
+        try {
+            int port = method.getURI().getPort();
+            String path = method.getURI().getPath();
+            return getService(method.getURI().getScheme(), method.getURI().getHost(), port, path);
+        } catch (URIException e) {
+            LOGGER.error("", e);
+            if (Pradar.isClusterTest()) {
+                throw new PressureMeasureError(e);
+            }
+        }
+        return null;
     }
 
     private void httpClusterTest(Advice advice, final HttpMethod method, String url) throws ProcessControlException {
@@ -250,9 +267,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                 } catch (NumberFormatException e) {
                 }
             }
-            if ("get".equals(record.getMethod())
-                || "GET".equals(record.getMethod())
-                || "head".equals(record.getMethod())
+            if ("get".equals(record.getMethod()) || "GET".equals(record.getMethod()) || "head".equals(record.getMethod())
                 || "HEAD".equals(record.getMethod())) {
                 record.setRequest(toMap(method.getQueryString()));
             } else {

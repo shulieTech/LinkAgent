@@ -121,9 +121,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         //判断是否在白名单中
         String url = getService(httpHost.getSchemeName(), host, port, path);
         boolean isBlackHost = BlackHostChecker.isBlackHost(url);
-        if (!isBlackHost) {
-            httpClusterTest(advice, args, request, url);
-        }
+        httpClusterTest(advice, args, request, url);
         Pradar.startClientInvoke(path, method);
         Pradar.remoteIp(host);
         Pradar.remotePort(port);

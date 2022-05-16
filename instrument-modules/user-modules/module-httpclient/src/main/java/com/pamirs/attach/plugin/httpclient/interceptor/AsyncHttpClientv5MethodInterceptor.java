@@ -108,9 +108,7 @@ public class AsyncHttpClientv5MethodInterceptor extends AroundInterceptor {
             }
         }
         //pradar启动提前为的是捕获白名单异常能trace进去的
-        if (!isBlackHost) {
-            httpClusterTest(advice, request, url);
-        }
+        httpClusterTest(advice, request, url);
         Pradar.popInvokeContext();
 
         final Object future = args[args.length - 1];

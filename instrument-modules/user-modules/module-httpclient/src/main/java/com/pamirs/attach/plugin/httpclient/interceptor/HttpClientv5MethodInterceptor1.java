@@ -28,6 +28,7 @@ import com.alibaba.fastjson.JSONObject;
 
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
@@ -87,12 +88,34 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
     }
 
     @Override
-    public void beforeLast(Advice advice) throws ProcessControlException {
+    public void beforeFirst(Advice advice) throws Exception {
         Object[] args = advice.getParameterArray();
         //ClassicHttpRequest
         final ClassicHttpRequest request = (ClassicHttpRequest)args[0];
-        if (request == null) {
+        String url = getUrl(request);
+        if (url == null) {return;}
+        advice.attach(url);
+        if (BlackHostChecker.isBlackHost(url)) {
+            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
+        }
+    }
+
+    @Override
+    public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!Pradar.isClusterTest()) {
             return;
+        }
+        Object[] args = advice.getParameterArray();
+        //ClassicHttpRequest
+        final ClassicHttpRequest request = (ClassicHttpRequest)args[0];
+        String url = advice.attachment();
+        if (url == null) {return;}
+        httpClusterTest(advice, request, url);
+    }
+
+    private String getUrl(ClassicHttpRequest request) {
+        if (request == null) {
+            return null;
         }
         URI uri = null;
         try {
@@ -106,11 +129,7 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
 
         //判断是否在白名单中
         String url = getService(uri.getScheme(), host, port, path);
-        if (BlackHostChecker.isBlackHost(url)) {
-            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
-        } else {
-            httpClusterTest(advice, request, url);
-        }
+        return url;
     }
 
     private void httpClusterTest(Advice advice, final ClassicHttpRequest request, String url)

@@ -91,6 +91,16 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 streamCreatedMethod.addInterceptor(Listeners.of(ServerTransportListenerImplStartCallInterceptor.class));
             }
         });
+        enhanceTemplate.enhance(this, className, new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("startCall",
+                        "io.grpc.internal.ServerStream", "java.lang.String",
+                        "io.grpc.ServerMethodDefinition", "io.grpc.Metadata", "io.grpc.Context$CancellableContext",
+                        "io.grpc.internal.StatsTraceContext", "io.perfmark.Tag");
+                streamCreatedMethod.addInterceptor(Listeners.of(ServerTransportListenerImplStartCallInterceptor.class));
+            }
+        });
     }
 
     private void enhanceServerStreamListenerImplHalfClosed(String className) {

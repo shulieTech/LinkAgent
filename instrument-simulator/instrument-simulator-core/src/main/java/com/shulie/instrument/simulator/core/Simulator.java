@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,10 +21,7 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.DefaultClassLoaderService;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
-import com.shulie.instrument.simulator.core.manager.impl.DefaultCoreLoadedClassDataSource;
-import com.shulie.instrument.simulator.core.manager.impl.DefaultCoreModuleManager;
-import com.shulie.instrument.simulator.core.manager.impl.DefaultProviderManager;
-import com.shulie.instrument.simulator.core.manager.impl.DefaultSwitcherManager;
+import com.shulie.instrument.simulator.core.manager.impl.*;
 import com.shulie.instrument.simulator.core.util.MessageUtils;
 import com.shulie.instrument.simulator.core.util.ThreadLocalCleaner;
 import org.slf4j.Logger;
@@ -55,31 +52,60 @@ public class Simulator {
     private ClassLoaderService classLoaderService;
 
     public Simulator(final CoreConfigure config,
-                     final Instrumentation inst) {
+                     final Instrumentation inst, ClassLoaderService classLoaderService) {
+        this(config, inst, classLoaderService, false);
+    }
+
+    public Simulator(final CoreConfigure config,
+                     final Instrumentation inst, ClassLoaderService classLoaderService, boolean isSyncModuleCoreManager) {
         EventListenerHandler eventListenerHandler = new EventListenerHandler();
         this.config = config;
-        this.classLoaderService = new DefaultClassLoaderService();
+        this.classLoaderService = classLoaderService != null ? classLoaderService : new DefaultClassLoaderService();
         this.classLoaderService.init();
-        this.coreModuleManager = SimulatorGuard.getInstance().doGuard(CoreModuleManager.class, new DefaultCoreModuleManager(
-                config,
-                inst,
-                new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe()),
-                new DefaultProviderManager(config),
-                classLoaderService,
-                eventListenerHandler,
-                new DefaultSwitcherManager(new ModuleLoader() {
-                    @Override
-                    public void load(Runnable runnable) {
-                        runnable.run();
-                    }
-
-                    @Override
-                    public void unload(Runnable runnable) {
-                    }
-                })
-        ));
+        CoreModuleManager manager = initCoreModuleManager(isSyncModuleCoreManager, inst, eventListenerHandler);
+        this.coreModuleManager = SimulatorGuard.getInstance().doGuard(CoreModuleManager.class, manager);
 
         init(eventListenerHandler);
+    }
+
+    private CoreModuleManager initCoreModuleManager(boolean isSyncModuleCoreManager, Instrumentation inst, EventListenerHandler eventListenerHandler) {
+        if (isSyncModuleCoreManager) {
+            return new SyncModuleCoreModuleManager(config,
+                    inst,
+                    new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe()),
+                    new DefaultProviderManager(config),
+                    classLoaderService,
+                    eventListenerHandler,
+                    new DefaultSwitcherManager(new ModuleLoader() {
+                        @Override
+                        public void load(Runnable runnable) {
+                            runnable.run();
+                        }
+
+                        @Override
+                        public void unload(Runnable runnable) {
+                        }
+                    }));
+        } else {
+            return new DefaultCoreModuleManager(
+                    config,
+                    inst,
+                    new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe()),
+                    new DefaultProviderManager(config),
+                    classLoaderService,
+                    eventListenerHandler,
+                    new DefaultSwitcherManager(new ModuleLoader() {
+                        @Override
+                        public void load(Runnable runnable) {
+                            runnable.run();
+                        }
+
+                        @Override
+                        public void unload(Runnable runnable) {
+                        }
+                    })
+            );
+        }
     }
 
     private void init(EventListenerHandler eventListenerHandler) {
@@ -139,4 +165,7 @@ public class Simulator {
         this.classLoaderService = null;
     }
 
+    public ClassLoaderService getClassLoaderService() {
+        return classLoaderService;
+    }
 }

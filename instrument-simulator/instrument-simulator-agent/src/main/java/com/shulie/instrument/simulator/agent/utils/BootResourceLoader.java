@@ -28,7 +28,12 @@ public class BootResourceLoader {
     // java 1.8版本号
     private static final float JAVA_8_VERSION = 1.8f;
 
+    private static boolean isAdded;
+
     public static void addResource(List<File> bootstrapFiles) throws MalformedURLException {
+        if (isAdded) {
+            return;
+        }
         float jvmVersion = getJvmVersion();
         if (jvmVersion > JAVA_8_VERSION) {
             return;
@@ -37,6 +42,7 @@ public class BootResourceLoader {
         for (File file : bootstrapFiles) {
             urlClassPath.addURL(file.toURI().toURL());
         }
+        isAdded = true;
     }
 
     private static sun.misc.URLClassPath getBootstrapClassPath() {

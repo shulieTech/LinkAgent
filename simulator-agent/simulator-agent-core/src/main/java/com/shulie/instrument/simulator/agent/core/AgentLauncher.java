@@ -290,55 +290,8 @@ public class AgentLauncher {
             }
 
             this.baseUrl = null;
-            StringBuilder builder = new StringBuilder();
-            if (StringUtils.isNotBlank(this.agentConfig.getAppName())) {
-                builder.append(";app.name=").append(encodeArg(this.agentConfig.getAppName()));
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getAgentId())) {
-                builder.append(";agentId=").append(encodeArg(this.agentConfig.getAgentId()));
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getLogPath())) {
-                builder.append(";logPath=").append(encodeArg(this.agentConfig.getLogPath()));
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getLogLevel())) {
-                builder.append(";logLevel=").append(encodeArg(this.agentConfig.getLogLevel()));
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getZkServers())) {
-                builder.append(";zkServers=").append(encodeArg(this.agentConfig.getZkServers()));
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getRegisterPath())) {
-                builder.append(";registerPath=").append(encodeArg(this.agentConfig.getRegisterPath()));
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getConfigFilePath())) {
-                builder.append(";agentConfigPath=").append(encodeArg(this.agentConfig.getConfigFilePath()));
-            }
-            builder.append(";zkConnectionTimeout=").append(this.agentConfig.getZkConnectionTimeout());
-            builder.append(";zkSessionTimeout=").append(this.agentConfig.getZkSessionTimeout());
-            if (StringUtils.isNotBlank(this.agentConfig.getAgentVersion())) {
-                builder.append(";agentVersion=").append(this.agentConfig.getAgentVersion());
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getTroWebUrl())) {
-                builder.append(";troWebUrl=").append(this.agentConfig.getTroWebUrl());
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getTenantAppKey())) {
-                builder.append(";tenantAppKey=").append(this.agentConfig.getTenantAppKey());
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getUserId())) {
-                builder.append(";userId=").append(this.agentConfig.getUserId());
-            }
-            if (StringUtils.isNotBlank(this.agentConfig.getEnvCode())) {
-                builder.append(";envCode=").append(this.agentConfig.getEnvCode());
-            }
 
-            /**
-             * 指定simulator配置文件的获取地址
-             */
-            final String simulatorConfigUrl = agentConfig.getProperty("simulator.config.url", null);
-            if (StringUtils.isNotBlank(simulatorConfigUrl)) {
-                builder.append(";prop=").append(encodeArg(simulatorConfigUrl));
-            }
-
-            start0(descriptor, agentConfig.getAgentJarPath(), builder.toString());
+            start0(descriptor, agentConfig.getAgentJarPath(), fetchConfig());
             String content = null;
             long startWaitTime = System.currentTimeMillis();
             while (true) {
@@ -396,6 +349,86 @@ public class AgentLauncher {
             logger.error("AGENT: agent startup failed.", throwable);
             throw throwable;
         }
+    }
+    public void startupSyncModule() throws Throwable {
+        AgentStatus.installing();
+        try {
+            if (logger.isInfoEnabled()) {
+                logger.info("prepare to startup sync module agent.");
+            }
+
+            this.baseUrl = null;
+
+
+            startSyncModuleWithPremain(agentConfig.getAgentJarPath(), fetchConfig());
+        } catch (Throwable throwable) {
+            try {
+                if (throwable instanceof NoClassDefFoundError) {
+                    NoClassDefFoundError e = (NoClassDefFoundError) throwable;
+                    if (e.getMessage().contains("com/sun/tools/attach/VirtualMachine")) {
+                        logger.error(
+                                "add java start params : -Djdk.attach.allowAttachSelf=true "
+                                        + "-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar to fix this error");
+                    }
+                }
+            } catch (Throwable e) {
+                logger.error("", e);
+            }
+            isRunning.set(false);
+            AgentStatus.installFailed(throwable.getMessage());
+            logger.error("AGENT: agent startup failed.", throwable);
+            throw throwable;
+        }
+    }
+
+    private String fetchConfig(){
+        StringBuilder builder = new StringBuilder();
+        if (StringUtils.isNotBlank(this.agentConfig.getAppName())) {
+            builder.append(";app.name=").append(encodeArg(this.agentConfig.getAppName()));
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getAgentId())) {
+            builder.append(";agentId=").append(encodeArg(this.agentConfig.getAgentId()));
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getLogPath())) {
+            builder.append(";logPath=").append(encodeArg(this.agentConfig.getLogPath()));
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getLogLevel())) {
+            builder.append(";logLevel=").append(encodeArg(this.agentConfig.getLogLevel()));
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getZkServers())) {
+            builder.append(";zkServers=").append(encodeArg(this.agentConfig.getZkServers()));
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getRegisterPath())) {
+            builder.append(";registerPath=").append(encodeArg(this.agentConfig.getRegisterPath()));
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getConfigFilePath())) {
+            builder.append(";agentConfigPath=").append(encodeArg(this.agentConfig.getConfigFilePath()));
+        }
+        builder.append(";zkConnectionTimeout=").append(this.agentConfig.getZkConnectionTimeout());
+        builder.append(";zkSessionTimeout=").append(this.agentConfig.getZkSessionTimeout());
+        if (StringUtils.isNotBlank(this.agentConfig.getAgentVersion())) {
+            builder.append(";agentVersion=").append(this.agentConfig.getAgentVersion());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getTroWebUrl())) {
+            builder.append(";troWebUrl=").append(this.agentConfig.getTroWebUrl());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getTenantAppKey())) {
+            builder.append(";tenantAppKey=").append(this.agentConfig.getTenantAppKey());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getUserId())) {
+            builder.append(";userId=").append(this.agentConfig.getUserId());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getEnvCode())) {
+            builder.append(";envCode=").append(this.agentConfig.getEnvCode());
+        }
+        /**
+         * 指定simulator配置文件的获取地址
+         */
+        final String simulatorConfigUrl = agentConfig.getProperty("simulator.config.url", null);
+        if (StringUtils.isNotBlank(simulatorConfigUrl)) {
+            builder.append(";prop=").append(encodeArg(simulatorConfigUrl));
+        }
+        return builder.toString();
     }
 
 
@@ -783,6 +816,18 @@ public class AgentLauncher {
         Class classOfAgentLauncher = frameworkClassLoader.loadClass(
                 "com.shulie.instrument.simulator.agent.AgentLauncher");
         Method premainMethod = classOfAgentLauncher.getDeclaredMethod("premain", String.class, Instrumentation.class);
+        premainMethod.setAccessible(true);
+        premainMethod.invoke(null, config, instrumentation);
+    }
+
+    private void startSyncModuleWithPremain(String agentJarPath, String config)
+            throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
+            InvocationTargetException {
+        this.frameworkClassLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()},
+                parent);
+        Class classOfAgentLauncher = frameworkClassLoader.loadClass(
+                "com.shulie.instrument.simulator.agent.AgentLauncher");
+        Method premainMethod = classOfAgentLauncher.getDeclaredMethod("syncModulePremain", String.class, Instrumentation.class);
         premainMethod.setAccessible(true);
         premainMethod.invoke(null, config, instrumentation);
     }

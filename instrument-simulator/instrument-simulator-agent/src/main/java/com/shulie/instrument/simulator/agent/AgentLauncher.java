@@ -46,6 +46,7 @@ import static java.lang.String.format;
 public class AgentLauncher {
     private final static BootLogger LOGGER = BootLogger.getLogger(AgentLauncher.class.getName());
 
+    private static boolean isAppendedBootstropJars;
     // Simulator默认主目录
     private static final String DEFAULT_SIMULATOR_HOME
         = new File(AgentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
@@ -203,8 +204,8 @@ public class AgentLauncher {
             final Map<String, String> featureMap = toFeatureMap(featureString);
             String appName = featureMap.get(KEY_APP_NAME);
             writeAttachResult(
-                appName,
-                install(featureMap, inst)
+                    appName,
+                    install(featureMap, inst, false)
             );
         } catch (Throwable e) {
             System.out.println("========" + e.getMessage());
@@ -213,6 +214,26 @@ public class AgentLauncher {
         } finally {
             LOGGER.info(
                 "simulator server start successful. cost:" + ((System.nanoTime() - startTime) / 1000000000) + "s");
+        }
+    }
+
+    public static void syncModulePremain(String featureString, Instrumentation inst) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info(
+                "SIMULATOR-sync: agent starting with premain mode. args=" + (featureString == null ? "" : featureString));
+        }
+        LAUNCH_MODE = LAUNCH_MODE_AGENT;
+        long startTime = System.nanoTime();
+        try {
+            final Map<String, String> featureMap = toFeatureMap(featureString);
+            install(featureMap, inst, true);
+        } catch (Throwable e) {
+            System.out.println("========" + e.getMessage());
+            e.printStackTrace();
+            LOGGER.error("SIMULATOR-sync: premain execute error!", e);
+        } finally {
+            LOGGER.info(
+                "simulator-sync start successful. cost:" + ((System.nanoTime() - startTime) / 1000000000) + "s");
         }
     }
 
@@ -234,8 +255,8 @@ public class AgentLauncher {
             final Map<String, String> featureMap = toFeatureMap(featureString);
             String appName = featureMap.get(KEY_APP_NAME);
             writeAttachResult(
-                appName,
-                install(featureMap, inst)
+                    appName,
+                    install(featureMap, inst, false)
             );
         } catch (Throwable e) {
             e.printStackTrace();
@@ -290,7 +311,9 @@ public class AgentLauncher {
     }
 
     private static synchronized ClassLoader defineClassLoader(final String coreJar) throws Throwable {
-        simulatorClassLoader = new SimulatorClassLoader(coreJar);
+        if (simulatorClassLoader == null) {
+            simulatorClassLoader = new SimulatorClassLoader(coreJar);
+        }
         return simulatorClassLoader;
     }
 
@@ -330,7 +353,7 @@ public class AgentLauncher {
      * @return serverIP :PORT
      */
     private static synchronized InstallInfo install(final Map<String, String> featureMap,
-        final Instrumentation inst) {
+        final Instrumentation inst,boolean isOnlySyncModule) {
 
         final String propertiesFilePath = getPropertiesFilePath(featureMap);
         final String coreFeatureString = toFeatureString(featureMap);
@@ -338,22 +361,26 @@ public class AgentLauncher {
 
         try {
             final String home = getSimulatorHome(featureMap);
-            // 将bootstrap下所有的jar注入到BootstrapClassLoader
-            List<File> bootstrapFiles = getSimulatorBootstrapJars(home);
-            for (File file : bootstrapFiles) {
-                if (file.isHidden()) {
-                    LOGGER.warn(
-                        "prepare to append bootstrap file " + file.getAbsolutePath()
-                            + " but found a hidden file. skip it.");
-                    continue;
+
+            if (!isAppendedBootstropJars) {
+                // 将bootstrap下所有的jar注入到BootstrapClassLoader
+                List<File> bootstrapFiles = getSimulatorBootstrapJars(home);
+                for (File file : bootstrapFiles) {
+                    if (file.isHidden()) {
+                        LOGGER.warn(
+                                "prepare to append bootstrap file " + file.getAbsolutePath()
+                                        + " but found a hidden file. skip it.");
+                        continue;
+                    }
+                    if (!file.isFile()) {
+                        LOGGER.warn("prepare to append bootstrap file " + file.getAbsolutePath()
+                                + " but found a directory file. skip it.");
+                        continue;
+                    }
+                    LOGGER.info("append bootstrap file=" + file.getAbsolutePath());
+                    inst.appendToBootstrapClassLoaderSearch(new JarFile(file));
                 }
-                if (!file.isFile()) {
-                    LOGGER.warn("prepare to append bootstrap file " + file.getAbsolutePath()
-                        + " but found a directory file. skip it.");
-                    continue;
-                }
-                LOGGER.info("append bootstrap file=" + file.getAbsolutePath());
-                inst.appendToBootstrapClassLoaderSearch(new JarFile(file));
+                isAppendedBootstropJars = true;
             }
 
             // 构造自定义的类加载器，尽量减少Simulator对现有工程的侵蚀
@@ -383,45 +410,54 @@ public class AgentLauncher {
 
                 // 反序列化成CoreConfigure类实例
                 final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", Class.class,
-                        String.class,
-                        String.class, String.class, Instrumentation.class)
-                    .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, agentConfigFilePath,
-                        inst);
-
+                                String.class,
+                                String.class, String.class, Instrumentation.class)
+                        .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, agentConfigFilePath,
+                                inst);
                 // CoreServer类定义
                 final Class<?> classOfProxyServer = simulatorClassLoader.loadClass(CLASS_OF_PROXY_CORE_SERVER);
 
                 // 获取CoreServer单例
                 final Object objectOfProxyServer = classOfProxyServer
-                    .getMethod("getInstance")
-                    .invoke(null);
+                        .getMethod("getInstance")
+                        .invoke(null);
 
-                // CoreServer.isBind()
-                final boolean isBind = (Boolean)classOfProxyServer.getMethod("isBind").invoke(objectOfProxyServer);
-
-                // 如果未绑定,则需要绑定一个地址
-                if (!isBind) {
-                    try {
-                        classOfProxyServer
-                            .getMethod("bind", classOfConfigure, Instrumentation.class)
+                if (isOnlySyncModule) {
+                    LOGGER.info("to start syncModule ###########################################");
+                    classOfProxyServer
+                            .getMethod("prepareSyncModule", classOfConfigure, Instrumentation.class)
                             .invoke(objectOfProxyServer, objectOfCoreConfigure, inst);
-                    } catch (Throwable t) {
-                        LOGGER.error("AGENT: agent bind error {}", t);
-                        classOfProxyServer.getMethod("destroy").invoke(objectOfProxyServer);
-                        throw t;
+                    LOGGER.info("syncModule end ###########################################");
+                    return null;
+                }else{
+                    // CoreServer.isBind()
+                    final boolean isBind = (Boolean)classOfProxyServer.getMethod("isBind").invoke(objectOfProxyServer);
+
+                    // 如果未绑定,则需要绑定一个地址
+                    if (!isBind) {
+                        try {
+                            classOfProxyServer
+                                    .getMethod("bind", classOfConfigure, Instrumentation.class)
+                                    .invoke(objectOfProxyServer, objectOfCoreConfigure, inst);
+                        } catch (Throwable t) {
+                            LOGGER.error("AGENT: agent bind error {}", t);
+                            classOfProxyServer.getMethod("destroy").invoke(objectOfProxyServer);
+                            throw t;
+                        }
+
+                    } else {
+                        LOGGER.warn("AGENT: agent start already. skip it. ");
                     }
 
-                } else {
-                    LOGGER.warn("AGENT: agent start already. skip it. ");
-                }
+                    // 返回服务器绑定的地址
+                    InetSocketAddress inetSocketAddress = (InetSocketAddress)classOfProxyServer
+                            .getMethod("getLocal")
+                            .invoke(objectOfProxyServer);
+                    String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure)
+                            .toString();
+                    return new InstallInfo(inetSocketAddress, version);
 
-                // 返回服务器绑定的地址
-                InetSocketAddress inetSocketAddress = (InetSocketAddress)classOfProxyServer
-                    .getMethod("getLocal")
-                    .invoke(objectOfProxyServer);
-                String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure)
-                    .toString();
-                return new InstallInfo(inetSocketAddress, version);
+                }
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }

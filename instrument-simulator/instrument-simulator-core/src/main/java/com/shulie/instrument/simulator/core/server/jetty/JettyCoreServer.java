@@ -15,10 +15,13 @@
 package com.shulie.instrument.simulator.core.server.jetty;
 
 import com.shulie.instrument.simulator.api.LoadMode;
+import com.shulie.instrument.simulator.api.ModuleException;
+import com.shulie.instrument.simulator.api.resource.ModuleLoader;
 import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.Simulator;
-import com.shulie.instrument.simulator.core.manager.impl.DefaultDeploymentManager;
+import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
+import com.shulie.instrument.simulator.core.manager.impl.*;
 import com.shulie.instrument.simulator.core.server.CoreServer;
 import com.shulie.instrument.simulator.core.server.jetty.servlet.ModuleHttpServlet;
 import com.shulie.instrument.simulator.core.util.Initializer;
@@ -54,7 +57,10 @@ public class JettyCoreServer implements CoreServer {
     private Server httpServer;
     private CoreConfigure config;
     private Simulator simulator;
+    private Simulator syncModuleSimulator;
     private ModuleHttpServlet moduleHttpServlet;
+
+    private boolean isLogInited;
     // is destroyed already
     private AtomicBoolean isDestroyed = new AtomicBoolean(false);
 
@@ -76,6 +82,19 @@ public class JettyCoreServer implements CoreServer {
             }
         }
         return coreServer;
+    }
+
+    @Override
+    public void prepareSyncModule(CoreConfigure config, Instrumentation inst) throws IOException {
+        this.config = config;
+        initLog();
+        logger.info("SIMULATOR-sync: prepareSyncModule!!!!!!!");
+        Simulator syncModuleSimulator = new Simulator(config, inst, null, true);
+        try {
+            syncModuleSimulator.getCoreModuleManager().reset();
+        } catch (Throwable e) {
+            logger.error("SIMULATOR-sync: reset fail!", e);
+        }
     }
 
     @Override
@@ -206,17 +225,16 @@ public class JettyCoreServer implements CoreServer {
     @Override
     public synchronized void bind(final CoreConfigure config, final Instrumentation inst) throws IOException {
         this.config = config;
+        final ClassLoaderService classLoaderService = syncModuleSimulator == null ? null : syncModuleSimulator.getClassLoaderService();
         try {
             initializer.initProcess(new Initializer.Processor() {
                 @Override
                 public void process() throws Throwable {
-                    LogbackUtils.init(
-                            config.getConfigLibPath() + File.separator + "simulator-logback.xml"
-                    );
+                    initLog();
                     if (logger.isInfoEnabled()) {
                         logger.info("SIMULATOR: initializing server. config={}", config);
                     }
-                    simulator = new Simulator(config, inst);
+                    simulator = new Simulator(config, inst, classLoaderService);
                     initHttpServer();
                     initHttpContextHandler();
                     httpServer.start();
@@ -282,6 +300,15 @@ public class JettyCoreServer implements CoreServer {
         this.simulator = null;
         this.moduleHttpServlet = null;
         coreServer = null;
+    }
+
+    private void initLog(){
+        if (!isLogInited){
+            LogbackUtils.init(
+                    config.getConfigLibPath() + File.separator + "simulator-logback.xml"
+            );
+            isLogInited = true;
+        }
     }
 
     @Override

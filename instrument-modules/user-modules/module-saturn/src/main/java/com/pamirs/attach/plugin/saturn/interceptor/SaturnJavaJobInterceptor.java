@@ -77,6 +77,11 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
         Pradar.endTrace();
     }
 
+    @Override
+    public void exceptionLast(Advice advice) {
+        Pradar.endTrace();
+    }
+
     private void initContextField(Object context) {
         initNameSpace(context);
         initJobConfiguration(context);

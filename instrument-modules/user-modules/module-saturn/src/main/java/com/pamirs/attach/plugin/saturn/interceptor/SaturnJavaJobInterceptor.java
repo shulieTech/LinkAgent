@@ -20,16 +20,17 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 
+import java.lang.reflect.Field;
+
 /**
  * Create by xuyh at 2020/8/17 10:57.
  */
 public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
 
-//    private Field namespace;
-//    private Field jobName;
-//    private Field jobConfiguration;
-//    private Field jobClass;
-//    private Field jobParameter;
+    private Field namespace;
+    private Field jobConfiguration;
+    private Field jobClass;
+    private Field jobParameter;
 
 
     @Override
@@ -55,15 +56,15 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
         if ("doExecution".equals(methodName) && args.length == 5) {
             Object shardingContextObj = args[3];
 
-//            initContextField(shardingContextObj);
-            Object jobConfigurationObj = Reflect.on(shardingContextObj).get("jobConfiguration");
-//            initConfigField(jobConfigurationObj);
+            initContextField(shardingContextObj);
+            Object jobConfigurationObj = Reflect.on(shardingContextObj).get(jobConfiguration);
+            initConfigField(jobConfigurationObj);
 
-            String serviceName = Reflect.on(shardingContextObj).get("namespace") + "-" + Reflect.on(shardingContextObj).get("jobName");
-            String methodNameS = Reflect.on(jobConfigurationObj).get("jobClass");
+            String serviceName = Reflect.on(shardingContextObj).get(namespace);
+            String methodNameS = Reflect.on(jobConfigurationObj).get(jobClass);
             Pradar.startTrace(null, serviceName, methodNameS);
             Pradar.middlewareName(getPluginName());
-            String jobParam = Reflect.on(jobConfigurationObj).get("jobParameter");
+            String jobParam = Reflect.on(jobConfigurationObj).get(jobParameter);
             if (jobParam.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
                 Pradar.setClusterTest(true);
             }
@@ -76,57 +77,61 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
         Pradar.endTrace();
     }
 
-//    private void initContextField(Object context) {
-//        if (namespace != null) {
-//            return;
-//        }
-//        try {
-//            namespace = context.getClass().getDeclaredField("namespace");
-//            namespace.setAccessible(true);
-//        } catch (Throwable e) {
-//            //ignore
-//        }
-//
-//        if (jobName != null) {
-//            return;
-//        }
-//        try {
-//            jobName = context.getClass().getDeclaredField("jobName");
-//            jobName.setAccessible(true);
-//        } catch (Throwable e) {
-//            //ignore
-//        }
-//
-//        if (jobConfiguration != null) {
-//            return;
-//        }
-//        try {
-//            jobConfiguration = context.getClass().getDeclaredField("jobConfiguration");
-//            jobConfiguration.setAccessible(true);
-//        } catch (Throwable e) {
-//            //ignore
-//        }
-//    }
-//
-//    private void initConfigField(Object jobConfig) {
-//        if (jobClass != null) {
-//            return;
-//        }
-//        try {
-//            jobClass = jobConfig.getClass().getDeclaredField("jobClass");
-//            jobClass.setAccessible(true);
-//        } catch (Throwable e) {
-//            //ignore
-//        }
-//
-//        if (jobParameter != null) {
-//            return;
-//        }
-//        try {
-//            jobParameter = jobConfig.getClass().getDeclaredField("jobParameter");
-//            jobParameter.setAccessible(true);
-//        } catch (Throwable e) {
-//            //ignore
-//        }
-//    }
+    private void initContextField(Object context) {
+        initNameSpace(context);
+        initJobConfiguration(context);
+    }
+
+    private void initConfigField(Object jobConfig) {
+        initJobClass(jobConfig);
+        initJobParameter(jobConfig);
+    }
+
+    private void initNameSpace(Object context) {
+        if (namespace != null) {
+            return;
+        }
+        try {
+            namespace = context.getClass().getDeclaredField("namespace");
+            namespace.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
+
+    private void initJobConfiguration(Object context) {
+        if (jobConfiguration != null) {
+            return;
+        }
+        try {
+            jobConfiguration = context.getClass().getDeclaredField("jobConfiguration");
+            jobConfiguration.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
+
+    private void initJobClass(Object jobConfig) {
+        if (jobClass != null) {
+            return;
+        }
+        try {
+            jobClass = jobConfig.getClass().getDeclaredField("jobClass");
+            jobClass.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
+
+    private void initJobParameter(Object jobConfig) {
+        if (jobParameter != null) {
+            return;
+        }
+        try {
+            jobParameter = jobConfig.getClass().getDeclaredField("jobParameter");
+            jobParameter.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
 }

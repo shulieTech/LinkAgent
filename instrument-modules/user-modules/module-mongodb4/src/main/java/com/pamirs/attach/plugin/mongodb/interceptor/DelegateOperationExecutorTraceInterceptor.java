@@ -64,8 +64,13 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
                 if (databaseConfig == null) {
                     return spanRecord;
                 }
-                String shadowUrl = databaseConfig.getShadowUrl();
-                spanRecord.setRemoteIp(shadowUrl);
+                String remoteIp;
+                if (databaseConfig.isShadowTable()) {
+                    remoteIp = databaseConfig.getUrl();
+                } else {
+                    remoteIp = databaseConfig.getShadowUrl();
+                }
+                spanRecord.setRemoteIp(remoteIp);
             } else {
                 String addressesStr = StringUtils.join(((Cluster) (ReflectionUtils.getFieldValue(mongoClientDelegate, "cluster"))).getSettings().getHosts(), ",");
                 spanRecord.setRemoteIp(addressesStr);
@@ -83,10 +88,12 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
                             service = namespace.getDatabaseName() + "." + Pradar.addClusterTestPrefix(collectionName);
                         } else if (databaseConfig.isShadowDatabase()) {
                             String shadowSchema = databaseConfig.getShadowSchema();
-                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + collectionName;
+                            shadowSchema = shadowSchema.contains("?") ? shadowSchema.substring(0, shadowSchema.indexOf("?")) : shadowSchema;
+                            service = shadowSchema+ "." + collectionName;
                         } else {
                             String shadowSchema = databaseConfig.getShadowSchema();
-                            service = shadowSchema.substring(0, shadowSchema.indexOf("?")) + "." + Pradar.addClusterTestPrefix(collectionName);
+                            shadowSchema = shadowSchema.contains("?") ? shadowSchema.substring(0, shadowSchema.indexOf("?")) : shadowSchema;
+                            service = shadowSchema + "." + Pradar.addClusterTestPrefix(collectionName);
                         }
                         spanRecord.setService(service);
                     } else {

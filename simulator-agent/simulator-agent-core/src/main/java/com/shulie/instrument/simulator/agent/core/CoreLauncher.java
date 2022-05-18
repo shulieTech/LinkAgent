@@ -292,7 +292,7 @@ public class CoreLauncher {
                 }
             }
         };
-        if ("true".equals(System.getProperty("agent.sync.module.enable"))) {
+        if ("true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"))) {
             launcher.startupSyncModule();
         }
         if (delay <= 0) {

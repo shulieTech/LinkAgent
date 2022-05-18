@@ -113,6 +113,10 @@ public class Messager {
         messageHandler = handler;
     }
 
+    public static MessageHandler getEventListenerHandler(){
+        return messageHandler;
+    }
+
     /**
      * 清理信使钩子方法
      */

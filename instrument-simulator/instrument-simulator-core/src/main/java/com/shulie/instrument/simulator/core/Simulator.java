@@ -24,6 +24,7 @@ import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
 import com.shulie.instrument.simulator.core.manager.impl.*;
 import com.shulie.instrument.simulator.core.util.MessageUtils;
 import com.shulie.instrument.simulator.core.util.ThreadLocalCleaner;
+import com.shulie.instrument.simulator.message.Messager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ public class Simulator {
 
     public Simulator(final CoreConfigure config,
                      final Instrumentation inst, ClassLoaderService classLoaderService, boolean isSyncModuleCoreManager) {
-        EventListenerHandler eventListenerHandler = new EventListenerHandler();
+        EventListenerHandler eventListenerHandler = Messager.isInit() ? (EventListenerHandler) Messager.getEventListenerHandler() : new EventListenerHandler();
         this.config = config;
         this.classLoaderService = classLoaderService != null ? classLoaderService : new DefaultClassLoaderService();
         this.classLoaderService.init();

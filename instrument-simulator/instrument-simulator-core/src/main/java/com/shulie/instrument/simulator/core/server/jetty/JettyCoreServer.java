@@ -89,7 +89,7 @@ public class JettyCoreServer implements CoreServer {
         this.config = config;
         initLog();
         logger.info("SIMULATOR-sync: prepareSyncModule!!!!!!!");
-        Simulator syncModuleSimulator = new Simulator(config, inst, null, true);
+        syncModuleSimulator = new Simulator(config, inst, null, true);
         try {
             syncModuleSimulator.getCoreModuleManager().reset();
         } catch (Throwable e) {

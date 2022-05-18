@@ -292,7 +292,7 @@ public class CoreLauncher {
                 }
             }
         };
-        if ("true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"))) {
+        if (isStartSyncModule()) {
             launcher.startupSyncModule();
         }
         if (delay <= 0) {
@@ -320,6 +320,11 @@ public class CoreLauncher {
 //                }
 //            }
 //        }));
+    }
+
+    private boolean isStartSyncModule(){
+        System.out.println("#########################>>>> classload:" + this.getClass().getClassLoader().getClass().getName());
+        return "true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"));
     }
 
     private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {

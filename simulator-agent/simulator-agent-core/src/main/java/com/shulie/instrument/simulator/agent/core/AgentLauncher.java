@@ -811,8 +811,7 @@ public class AgentLauncher {
     private void startWithPremain(String agentJarPath, String config)
             throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
             InvocationTargetException {
-        this.frameworkClassLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()},
-                parent);
+        initFrameworkClassLoader(agentJarPath);
         Class classOfAgentLauncher = frameworkClassLoader.loadClass(
                 "com.shulie.instrument.simulator.agent.AgentLauncher");
         Method premainMethod = classOfAgentLauncher.getDeclaredMethod("premain", String.class, Instrumentation.class);
@@ -823,13 +822,19 @@ public class AgentLauncher {
     private void startSyncModuleWithPremain(String agentJarPath, String config)
             throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
             InvocationTargetException {
-        this.frameworkClassLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()},
-                parent);
+        initFrameworkClassLoader(agentJarPath);
         Class classOfAgentLauncher = frameworkClassLoader.loadClass(
                 "com.shulie.instrument.simulator.agent.AgentLauncher");
         Method premainMethod = classOfAgentLauncher.getDeclaredMethod("syncModulePremain", String.class, Instrumentation.class);
         premainMethod.setAccessible(true);
         premainMethod.invoke(null, config, instrumentation);
+    }
+
+    private void initFrameworkClassLoader(String agentJarPath) throws MalformedURLException {
+        if (frameworkClassLoader == null) {
+            frameworkClassLoader = new FrameworkClassLoader(new URL[]{new File(agentJarPath).toURI().toURL()},
+                    parent);
+        }
     }
 
     private void shutdownWithPremain() {

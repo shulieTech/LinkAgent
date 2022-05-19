@@ -5,9 +5,9 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Random;
 
-public class RecordsRatioPollSelector implements PollConsumerSelector{
+public class RecordsRatioPollSelector implements PollConsumerSelector {
 
-    private int recordsRatio;
+    private int ratioPoint;
 
     private Random random = new Random();
 
@@ -37,12 +37,12 @@ public class RecordsRatioPollSelector implements PollConsumerSelector{
     @Override
     public ConsumerType select() {
         // 最开始时业务影子各一次, 业务压测消息个数一样时各一次
-        if (recordsRatio == 0) {
+        if (ratioPoint == 0) {
             return selector.select();
         }
         // 1～10
         int i = random.nextInt(10) + 1;
-        return i >= recordsRatio ? ConsumerType.BIZ : ConsumerType.SHADOW;
+        return i >= ratioPoint ? ConsumerType.BIZ : ConsumerType.SHADOW;
     }
 
     private int sumRecordCounts(Deque<Integer> deque) {
@@ -82,17 +82,17 @@ public class RecordsRatioPollSelector implements PollConsumerSelector{
 
         // 相等取0
         if (bizRecords == ptRecords) {
-            this.recordsRatio = 0;
+            this.ratioPoint = 0;
             return;
         }
         // 1 2 属于压测;  3 4 5 6 7 8 9 10 属于业务
         if (bizRecords > 0 && ptRecords == 0) {
-            this.recordsRatio = 3;
+            this.ratioPoint = 3;
             return;
         }
         //  1 2 3 4 5 6 7 8 属于压测; 9 10属于业务
         if (bizRecords == 0 && ptRecords > 0) {
-            this.recordsRatio = 8;
+            this.ratioPoint = 9;
             return;
         }
 
@@ -103,7 +103,7 @@ public class RecordsRatioPollSelector implements PollConsumerSelector{
         // 假设比例3， 10 * 3/4 = 7
         ratio = 10 * ratio / (ratio + 1);
         // 10 -7 + 1 = 4
-        this.recordsRatio = bizMore ? 10 - ratio + 1 : ratio;
+        this.ratioPoint = bizMore ? 10 - ratio + 1 : ratio + 1;
     }
 
 }

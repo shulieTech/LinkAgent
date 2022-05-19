@@ -848,4 +848,11 @@ public class AgentLauncher {
         this.frameworkClassLoader = null;
     }
 
+    public boolean isUsePremain() {
+        return usePremain;
+    }
+
+    public boolean isUseAgentmain() {
+        return useAgentmain;
+    }
 }

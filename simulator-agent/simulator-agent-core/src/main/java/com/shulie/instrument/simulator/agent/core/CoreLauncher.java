@@ -324,7 +324,12 @@ public class CoreLauncher {
 
     private boolean isStartSyncModule(){
         System.out.println("#########################>>>> classload:" + this.getClass().getClassLoader().getClass().getName());
-        return "true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"));
+        boolean syncEnable = "true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"));
+        if (syncEnable && launcher.isUseAgentmain()) {
+            LOGGER.error("enable sync module, but use agenmain to start!! need use premain, use simulator.use.premain=true!!");
+            syncEnable = false;
+        }
+        return syncEnable;
     }
 
     private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {

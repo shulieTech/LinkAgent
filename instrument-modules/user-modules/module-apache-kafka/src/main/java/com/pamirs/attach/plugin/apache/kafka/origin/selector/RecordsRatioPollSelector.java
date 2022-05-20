@@ -17,7 +17,7 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
     private Deque<Integer> ptRecordCounts = new LinkedList();
 
     public RecordsRatioPollSelector() {
-        startRatioComputingTask();
+        this.startRatioComputingTask();
     }
 
     public void addBizRecordCounts(int count) {

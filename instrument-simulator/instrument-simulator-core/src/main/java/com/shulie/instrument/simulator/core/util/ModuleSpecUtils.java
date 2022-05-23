@@ -238,8 +238,8 @@ public final class ModuleSpecUtils {
             }else {
                 asyncList.add(userModuleSpec);
             }
-            System.setProperty(SYNC_FETCH_TARGET_INNER, syncFetchTarget.toString());
         }
+        System.setProperty(SYNC_FETCH_TARGET_INNER, syncFetchTarget.toString());
         return isAsync ? asyncList : syncList;
     }
 }

@@ -39,8 +39,7 @@ public class InstrumentLauncher {
 
     static{
         try{
-            DEFAULT_AGENT_HOME = new File(InstrumentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                    .getParent();
+            DEFAULT_AGENT_HOME = new File(InstrumentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile()).getParent();
         }catch (Exception e){
 
         }

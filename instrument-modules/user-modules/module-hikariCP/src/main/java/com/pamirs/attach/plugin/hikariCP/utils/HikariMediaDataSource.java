@@ -23,6 +23,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.shulie.druid.util.JdbcUtils;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,9 @@ public class HikariMediaDataSource extends WrappedDbMediatorDataSource<HikariDat
 
     @Override
     public String getDriverClassName(HikariDataSource datasource) {
-        return datasource.getDriverClassName();
+        // 因为低版本Hikaricp没有getDriverClassName方法 所以通过反射获取
+        // 因为这个方法只会init的时候调用一次所以不需要考虑性能问题
+        return Reflect.on(datasource).get("driverClassName");
     }
 
     @Override

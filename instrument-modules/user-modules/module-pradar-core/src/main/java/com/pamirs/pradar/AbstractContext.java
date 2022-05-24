@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,8 @@ abstract class AbstractContext extends BaseContext {
      * 完全不会通过 RPC 调用传递的本地属性，只属于本调用
      */
     Map<String, String> localAttributes = null;
+
+    private Boolean isUseTraceIdSample = "true".equals(System.getProperty("use.traceid.sample"));
 
     /**
      * 是否有错误
@@ -181,7 +184,7 @@ abstract class AbstractContext extends BaseContext {
      * @return 采样率，如果返回0则表示traceId里未配置采样率
      */
     private int getTraceIdSamplingInterval() {
-        if (traceId.length() < 34) {
+        if (!isUseTraceIdSample || traceId.length() < 34) {
             return 0;
         }
         int samplingInterval = traceId.charAt(30) - '0';

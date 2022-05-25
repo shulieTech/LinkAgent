@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -52,50 +52,55 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     @Override
     public boolean onActive() throws Throwable {
         try {
-            this.watchers = new HashMap<String, EventWatcher>();
+            this.watchers = new Hashtable<String, EventWatcher>();
             EventRouter.router().addListener(new PradarEventListener() {
                 @Override
                 public EventResult onEvent(IEvent event) {
-                    if (event instanceof MockConfigAddEvent) {
-                        Set<MockConfig> mockConfigs = ((MockConfigAddEvent) event).getTarget();
-                        Set<MockConfig> newConfigs = new HashSet<MockConfig>();
-                        for (MockConfig mockConfig : mockConfigs) {
-                            if (watchers.containsKey(mockConfig.getKey())) {
-                                continue;
-                            }
-                            newConfigs.add(mockConfig);
-                        }
-                        Map<String, Set<MockConfig>> map = groupByClass(newConfigs);
-                        watchers.putAll(enhanceClassMethod(map));
-                    } else if (event instanceof MockConfigRemoveEvent) {
-                        Set<MockConfig> mockConfigs = ((MockConfigRemoveEvent) event).getTarget();
-                        for (MockConfig mockConfig : mockConfigs) {
-                            EventWatcher watcher = watchers.remove(mockConfig.getKey());
-                            if (watcher != null) {
-                                if (LOGGER.isInfoEnabled()) {
-                                    LOGGER.info("Remove mock config interceptor {}", mockConfig.getKey());
+                    synchronized (LOGGER) {
+                        if (event instanceof MockConfigAddEvent) {
+                            Set<MockConfig> mockConfigs = ((MockConfigAddEvent) event).getTarget();
+                            Set<MockConfig> newConfigs = new HashSet<MockConfig>();
+                            for (MockConfig mockConfig : mockConfigs) {
+                                if (watchers.containsKey(mockConfig.getKey())) {
+                                    continue;
                                 }
-                                watcher.onUnWatched();
-                            }
-                        }
-                    } else if (event instanceof MockConfigModifyEvent) {
-                        Set<MockConfig> mockConfigs = ((MockConfigModifyEvent) event).getTarget();
-                        for (MockConfig mockConfig : mockConfigs) {
-                            EventWatcher watcher = watchers.remove(mockConfig.getKey());
-                            if (watcher != null) {
                                 if (LOGGER.isInfoEnabled()) {
-                                    LOGGER.info("Modify mock config pre remove interceptor  {}", mockConfig.getKey());
+                                    LOGGER.info("add mock config interceptor {}", mockConfig.getKey());
                                 }
-                                watcher.onUnWatched();
+                                newConfigs.add(mockConfig);
                             }
+                            Map<String, Set<MockConfig>> map = groupByClass(newConfigs);
+                            watchers.putAll(enhanceClassMethod(map));
+                        } else if (event instanceof MockConfigRemoveEvent) {
+                            Set<MockConfig> mockConfigs = ((MockConfigRemoveEvent) event).getTarget();
+                            for (MockConfig mockConfig : mockConfigs) {
+                                EventWatcher watcher = watchers.remove(mockConfig.getKey());
+                                if (watcher != null) {
+                                    if (LOGGER.isInfoEnabled()) {
+                                        LOGGER.info("Remove mock config interceptor {}", mockConfig.getKey());
+                                    }
+                                    watcher.onUnWatched();
+                                }
+                            }
+                        } else if (event instanceof MockConfigModifyEvent) {
+                            Set<MockConfig> mockConfigs = ((MockConfigModifyEvent) event).getTarget();
+                            for (MockConfig mockConfig : mockConfigs) {
+                                EventWatcher watcher = watchers.remove(mockConfig.getKey());
+                                if (watcher != null) {
+                                    if (LOGGER.isInfoEnabled()) {
+                                        LOGGER.info("Modify mock config pre remove interceptor  {}", mockConfig.getKey());
+                                    }
+                                    watcher.onUnWatched();
+                                }
+                            }
+                            Map<String, Set<MockConfig>> map = groupByClass(mockConfigs);
+                            watchers.putAll(enhanceClassMethod(map));
+                        } else {
+                            return EventResult.IGNORE;
                         }
-                        Map<String, Set<MockConfig>> map = groupByClass(mockConfigs);
-                        watchers.putAll(enhanceClassMethod(map));
-                    } else {
-                        return EventResult.IGNORE;
-                    }
 
-                    return EventResult.success("Mock config update successful.");
+                        return EventResult.success("Mock config update successful.");
+                    }
                 }
 
                 @Override
@@ -104,17 +109,34 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 }
             });
 
-            Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
-            for (MockConfig mockConfig : GlobalConfig.getInstance().getMockConfigs()) {
-                if (this.watchers.containsKey(mockConfig.getKey())) {
-                    continue;
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        try {
+                            Thread.sleep(60000);
+                            synchronized (LOGGER) {
+                                Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
+                                for (MockConfig mockConfig : GlobalConfig.getInstance().getMockConfigs()) {
+                                    if (watchers.containsKey(mockConfig.getKey())) {
+                                        continue;
+                                    }
+                                    mockConfigs.add(mockConfig);
+                                }
+                                if (CollectionUtils.isNotEmpty(mockConfigs)) {
+                                    Map<String, Set<MockConfig>> map = groupByClass(mockConfigs);
+                                    watchers.putAll(enhanceClassMethod(map));
+                                }
+                            }
+                        } catch (Throwable throwable) {
+                            LOGGER.warn("try mock catch error", throwable);
+                        }
+                    }
+
                 }
-                mockConfigs.add(mockConfig);
-            }
-            if (CollectionUtils.isNotEmpty(mockConfigs)) {
-                Map<String, Set<MockConfig>> map = groupByClass(mockConfigs);
-                watchers.putAll(enhanceClassMethod(map));
-            }
+            });
+            thread.setName("simulator_module_mockInit");
+            thread.start();
 
         } catch (Throwable e) {
             LOGGER.warn("挡板增强失败", e);

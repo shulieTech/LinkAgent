@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.core.server;
 
+import com.shulie.instrument.simulator.api.ModuleException;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 
 import java.io.IOException;
@@ -24,6 +25,7 @@ import java.net.InetSocketAddress;
  * 内核服务器
  */
 public interface CoreServer {
+    void prepareSyncModule(CoreConfigure config, Instrumentation inst) throws IOException;
 
     /**
      * 判断服务器是否已经绑定端口

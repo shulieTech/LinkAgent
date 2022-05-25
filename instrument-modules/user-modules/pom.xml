@@ -89,6 +89,7 @@
         <module>module-spring-cloud-gateway</module>
         <module>module-netty-time-wheel</module>
         <module>module-spring-web</module>
+        <module>module-sync-fetch-obj</module>
     </modules>
 
     <build>

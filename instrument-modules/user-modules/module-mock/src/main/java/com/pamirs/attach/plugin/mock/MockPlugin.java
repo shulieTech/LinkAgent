@@ -117,7 +117,8 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                             Thread.sleep(60000);
                             synchronized (LOGGER) {
                                 Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
-                                for (MockConfig mockConfig : GlobalConfig.getInstance().getMockConfigs()) {
+                                HashSet<MockConfig> set = new HashSet<MockConfig>(GlobalConfig.getInstance().getMockConfigs());
+                                for (MockConfig mockConfig : set) {
                                     if (watchers.containsKey(mockConfig.getKey())) {
                                         continue;
                                     }

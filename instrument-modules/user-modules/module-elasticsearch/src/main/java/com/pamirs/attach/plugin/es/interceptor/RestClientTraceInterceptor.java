@@ -30,7 +30,6 @@ import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RestClient;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

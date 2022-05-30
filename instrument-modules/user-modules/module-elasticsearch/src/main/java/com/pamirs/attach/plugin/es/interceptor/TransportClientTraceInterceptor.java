@@ -14,8 +14,6 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.util.List;
-
 import com.pamirs.attach.plugin.es.ElasticsearchConstants;
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;

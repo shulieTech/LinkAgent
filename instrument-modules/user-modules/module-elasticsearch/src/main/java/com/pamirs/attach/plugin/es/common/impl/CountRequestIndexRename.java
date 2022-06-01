@@ -34,7 +34,6 @@ public class CountRequestIndexRename extends AbstractReadRequestIndexRename{
                 indices[i] = Pradar.addClusterTestPrefixLower(indices[i]);
             }
         }
-
         Reflect.on(request).set("indices", indices);
         return Arrays.asList(indices);
     }

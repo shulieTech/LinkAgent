@@ -14,6 +14,15 @@
  */
 package com.pamirs.attach.plugin.catalina.interceptor;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import javax.annotation.Resource;
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import com.pamirs.attach.plugin.catalina.common.CatalinaVersion;
 import com.pamirs.attach.plugin.catalina.common.Servlet2ApiHelperImpl;
 import com.pamirs.attach.plugin.common.web.RequestTracer;
@@ -32,16 +41,9 @@ import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
+import org.apache.tomcat.util.http.fileupload.servlet.ServletFileUpload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Resource;
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -93,15 +95,15 @@ public class StandardHostValveInvokeInterceptor extends AroundInterceptor implem
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
-        Request request = (Request) advice.getParameterArray()[0];
-        Response response = (Response) advice.getParameterArray()[1];
+        Request request = (Request)advice.getParameterArray()[0];
+        Response response = (Response)advice.getParameterArray()[1];
         if (servletApiHelper.isAsyncDispatcherBefore(request)) {
             return;
         }
         boolean isStartTrace = false;
         try {
             isStartTrace = requestTracer.startTrace(request, response, Pradar.WEB_SERVER_NAME);
-            if (isStartTrace) {
+            if (isStartTrace && !isFileUpload(request)) {
                 advice.changeParameter(0, CatalinaVersion.getRequest(request));
             }
         } finally {
@@ -109,6 +111,10 @@ public class StandardHostValveInvokeInterceptor extends AroundInterceptor implem
                 advice.mark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS);
             }
         }
+    }
+
+    private boolean isFileUpload(Request request) {
+        return ServletFileUpload.isMultipartContent(request);
     }
 
     private ServletApiHelper newServletApi() {
@@ -126,11 +132,12 @@ public class StandardHostValveInvokeInterceptor extends AroundInterceptor implem
             if (!advice.hasMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS)) {
                 return;
             }
-            Response response = (Response) advice.getParameterArray()[1];
-            Request request = (Request) advice.getParameterArray()[0];
+            Response response = (Response)advice.getParameterArray()[1];
+            Request request = (Request)advice.getParameterArray()[0];
             if (servletApiHelper.isAsyncDispatcherAfter(request)) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Skip async servlet request event. isAsyncStarted={}, dispatcherType={}", request.isAsyncStarted(), request.getDispatcherType());
+                    logger.debug("Skip async servlet request event. isAsyncStarted={}, dispatcherType={}",
+                        request.isAsyncStarted(), request.getDispatcherType());
                 }
                 return;
             }
@@ -147,15 +154,17 @@ public class StandardHostValveInvokeInterceptor extends AroundInterceptor implem
             if (!advice.hasMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS)) {
                 return;
             }
-            Response response = (Response) advice.getParameterArray()[1];
-            Request request = (Request) advice.getParameterArray()[0];
+            Response response = (Response)advice.getParameterArray()[1];
+            Request request = (Request)advice.getParameterArray()[0];
             if (servletApiHelper.isAsyncDispatcherAfter(request)) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Skip async servlet request event. isAsyncStarted={}, dispatcherType={}", request.isAsyncStarted(), request.getDispatcherType());
+                    logger.debug("Skip async servlet request event. isAsyncStarted={}, dispatcherType={}",
+                        request.isAsyncStarted(), request.getDispatcherType());
                 }
                 return;
             }
-            requestTracer.endTrace(request, response, advice.getThrowable(), String.valueOf(servletApiHelper.getStatus(response)));
+            requestTracer.endTrace(request, response, advice.getThrowable(),
+                String.valueOf(servletApiHelper.getStatus(response)));
         } finally {
             advice.unMark(TraceInterceptorAdaptor.BEFORE_TRACE_SUCCESS);
             Pradar.clearInvokeContext();

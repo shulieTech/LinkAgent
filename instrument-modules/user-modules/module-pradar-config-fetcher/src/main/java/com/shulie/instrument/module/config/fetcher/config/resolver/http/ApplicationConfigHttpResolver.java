@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,44 +14,14 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.ErrorTypeEnum;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
-import com.pamirs.pradar.internal.config.MatchConfig;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
-import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
-import com.pamirs.pradar.internal.config.ShadowJob;
-import com.pamirs.pradar.internal.config.ShadowRedisConfig;
+import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
@@ -59,11 +29,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
-import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.agent.shared.service.ShadowDatabaseConfigParser;
-import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.*;
 import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -81,6 +47,17 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.text.NumberFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author shiyajian
@@ -388,8 +365,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
 
         if (PradarSwitcher.configSyncSwitchOn()
-            || (ApplicationConfig.getWhiteList && ApplicationConfig.getPressureTable4AccessSimple
-            && ApplicationConfig.getShadowJobConfig)) {
+                || (ApplicationConfig.getWhiteList && ApplicationConfig.getPressureTable4AccessSimple
+                && ApplicationConfig.getShadowJobConfig)) {
             // 配置拉取过程中，配置无异常
             // 或者历史配置有完成拉取的记录
             if (isInfoEnabled) {
@@ -417,7 +394,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
                 logger.warn("SIMULATOR: [FetchConfig] get mock config error. status: {}, result: {}",
-                    httpResult.getStatus(), httpResult.getResult());
+                        httpResult.getStatus(), httpResult.getResult());
                 return Collections.EMPTY_SET;
             }
 
@@ -429,12 +406,12 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
             for (Object obj : mapList) {
-                Map<String, Object> map = (Map<String, Object>)obj;
+                Map<String, Object> map = (Map<String, Object>) obj;
                 //禁用状态不拉取配置
                 if (map.containsKey("isEnable") && "false".equals(String.valueOf(map.get("isEnable")))) {
                     continue;
                 }
-                String methodInfo = (String)map.get("methodInfo");
+                String methodInfo = (String) map.get("methodInfo");
                 if (StringUtils.isBlank(methodInfo)) {
                     continue;
                 }
@@ -459,7 +436,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     continue;
                 }
 
-                String script = (String)map.get("groovy");
+                String script = (String) map.get("groovy");
 
                 MockConfig mockConfig = new MockConfig();
                 mockConfig.setClassName(StringUtils.trim(classMethod[0]));
@@ -482,11 +459,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         } catch (Throwable e) {
             logger.warn("link guard config parse err!", e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
-                .setErrorCode("mock-enhance-0002")
-                .setMessage("获取挡板列表失败！")
-                .setDetail("获取挡板列表失败:" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
+                    .setErrorCode("mock-enhance-0002")
+                    .setMessage("获取挡板列表失败！")
+                    .setDetail("获取挡板列表失败:" + e.getMessage())
+                    .report();
         }
         return Collections.EMPTY_SET;
     }
@@ -498,35 +475,35 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         try {
 
             StringBuilder url = new StringBuilder(troControlWebUrl)
-                .append(TRO_SHADOW_MQ_CONSUMER_URL).append("?appName=").append(AppNameUtils.appName());
+                    .append(TRO_SHADOW_MQ_CONSUMER_URL).append("?appName=").append(AppNameUtils.appName());
             final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
                 logger.warn("SIMULATOR: [FetchConfig] get shadow consumer config error. status: {}, result: {}",
-                    httpResult.getStatus(), httpResult.getResult());
+                        httpResult.getStatus(), httpResult.getResult());
                 return Boolean.FALSE;
             }
 
             if (StringUtils.isBlank(httpResult.getResult())) {
                 logger.error("[pradar] get shadow consumer config from server with empty response.");
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0009")
-                    .setMessage("获取影子消费者配置失败")
-                    .setDetail("获取影子消费者配置失败,接口返回值为空")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0009")
+                        .setMessage("获取影子消费者配置失败")
+                        .setDetail("获取影子消费者配置失败,接口返回值为空")
+                        .report();
                 return Boolean.FALSE;
             }
 
             JSONObject dataMap = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean)dataMap.get("success");
+            Boolean success = (Boolean) dataMap.get("success");
             if (!success) {
                 logger.error("[pradar] get shadow consumer config from server with a fault response.");
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子MQ配置失败")
-                    .setDetail("获取影子MQ配置失败,接口返回查询状态success为false")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子MQ配置失败")
+                        .setDetail("获取影子MQ配置失败,接口返回查询状态success为false")
+                        .report();
                 return false;
             }
 
@@ -539,8 +516,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
 
             for (int i = 0; i < mapList.size(); i++) {
-                JSONObject stringObjectMap = (JSONObject)mapList.get(i);
-                Map<String, List<String>> topicGroups = (Map<String, List<String>>)stringObjectMap.get("topicGroups");
+                JSONObject stringObjectMap = (JSONObject) mapList.get(i);
+                Map<String, List<String>> topicGroups = (Map<String, List<String>>) stringObjectMap.get("topicGroups");
                 Set<Entry<String, List<String>>> entries = topicGroups.entrySet();
                 Set<String> mqList = applicationConfig.getMqList();
                 if (mqList == null) {
@@ -562,11 +539,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         } catch (Throwable e) {
             logger.error("[pradar] Report Error Shadow mq consumer failed.", e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0009")
-                .setMessage("获取影子消费者配置失败")
-                .setDetail("获取影子消费者配置失败,配置处理异常:" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0009")
+                    .setMessage("获取影子消费者配置失败")
+                    .setDetail("获取影子消费者配置失败,配置处理异常:" + e.getMessage())
+                    .report();
             return false;
         }
     }
@@ -593,7 +570,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                             applicationConfig.setRpcNameWhiteList(GlobalConfig.getInstance().getRpcNameWhiteList());
                             applicationConfig.setCacheKeyAllowList(GlobalConfig.getInstance().getCacheKeyWhiteList());
                             applicationConfig.setContextPathBlockList(
-                                GlobalConfig.getInstance().getContextPathBlockList());
+                                    GlobalConfig.getInstance().getContextPathBlockList());
                             applicationConfig.setMqList(GlobalConfig.getInstance().getMqWhiteList());
                         }
                         logger.error("SIMULATOR: get white list from server failed");
@@ -610,7 +587,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         PradarSwitcher.turnConfigSyncSwitchOff();
                         if (ApplicationConfig.getPressureTable4AccessSimple) {
                             applicationConfig.setShadowDatabaseConfigs(
-                                GlobalConfig.getInstance().getShadowDatasourceConfigs());
+                                    GlobalConfig.getInstance().getShadowDatasourceConfigs());
                         }
                         logger.error("SIMULATOR: get shadow db config from server failed");
                     } else {
@@ -671,34 +648,34 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private boolean getPluginConfig(String troWebUrl, ApplicationConfig applicationConfig) {
         try {
             final StringBuilder url = new StringBuilder(troWebUrl)
-                .append(TRO_PLUGIN_CONIFG)
-                .append("?applicationName=")
-                .append(AppNameUtils.appName())
-                .append("&configKey=redis_expire");
+                    .append(TRO_PLUGIN_CONIFG)
+                    .append("?applicationName=")
+                    .append(AppNameUtils.appName())
+                    .append("&configKey=redis_expire");
 
             return loadPluginConfig(url, applicationConfig);
         } catch (Throwable e) {
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取插件配置列表失败")
-                .setDetail(String.format("获取插件配置列表失败:%s", Throwables.getStackTraceAsString(e)))
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取插件配置列表失败")
+                    .setDetail(String.format("获取插件配置列表失败:%s", Throwables.getStackTraceAsString(e)))
+                    .report();
             return false;
         }
     }
 
     private boolean loadPluginConfig(final StringBuilder url,
-        ApplicationConfig applicationConfig) {
+                                     ApplicationConfig applicationConfig) {
         final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
         if (!httpResult.isSuccess() || !JSON.parseObject(httpResult.getResult()).getBoolean("success")) {
             logger.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url, JSON.toJSONString(httpResult));
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取插件配置列表失败")
-                .setDetail(String.format("获取插件配置列表失败,接口返回值为:%s", JSON.toJSONString(httpResult)))
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取插件配置列表失败")
+                    .setDetail(String.format("获取插件配置列表失败,接口返回值为:%s", JSON.toJSONString(httpResult)))
+                    .report();
             return false;
         }
 
@@ -714,7 +691,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
         if (isInfoEnabled) {
             logger.info("[pradar] pull pluginMaxRedisExpireTime success:{}",
-                applicationConfig.getPluginMaxRedisExpireTime());
+                    applicationConfig.getPluginMaxRedisExpireTime());
         }
         return true;
     }
@@ -734,16 +711,16 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
             Map<String, ShadowEsServerConfig> shadowEsConfigMap = new HashMap<String, ShadowEsServerConfig>();
             JSONObject res = JSON.parseObject(response);
-            Boolean success = (Boolean)res.get("success");
+            Boolean success = (Boolean) res.get("success");
             if (!success) {
                 logger.error("[pradar] get es shadow config from server with a fault response. url={}, result={}",
-                    accessUrl, response);
+                        accessUrl, response);
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.RedisServer)
-                    .setErrorCode("agent-0001")
-                    .setMessage("get es shadow config error.")
-                    .setDetail("获取影子es配置失败,接口返回查询状态success为false")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.RedisServer)
+                        .setErrorCode("agent-0001")
+                        .setMessage("get es shadow config error.")
+                        .setDetail("获取影子es配置失败,接口返回查询状态success为false")
+                        .report();
                 return;
             }
             JSONArray datas = res.getJSONArray(DATA);
@@ -752,22 +729,26 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return;
             }
             for (Object object : datas) {
-                JSONObject data = (JSONObject)object;
+                JSONObject data = (JSONObject) object;
                 if (0 != Long.parseLong(data.get("status").toString())) {
                     continue;
                 }
-                String config = (String)data.get("config");
+                String config = (String) data.get("config");
                 JSONObject configMap = JSON.parseObject(config);
-                String businessNodes = (String)configMap.get("businessNodes");
-                String performanceTestNodes = (String)configMap.get("performanceTestNodes");
+                String businessNodes = (String) configMap.get("businessNodes");
+                String performanceTestNodes = (String) configMap.get("performanceTestNodes");
                 Object biz_cluster_name = configMap.get("businessClusterName");
-
                 Object pt_cluster_name = configMap.get("performanceClusterName");
+
+                String ptUserName = (String) configMap.get("ptUserName");
+                String ptPassword = (String) configMap.get("ptPassword");
                 ShadowEsServerConfig shadowEsServerConfig = new ShadowEsServerConfig(
-                    Arrays.asList(businessNodes.split(","))
-                    , Arrays.asList(performanceTestNodes.split(","))
-                    , biz_cluster_name == null ? null : (String)biz_cluster_name
-                    , pt_cluster_name == null ? null : (String)pt_cluster_name
+                        Arrays.asList(businessNodes.split(","))
+                        , Arrays.asList(performanceTestNodes.split(","))
+                        , biz_cluster_name == null ? null : (String) biz_cluster_name
+                        , pt_cluster_name == null ? null : (String) pt_cluster_name
+                        , ptUserName
+                        , ptPassword
                 );
                 shadowEsConfigMap.put(shadowEsServerConfig.identifyKey(), shadowEsServerConfig);
             }
@@ -782,15 +763,15 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private void getShadowRedisServerConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
         String appName = AppNameUtils.appName();
         StringBuilder builder = new StringBuilder(troControlWebUrl)
-            .append(REDIS_SHADOW_SERVER_URL)
-            .append("?appName=")
-            .append(appName);
+                .append(REDIS_SHADOW_SERVER_URL)
+                .append("?appName=")
+                .append(appName);
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(builder.toString());
             if (!httpResult.isSuccess()) {
                 logger.warn(
-                    "SIMULATOR: [FetchConfig] get shadow redis server config error. url={}, status={}, result={}",
-                    builder.toString(), httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: [FetchConfig] get shadow redis server config error. url={}, status={}, result={}",
+                        builder.toString(), httpResult.getStatus(), httpResult.getResult());
                 return;
             }
 
@@ -802,13 +783,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             Boolean success = result.getBoolean("success");
             if (!success) {
                 logger.error("SIMULATOR: get redis shadow config from server with a fault response. url={}, result={}",
-                    builder.toString(), httpResult.getResult());
+                        builder.toString(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.RedisServer)
-                    .setErrorCode("agent-0001")
-                    .setMessage("get redis shadow config error.")
-                    .setDetail("获取影子redis配置失败,接口返回查询状态success为false")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.RedisServer)
+                        .setErrorCode("agent-0001")
+                        .setMessage("get redis shadow config error.")
+                        .setDetail("获取影子redis配置失败,接口返回查询状态success为false")
+                        .report();
                 return;
             }
 
@@ -822,26 +803,26 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
             for (Map data : datas) {
                 if (data.get("dataSourceBusiness") == null
-                    || data.get("dataSourceBusinessPerformanceTest") == null) {
+                        || data.get("dataSourceBusinessPerformanceTest") == null) {
                     continue;
                 }
-                Map business = (Map)data.get("dataSourceBusiness");
+                Map business = (Map) data.get("dataSourceBusiness");
                 StringBuilder keyBuilder = new StringBuilder();
                 if (notEmpty(business.get("master"))) {
-                    String businessMaster = (String)business.get("master");
+                    String businessMaster = (String) business.get("master");
                     keyBuilder.append(businessMaster)
-                        .append(",");
+                            .append(",");
                 }
-                String nodes = (String)business.get("nodes");
+                String nodes = (String) business.get("nodes");
                 keyBuilder.append(nodes);
 
-                Map dataSourceBusinessPerformanceTest = (Map)data.get("dataSourceBusinessPerformanceTest");
+                Map dataSourceBusinessPerformanceTest = (Map) data.get("dataSourceBusinessPerformanceTest");
                 ShadowRedisConfig config = new ShadowRedisConfig();
 
                 config.setShadowAccountPrefix(
-                    GlobalConfig.getInstance().getSimulatorDynamicConfig().shadowDatasourceAccountPrefix());
+                        GlobalConfig.getInstance().getSimulatorDynamicConfig().shadowDatasourceAccountPrefix());
                 config.setShadowAccountSuffix(
-                    GlobalConfig.getInstance().getSimulatorDynamicConfig().shadowDatasourceAccountSuffix());
+                        GlobalConfig.getInstance().getSimulatorDynamicConfig().shadowDatasourceAccountSuffix());
 
                 if (notEmpty(dataSourceBusinessPerformanceTest.get("master"))) {
                     String pressureMaster = String.valueOf(dataSourceBusinessPerformanceTest.get("master"));
@@ -872,7 +853,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         } catch (Throwable e) {
             logger.error("fetch redis server config error. url={}", builder.toString()
-                , e);
+                    , e);
         }
 
     }
@@ -900,14 +881,14 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             param.put("appName", AppNameUtils.appName());
             param.put("size", appInfo.getAppDetails().size() + "");
             final HttpUtils.HttpResult httpResult = HttpUtils.doPost(uploadAppInfoUrl.toString(),
-                JSON.toJSONString(param));
+                    JSON.toJSONString(param));
             if (!httpResult.isSuccess()) {
                 logger.warn("SIMULATOR: upload app info error. status: {}, result: {}", httpResult.getStatus(),
-                    httpResult.getResult());
+                        httpResult.getResult());
                 return;
             }
             if (httpResult.getResult() != null && (httpResult.getResult().contains("data=true")
-                || httpResult.getResult().contains("data:true"))) {
+                    || httpResult.getResult().contains("data:true"))) {
                 final StringBuilder url2 = new StringBuilder(troWebUrl).append(UPLOAD_APP_INFO);
                 HttpUtils.HttpResult httpResult1 = HttpUtils.doPost(url2.toString(), JSON.toJSONString(appInfo));
                 if (!httpResult1.isSuccess()) {
@@ -920,8 +901,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         final String projectName = AppNameUtils.appName();
         appInfo.setAppName(projectName);
         final StringBuilder uploadAgentVersion = new StringBuilder().append(troWebUrl).append(AGENT_VERSION)
-            .append("?appName=").append(projectName).append("&agentVersion=")
-            .append(getAgentVersion()).append("&pradarVersion=").append(getSimulatorVersion());
+                .append("?appName=").append(projectName).append("&agentVersion=")
+                .append(getAgentVersion()).append("&pradarVersion=").append(getSimulatorVersion());
         try {
             HttpUtils.doGet(uploadAgentVersion.toString());
         } catch (Throwable e) {
@@ -947,7 +928,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
         if (configs != null && configs.get("data") != null) {
             GlobalConfig.getInstance().setSimulatorDynamicConfig(
-                new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+                    new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
         } else {
             logger.error("获取探针动态参数异常");
         }
@@ -990,11 +971,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(result));
             if (!httpResult.isSuccess()) {
                 logger.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
-                    JSON.toJSONString(result));
+                        JSON.toJSONString(result));
             } else {
                 if (isInfoEnabled) {
                     logger.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
-                        JSON.toJSONString(result));
+                            JSON.toJSONString(result));
                 }
             }
             // TODO 存在一个隐患，去除了清空内存中异常信息，改为agent全量发送异常数据
@@ -1048,7 +1029,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      */
     private void reportErrorShadowJobConfig(String troControlWebUrl) {
         StringBuilder url = new StringBuilder(troControlWebUrl)
-            .append(TRO_REPORT_ERROR_SHADOW_JOB_URL);
+                .append(TRO_REPORT_ERROR_SHADOW_JOB_URL);
         try {
             for (ShadowJob shaDowJob : GlobalConfig.getInstance().getErrorRegisterJobs()) {
                 Map<String, Object> params = new HashMap<String, Object>(5, 1);
@@ -1072,20 +1053,20 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      */
     private boolean getTraceRegularRules(String troControlWebUrl) {
         StringBuilder url = new StringBuilder(troControlWebUrl)
-            .append(TRACE_REGULAR_RULE_URL).append("?appName=").append(AppNameUtils.appName());
+                .append(TRACE_REGULAR_RULE_URL).append("?appName=").append(AppNameUtils.appName());
         try {
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
                 logger.error(
-                    "SIMULATOR: [FetchConfig] get trace regular rules config from server with error response. url={},"
-                        + " status={}, result={} ",
-                    url, httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: [FetchConfig] get trace regular rules config from server with error response. url={},"
+                                + " status={}, result={} ",
+                        url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0005")
-                    .setMessage("获取入口规则配置失败")
-                    .setDetail("获取入口规则配置失败,接口返回值为空")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0005")
+                        .setMessage("获取入口规则配置失败")
+                        .setDetail("获取入口规则配置失败,接口返回值为空")
+                        .report();
                 return false;
             }
 
@@ -1093,15 +1074,15 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             Boolean success = map.getBoolean("success");
             if (!success) {
                 logger.error(
-                    "SIMULATOR: [FetchConfig] get trace regular rules config from server with a fault response. "
-                        + "url={}, status={}, result={} ",
-                    url, httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: [FetchConfig] get trace regular rules config from server with a fault response. "
+                                + "url={}, status={}, result={} ",
+                        url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0005")
-                    .setMessage("获取入口规则配置失败")
-                    .setDetail("获取入口规则配置失败,接口返回值为空")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0005")
+                        .setMessage("获取入口规则配置失败")
+                        .setDetail("获取入口规则配置失败,接口返回值为空")
+                        .report();
                 return false;
             }
             Map<String, List<String>> data = map.getObject(DATA, new TypeReference<Map<String, List<String>>>() {
@@ -1120,11 +1101,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         } catch (Throwable e) {
             logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0005")
-                .setMessage("获取入口规则配置失败")
-                .setDetail("获取入口规则配置失败,配置处理异常：" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0005")
+                    .setMessage("获取入口规则配置失败")
+                    .setDetail("获取入口规则配置失败,配置处理异常：" + e.getMessage())
+                    .report();
             return false;
         }
         return true;
@@ -1137,58 +1118,58 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      */
     private boolean getShadowJobConfig(String troControlWebUrl, ApplicationConfig applicationConfig) {
         StringBuilder url = new StringBuilder(troControlWebUrl)
-            .append(TRO_SHADOW_JOB_URL).append("?appName=").append(AppNameUtils.appName());
+                .append(TRO_SHADOW_JOB_URL).append("?appName=").append(AppNameUtils.appName());
         try {
             Set<ShadowJob> shadowJobs = new HashSet<ShadowJob>();
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
             if (!httpResult.isSuccess()) {
                 logger.error(
-                    "SIMULATOR: [FetchConfig] get shadow job config from server with error response. url={}, "
-                        + "status={}, result={}"
-                    , url, httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: [FetchConfig] get shadow job config from server with error response. url={}, "
+                                + "status={}, result={}"
+                        , url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子job配置失败")
-                    .setDetail("获取影子job配置失败,接口返回值为空")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子job配置失败")
+                        .setDetail("获取影子job配置失败,接口返回值为空")
+                        .report();
                 return false;
             }
 
             Map map = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean)map.get("success");
+            Boolean success = (Boolean) map.get("success");
             if (!success) {
                 logger.error(
-                    "SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={},"
-                        + " status={}, result={}"
-                    , url, httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={},"
+                                + " status={}, result={}"
+                        , url, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子job配置失败")
-                    .setDetail("获取影子job配置失败,接口返回查询状态success为false")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子job配置失败")
+                        .setDetail("获取影子job配置失败,接口返回查询状态success为false")
+                        .report();
                 return false;
             }
-            List<Map> data = (List<Map>)map.get(DATA);
+            List<Map> data = (List<Map>) map.get(DATA);
             if (null != data && !data.isEmpty()) {
                 for (Map datum : data) {
                     ShadowJob shaDowJob = new ShadowJob();
                     shaDowJob.setId(Long.valueOf(datum.get("id").toString()));
                     shaDowJob.setActive(Integer.valueOf(NumberFormat.getInstance().format(datum.get("active"))));
-                    shaDowJob.setClassName((String)datum.get("name"));
+                    shaDowJob.setClassName((String) datum.get("name"));
                     shaDowJob.setStatus(NumberFormat.getInstance().format(datum.get("status")));
                     Map<String, Object> configCode = JSON.parseObject(String.valueOf(datum.get("configCode")));
                     shaDowJob.setCron(configCode.get("cron") == null ? null : configCode.get("cron").toString());
                     shaDowJob.setFixedDelay(configCode.get("fixedDelay") == null ? null
-                        : Long.parseLong(configCode.get("fixedDelay").toString()));
+                            : Long.parseLong(configCode.get("fixedDelay").toString()));
                     shaDowJob.setFixedRate(configCode.get("fixedRate") == null ? null
-                        : Long.parseLong(configCode.get("fixedRate").toString()));
+                            : Long.parseLong(configCode.get("fixedRate").toString()));
                     shaDowJob.setInitialDelay(configCode.get("initialDelay") == null ? null
-                        : Long.parseLong(configCode.get("initialDelay").toString()));
+                            : Long.parseLong(configCode.get("initialDelay").toString()));
                     if (null != configCode.get("listener")) {
                         shaDowJob.setListenerName(
-                            configCode.get("listener") == null ? null : configCode.get("listener").toString());
+                                configCode.get("listener") == null ? null : configCode.get("listener").toString());
                     }
 
                     String jobType = configCode.get("jobType") == null ? null : configCode.get("jobType").toString();
@@ -1196,7 +1177,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         shaDowJob.setJobType(jobType);
                     }
                     String jobDataType = configCode.get("jobDataType") == null ? null : configCode.get("jobDataType")
-                        .toString();
+                            .toString();
                     if (null != jobDataType) {
                         shaDowJob.setJobDataType(jobDataType);
                     }
@@ -1217,11 +1198,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         } catch (Throwable e) {
             logger.error("SIMULATOR: get shadow job config from server with err response. url={}", url, e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取影子job配置失败")
-                .setDetail("获取影子job配置失败,配置处理异常：" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取影子job配置失败")
+                    .setDetail("获取影子job配置失败,配置处理异常：" + e.getMessage())
+                    .report();
             return false;
         }
         return true;
@@ -1238,59 +1219,59 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(getShadowDatasourceUrl);
             if (!httpResult.isSuccess()) {
                 logger.warn("SIMULATOR: [FetchConfig] get datasource config error. url={}, status={}, result={}"
-                    , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
+                        , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,status: " + httpResult.getStatus() + ", result: " + httpResult.getResult())
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子数据源配置失败")
+                        .setDetail("获取影子数据源配置失败,status: " + httpResult.getStatus() + ", result: " + httpResult.getResult())
+                        .report();
                 return false;
             }
             Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean)resultMap.get("success");
+            Boolean success = (Boolean) resultMap.get("success");
             if (!success) {
                 logger.warn(
-                    "SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, "
-                        + "status={}, result={}"
-                    , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, "
+                                + "status={}, result={}"
+                        , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
                 String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值为false,错误信息:" + error)
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子数据源配置失败")
+                        .setDetail("获取影子数据源配置失败,接口返回值为false,错误信息:" + error)
+                        .report();
                 return false;
             }
 
             if (!resultMap.containsKey("data")) {
                 logger.error(
-                    "SIMULATOR: get shadow db config with a err response. can't found attributes data from response. "
-                        + "url={}, status={}, result={}"
-                    , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
+                        "SIMULATOR: get shadow db config with a err response. can't found attributes data from response. "
+                                + "url={}, status={}, result={}"
+                        , getShadowDatasourceUrl, httpResult.getStatus(), httpResult.getResult());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值异常，无data属性")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子数据源配置失败")
+                        .setDetail("获取影子数据源配置失败,接口返回值异常，无data属性")
+                        .report();
                 return false;
             }
             List<Map<String, Object>> dataMapList = null;
             try {
-                dataMapList = (List<Map<String, Object>>)resultMap.get("data");
+                dataMapList = (List<Map<String, Object>>) resultMap.get("data");
             } catch (Throwable e) {
                 logger.error(
-                    "SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from "
-                        + "response. url={}",
-                    getShadowDatasourceUrl, e);
+                        "SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from "
+                                + "response. url={}",
+                        getShadowDatasourceUrl, e);
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0004")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0004")
+                        .setMessage("获取影子数据源配置失败")
+                        .setDetail("获取影子数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
+                        .report();
                 return false;
             }
             /**
@@ -1317,20 +1298,20 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     map.put(DbUrlUtils.getKey(shadowDatabaseConfig.getUrl(), null), shadowDatabaseConfig);
                 } else {
                     map.put(DbUrlUtils.getKey(shadowDatabaseConfig.getUrl(), shadowDatabaseConfig.getUsername()),
-                        shadowDatabaseConfig);
+                            shadowDatabaseConfig);
                 }
             }
             applicationConfig.setShadowDatabaseConfigs(map);
 
         } catch (Throwable e) {
             logger.error("SIMULATOR: get shadow db config with a err response. got a unknow err. url={}",
-                getShadowDatasourceUrl, e);
+                    getShadowDatasourceUrl, e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取影子数据源配置失败")
-                .setDetail("获取影子数据源配置失败,配置处理异常:" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取影子数据源配置失败")
+                    .setDetail("获取影子数据源配置失败,配置处理异常:" + e.getMessage())
+                    .report();
             return false;
         }
         return true;
@@ -1341,19 +1322,19 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      */
     private boolean getWhiteList(String troWebUrl, ApplicationConfig applicationConfig) {
         final StringBuilder url = new StringBuilder(troWebUrl)
-            .append(WHITELIST_FILE_URL)
-            .append("?appName=")
-            .append(AppNameUtils.appName());
+                .append(WHITELIST_FILE_URL)
+                .append("?appName=")
+                .append(AppNameUtils.appName());
         try {
             return loadList(url, applicationConfig);
         } catch (Throwable e) {
             logger.error("SIMULATOR: [FetchConfig] get whitelist config error. url={}", troWebUrl, e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取白名单列表失败")
-                .setDetail("获取白名单列表失败:" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取白名单列表失败")
+                    .setDetail("获取白名单列表失败:" + e.getMessage())
+                    .report();
             return false;
         }
     }
@@ -1365,17 +1346,17 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param applicationConfig
      */
     private boolean loadList(final StringBuilder url,
-        ApplicationConfig applicationConfig) {
+                             ApplicationConfig applicationConfig) {
         final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
         if (!httpResult.isSuccess()) {
             logger.warn("SIMULATOR: [FetchConfig] get whitelist config error. status: {}, result: {}",
-                httpResult.getStatus(), httpResult.getResult());
+                    httpResult.getStatus(), httpResult.getResult());
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0004")
-                .setMessage("获取白名单列表失败")
-                .setDetail("获取白名单列表失败,status: " + httpResult.getStatus() + ", result: " + httpResult.getResult())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0004")
+                    .setMessage("获取白名单列表失败")
+                    .setDetail("获取白名单列表失败,status: " + httpResult.getStatus() + ", result: " + httpResult.getResult())
+                    .report();
             return false;
         }
 
@@ -1391,13 +1372,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         JSONObject dataObj = dataMap.getJSONObject(DATA);
 
         //按应用分的黑名单
-        List<Object> blackList = (List<Object>)dataObj.get(B_LISTS);
+        List<Object> blackList = (List<Object>) dataObj.get(B_LISTS);
         if (CollectionUtils.isNotEmpty(blackList)) {
             for (int i = 0; i < blackList.size(); i++) {
-                Map<String, Object> blackMap = (Map<String, Object>)blackList.get(i);
+                Map<String, Object> blackMap = (Map<String, Object>) blackList.get(i);
                 if (AppNameUtils.appName().equals(blackMap.get(APP_NAME))) {
                     Object keyObj = blackMap.get(REDIS_KEY_NEW);
-                    redisKeyWhiteList.addAll(((JSONArray)keyObj).toJavaList(String.class));
+                    redisKeyWhiteList.addAll(((JSONArray) keyObj).toJavaList(String.class));
                 }
             }
         }
@@ -1504,55 +1485,55 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             if (!result.isSuccess()) {
                 logger.error("pull shadow hbase config error {}, url={}", result.getResult(),
-                    troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName());
+                        troWebUrl + SHADOW_HBASE_SERVER_URL + "?appName=" + AppNameUtils.appName());
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子数据源配置失败")
-                    .setDetail("获取影子数据源配置失败,接口返回值为null")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0010")
+                        .setMessage("获取影子数据源配置失败")
+                        .setDetail("获取影子数据源配置失败,接口返回值为null")
+                        .report();
                 return false;
             }
             Map<String, Object> resultMap = JSONObject.parseObject(result.getResult());
-            Boolean success = (Boolean)resultMap.get("success");
+            Boolean success = (Boolean) resultMap.get("success");
             if (!success) {
                 String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子Hbase数据源配置失败")
-                    .setDetail("获取影子Hbase数据源配置失败,接口返回值为false,错误信息:" + error)
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0010")
+                        .setMessage("获取影子Hbase数据源配置失败")
+                        .setDetail("获取影子Hbase数据源配置失败,接口返回值为false,错误信息:" + error)
+                        .report();
                 return false;
             }
 
             if (!resultMap.containsKey("data")) {
                 logger.error(
-                    "[pradar] get shadow hbase config with a err response. can't found attributes data from response."
-                        + " url={}",
-                    url);
+                        "[pradar] get shadow hbase config with a err response. can't found attributes data from response."
+                                + " url={}",
+                        url);
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子Hbase数据源配置失败")
-                    .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，无data属性")
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0010")
+                        .setMessage("获取影子Hbase数据源配置失败")
+                        .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，无data属性")
+                        .report();
                 return false;
             }
             List<Map<String, Object>> dataMapList = null;
             try {
-                dataMapList = (List<Map<String, Object>>)resultMap.get("data");
+                dataMapList = (List<Map<String, Object>>) resultMap.get("data");
             } catch (Exception e) {
                 logger.error(
-                    "[pradar] get shadow hbase config with a err response. can't convert attributes data to map from "
-                        + "response. url={}",
-                    url, e);
+                        "[pradar] get shadow hbase config with a err response. can't convert attributes data to map from "
+                                + "response. url={}",
+                        url, e);
                 ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.AgentError)
-                    .setErrorCode("agent-0010")
-                    .setMessage("获取影子Hbase数据源配置失败")
-                    .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
-                    .report();
+                        .setErrorType(ErrorTypeEnum.AgentError)
+                        .setErrorCode("agent-0010")
+                        .setMessage("获取影子Hbase数据源配置失败")
+                        .setDetail("获取影子Hbase数据源配置失败,接口返回值异常，data不是kv对象数组：" + e.getMessage())
+                        .report();
                 return false;
             }
 
@@ -1560,11 +1541,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 Map<String, ShadowHbaseConfig> shadowHbaseConfigMap = new HashMap<String, ShadowHbaseConfig>();
 
                 for (Map<String, Object> map : dataMapList) {
-                    Map<String, Object> configMap = JSONObject.parseObject((String)map.get("config"));
+                    Map<String, Object> configMap = JSONObject.parseObject((String) map.get("config"));
                     if (configMap != null) {
-                        Map<String, Object> business = (Map<String, Object>)configMap.get("dataSourceBusiness");
-                        Map<String, Object> performance = (Map<String, Object>)configMap.get(
-                            "dataSourcePerformanceTest");
+                        Map<String, Object> business = (Map<String, Object>) configMap.get("dataSourceBusiness");
+                        Map<String, Object> performance = (Map<String, Object>) configMap.get(
+                                "dataSourcePerformanceTest");
                         if (performance != null && business != null) {
                             ShadowHbaseConfig bconfig = convertConfig(business);
                             ShadowHbaseConfig pconfig = convertConfig(performance);
@@ -1585,11 +1566,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         } catch (Throwable e) {
             logger.error("[pradar] get shadow hbase config with a err response. got a unknow err. url={}", url, e);
             ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.AgentError)
-                .setErrorCode("agent-0010")
-                .setMessage("获取影子Hbase数据源配置失败")
-                .setDetail("获取影子Hbase数据源配置失败,配置处理异常:" + e.getMessage())
-                .report();
+                    .setErrorType(ErrorTypeEnum.AgentError)
+                    .setErrorCode("agent-0010")
+                    .setMessage("获取影子Hbase数据源配置失败")
+                    .setDetail("获取影子Hbase数据源配置失败,配置处理异常:" + e.getMessage())
+                    .report();
             return false;
         }
         return true;
@@ -1597,10 +1578,10 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
     public ShadowHbaseConfig convertConfig(Map<String, Object> business) {
         ShadowHbaseConfig config = new ShadowHbaseConfig();
-        String bquorum = (String)business.get("quorum");
-        String bport = (String)business.get("port");
-        String bznode = (String)business.get("znode");
-        Map<String, String> bparams = (Map<String, String>)business.get("params");
+        String bquorum = (String) business.get("quorum");
+        String bport = (String) business.get("port");
+        String bznode = (String) business.get("znode");
+        Map<String, String> bparams = (Map<String, String>) business.get("params");
         config.setQuorum(bquorum);
         config.setPort(bport);
         config.setZnode(bznode);

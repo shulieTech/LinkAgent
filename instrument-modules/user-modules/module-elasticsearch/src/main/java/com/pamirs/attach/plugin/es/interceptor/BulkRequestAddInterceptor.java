@@ -8,6 +8,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
@@ -23,6 +24,10 @@ public class BulkRequestAddInterceptor extends TraceInterceptorAdaptor {
     public void beforeFirst(Advice advice) {
         ClusterTestUtils.validateClusterTest();
         if (!Pradar.isClusterTest()) {
+            return;
+        }
+
+        if (GlobalConfig.getInstance().isShadowEsServer()) {
             return;
         }
         Object[] args = advice.getParameterArray();

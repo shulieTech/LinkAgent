@@ -89,6 +89,7 @@ public final class RequestIndexRenameProvider {
         registry.put("org.elasticsearch.action.search.ClearScrollRequest", new ClearScrollRequestRename());
         registry.put("org.elasticsearch.action.admin.cluster.state.ClusterStateRequest", new ClusterStateRequestRename());
         registry.put("org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest", new ClusterHealthRequestRename());
+        registry.put("org.elasticsearch.client.core.CountRequest", new CountRequestIndexRename());
     }
 
 

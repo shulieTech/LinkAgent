@@ -16,6 +16,10 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
     private Deque<Integer> bizRecordCounts = new LinkedList();
     private Deque<Integer> ptRecordCounts = new LinkedList();
 
+    private static final String TEST_MODE_POLL = "agent.test.mode.poll";
+
+    private static boolean testModePoll = System.getProperty(TEST_MODE_POLL) != null;
+
     public RecordsRatioPollSelector() {
         this.startRatioComputingTask();
     }
@@ -37,7 +41,7 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
     @Override
     public ConsumerType select() {
         // 最开始时业务影子各一次, 业务压测消息个数一样时各一次
-        if (ratioPoint == 0) {
+        if (ratioPoint == 0 || testModePoll) {
             return selector.select();
         }
         // 1～10

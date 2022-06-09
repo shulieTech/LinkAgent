@@ -28,7 +28,7 @@ public class JvmArgsConstants {
     public static final String permSizeValueCheckErrorMsg_1 = "jdk7以及以下，未配置-XX:PermSize=256M -XX:MaxPermSize=512M，请检查启动参数";
 
     public static final String metaspaceSizeValueCheckCode = "MetaspaceSizeValueCheck";
-    public static final String metaspaceSizeValueCheckErrorMsg_1 = "jdk8及以上，未配置-XX:MetaspaceSize=256M -XX:MaxMetaspaceSize=256M参数，请检查启动参数";
+    public static final String metaspaceSizeValueCheckErrorMsg_1 = "jdk8及以上，-XX:MaxMetaspaceSize 不能小于100M，请检查启动参数";
     public static final String metaspaceSizeValueCheckErrorMsg_2 = "jdk8及以上，配置了-XX:UseParallelGC，未配置-XX:SurvivorRatio=8 -XX:-UseAdaptiveSizePolicy，请检查启动参数";
 
 

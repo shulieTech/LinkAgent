@@ -20,7 +20,6 @@ import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.HttpUtils.HttpResult;
 import com.pamirs.pradar.common.IOUtils;
-import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.event.ErrorEvent;
 import com.pamirs.pradar.event.Event;
@@ -481,7 +480,11 @@ public class ZookeeperRegister implements Register {
 
                 try {
                     if (!zkClient.exists(heartbeatPath)) {
-                        zkClient.ensureDirectoryExists(heartbeatPath);
+                        LOGGER.info("{}节点不存在，等待重新创建",heartbeatPath);
+                        //zkClient.ensureDirectoryExists(heartbeatPath);
+                        //等待watcher创建
+                        scanJarFuture = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
+                        return;
                     }
                 } catch (Throwable e) {
                     LOGGER.error("[pradar-register] zk ensureDirectoryExists err: {}!", heartbeatPath);

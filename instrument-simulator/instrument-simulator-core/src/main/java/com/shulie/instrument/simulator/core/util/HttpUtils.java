@@ -14,15 +14,9 @@
  */
 package com.shulie.instrument.simulator.core.util;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import org.apache.commons.lang.StringUtils;
+
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -33,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.commons.lang.StringUtils;
 
 public abstract class HttpUtils {
 
@@ -203,7 +195,7 @@ public abstract class HttpUtils {
             }
 
             if (body != null && !body.isEmpty()) {
-                request.append("Content-Length: ").append(body.getBytes().length).append("\r\n")
+                request.append("Content-Length: ").append(body.getBytes(UTF_8).length).append("\r\n")
                     .append("Content-Type: application/json\r\n");
             }
 

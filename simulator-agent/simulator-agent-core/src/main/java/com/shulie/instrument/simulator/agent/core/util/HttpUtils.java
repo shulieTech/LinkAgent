@@ -124,7 +124,7 @@ public abstract class HttpUtils {
             output = socket.getOutputStream();
 
             if (body != null && !body.isEmpty()) {
-                request.append("Content-Length: ").append(body.getBytes().length).append("\r\n")
+                request.append("Content-Length: ").append(body.getBytes(UTF_8).length).append("\r\n")
                     .append("Content-Type: application/json\r\n");
             }
             request.append("\r\n");

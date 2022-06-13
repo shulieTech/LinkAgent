@@ -57,6 +57,7 @@ public class SimulatorDynamicConfig {
 
     private static final String FILED_CHECK_RULES_SWITCH = "filed.check.rules.switch";
     private static final String FILED_CHECK_RULES = "filed.check.rules";
+    private static final String KAFKA_PT_CONSUMER_MAX_POLL_RATION_KEY = "kafka.pt.consumer.max.poll.ratio";
 
     /**
      * 影子库，账密前缀及后缀
@@ -107,6 +108,12 @@ public class SimulatorDynamicConfig {
     private final boolean shadowRequestResponseDataAllowTrace;
 
     /**
+     * kafka影子消费者poll最大比例
+     */
+    private final double kafkaPtConsumerPollMaxRatio;
+    public static final double DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO = 0.8;
+
+    /**
      * 影子库账号前后缀
      */
     private final String shadowDatasourceAccountPrefix;
@@ -137,6 +144,7 @@ public class SimulatorDynamicConfig {
         this.securityFieldCollection = getSecurityFieldCollection(config);
         this.shadowDatasourceAccountPrefix = getShadowDatasourceAccountPrefix(config);
         this.shadowDatasourceAccountSuffix = getShadowDatasourceAccountSuffix(config);
+        this.kafkaPtConsumerPollMaxRatio = getKafkaPtConsumerMaxPollRatio(config);
     }
 
     public String shadowDatasourceAccountPrefix() {
@@ -448,6 +456,22 @@ public class SimulatorDynamicConfig {
         }
     }
 
+    private double getKafkaPtConsumerMaxPollRatio(Map<String, String> config) {
+        try {
+            if (config == null) {
+                return DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO;
+            }
+            final String value = getConfig(config, KAFKA_PT_CONSUMER_MAX_POLL_RATION_KEY);
+            if (value == null) {
+                return DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO;
+            }
+            return Double.valueOf(value);
+        } catch (Throwable e) {
+            LOGGER.error("getKafkaPtConsumerMaxPollRatio error {}.", e);
+            return DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO;
+        }
+    }
+
     /**
      * trace日志采样率
      *
@@ -533,5 +557,9 @@ public class SimulatorDynamicConfig {
             LOGGER.error("getShadowRequestResponseDataAllowTrace error {}, use default false.", e);
             return false;
         }
+    }
+
+    public double getKafkaPtConsumerPollMaxRatio() {
+        return kafkaPtConsumerPollMaxRatio;
     }
 }

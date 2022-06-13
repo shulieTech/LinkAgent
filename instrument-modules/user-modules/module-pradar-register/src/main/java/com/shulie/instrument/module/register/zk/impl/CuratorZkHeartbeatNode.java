@@ -110,7 +110,7 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
                 }
             }
             logger.info("heartbeat node is set alive, path={}", path);
-            client.checkExists().usingWatcher(watcher).forPath(path);
+            addWatcher();
             alive.set(true);
         }
     }
@@ -149,13 +149,28 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
     private final Watcher watcher = new Watcher() {
         @Override
         public void process(WatchedEvent event) {
+            logger.info("receive node event：{}",event.toString());
             if (event.getType() == Watcher.Event.EventType.NodeDeleted) {
                 try {
                     reset();
                 } catch (Throwable e) {
-                    logger.warn("fail to reset in watch event, path={}", path, e);
+                    logger.error("fail to reset in watch event, path={}", path, e);
                 }
+            }else {
+                //Watcher监听器是一次性,需重置watcher
+                addWatcher();
             }
         }
     };
+
+
+
+    private void addWatcher(){
+        try {
+            logger.info("add watcher for node:{}",path);
+            client.checkExists().usingWatcher(watcher).forPath(path);
+        } catch (Exception e) {
+            logger.error("fail to add watcher for path={}", path, e);
+        }
+    }
 }

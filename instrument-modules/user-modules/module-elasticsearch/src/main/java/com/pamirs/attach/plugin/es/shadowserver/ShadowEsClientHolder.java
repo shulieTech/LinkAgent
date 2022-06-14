@@ -224,6 +224,7 @@ public class ShadowEsClientHolder {
                 IS_REST_CLIENT_614 = Boolean.TRUE;
             }
         }
+        JUDGE_IS_614 = Boolean.TRUE;
     }
 
     private static List<String> getHighLevelNodesAddressAsString(RestClient target) {

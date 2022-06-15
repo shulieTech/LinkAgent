@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -40,22 +40,19 @@ public class RestClientPerformAsyncLowVersionRequestInterceptor extends Abstract
 
     private volatile Method performRequestAsyncMethod;
 
-
     @Override
-    public CutOffResult doShadowIndexInterceptor(Advice advice){
-        if (!RestClientHighLowFlag.isHigh){
+    public CutOffResult doShadowIndexInterceptor(Advice advice) {
+        if (!RestClientHighLowFlag.isHigh) {
             String endpoint = (String) advice.getParameterArray()[1];
-            if (endpoint.startsWith("/")){
+            if (endpoint.startsWith("/")) {
                 //es索引名称得小写
                 endpoint = endpoint.replaceFirst("/", "/" + Pradar.CLUSTER_TEST_PREFIX_LOWER);
-            } else if (!endpoint.startsWith(Pradar.CLUSTER_TEST_PREFIX_LOWER)){
+            } else if (!endpoint.startsWith(Pradar.CLUSTER_TEST_PREFIX_LOWER)) {
                 endpoint = Pradar.addClusterTestPrefix(endpoint);
             }
-
             advice.changeParameter(1, endpoint);
         }
         return CutOffResult.PASSED;
-
     }
 
     @Override

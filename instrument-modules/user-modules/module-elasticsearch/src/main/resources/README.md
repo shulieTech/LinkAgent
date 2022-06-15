@@ -1,1 +1,1 @@
-2.0.0.3 es支持Count请求
+elasticsearch-rest-client 6.1.4 支持影子集群模式

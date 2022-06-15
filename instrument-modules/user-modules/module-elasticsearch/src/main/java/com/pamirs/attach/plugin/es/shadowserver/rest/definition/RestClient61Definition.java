@@ -30,5 +30,4 @@ public class RestClient61Definition extends AbstractRestClientDefinition impleme
             builder.setMaxRetryTimeoutMillis(maxRetryTimeoutMillis.intValue());
         }
     }
-
 }

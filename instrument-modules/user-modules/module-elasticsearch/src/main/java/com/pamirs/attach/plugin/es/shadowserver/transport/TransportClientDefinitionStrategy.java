@@ -14,15 +14,15 @@
  */
 package com.pamirs.attach.plugin.es.shadowserver.transport;
 
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.TransportClientDefinition;
 import com.pamirs.attach.plugin.es.shadowserver.transport.definition.PreBuiltTransportClientDefinition;
 import com.pamirs.attach.plugin.es.shadowserver.transport.definition.TransportClient2XDefinition;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import org.elasticsearch.client.transport.TransportClient;
+
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -77,5 +77,4 @@ public class TransportClientDefinitionStrategy {
 
         TransportClientDefinition definition();
     }
-
 }

@@ -24,7 +24,9 @@ import com.pamirs.pradar.MiddlewareType;
  */
 public class ElasticsearchConstants {
     public final static String PLUGIN_NAME = "elasticsearch";
+
     public final static int PLUGIN_TYPE = MiddlewareType.TYPE_SEARCH;
+
     public final static String MODULE_NAME = "elasticsearch";
 
     public final static String REFLECT_FIELD_CLIENT = "client";

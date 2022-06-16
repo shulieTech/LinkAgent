@@ -6,7 +6,7 @@ import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectFetchInteceptor;
+import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectFetchInterceptor;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +33,7 @@ public class SyncPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                         enhanceTemplate.enhance(this, split[0], new EnhanceCallback() {
                             @Override
                             public void doEnhance(InstrumentClass target) {
-                                target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(SyncObjectFetchInteceptor.class));
+                                target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(SyncObjectFetchInterceptor.class));
                             }
                         });
                     } else {

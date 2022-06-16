@@ -15,8 +15,13 @@
 package com.pamirs.attach.plugin.spring.web.trace;
 
 import com.pamirs.attach.plugin.common.web.RequestTracer;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Description
@@ -52,7 +57,18 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
 
     @Override
     public void setAttribute(ServerHttpRequest request, String key, Object value) {
-        request.getHeaders().add(key, value.toString());
+        HttpHeaders headers = request.getHeaders();
+        try {
+            headers.add(key, value.toString());
+        }catch (UnsupportedOperationException exception){
+            //readOnlyHttpHeaders
+            HttpHeaders httpHeaders = new HttpHeaders();
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                httpHeaders.put(entry.getKey(),entry.getValue());
+            }
+            httpHeaders.add(key,value.toString());
+            Reflect.on(request).set("headers",httpHeaders);
+        }
     }
 
     @Override

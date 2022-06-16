@@ -107,7 +107,18 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
         if (httpResponseInfo == null) {
             return;
         }
-        httpResponseInfo.getHeaders().add(key, String.valueOf(value));
+        HttpHeaders headers = httpResponseInfo.getHeaders();
+        try {
+            headers.add(key, String.valueOf(value));
+        }catch (UnsupportedOperationException exception){
+            //readOnlyHttpHeaders
+            HttpHeaders httpHeaders = new HttpHeaders();
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                httpHeaders.put(entry.getKey(),entry.getValue());
+            }
+            httpHeaders.add(key,String.valueOf(value));
+            Reflect.on(httpResponseInfo).set("headers",httpHeaders);
+        }
     }
 
 }

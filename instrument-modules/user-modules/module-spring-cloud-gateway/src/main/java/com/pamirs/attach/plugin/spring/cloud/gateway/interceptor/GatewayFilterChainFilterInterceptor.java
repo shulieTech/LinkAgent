@@ -14,10 +14,6 @@
  */
 package com.pamirs.attach.plugin.spring.cloud.gateway.interceptor;
 
-import java.net.URI;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import com.pamirs.attach.plugin.common.web.RequestTracer;
 import com.pamirs.attach.plugin.spring.cloud.gateway.SpringCloudGatewayConstants;
 import com.pamirs.attach.plugin.spring.cloud.gateway.tracer.ServerHttpRequestTracer;
@@ -28,13 +24,20 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.BeforeTraceInterceptorAdapter;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.gateway.filter.NettyRoutingFilter;
 import org.springframework.cloud.gateway.filter.headers.HttpHeadersFilter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
+
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR;
 
@@ -121,11 +124,19 @@ public class GatewayFilterChainFilterInterceptor extends BeforeTraceInterceptorA
             return;
         }
         Pradar.setInvokeContext(context);
-        if(!target.getHeadersFilters().contains(requestHttpHeadersFilter)){
-            target.getHeadersFilters().add(requestHttpHeadersFilter);
+        boolean existsMethod = Reflect.on(target).existsMethod("getHeadersFilters");
+        List<HttpHeadersFilter> headersFilters;
+        if(existsMethod){
+            headersFilters = target.getHeadersFilters();
+        }else {
+            ObjectProvider<List<HttpHeadersFilter>> provider = Reflect.on(target).get("headersFilters");
+            headersFilters = provider.getIfAvailable();
         }
-        if(!target.getHeadersFilters().contains(responseHttpHeadersFilter)){
-            target.getHeadersFilters().add(responseHttpHeadersFilter);
+        if(!headersFilters.contains(requestHttpHeadersFilter)){
+            headersFilters.add(requestHttpHeadersFilter);
+        }
+        if(!headersFilters.contains(responseHttpHeadersFilter)){
+            headersFilters.add(responseHttpHeadersFilter);
         }
     }
 

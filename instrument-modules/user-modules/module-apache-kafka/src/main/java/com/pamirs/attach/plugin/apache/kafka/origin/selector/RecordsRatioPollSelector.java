@@ -50,7 +50,7 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
     @Override
     public ConsumerType select() {
         // 最开始时业务影子各一次, 业务压测消息个数一样时各一次
-        if (ratioPoint == 0 || testModePoll) {
+        if (testModePoll) {
             return selector.select();
         }
         // 1～100
@@ -76,9 +76,7 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
             public void run() {
                 while (true) {
                     try {
-                        if (bizRecordCounts.size() >= 5 && ptRecordCounts.size() >= 5) {
-                            RecordsRatioPollSelector.this.computeRatio();
-                        }
+                        RecordsRatioPollSelector.this.computeRatio();
                         Thread.sleep(10 * 1000);
                     } catch (InterruptedException e) {
 
@@ -98,7 +96,7 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
 
         // 相等取0
         if (bizRecords == ptRecords) {
-            this.ratioPoint = 0;
+            this.ratioPoint = (int) (bound * (0.5 > maxPtRatioPoint ? maxPtRatioPoint : 0.5));
             return;
         }
         // 1~20 属于压测;  21~100 属于业务

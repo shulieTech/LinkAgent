@@ -34,14 +34,14 @@ public class RecordsRatioPollSelector implements PollConsumerSelector {
     }
 
     public void addBizRecordCounts(int count) {
-        if (bizRecordCounts.size() > 5) {
+        if (bizRecordCounts.size() > 10) {
             bizRecordCounts.removeLast();
         }
         bizRecordCounts.addFirst(count);
     }
 
     public void addPtRecordCounts(int count) {
-        if (ptRecordCounts.size() > 5) {
+        if (ptRecordCounts.size() > 10) {
             ptRecordCounts.removeLast();
         }
         ptRecordCounts.addFirst(count);

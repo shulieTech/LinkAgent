@@ -1,1 +1,1 @@
-替换只读HttpHeaders
+兼容spring-cloud-gateway-core 2.0.2.RELEASE

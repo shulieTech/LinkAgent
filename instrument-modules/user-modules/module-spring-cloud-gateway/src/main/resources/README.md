@@ -1,1 +1,1 @@
-修改spring-cloud-gateway切点，提前将context放入当前线程中
+替换只读HttpHeaders

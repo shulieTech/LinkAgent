@@ -1,1 +1,1 @@
-兼容spring-cloud-gateway-core 2.0.2.RELEASE
+兼容spring-cloud-gateway-core低版本，通过beanfactory完成headersFilter注入

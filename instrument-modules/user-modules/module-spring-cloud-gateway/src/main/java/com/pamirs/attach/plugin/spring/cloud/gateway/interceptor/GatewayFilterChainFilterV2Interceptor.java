@@ -23,10 +23,11 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.BeforeTraceInterceptorAdapter;
 import com.pamirs.pradar.interceptor.SpanRecord;
+import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.cloud.gateway.filter.NettyRoutingFilter;
 import org.springframework.cloud.gateway.filter.headers.HttpHeadersFilter;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +37,6 @@ import org.springframework.web.server.ServerWebExchange;
 
 import java.lang.reflect.Field;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +50,13 @@ import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.G
 public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceInterceptorAdapter {
 
     private static final RequestTracer<ServerHttpRequest, ServerHttpResponse> requestTracer = new ServerHttpRequestTracer();
+
+    private static final String REQUEST_HEADERS_FILTER_NAME = "shulieAgentRequestHttpHeadersFilter";
+
+    private static final String RESPONSE_HEADERS_FILTER_NAME = "shulieAgentResponseHttpHeadersFilter";
+
+
+    private volatile boolean injected = false;
 
     private static final HttpHeadersFilter requestHttpHeadersFilter = new HttpHeadersFilter() {
         @Override
@@ -122,18 +129,26 @@ public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceIntercepto
     public void beforeFirst(Advice advice) {
         final NettyRoutingFilter target = (NettyRoutingFilter) advice.getTarget();
         boolean existsMethod = existsMethod(target,"getHeadersFilters");
-        List<HttpHeadersFilter> headersFilters;
-        if(existsMethod){
-            headersFilters = target.getHeadersFilters();
-        }else {
-            ObjectProvider<List<HttpHeadersFilter>> provider = Reflect.on(target).get(getHeadersFilters(target));
-            headersFilters = provider.getIfAvailable();
+        DefaultListableBeanFactory beanFactory = PradarSpringUtil.getBeanFactory();
+        if(!existsMethod && beanFactory != null && !injected) {
+            //低版本
+            try {
+                beanFactory.registerSingleton(REQUEST_HEADERS_FILTER_NAME,requestHttpHeadersFilter);
+                beanFactory.registerSingleton(RESPONSE_HEADERS_FILTER_NAME,responseHttpHeadersFilter);
+                injected = true;
+            } catch (Exception e) {
+                LOGGER.error("spring-cloud-gateway headersFilter inject error",e);
+            }
+            return;
         }
-        if (!headersFilters.contains(requestHttpHeadersFilter)) {
-            headersFilters.add(requestHttpHeadersFilter);
+        if(!existsMethod){
+            return;
         }
-        if (!headersFilters.contains(responseHttpHeadersFilter)) {
-            headersFilters.add(responseHttpHeadersFilter);
+        if (!target.getHeadersFilters().contains(requestHttpHeadersFilter)) {
+            target.getHeadersFilters().add(requestHttpHeadersFilter);
+        }
+        if (!target.getHeadersFilters().contains(responseHttpHeadersFilter)) {
+            target.getHeadersFilters().add(responseHttpHeadersFilter);
         }
     }
 

@@ -136,7 +136,7 @@ public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceIntercepto
                 beanFactory.registerSingleton(REQUEST_HEADERS_FILTER_NAME,requestHttpHeadersFilter);
                 beanFactory.registerSingleton(RESPONSE_HEADERS_FILTER_NAME,responseHttpHeadersFilter);
                 injected = true;
-            } catch (IllegalStateException e) {
+            } catch (Exception e) {
                 LOGGER.error("spring-cloud-gateway headersFilter inject error",e);
             }
             return;

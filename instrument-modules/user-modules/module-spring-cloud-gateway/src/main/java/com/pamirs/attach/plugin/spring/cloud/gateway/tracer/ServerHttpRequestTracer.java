@@ -20,8 +20,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Description
@@ -67,7 +69,7 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
                 httpHeaders.put(entry.getKey(),entry.getValue());
             }
             httpHeaders.add(key,value.toString());
-            Reflect.on(request).set("headers",httpHeaders);
+            Reflect.on(request).set(getHeaders(httpHeaders),httpHeaders);
         }
     }
 
@@ -117,8 +119,24 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
                 httpHeaders.put(entry.getKey(),entry.getValue());
             }
             httpHeaders.add(key,String.valueOf(value));
-            Reflect.on(httpResponseInfo).set("headers",httpHeaders);
+            Reflect.on(httpResponseInfo).set(getHeaders(httpHeaders),httpHeaders);
         }
+    }
+
+
+
+
+    private static final Map<Class, Field> headersMap = new ConcurrentHashMap<Class, Field>();
+
+
+    private Field getHeaders(Object target) {
+        Field field = headersMap.get(target.getClass());
+        if(field != null){
+            return field;
+        }
+        field = Reflect.on(target).field0("headers");
+        headersMap.put(target.getClass(),field);
+        return field;
     }
 
 }

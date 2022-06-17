@@ -87,12 +87,12 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         this.ptHeartbeat = extractHeartbeat(ptConsumer);
     }
 
-    private Heartbeat extractHeartbeat(Consumer consumer){
-        if(consumer instanceof WithTryCatchConsumerProxy){
+    private Heartbeat extractHeartbeat(Consumer consumer) {
+        if (consumer instanceof WithTryCatchConsumerProxy) {
             consumer = Reflect.on(consumer).get("consumer");
         }
-        Object coordinator =  Reflect.on(consumer).get("coordinator");
-        if(coordinator == null){
+        Object coordinator = Reflect.on(consumer).get("coordinator");
+        if (coordinator == null) {
             return null;
         }
         return Reflect.on(coordinator).get("heartbeat");
@@ -180,10 +180,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     private ConsumerRecords doShadowPoll(long timeout) {
         try {
             ConsumerRecords consumerRecords = ptConsumer.poll(Math.min(timeout, ptMaxPollTimeout));
-            //没数据，不要设置压测标，避免不必要的上下文创建
-            if (!consumerRecords.isEmpty()) {
-                Pradar.setClusterTest(true);
-            }
+            Pradar.setClusterTest(true);
             ((RecordsRatioPollSelector) consumerSelector).addPtRecordCounts(consumerRecords.count());
             heartbeatPoll();
             return consumerRecords;
@@ -193,7 +190,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         }
     }
 
-    private void heartbeatPoll(){
+    private void heartbeatPoll() {
         this.ptHeartbeat.poll(System.currentTimeMillis());
         this.bizHeartbeat.poll(System.currentTimeMillis());
     }
@@ -579,16 +576,16 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         return new WithTryCatchConsumerProxy(kafkaConsumer);
     }
 
-    private void copyHeartbeatConfig(Properties config, Object coordinator){
+    private void copyHeartbeatConfig(Properties config, Object coordinator) {
         try {
             Object heartbeat = Reflect.on(coordinator).get("heartbeat");
-            if(Reflect.on(heartbeat).existsField("rebalanceConfig")){
+            if (Reflect.on(heartbeat).existsField("rebalanceConfig")) {
                 heartbeat = Reflect.on(heartbeat).get("rebalanceConfig");
             }
             config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, Reflect.on(heartbeat).get("sessionTimeoutMs"));
             config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("rebalanceTimeoutMs"));
             config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("heartbeatIntervalMs"));
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
     }

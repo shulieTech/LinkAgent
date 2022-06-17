@@ -34,10 +34,12 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR;
 
@@ -119,12 +121,12 @@ public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceIntercepto
     @Override
     public void beforeFirst(Advice advice) {
         final NettyRoutingFilter target = (NettyRoutingFilter) advice.getTarget();
-        boolean existsMethod = Reflect.on(target).existsMethod("getHeadersFilters");
+        boolean existsMethod = existsMethod(target,"getHeadersFilters");
         List<HttpHeadersFilter> headersFilters;
         if(existsMethod){
             headersFilters = target.getHeadersFilters();
         }else {
-            ObjectProvider<List<HttpHeadersFilter>> provider = Reflect.on(target).get("headersFilters");
+            ObjectProvider<List<HttpHeadersFilter>> provider = Reflect.on(target).get(getHeadersFilters(target));
             headersFilters = provider.getIfAvailable();
         }
         if (!headersFilters.contains(requestHttpHeadersFilter)) {
@@ -133,6 +135,33 @@ public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceIntercepto
         if (!headersFilters.contains(responseHttpHeadersFilter)) {
             headersFilters.add(responseHttpHeadersFilter);
         }
+    }
+
+
+    private static final Map<String, Boolean> methodCheckCache = new ConcurrentHashMap<String, Boolean>();
+
+    private Boolean existsMethod(Object target,String method) {
+        Boolean result = methodCheckCache.get(target.getClass().toString()+"_"+method);
+        if(result != null){
+            return result;
+        }
+        result = Reflect.on(target).existsMethod(method);
+        methodCheckCache.put(target.getClass().toString()+"_"+method,result);
+        return result;
+    }
+
+
+    private static final Map<Class, Field> fieldMap = new ConcurrentHashMap<Class, Field>();
+
+
+    private Field getHeadersFilters(Object target) {
+        Field field = fieldMap.get(target.getClass());
+        if(field != null){
+            return field;
+        }
+        field = Reflect.on(target).field0("headersFilters");
+        fieldMap.put(target.getClass(),field);
+        return field;
     }
 
     @Override

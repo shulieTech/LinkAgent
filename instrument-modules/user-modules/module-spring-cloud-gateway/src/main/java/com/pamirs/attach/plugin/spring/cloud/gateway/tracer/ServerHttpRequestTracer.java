@@ -69,7 +69,7 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
                 httpHeaders.put(entry.getKey(),entry.getValue());
             }
             httpHeaders.add(key,value.toString());
-            Reflect.on(request).set(getHeaders(httpHeaders),httpHeaders);
+            Reflect.on(request).set(getHeaders(request),httpHeaders);
         }
     }
 
@@ -119,7 +119,7 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
                 httpHeaders.put(entry.getKey(),entry.getValue());
             }
             httpHeaders.add(key,String.valueOf(value));
-            Reflect.on(httpResponseInfo).set(getHeaders(httpHeaders),httpHeaders);
+            Reflect.on(httpResponseInfo).set(getHeaders(httpResponseInfo),httpHeaders);
         }
     }
 

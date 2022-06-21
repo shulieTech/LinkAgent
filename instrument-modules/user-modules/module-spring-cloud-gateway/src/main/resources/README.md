@@ -1,1 +1,1 @@
-兼容spring-cloud-gateway-core低版本，通过beanfactory完成headersFilter注入
+车联网覆写了NettyRoutingFilter,添加子类增强

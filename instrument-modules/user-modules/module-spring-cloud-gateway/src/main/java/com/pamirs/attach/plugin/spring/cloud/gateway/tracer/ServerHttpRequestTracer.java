@@ -101,7 +101,8 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
         if (response == null) {
             return "200";
         }
-        return String.valueOf(response.getStatusCode().value());
+        int code = response.getStatusCode() == null ? 200 : response.getStatusCode().value();
+        return String.valueOf(code);
     }
 
     @Override

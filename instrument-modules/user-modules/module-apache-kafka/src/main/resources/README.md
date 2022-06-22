@@ -1,2 +1,3 @@
-2.0.0.6
-poll优化，可通过控制台指定影子消费者poll频率的最大比例，方便在不压测是降低对业务消费的影响
+2.0.0.7
+创建影子消费者时拷贝业务的pollInterval，sessionTimeout,heartbeatInterval
+poll时更新业务和影子的心跳时间，避免poll超时被踢出group

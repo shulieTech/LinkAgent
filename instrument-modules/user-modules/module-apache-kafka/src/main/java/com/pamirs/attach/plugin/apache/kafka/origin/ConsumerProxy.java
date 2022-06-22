@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
-import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.RecordsRatioPollSelector;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
@@ -25,6 +24,7 @@ import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.internals.Heartbeat;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.PartitionInfo;
@@ -51,6 +51,9 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     private Consumer ptConsumer;
 
+    private Heartbeat bizHeartbeat;
+    private Heartbeat ptHeartbeat;
+
     private final PollConsumerSelector consumerSelector;
 
     private ConsumerMetaData topicAndGroup;
@@ -65,8 +68,6 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     private final long currentPollTime;
 
-    private static boolean singleThreadConsumer = System.getProperty(KafkaConstants.SINGLE_THREAD_CONSUMER) != null;
-
     public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup, long maxLagMillSecond, long timeout) {
         this(consumer, topicAndGroup, maxLagMillSecond, new RecordsRatioPollSelector(), timeout);
     }
@@ -79,6 +80,19 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         this.ptConsumer = createPtConsumer(consumer, topicAndGroup);
         this.topicAndGroup = topicAndGroup;
         this.consumerSelector = consumerSelector;
+        this.bizHeartbeat = extractHeartbeat(bizConsumer);
+        this.ptHeartbeat = extractHeartbeat(ptConsumer);
+    }
+
+    private Heartbeat extractHeartbeat(Consumer consumer) {
+        if (consumer instanceof WithTryCatchConsumerProxy) {
+            consumer = Reflect.on(consumer).get("consumer");
+        }
+        Object coordinator = Reflect.on(consumer).get("coordinator");
+        if (coordinator == null) {
+            return null;
+        }
+        return Reflect.on(coordinator).get("heartbeat");
     }
 
     public Consumer getPtConsumer() {
@@ -163,11 +177,9 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     private ConsumerRecords doShadowPoll(long timeout) {
         try {
             ConsumerRecords consumerRecords = ptConsumer.poll(Math.min(timeout, ptMaxPollTimeout));
-            //没数据，不要设置压测标，避免不必要的上下文创建
-            if (!consumerRecords.isEmpty()) {
-                Pradar.setClusterTest(true);
-            }
+            Pradar.setClusterTest(true);
             ((RecordsRatioPollSelector) consumerSelector).addPtRecordCounts(consumerRecords.count());
+            heartbeatPoll();
             return consumerRecords;
         } catch (Exception e) {
             log.error("shadow consumer poll fail!", e);
@@ -175,11 +187,17 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         }
     }
 
+    private void heartbeatPoll() {
+        this.ptHeartbeat.poll(System.currentTimeMillis());
+        this.bizHeartbeat.poll(System.currentTimeMillis());
+    }
+
     private ConsumerRecords doBizPoll(long timeout) {
         ConsumerRecords consumerRecords = bizConsumer.poll(timeout);
         logDetection(consumerRecords);
         Pradar.setClusterTest(false);
         ((RecordsRatioPollSelector) consumerSelector).addBizRecordCounts(consumerRecords.count());
+        heartbeatPoll();
         return consumerRecords;
     }
 
@@ -521,6 +539,8 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             }
         }
 
+        copyHeartbeatConfig(config, coordinator);
+
         config.put(ConsumerConfig.GROUP_ID_CONFIG, consumerMetaData.getPtGroupId());
         putSlience(config, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, coordinator, "sessionTimeoutMs");
         putSlience(config, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, coordinator, "autoCommitEnabled");
@@ -551,6 +571,20 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
         kafkaConsumer.subscribe(consumerMetaData.getShadowTopics());
         return new WithTryCatchConsumerProxy(kafkaConsumer);
+    }
+
+    private void copyHeartbeatConfig(Properties config, Object coordinator) {
+        try {
+            Object heartbeat = Reflect.on(coordinator).get("heartbeat");
+            if (Reflect.on(heartbeat).existsField("rebalanceConfig")) {
+                heartbeat = Reflect.on(heartbeat).get("rebalanceConfig");
+            }
+            config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, Reflect.on(heartbeat).get("sessionTimeoutMs"));
+            config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("rebalanceTimeoutMs"));
+            config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("heartbeatIntervalMs"));
+        } catch (Exception e) {
+
+        }
     }
 
     private static void putSlience(Properties config, String configStr, Object value) {

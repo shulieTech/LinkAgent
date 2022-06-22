@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
-import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.RecordsRatioPollSelector;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
@@ -68,8 +67,6 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     private final long allowMaxLag;
 
     private final long currentPollTime;
-
-    private static boolean singleThreadConsumer = System.getProperty(KafkaConstants.SINGLE_THREAD_CONSUMER) != null;
 
     public ConsumerProxy(KafkaConsumer consumer, ConsumerMetaData topicAndGroup, long maxLagMillSecond, long timeout) {
         this(consumer, topicAndGroup, maxLagMillSecond, new RecordsRatioPollSelector(), timeout);

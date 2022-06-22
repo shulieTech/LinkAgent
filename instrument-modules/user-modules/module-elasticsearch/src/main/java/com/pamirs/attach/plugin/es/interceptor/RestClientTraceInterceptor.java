@@ -74,7 +74,6 @@ public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
             record.setPassedCheck(true);
         }
         return record;
-
     }
 
     private String toString(Collection<String> list) {
@@ -97,7 +96,6 @@ public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
         record.setRequest(args[0]);
         //record.setResponse(result);
         return record;
-
     }
 
     @Override

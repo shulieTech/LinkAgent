@@ -14,9 +14,6 @@
  */
 package com.pamirs.attach.plugin.es.shadowserver.rest;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.RestClient61Definition;
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.RestClient68Definition;
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.RestClient70Definition;
@@ -25,6 +22,9 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClient.FailureListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -117,5 +117,4 @@ public class RestClientDefinitionStrategy {
 
         RestClientDefinition definition();
     }
-
 }

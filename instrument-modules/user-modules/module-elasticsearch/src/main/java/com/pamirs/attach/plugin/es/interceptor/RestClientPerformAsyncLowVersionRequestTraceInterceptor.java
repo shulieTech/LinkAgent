@@ -37,7 +37,6 @@ import java.util.Map;
  */
 public class RestClientPerformAsyncLowVersionRequestTraceInterceptor extends TraceInterceptorAdaptor {
 
-
     @Override
     public String getPluginName() {
         return "es";
@@ -100,10 +99,7 @@ public class RestClientPerformAsyncLowVersionRequestTraceInterceptor extends Tra
             AsyncLowTraceUtils.map.put(hashCode, stringBuilder.toString());
             return stringBuilder.toString();
         }
-
     }
-
-
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
@@ -126,6 +122,4 @@ public class RestClientPerformAsyncLowVersionRequestTraceInterceptor extends Tra
         spanRecord.setResponse(advice.getThrowable());
         return spanRecord;
     }
-
-
 }

@@ -14,7 +14,7 @@
     <properties>
         <module-name>elasticsearch</module-name>
     </properties>
-    <version>2.0.0.2</version>
+    <version>2.0.0.4</version>
 
     <dependencies>
         <dependency>
@@ -113,7 +113,7 @@
                 <configuration>
                     <tasks>
                         <echo>Removing dummy classes</echo>
-                        <delete dir="target/classes/org/elasticsearch" />
+                        <delete dir="target/classes/org/elasticsearch"/>
                     </tasks>
                 </configuration>
             </plugin>

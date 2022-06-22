@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.spring.cloud.gateway;
 
+import com.pamirs.attach.plugin.spring.cloud.gateway.interceptor.ExternalHeaderFilterInterceptor;
 import com.pamirs.attach.plugin.spring.cloud.gateway.interceptor.FilteringWebHandlerHandleInterceptor;
 import com.pamirs.attach.plugin.spring.cloud.gateway.interceptor.GatewayFilterChainFilterV2Interceptor;
 import com.pamirs.attach.plugin.spring.cloud.gateway.interceptor.GatewayFirstFilterChainInterceptor;
@@ -78,6 +79,20 @@ public class SpringCloudGatewayPlugin extends ModuleLifecycleAdapter implements 
                     }
                 });
 
+
+        this.enhanceTemplate.enhanceWithSuperClass(this, "org.springframework.cloud.gateway.filter.NettyRoutingFilter",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod filter = target.getDeclaredMethod("filter",
+                                "org.springframework.web.server.ServerWebExchange",
+                                "org.springframework.cloud.gateway.filter.GatewayFilterChain");
+                        filter.addInterceptor(
+                                Listeners.of(GatewayFilterChainFilterV2Interceptor.class, "SpringCloudGatewayFilterScope",
+                                        ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    }
+                });
+
         this.enhanceTemplate.enhance(this, "org.springframework.cloud.gateway.handler.FilteringWebHandler$DefaultGatewayFilterChain",
                 new EnhanceCallback() {
                     @Override
@@ -85,6 +100,17 @@ public class SpringCloudGatewayPlugin extends ModuleLifecycleAdapter implements 
                         final InstrumentMethod filter = target.getDeclaredMethod("filter",
                                 "org.springframework.web.server.ServerWebExchange");
                         filter.addInterceptor(Listeners.of(GatewayFirstFilterChainInterceptor.class));
+                    }
+                });
+
+        this.enhanceTemplate.enhance(this, "org.springframework.beans.factory.support.DefaultListableBeanFactory$DependencyObjectProvider",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod filter = target.getDeclaredMethod("getIfAvailable");
+                        filter.addInterceptor(Listeners.of(ExternalHeaderFilterInterceptor.class,"HttpHeaderFilterScope",
+                                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
                     }
                 });
 

@@ -1,3 +1,2 @@
 bug-fix
-1、客户端心跳线程更新节点数据时，若节点不存在，创建节点时为永久节点，导致应用消亡后节点仍存在。
-2、原生watcher api是一次性的，更新线程重置heartbeatData后，会触发NodeDataChanged事件，导致watcher失效,无法监听NodeDelete事件。
+1、删除无效日志

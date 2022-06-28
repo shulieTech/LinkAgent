@@ -149,7 +149,6 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
     private final Watcher watcher = new Watcher() {
         @Override
         public void process(WatchedEvent event) {
-            logger.info("receive node event：{}",event.toString());
             if (event.getType() == Watcher.Event.EventType.NodeDeleted) {
                 try {
                     reset();
@@ -167,7 +166,6 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
 
     private void addWatcher(){
         try {
-            logger.info("add watcher for node:{}",path);
             client.checkExists().usingWatcher(watcher).forPath(path);
         } catch (Exception e) {
             logger.error("fail to add watcher for path={}", path, e);

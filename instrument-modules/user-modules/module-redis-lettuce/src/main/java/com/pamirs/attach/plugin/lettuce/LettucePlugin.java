@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.lettuce;
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.lettuce.interceptor.*;
 import com.pamirs.attach.plugin.lettuce.interceptor.spring.SpringRedisClientPerformanceInterceptor;
+import com.pamirs.attach.plugin.lettuce.utils.InvalidatedResourcesEvictor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -184,6 +185,8 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         addCloseConnectionSupport();
 
         addAbstractRedisAsyncCommandsDispatchInterceptor();
+
+        InvalidatedResourcesEvictor.scheduleDropInvalidatedResources(manager);
 
         return true;
     }

@@ -123,7 +123,7 @@ public class JedisCacheHandler {
 
     private static void putData(Map map, Object key, Object value) {
         // 防止内存溢出
-        if (map.size() > 100) {
+        if (map.size() >= INIT_CAPACITY) {
             map.clear();
         }
         map.put(key, value);

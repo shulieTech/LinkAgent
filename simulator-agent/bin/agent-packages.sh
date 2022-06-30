@@ -51,6 +51,8 @@ cp ../simulator-launcher-instrument/target/simulator-launcher-instrument-*-jar-w
 cp ../simulator-launcher-embedded/target/simulator-launcher-embedded-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/simulator-launcher-embedded.jar
 cp ../simulator-agent-core/target/simulator-agent-core-*-jar-with-dependencies.jar ${AGENT_TARGET_DIR}/core/simulator-agent-core.jar
 cp ../simulator-bootstrap-extras/target/lib/* ${AGENT_TARGET_DIR}/bootstrap/
+# 升级了ttl包，为了不让客户重新改启动参数，所以这里将ttl的包名改一下。
+mv ${AGENT_TARGET_DIR}/bootstrap/transmittable-thread-local-2.13.0.jar ${AGENT_TARGET_DIR}/bootstrap/transmittable-thread-local-2.12.1.jar
 
 # zip the simulator.zip
 cd ../target/

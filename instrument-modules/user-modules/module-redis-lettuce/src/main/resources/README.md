@@ -1,3 +1,3 @@
 
-2.0.1.1版本：
-trace日志service和method的位置错了，调整回来
+2.0.1.2版本：
+定时清理DynamicFieldManager里的closed的connection

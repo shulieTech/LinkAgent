@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Created-By: Maven JAR Plugin 3.2.2
+Build-Jdk-Spec: 11
+Boot-Class-Path: transmittable-thread-local-2.12.1.jar
+Can-Redefine-Classes: false
+Can-Retransform-Classes: true
+Can-Set-Native-Method-Prefix: false
+Premain-Class: com.alibaba.ttl.threadpool.agent.TtlAgent
+

@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.perf;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -107,7 +108,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     private void collect() {
 
         // thread信息有可能数据量很大所以不需要每次都采集
-        long threadCollectInterval = simulatorConfig.getLongProperty("pradar.perf.thread.collect.interval", 60L) * 1000;
+        long threadCollectInterval = GlobalConfig.getInstance().getSimulatorDynamicConfig().perfThreadCollectInterval() * 1000;
         List<ThreadInfo> threadInfos = Collections.EMPTY_LIST;
         if ((threadInfoCollectTime.get() + threadCollectInterval) <= System.currentTimeMillis()) {
             threadInfoCollectTime.set(System.currentTimeMillis());

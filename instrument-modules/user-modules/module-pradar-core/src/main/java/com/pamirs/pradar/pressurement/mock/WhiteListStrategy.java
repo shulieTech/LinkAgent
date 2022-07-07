@@ -57,11 +57,12 @@ public class WhiteListStrategy implements ExecutionStrategy {
             }
             /**
              * 部分http在beforeFirst的时候校验，还没有trace
+             * TYPE_FS: Amazon-S3, 底层请求是会使用当前时间戳拼接url，不能用白名单
              */
             if (invokeContext != null &&
                     (invokeContext.getInvokeType() == MiddlewareType.TYPE_RPC ||
-                            invokeContext.getInvokeType() == MiddlewareType.TYPE_WEB_SERVER) &&
-                    invokeContext.isPassCheck()) {
+                            invokeContext.getInvokeType() == MiddlewareType.TYPE_WEB_SERVER || invokeContext.getInvokeType() == MiddlewareType.TYPE_FS) &&
+                    isWhitelistCheckPassed(invokeContext)) {
                 return true;
             }
             if (!config.isSuccess()) {
@@ -97,6 +98,16 @@ public class WhiteListStrategy implements ExecutionStrategy {
             }
         }
         return true;
+    }
+
+    private boolean isWhitelistCheckPassed(InvokeContext context){
+        while (context != null){
+            if(context.isPassCheck()){
+                return true;
+            }
+            context = context.getParentInvokeContext();
+        }
+        return false;
     }
 
     private Boolean isInterface(MatchConfig config) {

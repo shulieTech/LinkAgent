@@ -3,7 +3,7 @@ package com.pamirs.attach.plugin.lettuce.utils;
 
 import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.StatefulConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,39 +16,43 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class InvalidatedResourcesEvictor implements Runnable {
-
-    private static AtomicBoolean started = new AtomicBoolean(false);
+public class InvalidatedResourcesEvictor {
 
     protected static DynamicFieldManager manager;
 
     private final static Logger LOGGER = LoggerFactory.getLogger(InvalidatedResourcesEvictor.class.getName());
 
-    private static ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r, "DynamicFieldManager-invalidated-resources-evictor");
-            t.setDaemon(true);
-            t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread t, Throwable e) {
-                    LOGGER.error("Thread {} caught a unknow exception with UncaughtExceptionHandler", t.getName(), e);
+    public static void scheduleDropInvalidatedResources(DynamicFieldManager manager) {
+        InvalidatedResourcesEvictor.manager = manager;
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        InvalidatedResourcesEvictor.run();
+                        LOGGER.info("Invalidated-Resources-Evictor-Job done");
+                        Thread.sleep(3 * 60 * 1000);
+                    } catch (Exception e) {
+                        LOGGER.error("Invalidated-Resources-Evictor-Job invoke occur exception", e);
+                    }
                 }
-            });
-            return t;
-        }
-    });
+            }
+        };
+        thread.setName("Invalidated-Resources-Evictor-Job");
+        thread.start();
+    }
 
-    @Override
-    public void run() {
+    public static void run() {
         Map<Object, Object> fields = Reflect.on(manager).get("dynamicFields");
-
+        if (fields == null || fields.isEmpty()) {
+            return;
+        }
         Set<Object> needRemoved = new HashSet<Object>();
         for (Map.Entry<Object, Object> entry : fields.entrySet()) {
             Object key = entry.getKey();
-            if (key instanceof StatefulRedisConnection) {
-                StatefulRedisConnection conn = (StatefulRedisConnection) key;
-                if (!conn.isOpen()) {
+            if (key.getClass().getSimpleName().startsWith("StatefulRedis")) {
+                boolean isOpen = Reflect.on(key).call("isOpen").get();
+                if (!isOpen) {
                     needRemoved.add(key);
                 }
             }
@@ -57,13 +61,6 @@ public class InvalidatedResourcesEvictor implements Runnable {
             fields.remove(key);
         }
 
-    }
-
-    public static void scheduleDropInvalidatedResources(DynamicFieldManager manager) {
-        if (started.compareAndSet(false, true)) {
-            InvalidatedResourcesEvictor.manager = manager;
-            service.scheduleAtFixedRate(new InvalidatedResourcesEvictor(), 3, 3, TimeUnit.MINUTES);
-        }
     }
 
 

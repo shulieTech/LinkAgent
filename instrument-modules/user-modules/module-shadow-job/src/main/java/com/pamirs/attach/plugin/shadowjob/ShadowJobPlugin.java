@@ -284,6 +284,14 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
+        enhanceTemplate.enhance(this, "org.springframework.scheduling.config.ScheduledTaskRegistrar", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod declaredMethods = target.getDeclaredMethods("scheduleCronTask", "scheduleFixedRateTask", "scheduleFixedDelayTask");
+                declaredMethods.addInterceptor(Listeners.of(ScheduledTaskRegistrarInterceptor.class));
+            }
+        });
+
         try {
             Class.forName("com.dangdang.ddframe.job.spring.schedule.SpringJobScheduler");
             PradarSpringUtil.onApplicationContextLoad(new Runnable() {

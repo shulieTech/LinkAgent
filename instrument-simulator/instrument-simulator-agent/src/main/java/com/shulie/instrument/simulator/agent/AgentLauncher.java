@@ -424,6 +424,7 @@ public class AgentLauncher {
                 return new InstallInfo(inetSocketAddress, version);
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
+                System.clearProperty("config");
             }
 
         } catch (Throwable cause) {

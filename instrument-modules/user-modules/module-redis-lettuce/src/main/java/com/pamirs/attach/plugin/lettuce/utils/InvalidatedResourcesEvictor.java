@@ -3,18 +3,12 @@ package com.pamirs.attach.plugin.lettuce.utils;
 
 import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import io.lettuce.core.api.StatefulConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class InvalidatedResourcesEvictor {
 
@@ -29,7 +23,7 @@ public class InvalidatedResourcesEvictor {
             public void run() {
                 while (true) {
                     try {
-                        InvalidatedResourcesEvictor.run();
+                        InvalidatedResourcesEvictor.releaseInvalidatedResources();
                         LOGGER.info("Invalidated-Resources-Evictor-Job done");
                         Thread.sleep(3 * 60 * 1000);
                     } catch (Exception e) {
@@ -42,7 +36,7 @@ public class InvalidatedResourcesEvictor {
         thread.start();
     }
 
-    public static void run() {
+    public static void releaseInvalidatedResources() {
         Map<Object, Object> fields = Reflect.on(manager).get("dynamicFields");
         if (fields == null || fields.isEmpty()) {
             return;

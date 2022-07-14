@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>module-pradar-register</artifactId>
-    <version>2.0.0.1</version>
+    <version>${pradar.register.version}</version>
     <properties>
         <module-name>pradar-register</module-name>
     </properties>

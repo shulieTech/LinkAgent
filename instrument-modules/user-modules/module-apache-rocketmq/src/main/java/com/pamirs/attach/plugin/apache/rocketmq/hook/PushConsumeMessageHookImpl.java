@@ -39,6 +39,8 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.pamirs.attach.plugin.apache.rocketmq.RocketmqConstants.NAME_SERVER_ADDRESS;
+
 /**
  * 消费消息时的pradar埋点
  */
@@ -100,14 +102,18 @@ public class PushConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 traceBean.setBornHost(StringUtils.substring(msg.getBornHost().toString(), 1));
                 String storeHost = "";
                 String port = "";
-                if (msg.getStoreHost() != null && msg.getStoreHost() instanceof InetSocketAddress) {
-                    InetSocketAddress address = (InetSocketAddress) msg.getStoreHost();
-                    storeHost = address.getAddress() == null ? null : address.getAddress().getHostAddress();
-                    port = String.valueOf(address.getPort());
-                } else {
-                    storeHost = StringUtils.substring(msg.getStoreHost().toString(), 1);
+                storeHost = msg.getProperty(NAME_SERVER_ADDRESS);
+                if (storeHost == null) {
+                    if (msg.getStoreHost() != null && msg.getStoreHost() instanceof InetSocketAddress) {
+                        InetSocketAddress address = (InetSocketAddress) msg.getStoreHost();
+                        storeHost = address.getAddress() == null ? null : address.getAddress().getHostAddress();
+                        port = String.valueOf(address.getPort());
+                    } else {
+                        storeHost = StringUtils.substring(msg.getStoreHost().toString(), 1);
+                    }
                 }
                 traceBean.setStoreHost(storeHost);
+//                traceBean.setPort(port);
                 traceBean.setStoreTime(msg.getStoreTimestamp());
                 traceBean.setBrokerName(context.getMq().getBrokerName());
                 traceBean.setQueueId(msg.getQueueId());

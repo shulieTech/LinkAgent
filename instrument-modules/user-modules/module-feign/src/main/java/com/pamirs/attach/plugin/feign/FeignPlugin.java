@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.feign;
 
+import com.pamirs.attach.plugin.feign.interceptor.EurekaRestRequestInterceptor;
 import com.pamirs.attach.plugin.feign.interceptor.FeignMockInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -50,6 +51,14 @@ public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 enqueueMethod.addInterceptor(Listeners.of(FeignDataPassInterceptor.class));
             }
         });*/
+
+        this.enhanceTemplate.enhance(this, "org.springframework.cloud.netflix.eureka.http.RestTemplateEurekaHttpClient", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod declaredMethods = target.getDeclaredMethods("sendHeartBeat", "statusUpdate", "getApplicationsInternal", "getApplication", "getInstance");
+                declaredMethods.addInterceptor(Listeners.of(EurekaRestRequestInterceptor.class));
+            }
+        });
         return true;
     }
 

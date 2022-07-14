@@ -129,7 +129,7 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                                         Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("commitAsync", "java.util.Map",
-                        "org.apache.kafka.clients.consumer.OffsetCommitCallback")
+                                "org.apache.kafka.clients.consumer.OffsetCommitCallback")
                         .addInterceptor(
                                 Listeners.of(ConsumerCommitAsyncInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
                                         Interceptors.SCOPE_CALLBACK));
@@ -161,8 +161,16 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         this.enhanceTemplate.enhance(this, "org.apache.kafka.common.config.AbstractConfig", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethod("getConfiguredInstances","java.lang.String","java.lang.Class");
+                InstrumentMethod method = target.getDeclaredMethod("getConfiguredInstances", "java.lang.String", "java.lang.Class");
                 method.addInterceptor(Listeners.of(AbstractConfigGetInstanceInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "org.springframework.kafka.core.DefaultKafkaConsumerFactory", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod instrumentMethod = target.getDeclaredMethod("createRawConsumer", "java.util.Map");
+                instrumentMethod.addInterceptor(Listeners.of(CreateRawConsumerInterceptor.class));
             }
         });
 

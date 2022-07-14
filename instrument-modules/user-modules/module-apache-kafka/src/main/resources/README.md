@@ -1,3 +1,2 @@
-2.0.0.7
-创建影子消费者时拷贝业务的pollInterval，sessionTimeout,heartbeatInterval
-poll时更新业务和影子的心跳时间，避免poll超时被踢出group
+2.0.0.8
+修复spring-kafka影子消息白名单等没配置，抛出error直接导致业务消费者下线问题

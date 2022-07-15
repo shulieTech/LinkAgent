@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
 
@@ -39,10 +40,8 @@ import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -63,6 +62,8 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     @Resource
     protected DynamicFieldManager manager;
 
+    private static final Map<Object, String> consumerGroupIdMappings = new ConcurrentHashMap<Object, String>();
+
     @Override
     public String getPluginName() {
         return KafkaConstants.PLUGIN_NAME;
@@ -72,8 +73,6 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     public int getPluginType() {
         return KafkaConstants.PLUGIN_TYPE;
     }
-
-    private volatile String groupGlobal = null;
 
     /**
      * 是否是调用端
@@ -119,25 +118,13 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                 remoteAddress = sb.toString();
             }
         }
-        String group = null;
-        if (groupGlobal == null) {
-            if (args.length >= 3) {
-                group = manager.removeField(args[2], KafkaConstants.DYNAMIC_FIELD_GROUP);
-            }
+        String group = consumerGroupIdMappings.get(consumer);
+        if (group == null) {
+            group = extractGroup(args, consumer);
             if (group == null) {
-                try {
-                    Field groupId = ReflectUtil.getField(consumer, "groupId");
-                    group = (String) groupId.get(consumer);
-                } catch (Throwable e) {
-                    try {
-                        Object coordinator = Reflect.on(consumer).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
-                        group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-                    } catch (Exception exp) {
-                        LOGGER.warn("get kafka group id by reflection failed, using groupGlobal instead.", e);
-                    }
-                    groupGlobal = Thread.currentThread().getName().split("-")[0];
-                }
+                group = Thread.currentThread().getName().split("-")[0];
             }
+            consumerGroupIdMappings.put(consumer, group);
         }
 
         SpanRecord spanRecord = new SpanRecord();
@@ -149,9 +136,52 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         }
         spanRecord.setRequest(consumerRecord);
         spanRecord.setService(consumerRecord.topic());
-        spanRecord.setMethod(group == null ? groupGlobal : group);
+        spanRecord.setMethod(group);
         spanRecord.setCallbackMsg(consumerCell + "");
         return spanRecord;
+    }
+
+    private String extractGroup(Object[] args, Object obj) {
+        Object group = null;
+        if (args.length >= 3) {
+            group = manager.removeField(args[2], KafkaConstants.DYNAMIC_FIELD_GROUP);
+        }
+        if (group != null) {
+            return (String) group;
+        }
+
+        if (group == null) {
+            try {
+                Field groupId = ReflectUtil.getField(obj, "groupId");
+                group = groupId.get(obj);
+            } catch (Throwable e) {
+                try {
+                    Object coordinator = Reflect.on(obj).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
+                    group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+                } catch (Exception exp) {
+
+                }
+            }
+        }
+        if (group != null) {
+            return (String) group;
+        }
+
+        try {
+            Consumer consumer = (Consumer) obj;
+            Object proxy = Reflect.on(consumer).get("h");
+            Object advised = Reflect.on(proxy).get("advised");
+            Object targetSource = Reflect.on(advised).get("targetSource");
+            Object kafkaConsumer = Reflect.on(targetSource).get("target");
+            group = Reflect.on(kafkaConsumer).get("groupId");
+            if (group.getClass().getName().equals("java.util.Optional")) {
+                group = Reflect.on(group).call("get").get();
+            }
+            return (String) group;
+        } catch (Exception e) {
+            LOGGER.error("extract groupId from Spring-Kafka occur exception, using global group!", e);
+            return null;
+        }
     }
 
     @Override

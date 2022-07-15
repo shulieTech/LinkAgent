@@ -64,6 +64,8 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
 
     private static final Map<Object, String> consumerGroupIdMappings = new ConcurrentHashMap<Object, String>();
 
+    private static final Map<Object, Consumer> proxyConsumerMappings = new ConcurrentHashMap<Object, Consumer>();
+
     @Override
     public String getPluginName() {
         return KafkaConstants.PLUGIN_NAME;
@@ -88,14 +90,28 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
         ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
-        Object consumer = advice.getParameterArray()[2];
+        Object consumer = args[2];
         if (consumer instanceof Consumer && consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {
             consumer = Reflect.on(consumer).get("delegate");
         }
+
+        String group = consumerGroupIdMappings.get(consumer);
+        if (group == null) {
+            group = extractGroup(args, consumer);
+            if (group == null) {
+                group = Thread.currentThread().getName().split("-")[0];
+            }
+            consumerGroupIdMappings.put(consumer, group);
+        }
+
         long consumerCell = System.currentTimeMillis() - consumerRecord.timestamp();
         String remoteAddress = null;
         if (args.length >= 3) {
-            remoteAddress = KafkaUtils.getRemoteAddress(args[2], manager);
+            if(proxyConsumerMappings.containsKey(consumer)){
+                remoteAddress = KafkaUtils.getRemoteAddress(proxyConsumerMappings.get(consumer), manager);
+            }else{
+                remoteAddress = KafkaUtils.getRemoteAddress(consumer, manager);
+            }
         }
         if (remoteAddress == null) {
             Object metadata = Reflect.on(consumer).get("metadata");
@@ -117,14 +133,6 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                 }
                 remoteAddress = sb.toString();
             }
-        }
-        String group = consumerGroupIdMappings.get(consumer);
-        if (group == null) {
-            group = extractGroup(args, consumer);
-            if (group == null) {
-                group = Thread.currentThread().getName().split("-")[0];
-            }
-            consumerGroupIdMappings.put(consumer, group);
         }
 
         SpanRecord spanRecord = new SpanRecord();
@@ -173,6 +181,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             Object advised = Reflect.on(proxy).get("advised");
             Object targetSource = Reflect.on(advised).get("targetSource");
             Object kafkaConsumer = Reflect.on(targetSource).get("target");
+            proxyConsumerMappings.put(obj, (Consumer) kafkaConsumer);
             group = Reflect.on(kafkaConsumer).get("groupId");
             if (group.getClass().getName().equals("java.util.Optional")) {
                 group = Reflect.on(group).call("get").get();

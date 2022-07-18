@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,9 @@ package com.pamirs.attach.plugin.redisson.interceptor;
 
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
+import com.pamirs.attach.plugin.redisson.utils.RedisUtils;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -39,8 +42,13 @@ public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethod
         record.setRemoteIp(getHost(target, methodName, args));
         record.setPort(getPort(target, methodName, args));
         record.setMiddlewareName(RedissonConstants.MIDDLEWARE_NAME);
-        record.setService(String.valueOf(getDatabase(target, methodName, args)));
-        record.setMethod(methodName);
+//        record.setService(String.valueOf(getDatabase(target, methodName, args)));
+        record.setService(methodName);
+        if (args.length == 0) {
+            record.setMethod(String.valueOf(args[0]));
+        }else{
+            record.setMethod(".empty");
+        }
         record.setRequest(toArgs(args));
         return record;
     }

@@ -19,6 +19,7 @@ import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.JedisCacheHandler;
 import com.pamirs.attach.plugin.jedis.util.Model;
+import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -224,7 +225,11 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
 
         SpanRecord record = new SpanRecord();
         record.setService(methodName);
-        record.setMethod(methodName);
+        if (args.length > 0) {
+            record.setMethod(RedisUtils.getMethodNameExt(args[0]));
+        }else{
+            record.setMethod(".empty");
+        }
         record.setRequestSize(0);
 
         Client client = getClient(target);

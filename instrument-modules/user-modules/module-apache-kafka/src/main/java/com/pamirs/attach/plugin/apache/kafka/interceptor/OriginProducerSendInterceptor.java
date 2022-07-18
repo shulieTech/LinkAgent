@@ -75,12 +75,14 @@ public class OriginProducerSendInterceptor extends TraceInterceptorAdaptor {
                 try {
                     Reflect.on(KeyedMessage).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
                 } catch (ReflectException ex) {
+                    throw ex;
                 }
             }
         } else {
             try {
                 Reflect.on(KeyedMessage).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
             } catch (ReflectException ex) {
+                throw ex;
             }
         }
     }
@@ -111,31 +113,35 @@ public class OriginProducerSendInterceptor extends TraceInterceptorAdaptor {
                 return;
             }
             if (obj instanceof KeyedMessage) {
-                initTopicField(obj);
-                String topic = ((KeyedMessage) obj).topic();
-                if (!Pradar.isClusterTestPrefix(topic)) {
-                    topic = Pradar.addClusterTestPrefix(topic);
-                }
-                setTopic(obj, topic);
+                dealTopic((KeyedMessage) obj);
             }
 
             if (obj instanceof List && !((List<?>) obj).isEmpty()) {
                 initTopicField(((List<?>) obj).get(0));
                 for (Object item : (List<?>) obj) {
                     if (!(item instanceof KeyedMessage)) {
-                        return;
+                        continue;
                     }
-                    initTopicField(obj);
-                    String topic = ((KeyedMessage) item).topic();
-                    if (!Pradar.isClusterTestPrefix(topic)) {
-                        topic = Pradar.addClusterTestPrefix(topic);
-                    }
-                    setTopic(obj, topic);
+                    dealTopic((KeyedMessage) item);
                 }
             }
         } catch (Throwable e) {
             LOGGER.warn("SIMULATOR: origin kafka send message deal topic failed.", e);
         }
+    }
+
+    /**
+     * 修改topic
+     *
+     * @param keyedMessage KeyedMessage对象
+     */
+    private void dealTopic(KeyedMessage keyedMessage) {
+        initTopicField(keyedMessage);
+        String topic = keyedMessage.topic();
+        if (!Pradar.isClusterTestPrefix(topic)) {
+            topic = Pradar.addClusterTestPrefix(topic);
+        }
+        setTopic(keyedMessage, topic);
     }
 
     private String getRemoteAddress(Object remoteAddressFieldAccessor) {

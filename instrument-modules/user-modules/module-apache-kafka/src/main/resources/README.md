@@ -1,2 +1,2 @@
-2.0.0.8
-修复spring-kafka影子消息白名单等没配置，抛出error直接导致业务消费者下线问题
+2.0.0.9
+修复spring-kafka trace日志group丢失问题

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -18,6 +18,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.operation.*;
+import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -60,7 +61,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
     private final static int INSERT_TO_COLLECTION = 15;
     private final static int UPDATE_OPERATION = 16;
     private final static int DELETE_OPERATION = 17;
-
+    private final static int AGGREGATE_OPERATION = 18;
 
 
     public MongoExecuteInterceptor() {
@@ -72,6 +73,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
         operationNumMap.put(ListIndexesOperation.class, LIST_INDEXES);
         operationNumMap.put(MapReduceWithInlineResultsOperation.class, MAP_REDUCE_WITH_INLINE);
         operationNumMap.put(ParallelCollectionScanOperation.class, PARALLEL_COLLECTION_SCAN);
+        operationNumMap.put(AggregateOperation.class, AGGREGATE_OPERATION);
 
         //写操作
         operationNumMap.put(MixedBulkWriteOperation.class, MIXED_BULK_WRITE);
@@ -110,7 +112,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
         List<ServerAddress> serverAddresses = ((MongoClient) advice.getTarget()).getAllAddress();
         ShadowDatabaseConfig shadowDatabaseConfig = getShadowDatabaseConfig(serverAddresses);
 
-        if (operationNum > 7 && shadowDatabaseConfig == null){
+        if (operationNum > 7 && shadowDatabaseConfig == null) {
             ErrorReporter.Error error = ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0005")
@@ -121,7 +123,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             throw new PressureMeasureError("mongo 未配置对应影子表或者影子库");
         }
 
-        if (shadowDatabaseConfig.isShadowDatabase()){
+        if (shadowDatabaseConfig.isShadowDatabase()) {
             return advice.getParameterArray();
         }
 
@@ -208,6 +210,11 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
                 busMongoNamespace = ((DeleteOperation) (args[0])).getNamespace();
                 setWritePtMongoNamespace(DeleteOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
+            case AGGREGATE_OPERATION:
+                objectFieldMapAdd(AggregateOperation.class);
+                busMongoNamespace = Reflect.on(args[0]).get("namespace");
+                setReadPtMongoNamespace(AggregateOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
+                break;
             default:
                 LOGGER.error("not support operation class is {} ", args[0].getClass().getName());
                 throw new PressureMeasureError("[3]mongo not support pressure operation class is " + args[0].getClass().getName());
@@ -236,7 +243,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
     }
 
     private void setWritePtMongoNamespace(Class operationClass, Object target, MongoNamespace busMongoNamespace, ShadowDatabaseConfig shadowDatabaseConfig) throws IllegalAccessException, NoSuchFieldException {
-        if (busMongoNamespace.getCollectionName().startsWith(Pradar.CLUSTER_TEST_PREFIX)){
+        if (busMongoNamespace.getCollectionName().startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
             return;
         }
         //写操作未配置则直接抛异常

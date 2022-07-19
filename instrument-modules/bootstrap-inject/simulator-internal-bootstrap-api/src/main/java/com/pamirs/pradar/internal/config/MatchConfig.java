@@ -44,6 +44,19 @@ public class MatchConfig implements Serializable {
 
     private boolean success = true;
 
+    public MatchConfig(MatchConfig matchConfig) {
+        this.url = matchConfig.url;
+        this.strategy = matchConfig.strategy;
+        this.scriptContent = matchConfig.scriptContent;
+        this.forwarding = matchConfig.forwarding;
+        this.success = matchConfig.success;
+        this.args = new HashMap<String, Object>(matchConfig.args);
+    }
+
+    public MatchConfig() {
+
+    }
+
     public String getUrl() {
         return url;
     }

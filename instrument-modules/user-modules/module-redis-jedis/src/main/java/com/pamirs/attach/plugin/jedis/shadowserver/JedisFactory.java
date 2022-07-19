@@ -73,8 +73,9 @@ public class JedisFactory extends AbstractRedisServerFactory<JedisPool> {
          * 反射是为了兼容没有getDb的版本
          * 向下转为Integer是为了兼容Long类型的入参
          */
-        Integer bizDb = Integer.parseInt(String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("db")));
-        String shadowPassword = shadowConfig.getPassword();
+        int bizDb = Integer.parseInt(String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("db")));
+        String bizPassword = String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("password"));
+        String shadowPassword = shadowConfig.getPassword(bizPassword);
         if (JedisConstant.JEDIS.equals(className)) {
             //单节点
             String nodes = shadowConfig.getNodes();

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -24,6 +24,8 @@ public class ShadowEsServerConfig {
     private List<String> performanceTestNodes;
     private String bizClusterName;
     private String ptClusterName;
+    private String ptUsername;
+    private String ptPassword;
 
     public List<String> getBusinessNodes() {
         return businessNodes;
@@ -45,14 +47,21 @@ public class ShadowEsServerConfig {
         this.performanceTestNodes = performanceTestNodes;
     }
 
-    public ShadowEsServerConfig(List<String> businessNodes
-        , List<String> performanceTestNodes
-        , String bizClusterName
-        , String ptClusterName) {
+    public String getPtUsername() {
+        return ptUsername;
+    }
+
+    public String getPtPassword() {
+        return ptPassword;
+    }
+
+    public ShadowEsServerConfig(List<String> businessNodes, List<String> performanceTestNodes, String bizClusterName, String ptClusterName, String ptUsername, String ptPassword) {
         this.businessNodes = businessNodes;
         this.performanceTestNodes = performanceTestNodes;
         this.bizClusterName = bizClusterName;
         this.ptClusterName = ptClusterName;
+        this.ptUsername = ptUsername;
+        this.ptPassword = ptPassword;
     }
 
     public ShadowEsServerConfig() {
@@ -98,9 +107,9 @@ public class ShadowEsServerConfig {
     @Override
     public String toString() {
         return "ShadowEsServerConfig{" +
-            "businessNodes='" + businessNodes + '\'' +
-            ", performanceTestNodes=" + performanceTestNodes +
-            '}';
+                "businessNodes='" + businessNodes + '\'' +
+                ", performanceTestNodes=" + performanceTestNodes +
+                '}';
     }
 
 }

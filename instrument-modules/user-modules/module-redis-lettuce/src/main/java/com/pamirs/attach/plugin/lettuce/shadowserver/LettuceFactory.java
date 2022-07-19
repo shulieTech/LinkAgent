@@ -173,9 +173,10 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
                 RedisClient redisClient = (RedisClient) client;
                 RedisURI redisURI = Reflect.on(redisClient).get("redisURI");
 
+                String password = new String(redisURI.getPassword());
 
                 // 单机redisUri，如果控制台配置多个，只取第一个node节点
-                RedisURI performanceRedisUri = performanceRedisUri(redisURI, shadowRedisConfig.getNodeNums(), 0, shadowRedisConfig.getDatabase(), shadowRedisConfig.getPassword());
+                RedisURI performanceRedisUri = performanceRedisUri(redisURI, shadowRedisConfig.getNodeNums(), 0, shadowRedisConfig.getDatabase(), shadowRedisConfig.getPassword(password));
                 RedisClient performanceRedisClient = RedisClient.create(redisClient.getResources(), performanceRedisUri);
                 mediator = new RedisClientMediator<AbstractRedisClient>(performanceRedisClient, client, true);
             }
@@ -216,8 +217,12 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         Iterator<RedisURI> iterator = uris.iterator();
         int index = 0;
         while (iterator.hasNext()) {
-            RedisURI redisURI = performanceRedisUri(iterator.next(), nodes, index, config.getDatabase(), config.getPassword());
-            shadowNodes.add(redisURI);
+            RedisURI redisURI = iterator.next();
+            String password = new String(redisURI.getPassword());
+
+            RedisURI redisURINew = performanceRedisUri(redisURI, nodes, index, config.getDatabase(),
+                config.getPassword(password));
+            shadowNodes.add(redisURINew);
             index++;
         }
         return shadowNodes;

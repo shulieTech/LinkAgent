@@ -14,16 +14,16 @@
  */
 package com.pamirs.pradar;
 
-
-import com.pamirs.pradar.exception.PradarException;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 提供给InvokeContext 共用的公共类
@@ -52,6 +52,8 @@ abstract class AbstractContext extends BaseContext {
      */
     Map<String, String> localAttributes = null;
 
+    private Boolean isUseTraceIdSample = "true".equals(System.getProperty("use.traceid.sample"));
+
     /**
      * 是否有错误
      */
@@ -63,7 +65,7 @@ abstract class AbstractContext extends BaseContext {
     }
 
     AbstractContext(String _traceId, String _traceAppName, String _invokeId,
-                    String traceMethod, String traceServiceName) {
+        String traceMethod, String traceServiceName) {
         super(_traceId, _traceAppName, _invokeId, traceMethod, traceServiceName);
     }
 
@@ -155,11 +157,16 @@ abstract class AbstractContext extends BaseContext {
     }
 
     private boolean isTraceSampled(int si) {
-        if (si <= 1 || si > 10000) {
+        // 如果traceId里有采用率则优先于traceId里的采用率为准
+        int samplingInterval = getTraceIdSamplingInterval();
+        if (samplingInterval == 0) {
+            samplingInterval = si;
+        }
+        if (samplingInterval <= 1 || samplingInterval > 10000) {
             return true;
         }
         if (traceId.length() < 25) {
-            return traceId.hashCode() % si == 0;
+            return traceId.hashCode() % samplingInterval == 0;
         }
         /**
          * 生成的数字在 1 - 上限之间
@@ -168,7 +175,23 @@ abstract class AbstractContext extends BaseContext {
         count = count * 10 + traceId.charAt(22) - '0';
         count = count * 10 + traceId.charAt(23) - '0';
         count = count * 10 + traceId.charAt(24) - '0';
-        return count % si == 0;
+        return count % samplingInterval == 0;
+    }
+
+    /**
+     * 获取traceId里的采样率
+     *
+     * @return 采样率，如果返回0则表示traceId里未配置采样率
+     */
+    private int getTraceIdSamplingInterval() {
+        if (!isUseTraceIdSample || traceId.length() < 34) {
+            return 0;
+        }
+        int samplingInterval = traceId.charAt(30) - '0';
+        samplingInterval = samplingInterval * 10 + traceId.charAt(31) - '0';
+        samplingInterval = samplingInterval * 10 + traceId.charAt(32) - '0';
+        samplingInterval = samplingInterval * 10 + traceId.charAt(33) - '0';
+        return samplingInterval;
     }
 
     void logContextData(StringBuilder appender) {
@@ -204,8 +227,9 @@ abstract class AbstractContext extends BaseContext {
             String value = entry.getValue();
             if (PradarCoreUtils.isNotBlank(key) && value != null) {
                 // 在 key 前面加 @ 来区分是否本地属性
-                appender.append('@').append(PradarCoreUtils.makeLogSafe(key)).append(Pradar.KV_SEPARATOR2).append(PradarCoreUtils.makeLogSafe(value))
-                        .append(Pradar.ENTRY_SEPARATOR);
+                appender.append('@').append(PradarCoreUtils.makeLogSafe(key)).append(Pradar.KV_SEPARATOR2).append(
+                        PradarCoreUtils.makeLogSafe(value))
+                    .append(Pradar.ENTRY_SEPARATOR);
             }
         }
     }
@@ -216,12 +240,15 @@ abstract class AbstractContext extends BaseContext {
     public String putUserData(String key, String value) {
         // 透传数据的限制
         if (PradarCoreUtils.isBlank(key) || key.length() > Pradar.MAX_USER_DATA_KEY_SIZE) {
-            LOGGER.error("[ERROR] userData is not accepted since key is blank or too long: key: {} value: {}", key, value);
-            throw new PradarException("[ERROR] localData is not accepted since key is blank or too long: key: " + key + " value: " + value);
+            LOGGER.error("[ERROR] userData is not accepted since key is blank or too long: key: {} value: {}", key,
+                value);
+            throw new PradarException(
+                "[ERROR] localData is not accepted since key is blank or too long: key: " + key + " value: " + value);
         }
         if (value != null && value.length() > Pradar.MAX_USER_DATA_VALUE_SIZE) {
             LOGGER.warn("[ERROR] userData is not accepted since value is too long: key:{} value: {}", key, value);
-            throw new PradarException("[ERROR] localData is not accepted since value is blank or too long: key: " + key + " value: " + value);
+            throw new PradarException(
+                "[ERROR] localData is not accepted since value is blank or too long: key: " + key + " value: " + value);
         }
         if (attributes == null) {
             attributes = new LinkedHashMap<String, String>();
@@ -262,8 +289,8 @@ abstract class AbstractContext extends BaseContext {
     public Map<String, String> getUserDataMap() {
         // 涉及透传，不允许外部修改
         return attributes == null
-                ? Collections.<String, String>emptyMap()
-                : Collections.<String, String>unmodifiableMap(attributes);
+            ? Collections.<String, String>emptyMap()
+            : Collections.<String, String>unmodifiableMap(attributes);
     }
 
     /**
@@ -272,13 +299,16 @@ abstract class AbstractContext extends BaseContext {
     public String putLocalAttribute(String key, String value) {
         // 透传数据的限制
         if (PradarCoreUtils.isBlank(key) || key.length() > Pradar.MAX_LOCAL_DATA_KEY_SIZE) {
-            LOGGER.warn("[ERROR] localData is not accepted since key is blank or too long: key: {} value: {}", key, value);
-            throw new PradarException("[ERROR] localData is not accepted since key is blank or too long: key: " + key + " value: " + value);
+            LOGGER.warn("[ERROR] localData is not accepted since key is blank or too long: key: {} value: {}", key,
+                value);
+            throw new PradarException(
+                "[ERROR] localData is not accepted since key is blank or too long: key: " + key + " value: " + value);
         }
         if (value != null && value.length() > Pradar.MAX_LOCAL_DATA_VALUE_SIZE) {
             LOGGER.warn("[WARN] localData is not accepted since value is too long: key:{} value: {}", key, value);
             value = value.substring(Pradar.MAX_LOCAL_DATA_VALUE_SIZE - 1);
-//            throw new PradarException("[ERROR] localData is not accepted since value is blank or too long: key: " + key + " value: " + value);
+            //            throw new PradarException("[ERROR] localData is not accepted since value is blank or too
+            //            long: key: " + key + " value: " + value);
         }
         if (localAttributes == null) {
             localAttributes = new LinkedHashMap<String, String>();

@@ -37,5 +37,4 @@ public class RestClientPerformRequestInterceptor extends AbstractRestClientShado
     protected boolean doCheck(Object target, String methodName, Object[] args) {
         return args.length == 1 && args[0] instanceof Request;
     }
-
 }

@@ -52,6 +52,7 @@ public class SimulatorStatus {
 
     public static void setAgentStatus(String agentStatus, String errorMsg){
         AGENT_STATUS = agentStatus;
+        SimulatorStatus.errorMsg = errorMsg;
     }
 
     public static String getErrorMsg() {

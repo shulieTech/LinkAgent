@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.caffeine.interceptor;
 
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Set;
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/03/22 5:25 下午
  */
+@ListenerBehavior(isFilterClusterTest = true)
 public class PutAllInterceptor extends AbstractFilterInterceptor {
     public static final int MAX_POWER_OF_TWO = 1 << (Integer.SIZE - 2);
 

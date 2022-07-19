@@ -46,9 +46,9 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     public ModuleRoutingURLClassLoader(final String moduleId,
-                                       final ClassLoaderService classLoaderService,
-                                       final URL[] urls,
-                                       final Routing... routingArray) {
+        final ClassLoaderService classLoaderService,
+        final URL[] urls,
+        final Routing... routingArray) {
         super(urls);
         this.moduleId = moduleId;
         this.classLoaderService = classLoaderService;
@@ -56,10 +56,10 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     public ModuleRoutingURLClassLoader(final String moduleId,
-                                       final ClassLoaderService classLoaderService,
-                                       final URL[] urls,
-                                       final ClassLoader parent,
-                                       final Routing... routingArray) {
+        final ClassLoaderService classLoaderService,
+        final URL[] urls,
+        final ClassLoader parent,
+        final Routing... routingArray) {
         super(urls, parent);
         this.moduleId = moduleId;
         this.classLoaderService = classLoaderService;
@@ -76,7 +76,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         if (shouldFindExportedResource(resourceName)) {
             URL url;
             List<ClassLoaderFactory> exportResourceClassLoadersInOrder = classLoaderService
-                    .findExportResourceClassLoadersInOrder(resourceName);
+                .findExportResourceClassLoadersInOrder(resourceName);
             if (exportResourceClassLoadersInOrder != null) {
                 for (ClassLoaderFactory exportResourceClassLoaderFactory : exportResourceClassLoadersInOrder) {
                     ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
@@ -179,16 +179,16 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     protected Enumeration<URL> getExportResources(String resourceName) throws IOException {
         if (shouldFindExportedResource(resourceName)) {
             List<ClassLoaderFactory> exportResourceClassLoadersInOrder = classLoaderService
-                    .findExportResourceClassLoadersInOrder(resourceName);
+                .findExportResourceClassLoadersInOrder(resourceName);
             if (exportResourceClassLoadersInOrder != null) {
                 List<Enumeration<URL>> enumerationList = new ArrayList<Enumeration<URL>>();
                 for (ClassLoaderFactory exportResourceClassLoaderFactory : exportResourceClassLoadersInOrder) {
                     ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
                     enumerationList.add(((ModuleRoutingURLClassLoader) classLoader)
-                            .getLocalResources(resourceName));
+                        .getLocalResources(resourceName));
                 }
                 return new CompoundEnumeration<URL>(
-                        enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
+                    enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
             }
         }
         return EmptyEnumeration.emptyEnumeration();
@@ -218,7 +218,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
 
 
         return new CompoundEnumeration<URL>(
-                enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
+            enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
     }
 
     /**
@@ -283,7 +283,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                     if (isDebugEnabled) {
                         // log debug message
                         logger.debug(
-                                "SIMULATOR: Fail to load export class " + name, e);
+                            "SIMULATOR: Fail to load export class " + name, e);
                     }
                 }
             }
@@ -292,7 +292,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     protected Class<?> internalLoadClass(String name, boolean resolve)
-            throws ClassNotFoundException {
+        throws ClassNotFoundException {
         Class<?> clazz = null;
 
         // 1. find routing
@@ -384,17 +384,17 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                     StringBuilder pen = new StringBuilder(packageName.length() + 10);
                     StringBuilder cen = new StringBuilder(className.length() + 10);
                     String packageEntryName = pen.append(packageName.replace('.', '/')).append("/")
-                            .toString();
+                        .toString();
                     String classEntryName = cen.append(className.replace('.', '/'))
-                            .append(".class").toString();
+                        .append(".class").toString();
                     for (URL url : getURLs()) {
                         try {
                             URLConnection connection = url.openConnection();
                             if (connection instanceof JarURLConnection) {
                                 JarFile jarFile = ((JarURLConnection) connection).getJarFile();
                                 if (jarFile.getEntry(classEntryName) != null
-                                        && jarFile.getEntry(packageEntryName) != null
-                                        && jarFile.getManifest() != null) {
+                                    && jarFile.getEntry(packageEntryName) != null
+                                    && jarFile.getManifest() != null) {
                                     definePackage(packageName, jarFile.getManifest(), url);
                                     return null;
                                 }

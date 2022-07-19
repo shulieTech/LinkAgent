@@ -7,9 +7,6 @@ import com.alibaba.rocketmq.common.message.MessageExt;
 
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.OrderlyTraceContexts;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.exception.PradarException;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
@@ -32,21 +29,8 @@ public class OrderlyTraceBeforeInterceptor extends AroundInterceptor {
             }
             consumeMessageContext.setMsgList(messageExts);
             PushConsumeMessageHookImpl.getInstance().consumeMessageBefore(consumeMessageContext);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
         } catch (Throwable e) {
             LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
         }
     }
 }

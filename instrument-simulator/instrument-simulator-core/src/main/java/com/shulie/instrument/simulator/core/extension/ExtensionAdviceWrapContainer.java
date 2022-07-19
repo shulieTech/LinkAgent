@@ -94,11 +94,11 @@ public class ExtensionAdviceWrapContainer extends AdviceListenerWrap {
 
     private AdviceListener wrapAdviceListener() {
         AdviceListener adviceListener = this.adviceListener;
-        for (AdviceListenerWrapBuilder adviceListenerWrapBuilder : GlobalAdviceWrapBuilders.getAdviceListenerWrapBuilders()) {
+//        for (AdviceListenerWrapBuilder adviceListenerWrapBuilder : GlobalAdviceWrapBuilders.getAdviceListenerWrapBuilders()) {
 /*
              adviceListener = adviceListenerWrapBuilder.build(adviceListener);
 */
-        }
+//        }
         return adviceListener;
     }
 }

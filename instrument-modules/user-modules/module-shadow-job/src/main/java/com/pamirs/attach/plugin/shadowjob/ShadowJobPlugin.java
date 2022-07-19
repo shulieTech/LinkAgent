@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -46,7 +46,6 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
     @Override
     public boolean onActive() throws Throwable {
         final ShadowImplListener shaDowImplListener = new ShadowImplListener();
-
 
         try {
             XxlJobAdapter xxlJobAdapter = new XxlJobAdapter();
@@ -111,13 +110,21 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
-//        enhanceTemplate.enhance(this, "org.springframework.context.support.ApplicationContextAwareProcessor", new EnhanceCallback() {
-//            @Override
-//            public void doEnhance(InstrumentClass target) {
-//                InstrumentMethod getMethod = target.getDeclaredMethod("invokeAwareInterfaces", "java.lang.Object");
-//                getMethod.addInterceptor(Listeners.of(SpringContextInterceptor.class));
-//            }
-//        });
+        enhanceTemplate.enhance(this, "com.xxl.job.core.executor.XxlJobExecutor", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod declaredMethod = target.getDeclaredMethod("loadJobThread","int");
+                declaredMethod.addInterceptor(Listeners.of(XxlOptionInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "org.springframework.context.support.ApplicationContextAwareProcessor", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("invokeAwareInterfaces", "java.lang.Object");
+                getMethod.addInterceptor(Listeners.of(SpringContextInterceptor.class));
+            }
+        });
 
         enhanceTemplate.enhance(this, "org.springframework.context.support.AbstractRefreshableApplicationContext", new EnhanceCallback() {
             @Override
@@ -126,7 +133,6 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
                 getMethod.addInterceptor(Listeners.of(SpringContextInterceptor.class));
             }
         });
-
 
 
         /**
@@ -278,6 +284,14 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
+        enhanceTemplate.enhance(this, "org.springframework.scheduling.config.ScheduledTaskRegistrar", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod declaredMethods = target.getDeclaredMethods("scheduleCronTask", "scheduleFixedRateTask", "scheduleFixedDelayTask");
+                declaredMethods.addInterceptor(Listeners.of(ScheduledTaskRegistrarInterceptor.class));
+            }
+        });
+
         try {
             Class.forName("com.dangdang.ddframe.job.spring.schedule.SpringJobScheduler");
             PradarSpringUtil.onApplicationContextLoad(new Runnable() {
@@ -286,7 +300,7 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
                     ElasticJobRegisterUtil.addShadowJob();
                 }
             });
-        }catch (ClassNotFoundException e){
+        } catch (ClassNotFoundException e) {
             // do nothing
         }
         return true;

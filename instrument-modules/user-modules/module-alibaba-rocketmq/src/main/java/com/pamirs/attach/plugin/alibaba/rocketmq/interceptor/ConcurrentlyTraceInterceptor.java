@@ -9,9 +9,6 @@ import com.alibaba.rocketmq.common.message.MessageExt;
 import com.alibaba.rocketmq.common.message.MessageQueue;
 
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.exception.PradarException;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -53,21 +50,8 @@ public class ConcurrentlyTraceInterceptor extends AroundInterceptor {
             consumeMessageContext.setSuccess(false);
             hook.consumeMessageBefore(consumeMessageContext);
             contextThreadLocal.set(consumeMessageContext);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
         } catch (Throwable e) {
             LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
         }
     }
 
@@ -81,21 +65,8 @@ public class ConcurrentlyTraceInterceptor extends AroundInterceptor {
             consumeMessageContext.setSuccess(true);
             consumeMessageContext.setStatus("CONSUME_SUCCESS");
             hook.consumeMessageAfter(consumeMessageContext);
-        } catch (PradarException e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
-        } catch (PressureMeasureError e) {
-            LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw e;
-            }
         } catch (Throwable e) {
             LOGGER.error("", e);
-            if (Pradar.isClusterTest()) {
-                throw new PressureMeasureError(e);
-            }
         } finally {
             contextThreadLocal.remove();
         }
@@ -132,7 +103,8 @@ public class ConcurrentlyTraceInterceptor extends AroundInterceptor {
         Field consumeMessageServiceField = getThis$0Field(target);
         Object consumeMessageService = Reflect.on(target).get(consumeMessageServiceField);
         Field defaultMQPushConsumerImplField = getDefaultMQPushConsumerImplField(consumeMessageService);
-        DefaultMQPushConsumerImpl defaultMQPushConsumer = Reflect.on(consumeMessageService).get(defaultMQPushConsumerImplField);
+        DefaultMQPushConsumerImpl defaultMQPushConsumer = Reflect.on(consumeMessageService).get(
+            defaultMQPushConsumerImplField);
         return defaultMQPushConsumer.groupName();
     }
 

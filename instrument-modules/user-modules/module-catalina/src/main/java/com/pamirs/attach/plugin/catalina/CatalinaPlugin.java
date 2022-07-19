@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.catalina;
 
 import com.pamirs.attach.plugin.catalina.interceptor.RequestStartAsyncInterceptor;
+import com.pamirs.attach.plugin.catalina.interceptor.SpringMvcApiInterceptor;
 import com.pamirs.attach.plugin.catalina.interceptor.SpringMvcInterceptor;
 import com.pamirs.attach.plugin.catalina.interceptor.StandardHostValveInvokeInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -26,9 +27,9 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
 
-
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "catalina", version = "1.0.0", author = " xiaobin@shulie.io",description = "catalina 服务器,支持 tomcat 和 jboss")
+@ModuleInfo(id = "catalina", version = "1.0.0", author = " xiaobin@shulie.io",
+    description = "catalina 服务器,支持 tomcat 和 jboss")
 public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
@@ -36,7 +37,8 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
         enhanceTemplate.enhance(this, "org.apache.catalina.core.StandardHostValve", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethod("invoke", "org.apache.catalina.connector.Request", "org.apache.catalina.connector.Response");
+                InstrumentMethod method = target.getDeclaredMethod("invoke", "org.apache.catalina.connector.Request",
+                    "org.apache.catalina.connector.Response");
                 method.addInterceptor(Listeners.of(StandardHostValveInvokeInterceptor.class));
             }
         });
@@ -44,22 +46,35 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
         enhanceTemplate.enhance(this, "org.apache.catalina.connector.Request", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod method = target.getDeclaredMethod("startAsync", "javax.servlet.ServletRequest", "javax.servlet.ServletResponse");
+                InstrumentMethod method = target.getDeclaredMethod("startAsync", "javax.servlet.ServletRequest",
+                    "javax.servlet.ServletResponse");
                 method.addInterceptor(Listeners.of(RequestStartAsyncInterceptor.class));
             }
         });
 
         //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.MappingRegistry.getMappingsByUrl
-        enhanceTemplate.enhance(this, "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
-                new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByUrl",
-                                "java.lang.String");
-                        getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
+        enhanceTemplate.enhance(this,
+            "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByUrl",
+                        "java.lang.String");
+                    getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
+                }
+            });
 
-                    }
-                });
+        //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.MappingRegistry.getMappingsByDirectPath
+        enhanceTemplate.enhance(this,
+            "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
+            new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByDirectPath",
+                        "java.lang.String");
+                    getMethod.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
+                }
+            });
         return true;
     }
 }

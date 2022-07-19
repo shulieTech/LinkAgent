@@ -88,9 +88,7 @@ public class MQConsumeMessageTraceLog {
         Pradar.middlewareName(RocketmqConstants.PLUGIN_NAME);
 
         String group = ctx.getGroup();
-        if (!Pradar.getInvokeContext().isClusterTest() && group.startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
-            Pradar.getInvokeContext().setClusterTest(true);
-        }
+        Pradar.getInvokeContext().setClusterTest(Pradar.isClusterTestPrefix(group));
         if (firstTrace != null) {
             // 追加 msgId 和第一条消息的 TraceId
             Pradar.callBack(traceBean.getMsgId() + "/" + firstTrace);

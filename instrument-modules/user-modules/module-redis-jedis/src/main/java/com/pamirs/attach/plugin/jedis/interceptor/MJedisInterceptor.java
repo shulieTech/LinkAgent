@@ -27,6 +27,7 @@ import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+import redis.clients.jedis.commands.ProtocolCommand;
 
 import java.util.*;
 
@@ -34,7 +35,7 @@ import java.util.*;
 @ListenerBehavior(isFilterClusterTest = true)
 public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
-    private static List<String> readMethod = new ArrayList<String>(14);
+    static List<String> readMethod = new ArrayList<String>(14);
 
     /**
      * redis黑名单支持的操作方法
@@ -65,7 +66,6 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
     @Override
     public Object[] getParameter0(Advice advice) {
-
         ClusterTestUtils.validateClusterTest();
 
         Object[] args = advice.getParameterArray();
@@ -122,7 +122,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return process(args, whiteList, canMatchWhiteList);
     }
 
-    private Object[] processMset(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
+    protected Object[] processMset(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         Object params = args[0];
         if (params instanceof String[]) {
             String[] data = (String[]) params;
@@ -142,7 +142,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         throw new PressureMeasureError("Jedis not support mset key deserialize !");
     }
 
-    private Object[] processXRead(Object[] args, Collection<String> whiteList) {
+    protected Object[] processXRead(Object[] args, Collection<String> whiteList) {
         if (args.length != 3) {
             return args;
         }
@@ -186,7 +186,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return args;
     }
 
-    private Object[] processXReadGroup(Object[] args, Collection<String> whiteList) {
+    protected Object[] processXReadGroup(Object[] args, Collection<String> whiteList) {
         if (args.length != 6) {
             return args;
         }
@@ -230,7 +230,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return args;
     }
 
-    private Object[] process(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
+    protected Object[] process(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         //遍历顺序获取一下几个类型值
         for (int i = 0; i < args.length; i++) {
             if (args[i] instanceof String) {
@@ -293,7 +293,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return false;
     }
 
-    private Object[] processMoreKeys(String methodName, Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
+    protected Object[] processMoreKeys(String methodName, Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         List<Integer> keyIndexes = RedisUtils.METHOD_MORE_KEYS.get(methodName);
         //如果出现枚举的值比方法参数数量大的，则进行判断单个key逻辑处理
         for (int i = 0; i < keyIndexes.size(); i++) {
@@ -334,7 +334,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         return false;
     }
 
-    private Object[] processEvalMethodName(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
+    protected Object[] processEvalMethodName(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         if (args.length != 3) {
             return args;
         }

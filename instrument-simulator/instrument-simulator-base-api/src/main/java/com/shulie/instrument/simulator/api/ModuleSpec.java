@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -221,6 +221,11 @@ public class ModuleSpec {
      */
     private boolean async = true;
 
+    /**
+     * 需要同步拦截和记录什么方法
+     */
+    private String syncFetchTarget;
+
     public void loadModuleInfo(ModuleInfo moduleInfo) {
         if (moduleInfo == null) {
             return;
@@ -239,8 +244,9 @@ public class ModuleSpec {
         return async;
     }
 
-    public void setAsync(boolean async) {
+    public ModuleSpec setAsync(boolean async) {
         this.async = async;
+        return this;
     }
 
     public int[] getSupportedModes() {
@@ -526,6 +532,14 @@ public class ModuleSpec {
 
     public Set<String> getImportExactlyResources() {
         return importExactlyResources;
+    }
+
+    public String getSyncFetchTarget() {
+        return syncFetchTarget;
+    }
+
+    public void setSyncFetchTarget(String syncFetchTarget) {
+        this.syncFetchTarget = syncFetchTarget;
     }
 
     @Override

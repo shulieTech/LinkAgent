@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -31,6 +31,8 @@ import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
  * @since 2020/10/11 6:02 下午
  */
 public class DefaultEnhanceTemplate implements EnhanceTemplate {
+    // agent中引用外部jar避免重复增强，所以打包时会在外部jar的包名前加上 com.shulie.instrument.simulator.dependencies. 但是会导致需要增强的类的类名字符串也没修改，所以这里需要去除
+    private final static String dependencyPrefix = "com.shulie.instrument.simulator.dependencies.";
     private ModuleEventWatcher moduleEventWatcher;
 
     public DefaultEnhanceTemplate(ModuleEventWatcher moduleEventWatcher) {
@@ -40,7 +42,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     @Override
     public InstrumentClass enhance(ExtensionModule module, String className, EnhanceCallback callback) {
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
-                .onClass(className);
+                .onClass(dealClassName(className));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
         callback.doEnhance(instrumentClass);
         if (module instanceof ModuleLifecycleAdapter) {
@@ -57,7 +59,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
         }
 
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
-                .onClass(classNames);
+                .onClass(dealClassName(classNames));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
         callback.doEnhance(instrumentClass);
         if (module instanceof ModuleLifecycleAdapter) {
@@ -70,7 +72,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     @Override
     public InstrumentClass enhanceWithSuperClass(ExtensionModule module, String superClassName, EnhanceCallback callback) {
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
-                .onAnyClass().withSuperClass(superClassName);
+                .onAnyClass().withSuperClass(dealClassName(superClassName));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
         callback.doEnhance(instrumentClass);
         if (module instanceof ModuleLifecycleAdapter) {
@@ -83,7 +85,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     @Override
     public InstrumentClass enhanceWithSuperClass(ExtensionModule module, EnhanceCallback callback, String... superClassNames) {
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
-                .onAnyClass().withSuperClass(superClassNames);
+                .onAnyClass().withSuperClass(dealClassName(superClassNames));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
         callback.doEnhance(instrumentClass);
         if (module instanceof ModuleLifecycleAdapter) {
@@ -96,7 +98,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     @Override
     public InstrumentClass enhanceWithInterface(ExtensionModule module, String interfaceClassName, EnhanceCallback callback) {
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
-                .onAnyClass().hasInterfaceTypes(interfaceClassName);
+                .onAnyClass().hasInterfaceTypes(dealClassName(interfaceClassName));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
         callback.doEnhance(instrumentClass);
         if (module instanceof ModuleLifecycleAdapter) {
@@ -109,7 +111,7 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     @Override
     public InstrumentClass enhanceWithInterface(ExtensionModule module, EnhanceCallback callback, String... interfaceClassNames) {
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
-                .onAnyClass().hasInterfaceTypes(interfaceClassNames);
+                .onAnyClass().hasInterfaceTypes(dealClassName(interfaceClassNames));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
         callback.doEnhance(instrumentClass);
         if (module instanceof ModuleLifecycleAdapter) {
@@ -117,5 +119,19 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
         }
         instrumentClass.execute();
         return instrumentClass;
+    }
+
+    private String dealClassName(String className) {
+        if (className.startsWith(dependencyPrefix)) {
+            className = className.substring(dependencyPrefix.length());
+        }
+        return className;
+    }
+
+    private String[] dealClassName(String... classNames) {
+        for (int i = 0; i < classNames.length; i++) {
+            classNames[i] = dealClassName(classNames[i]);
+        }
+        return classNames;
     }
 }

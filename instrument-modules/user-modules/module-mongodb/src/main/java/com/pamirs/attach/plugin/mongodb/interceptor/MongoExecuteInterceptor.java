@@ -257,7 +257,14 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             error.report();
             throw new PressureMeasureError("mongo 未配置对应影子表2:" + busMongoNamespace.getFullName());
         }
-        String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        String shadowTableName = null;
+        if (shadowDatabaseConfig.isShadowTable()) {
+            shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        } else if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
+            if (!Pradar.isClusterTestPrefix(busMongoNamespace.getCollectionName())) {
+                shadowTableName = Pradar.addClusterTestPrefix(busMongoNamespace.getCollectionName());
+            }
+        }
         if (shadowTableName == null) {
             ErrorReporter.Error error = ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
@@ -273,7 +280,14 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
 
     private void setReadPtMongoNamespace(Class operationClass, Object target, MongoNamespace busMongoNamespace, ShadowDatabaseConfig shadowDatabaseConfig) throws IllegalAccessException, NoSuchFieldException {
         //读操作不包含则直接读取业务表
-        String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        String shadowTableName = null;
+        if (shadowDatabaseConfig.isShadowTable()) {
+            shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        } else if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
+            if (!Pradar.isClusterTestPrefix(busMongoNamespace.getCollectionName())) {
+                shadowTableName = Pradar.addClusterTestPrefix(busMongoNamespace.getCollectionName());
+            }
+        }
         if (shadowTableName == null) {
             return;
         }

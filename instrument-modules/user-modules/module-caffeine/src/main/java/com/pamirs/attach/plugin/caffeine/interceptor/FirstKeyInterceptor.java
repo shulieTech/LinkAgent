@@ -14,10 +14,13 @@
  */
 package com.pamirs.attach.plugin.caffeine.interceptor;
 
+import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
+
 /**
  * @author jirenhe | jirenhe@shulie.io
  * @since 2021/03/22 4:31 下午
  */
+@ListenerBehavior(isFilterClusterTest = true)
 public class FirstKeyInterceptor extends AbstractChangeCacheKeyTraceInterceptor {
     @Override
     protected int getKeyIndex(Object[] parameterArray) {

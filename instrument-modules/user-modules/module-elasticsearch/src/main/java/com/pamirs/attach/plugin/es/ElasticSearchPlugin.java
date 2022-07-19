@@ -96,9 +96,21 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethods("internalPerformRequest",
-                        "internalPerformRequestAsync");
+                        "internalPerformRequestAsync", "performRequest", "performRequestAsync");
                 method.addInterceptor(Listeners
                         .of(RestHighLevelClientInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
+
+            }
+        });
+
+        //BulkRequest修改影子索引需要在添加请求时就执行
+        enhanceTemplate.enhance(this, "org.elasticsearch.action.bulk.BulkRequest", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethods("add");
+                method.addInterceptor(Listeners
+                        .of(BulkRequestAddInterceptor.class, "SEARCH_SCOPE", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));
 
             }
@@ -121,9 +133,22 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
                         "org.elasticsearch.client.HttpAsyncResponseConsumerFactory", "org.elasticsearch.client.ResponseListener",
                         "org.apache.http.Header[]");
 
+                InstrumentMethod performRequestAsyncMethodLowVersionTrace = target.getDeclaredMethod("performRequestAsync",
+                        "long", "org.elasticsearch.client.RestClient$HostTuple", "org.apache.http.client.methods.HttpRequestBase", "java.util.Set",
+                        "org.elasticsearch.client.HttpAsyncResponseConsumerFactory",
+                        "org.elasticsearch.client.RestClient$FailureTrackingResponseListener");
+
+
                 if (performRequestAsyncMethod != null) {
                     performRequestAsyncMethod.addInterceptor(Listeners.of(RestClientPerformAsyncRequestInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 }
+
+
+                if (performRequestAsyncMethodLowVersionTrace != null){
+                    performRequestAsyncMethodLowVersionTrace.addInterceptor(
+                            Listeners.of(RestClientPerformAsyncLowVersionRequestTraceInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                }
+
 
                 if (performRequestAsyncMethodLowVersion != null) {
                     performRequestAsyncMethodLowVersion.addInterceptor(

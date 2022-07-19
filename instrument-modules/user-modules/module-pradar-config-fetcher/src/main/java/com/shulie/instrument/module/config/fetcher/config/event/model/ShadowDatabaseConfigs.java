@@ -14,6 +14,10 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.event.model;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -24,10 +28,6 @@ import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * @author: wangjian
@@ -54,10 +54,13 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
     }
 
     @Override
-    public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig, Map<String, ShadowDatabaseConfig> newValue) {
+    public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig,
+        Map<String, ShadowDatabaseConfig> newValue) {
+
         Set<ShadowDatabaseConfig> needCloseDataSource = new HashSet<ShadowDatabaseConfig>();
         // 同名配置比对
-        for (Map.Entry<String, ShadowDatabaseConfig> old : GlobalConfig.getInstance().getShadowDatasourceConfigs().entrySet()) {
+        for (Map.Entry<String, ShadowDatabaseConfig> old : GlobalConfig.getInstance().getShadowDatasourceConfigs()
+            .entrySet()) {
             String key = old.getKey();
             ShadowDatabaseConfig newConfig = newValue.get(key);
             if (null == newConfig) {
@@ -77,6 +80,7 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
                     logger.info("modified config:" + key);
                 }
             }
+
         }
         for (Map.Entry<String, ShadowDatabaseConfig> entry : newValue.entrySet()) {
             // 判断是否是新增内容
@@ -88,14 +92,16 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
                 }
             }
         }
-        if (needCloseDataSource.isEmpty() && newValue.size() == GlobalConfig.getInstance().getShadowDatasourceConfigs().size()) {
+        if (needCloseDataSource.isEmpty() && newValue.size() == GlobalConfig.getInstance().getShadowDatasourceConfigs()
+            .size()) {
             return Boolean.FALSE;
         }
 
         GlobalConfig.getInstance().setShadowDatabaseConfigs(newValue, true);
         applicationConfig.setShadowDatabaseConfigs(GlobalConfig.getInstance().getShadowDatasourceConfigs());
 
-        ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = new ShadowDataSourceConfigModifyEvent(needCloseDataSource);
+        ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = new ShadowDataSourceConfigModifyEvent(
+            needCloseDataSource);
         EventRouter.router().publish(shadowDataSourceConfigModifyEvent);
         // 清除影子表模式的sql表名替换缓存
         SqlParser.clear();

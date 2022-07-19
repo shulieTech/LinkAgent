@@ -66,8 +66,8 @@ public class TomcatJdbcDatasourceUtils {
             return null;
         }
         String url = ptDataSourceConf.getShadowUrl();
-        String username = ptDataSourceConf.getShadowUsername();
-        String password = ptDataSourceConf.getShadowPassword();
+        String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
+        String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
         String initialSize = ptDataSourceConf.getProperty("initialSize");
         String minIdle = ptDataSourceConf.getProperty("minIdle");
         String maxActive = ptDataSourceConf.getProperty("maxActive");

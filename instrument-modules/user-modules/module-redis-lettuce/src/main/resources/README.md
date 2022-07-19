@@ -1,4 +1,3 @@
-注意！！！！！
-每次更新插件请都更新内容到以下内容，
-redis-lettuce中间件支持模块，
-新增模块版本信息，初始版本为1.0.0，README.md为模块更新内容描述文件，
+
+2.0.1.2版本：
+定时清理DynamicFieldManager里的closed的connection

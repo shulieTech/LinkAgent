@@ -197,8 +197,8 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
             return null;
         }
         String url = ptDataSourceConf.getShadowUrl();
-        String username = ptDataSourceConf.getShadowUsername();
-        String password = ptDataSourceConf.getShadowPassword();
+        String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUser());
+        String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
         String driverClassName = ptDataSourceConf.getShadowDriverClassName();
         if (StringUtils.isBlank(driverClassName)) {
             driverClassName = sourceDatasource.getDriverClassName();

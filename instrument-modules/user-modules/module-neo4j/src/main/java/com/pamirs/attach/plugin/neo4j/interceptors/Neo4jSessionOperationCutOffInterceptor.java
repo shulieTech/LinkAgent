@@ -96,13 +96,15 @@ public class Neo4jSessionOperationCutOffInterceptor extends CutoffInterceptorAda
         String uri = configuration.getURI();
         Credentials credentials = configuration.getCredentials();
         String username = null;
+        String password = null;
         if (credentials instanceof AuthTokenCredentials) {
             username = ((AuthTokenCredentials) credentials).credentials();
         } else if (credentials instanceof UsernamePasswordCredentials) {
             username = ((UsernamePasswordCredentials) credentials).getUsername();
+            password = ((UsernamePasswordCredentials) credentials).getPassword();
         }
         DataSourceMeta<Neo4jSession> neo4jSessionDataSourceMeta = new DataSourceMeta<Neo4jSession>(uri, username, (Neo4jSession) target);
-        DataSourceWrapUtil.wrap(neo4jSessionDataSourceMeta);
+        DataSourceWrapUtil.wrap(neo4jSessionDataSourceMeta,password);
         // 压测流量转发影子库
         if (!DataSourceWrapUtil.pressureDataSources.containsKey(neo4jSessionDataSourceMeta) || null == DataSourceWrapUtil.pressureDataSources.get(neo4jSessionDataSourceMeta)) {
             ErrorReporter.buildError()

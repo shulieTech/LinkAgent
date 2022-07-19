@@ -65,69 +65,69 @@ import static org.apache.commons.lang.reflect.FieldUtils.writeField;
  */
 public class DefaultCoreModuleManager implements CoreModuleManager {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final boolean isDebugEnabled = logger.isDebugEnabled();
-    private final boolean isInfoEnabled = logger.isInfoEnabled();
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+    protected final boolean isDebugEnabled = logger.isDebugEnabled();
+    protected final boolean isInfoEnabled = logger.isInfoEnabled();
 
-    private CoreConfigure config;
-    private Instrumentation inst;
-    private ClassFileTransformer defaultClassFileTransformer;
-    private ClassInjector classInjector;
-    private CoreLoadedClassDataSource classDataSource;
-    private ProviderManager providerManager;
+    protected CoreConfigure config;
+    protected Instrumentation inst;
+    protected ClassFileTransformer defaultClassFileTransformer;
+    protected ClassInjector classInjector;
+    protected CoreLoadedClassDataSource classDataSource;
+    protected ProviderManager providerManager;
 
     /**
      * 系统模块目录列表
      */
-    private File[] systemModuleLibs;
+    protected File[] systemModuleLibs;
 
     /**
      * 用户模块目录列表
      */
-    private File[] userModuleLibs;
+    protected File[] userModuleLibs;
 
     /**
      * 类加载器服务
      */
-    private ClassLoaderService classLoaderService;
+    protected ClassLoaderService classLoaderService;
 
     /**
      * 仿真器配置
      */
-    private SimulatorConfig simulatorConfig;
+    protected SimulatorConfig simulatorConfig;
 
     /**
      * 模块命令调用器
      */
-    private ModuleCommandInvoker moduleCommandInvoker;
+    protected ModuleCommandInvoker moduleCommandInvoker;
 
     /**
      * switcher manager
      */
-    private SwitcherManager switcherManager;
+    protected SwitcherManager switcherManager;
 
     /**
      * 禁用的模块列表
      */
-    private List<String> disabledModules;
+    protected List<String> disabledModules;
 
     /**
      * event listener handler
      */
-    private EventListenerHandler eventListenerHandler;
+    protected EventListenerHandler eventListenerHandler;
 
     // 已加载的模块集合
-    private Map<String, CoreModule> loadedModuleMap = new ConcurrentHashMap<String, CoreModule>();
+    protected Map<String, CoreModule> loadedModuleMap = new ConcurrentHashMap<String, CoreModule>();
 
     /**
      * 所有等待加载的模块
      */
-    private Queue<Runnable> waitLoadModules = new ConcurrentLinkedQueue<Runnable>();
+    protected Queue<Runnable> waitLoadModules = new ConcurrentLinkedQueue<Runnable>();
 
     /**
      * module loader
      */
-    private ModuleLoader moduleLoader;
+    protected ModuleLoader moduleLoader;
 
     /**
      * 模块模块管理
@@ -270,8 +270,9 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                     ModuleLoadInfo moduleLoadInfo = DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
                         getModuleLoadInfos().get(moduleId);
                     if(moduleLoadInfo == null){
-                        throw new ModuleException(String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId),
-                            MODULE_LOAD_ERROR);
+                        throw new ModuleException(moduleId,
+                                MODULE_LOAD_ERROR,
+                                String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId));
                     }
                     try {
 
@@ -1084,7 +1085,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
     }
 
-    private List<File> getAllModuleLibJar(File[] libDirs) {
+    protected List<File> getAllModuleLibJar(File[] libDirs) {
         List<File> files = new ArrayList<File>();
         for (File file : libDirs) {
             loadJar(file, files);
@@ -1218,7 +1219,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
     }
 
-    private void loadModules(List<ModuleSpec> moduleSpecs, String action) {
+    protected void loadModules(List<ModuleSpec> moduleSpecs, String action) {
         for (ModuleSpec moduleSpec : moduleSpecs) {
             loadModule(moduleSpec, action);
         }
@@ -1244,11 +1245,11 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         // 2. 先加载所有的系统模块
         List<File> systemModuleLibJars = getAllModuleLibJar(systemModuleLibs);
-        List<ModuleSpec> systemModuleSpecs = ModuleSpecUtils.loadModuleSpecs(systemModuleLibJars, true);
+        List<ModuleSpec> systemModuleSpecs = ModuleSpecUtils.loadModuleSpecs(systemModuleLibJars, true, true);
 
         // 3. 加载所有用户自定义模块, 采用异步加载方式加载用户自定义模块
         List<File> userModuleLibJars = getAllModuleLibJar(userModuleLibs);
-        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false);
+        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false, true);
         initAllModuleInfos(systemModuleSpecs);
         initAllModuleInfos(userModuleSpecs);
 
@@ -1264,7 +1265,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     /**
      * 初始化所有要加载的模块
      */
-    private void initAllModuleInfos(List<ModuleSpec> moduleSpecList) {
+    protected void initAllModuleInfos(List<ModuleSpec> moduleSpecList) {
         for (ModuleSpec moduleSpec : moduleSpecList) {
             ModuleLoadInfo moduleLoadInfo = new ModuleLoadInfo();
             moduleLoadInfo.setModuleId(moduleSpec.getModuleId());
@@ -1387,7 +1388,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             }
 
             // 3. 加载所有用户自定义模块
-            List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(appendJarFiles, false);
+            List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(appendJarFiles, false, true);
             loadModules(userModuleSpecs, "soft-flush");
         } catch (Throwable cause) {
             logger.warn("SIMULATOR: soft-flushing modules: occur error.", cause);
@@ -1439,8 +1440,9 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         // 对模块访问权限进行校验
         // 用户模块目录
         List<File> userModuleLibJars = getAllModuleLibJar(userModuleLibs);
-        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false);
+        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false, true);
         loadModules(userModuleSpecs, "force-flush");
 
     }
+
 }

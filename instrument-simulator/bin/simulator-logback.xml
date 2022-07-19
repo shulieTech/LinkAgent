@@ -1,14 +1,31 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration scan="true" scanPeriod="10000">
 
+<!--    <appender name="SIMULATOR-FILE-APPENDER" class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.RollingFileAppender">-->
+<!--        <file>${SIMULATOR_LOG_PATH}/simulator.log</file>-->
+<!--        <rollingPolicy class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
+<!--            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>-->
+<!--            <maxFileSize>100MB</maxFileSize>  &lt;!&ndash; 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB &ndash;&gt;-->
+<!--            <maxHistory>3</maxHistory>  &lt;!&ndash; 保存30天 &ndash;&gt;-->
+<!--            <totalSizeCap>300MB</totalSizeCap>  &lt;!&ndash; 总日志大小 &ndash;&gt;-->
+<!--        </rollingPolicy>-->
+<!--        <encoder>-->
+<!--            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %msg%n</pattern>-->
+<!--            <charset>UTF-8</charset>-->
+<!--        </encoder>-->
+<!--    </appender>-->
+
     <appender name="SIMULATOR-FILE-APPENDER" class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${SIMULATOR_LOG_PATH}/simulator.log</file>
-        <rollingPolicy class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator.%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>  <!-- 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB -->
-            <maxHistory>3</maxHistory>  <!-- 保存30天 -->
-            <totalSizeCap>300MB</totalSizeCap>  <!-- 总日志大小 -->
+        <rollingPolicy class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator.%i.log</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
         </rollingPolicy>
+        <!--SizeBasedTriggeringPolicy 观察当前活动文件的大小，如果已经大于了指定的值，它会给 RollingFileAppender 发一个信号触发对当前活动文件的轮转 -->
+        <triggeringPolicy class="com.shulie.instrument.simulator.dependencies.ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>100MB</maxFileSize>
+        </triggeringPolicy>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %msg%n</pattern>
             <charset>UTF-8</charset>
@@ -96,7 +113,7 @@
         <appender-ref ref="ASYNC-TIME-CONSUMING-APPENDER"/>
     </logger>
 
-    <logger name="com.shulie.instrument.module.config.fetcher.config" level="warn" additivity="false"/>
+<!--    <logger name="com.shulie.instrument.module.config.fetcher.config" level="warn" additivity="false"/>-->
 
     <root level="${SIMULATOR_LOG_LEVEL}">
         <appender-ref ref="ASYNC-SIMULATOR-FILE-APPENDER"/>

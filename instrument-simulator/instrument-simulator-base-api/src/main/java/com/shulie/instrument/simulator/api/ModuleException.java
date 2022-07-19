@@ -44,6 +44,14 @@ public class ModuleException extends Exception {
         this.errorCode = errorCode;
     }
 
+    public ModuleException(final String moduleId,
+                           final ErrorCode errorCode,
+                           String msg) {
+        super(msg);
+        this.moduleId = moduleId;
+        this.errorCode = errorCode;
+    }
+
     /**
      * 构造模块异常
      *

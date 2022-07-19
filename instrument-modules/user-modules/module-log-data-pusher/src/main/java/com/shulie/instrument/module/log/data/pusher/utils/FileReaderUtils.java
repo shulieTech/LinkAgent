@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 文件读取工具类
@@ -119,6 +120,7 @@ public class FileReaderUtils {
         return log;
     }
 
+
     public static int countTotalLines(String filePath) {
         File file = new File(filePath);
         try {
@@ -134,4 +136,76 @@ public class FileReaderUtils {
         }
         return -1;
     }
+
+
+    /**
+     * 倒序读取
+     *
+     * @param file 文件路径
+     * @param lineSize 读取行数
+     * @Param grepParam 过滤参数
+     * @return 文件内容
+     */
+    public static String reverseReadLinesWithGrep(File file, int lineSize, List<String> grepParam) {
+        ReversedLinesFileReader reader = null;
+        try {
+            reader = new ReversedLinesFileReader(file, Charsets.UTF_8);
+            int count = 0;
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null && count < lineSize) {
+                if(grepParam.isEmpty() || contains(line,grepParam)){
+                    builder.append(line).append("\n");
+                    count++;
+                }
+            }
+            return builder.toString();
+        } catch (IOException e) {
+            LOGGER.error("reverseReadLines init file error:", e);
+        } finally {
+            try {
+                if (reader != null) {
+                    reader.close();
+                }
+            } catch (Exception e) {
+            }
+        }
+        return "";
+    }
+
+
+    /**
+     * 获取指定路径下指定前缀的最新日志(日志拆分)
+     * @param path 日志路径
+     * @param fileRgex 文件名正则
+     * @return
+     */
+    public static File findNewestFile(String path,String fileRgex){
+        File logPath = new File(path);
+        if(!logPath.isDirectory()){
+            return null;
+        }
+        long lastModify = 0L;
+        File latest = null;
+        Pattern pattern = Pattern.compile(fileRgex);
+        File[] files = logPath.listFiles();
+        for (File file : files) {
+            if(pattern.matcher(file.getName()).find() && file.lastModified() > lastModify){
+                lastModify = file.lastModified();
+                latest = file;
+            }
+        }
+        return latest;
+    }
+
+
+    private static boolean contains(String line,List<String> grepParam){
+        for (String s : grepParam) {
+            if(!line.contains(s)){
+                return false;
+            }
+        }
+        return true;
+    }
+
 }

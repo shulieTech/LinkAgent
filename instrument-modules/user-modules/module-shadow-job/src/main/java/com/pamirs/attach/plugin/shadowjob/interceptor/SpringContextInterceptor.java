@@ -58,7 +58,7 @@ public class SpringContextInterceptor extends AroundInterceptor {
             }
             PradarSpringUtil.refreshBeanFactory(applicationContext);
         } catch (Throwable e) {
-            logger.error("[spring-context] {}", ThrowableUtils.toString(e));
+            logger.error("[spring-context] " + ThrowableUtils.toString(e));
             isInited.set(false);
         }
     }

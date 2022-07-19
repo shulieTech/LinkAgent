@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,25 +14,14 @@
  */
 package com.pamirs.attach.plugin.alibaba.rocketmq;
 
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultMQPushConsumerImplHasHookListener;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerCreateTopicInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerEarliestMsgStoreTimeInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerMaxOffsetInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerMinOffsetInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerQueryMessageInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerSearchOffsetInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerSendMessageBackInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerShutdownInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.DefaultPushConsumerViewMessageInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.MQProducerSendInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceAfterInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceBeforeInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.OrderlyTraceContextInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.PullConsumerInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.ConcurrentlyTraceInterceptor;
-import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.TransactionCheckInterceptor;
+import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
+import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
+import com.pamirs.attach.plugin.alibaba.rocketmq.interceptor.*;
+import com.pamirs.pradar.PradarSwitcher;
+import com.pamirs.pradar.SyncObjectService;
+import com.pamirs.pradar.bean.SyncObject;
+import com.pamirs.pradar.bean.SyncObjectData;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -41,6 +30,8 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author vincent
@@ -48,6 +39,8 @@ import org.kohsuke.MetaInfServices;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = RocketmqConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "阿里巴巴rocketmq消息中间件")
 public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
+    private static final Logger logger = LoggerFactory.getLogger(RocketMQPlugin.class);
+
 
     @Override
     public boolean onActive() throws Throwable {
@@ -83,8 +76,6 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         final InstrumentMethod fetchSubscribeMessageQueuesMethod = target.getDeclaredMethods("fetchSubscribeMessageQueues");
                         fetchSubscribeMessageQueuesMethod.addInterceptor(Listeners.of(DefaultPushConsumerFetchSubscribeMessageQueuesInterceptor.class));
 
-                        final InstrumentMethod sendMessageBackMethod = target.getDeclaredMethods("sendMessageBack");
-                        sendMessageBackMethod.addInterceptor(Listeners.of(DefaultPushConsumerSendMessageBackInterceptor.class));
 
                         final InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
                         shutdownMethod.addInterceptor(Listeners.of(DefaultPushConsumerShutdownInterceptor.class));
@@ -149,46 +140,102 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
         });
 
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
-                    enhanceMethod.addInterceptor(Listeners.of(ConcurrentlyTraceInterceptor.class));
-                }
-            });
+                "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageConcurrentlyService$ConsumeRequest",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                        enhanceMethod.addInterceptor(Listeners.of(ConcurrentlyTraceInterceptor.class));
+                    }
+                });
 
         //--for orderly
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService$ConsumeRequest", new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
-                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceContextInterceptor.class));
-                }
-            });
+                "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService$ConsumeRequest", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
+                        enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceContextInterceptor.class));
+                    }
+                });
 
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("takeMessags");
-                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
-                }
-            });
+                "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("takeMessags");
+                        enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
+                    }
+                });
 
         this.enhanceTemplate.enhance(this,
-            "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService", new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");
-                    enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceAfterInterceptor.class));
-                }
-            });
+                "com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("processConsumeResult");
+                        enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceAfterInterceptor.class));
+                    }
+                });
 
         //--for orderly
 
+        delayToInitShadowConsumer();
         return true;
+    }
+
+    private void delayToInitShadowConsumer() {
+        final SyncObject syncObject = SyncObjectService.getSyncObject("com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer#start");
+        if (syncObject == null) {
+            return;
+        }
+        Thread thread = new Thread(new Runnable() {
+            boolean isInit;
+            int initTimes;
+
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        if (isInit) {
+                            Thread.sleep(300000);
+                        } else {
+                            Thread.sleep(5000);
+                        }
+                    } catch (InterruptedException e) {
+                        logger.warn("delayToInitShadowConsumer tnterrupted", e);
+                    }
+                    if (!PradarSwitcher.isClusterTestReady() || GlobalConfig.getInstance().getMqWhiteList() == null || GlobalConfig.getInstance().getMqWhiteList().isEmpty()) {
+                        if (!isInit && initTimes++ > 20) {
+                            isInit = true;
+                        }
+                        continue;
+                    }
+                    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                    try {
+                        logger.info("delayToInitShadowConsumer start ############");
+                        if (syncObject == null) {
+                            return;
+                        }
+                        Thread.currentThread().setContextClassLoader(syncObject.getClass().getClassLoader());
+                        for (SyncObjectData data : syncObject.getDatas()) {
+                            Object target = data.getTarget();
+                            if (target instanceof DefaultMQPushConsumer) {
+                                logger.info("delayToInitShadowConsumer to init ######### {} ", target);
+                                ConsumerRegistry.registerConsumer((DefaultMQPushConsumer) target);
+                            }
+                        }
+                        logger.info("delayToInitShadowConsumer end ############");
+                    } catch (Throwable e) {
+                        logger.error("delayToInitShadowConsumer init fail!", e);
+                    } finally {
+                        Thread.currentThread().setContextClassLoader(classLoader);
+                        isInit = true;
+                    }
+                }
+            }
+        });
+        thread.setName("alibaba-rocketmq-init-shadowConsumer-thread");
+        thread.start();
     }
 
 }

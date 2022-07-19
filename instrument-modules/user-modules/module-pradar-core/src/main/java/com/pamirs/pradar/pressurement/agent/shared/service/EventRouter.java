@@ -40,6 +40,7 @@ public final class EventRouter {
     private BlockingQueue<IEvent> queue = new LinkedBlockingQueue<IEvent>(1000);
 
     private Future future;
+    private Future future2;
     private ExecutorService service;
     private boolean isRunning;
 
@@ -62,7 +63,7 @@ public final class EventRouter {
         /**
          * 将事件的发布与订阅拆分开来
          */
-        this.future = this.service.submit(new Runnable() {
+        Runnable task = new Runnable() {
             @Override
             public void run() {
                 while (isRunning) {
@@ -75,6 +76,11 @@ public final class EventRouter {
                     if (event == null) {
                         continue;
                     }
+                    StringBuilder sb = new StringBuilder();
+                    for (PradarEventListener listener : listeners) {
+                        sb.append(listener).append(",");
+                    }
+                    LOGGER.info("execute event {} with listeners: {}", event, sb.toString());
                     for (PradarEventListener listener : listeners) {
                         try {
                             EventResult result = listener.onEvent(event);
@@ -117,7 +123,9 @@ public final class EventRouter {
                     }
                 }
             }
-        });
+        };
+        this.future = this.service.submit(task);
+        this.future2 = this.service.submit(task);
     }
 
     private static EventRouter INSTANCE;
@@ -178,6 +186,9 @@ public final class EventRouter {
         this.isRunning = false;
         if (future != null && !future.isCancelled() && !future.isDone()) {
             future.cancel(true);
+        }
+        if (future2 != null && !future2.isCancelled() && !future2.isDone()) {
+            future2.cancel(true);
         }
         this.service.shutdownNow();
         this.listeners.clear();

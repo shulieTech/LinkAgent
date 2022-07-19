@@ -129,7 +129,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                         ptConnectionFactory.setHost(busCachingConnectionFactory.getHost());
                         ptConnectionFactory.setPort(busCachingConnectionFactory.getPort());
                         try {
-                            final Address[] addresses = Reflect.on(busCachingConnectionFactory).get("addresses");
+                            final Object addresses = Reflect.on(busCachingConnectionFactory).get("addresses");
                             if (addresses != null) {
                                 Reflect.on(ptConnectionFactory).set("addresses", addresses);
                             }
@@ -170,6 +170,8 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                         String.format("[RabbitMQ] shadow consumer create successfully. cacheKey: %s, ptQueueNames: %s",
                             cacheKey, Arrays.toString(ptQueueNames)));
                     RUNNING_CONTAINER.put(cacheKey, ptContainer);
+                }else {
+                    RUNNING_CONTAINER.remove(cacheKey);
                 }
             } else {
                 final Object value = RUNNING_CONTAINER.get(cacheKey);
@@ -212,11 +214,12 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
                             }
                         }
                     }
+                }else {
+                    // if value not instanceof AbstractMessageListenerContainer，is creating ptContainer.
                 }
             }
         } catch (Throwable e) {
             LOGGER.warn(String.format("[RabbitMQ] ptContainer start fail. cacheKey: %s", cacheKey), e);
-            RUNNING_CONTAINER.remove(cacheKey);
         }
 
         Object[] args = advice.getParameterArray();

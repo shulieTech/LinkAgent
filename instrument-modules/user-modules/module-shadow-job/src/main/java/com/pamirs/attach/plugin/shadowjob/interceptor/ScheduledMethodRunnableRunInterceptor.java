@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -22,15 +22,16 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.scheduling.config.Task;
 import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.scheduling.support.ScheduledMethodRunnable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.Resource;
 import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.HashMap;
@@ -43,6 +44,9 @@ import java.util.concurrent.ScheduledFuture;
  * @date 2021/3/25 20:43
  */
 public class ScheduledMethodRunnableRunInterceptor extends ParametersWrapperInterceptorAdaptor {
+
+    @Resource
+    protected DynamicFieldManager manager;
 
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {
@@ -101,22 +105,24 @@ public class ScheduledMethodRunnableRunInterceptor extends ParametersWrapperInte
     }
 
     public boolean registerShadowJob(final String key, final ShadowJob shadowJob) throws Throwable {
-        if (PradarSpringUtil.getBeanFactory() == null || schedulerFuture.containsKey(shadowJob.getClassName())) {
-            LOGGER.warn("PradarSpringUtil.getBeanFactory is null,can not register shadowJob " + shadowJob.getClassName());
+        Object taskRegistrar = manager.getDynamicField(ScheduledTaskRegistrarInterceptor.class, "taskRegistrar");
+        if (taskRegistrar == null) {
+            LOGGER.warn("can`t get ScheduledTaskRegistrar from DynamicFieldManager, try get from Spring Context。");
+            taskRegistrar = getScheduledTaskRegistrarFromContext();
+            if (taskRegistrar == null) {
+                return false;
+            }
+        }
+        if (schedulerFuture.containsKey(shadowJob.getClassName())) {
+            LOGGER.warn("has registered shadowJob {}, do not again!" + shadowJob.getClassName());
             return false;
         }
         //已经注册过
         if (schedulerFuture.containsKey(key)) {
             return true;
         }
-        // 通过springboot applicationContext找到注册的job
-        ScheduledAnnotationBeanPostProcessor bean = PradarSpringUtil.getBeanFactory().getBean(ScheduledAnnotationBeanPostProcessor.class);
-        Field registrar = ScheduledAnnotationBeanPostProcessor.class.getDeclaredField("registrar");
-        registrar.setAccessible(true);
-        ScheduledTaskRegistrar scheduledTaskRegistrar = (ScheduledTaskRegistrar) registrar.get(bean);
-
         // 注册影子任务
-        boolean registeredRes = registerTask(scheduledTaskRegistrar, shadowJob, key);
+        boolean registeredRes = registerTask(taskRegistrar, shadowJob, key);
 
         if (!registeredRes) {
             shadowJob.setErrorMessage("未找到应用已注册真实job:" + shadowJob.getClassName());
@@ -124,7 +130,20 @@ public class ScheduledMethodRunnableRunInterceptor extends ParametersWrapperInte
         return registeredRes;
     }
 
-    private boolean registerTask(ScheduledTaskRegistrar scheduledTaskRegistrar, final ShadowJob shadowJob, String key) {
+
+    private Object getScheduledTaskRegistrarFromContext() throws NoSuchFieldException, IllegalAccessException {
+        // 通过springboot applicationContext找到注册的job
+        if (PradarSpringUtil.getBeanFactory() == null) {
+            LOGGER.warn("can`t get ScheduledTaskRegistrar from Spring Factory, because can`t hold spring context!");
+            return null;
+        }
+        ScheduledAnnotationBeanPostProcessor bean = PradarSpringUtil.getBeanFactory().getBean(ScheduledAnnotationBeanPostProcessor.class);
+        Field registrar = ScheduledAnnotationBeanPostProcessor.class.getDeclaredField("registrar");
+        registrar.setAccessible(true);
+        return registrar.get(bean);
+    }
+
+    private boolean registerTask(Object scheduledTaskRegistrar, final ShadowJob shadowJob, String key) {
         boolean hasIntervalConfig = StringUtils.hasText(shadowJob.getCron()) || shadowJob.getFixedRate() != null || shadowJob.getFixedDelay() != null;
         if (!hasIntervalConfig) {
             LOGGER.error("影子任务必须参数不存在, cron, fixedRate, fixedDelay 三者需至少配置一个");

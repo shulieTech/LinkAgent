@@ -32,12 +32,30 @@ import java.util.concurrent.TimeUnit;
  * @since 2020/12/7 3:56 下午
  */
 public class InstrumentLauncher {
-    private static final String DEFAULT_AGENT_HOME
-            = new File(InstrumentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-            .getParent();
+    private static String DEFAULT_AGENT_HOME;
 
     private final static String SIMULATOR_KEY_DELAY = "simulator.delay";
     private final static String SIMULATOR_KEY_UNIT = "simulator.unit";
+
+    static{
+        try{
+            DEFAULT_AGENT_HOME = new File(InstrumentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile()).getParent();
+        }catch (Exception e){
+
+        }
+    }
+
+    /**
+     * 其他探针里启动takin, 方便传入探针目录
+     *
+     * @param agentHome
+     * @param agentArgs
+     * @param instrumentation
+     */
+    public static void premain(final String agentHome, final String agentArgs, final Instrumentation instrumentation) {
+        DEFAULT_AGENT_HOME = agentHome;
+        start(agentArgs, instrumentation);
+    }
 
     public static void premain(final String agentArgs, final Instrumentation instrumentation) {
         start(agentArgs, instrumentation);

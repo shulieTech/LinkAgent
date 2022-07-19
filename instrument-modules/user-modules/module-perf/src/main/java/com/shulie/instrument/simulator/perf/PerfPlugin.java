@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.perf;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -42,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -52,6 +54,8 @@ import java.util.concurrent.TimeUnit;
 public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private final static Logger logger = LoggerFactory.getLogger(PerfPlugin.class);
     private final static String PUSH_URL = "/api/agent/performance/basedata";
+
+    private final static AtomicLong threadInfoCollectTime = new AtomicLong(System.currentTimeMillis());
 
     @Resource
     private ModuleCommandInvoker moduleCommandInvoker;
@@ -73,6 +77,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     @Override
     public boolean onActive() throws Throwable {
         boolean isPushPerfEnabled = simulatorConfig.getBooleanProperty("pradar.perf.push.enabled", true);
+        logger.info("isPushPerfEnabled: {}", isPushPerfEnabled);
         if (!isPushPerfEnabled) {
             return false;
         }
@@ -102,15 +107,21 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     private void collect() {
 
-        CommandResponse<List<ThreadInfo>> threadResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_THREAD, PerfConstants.MODULE_COMMAND_THREAD_INFO, threadParams);
+        // thread信息有可能数据量很大所以不需要每次都采集
+        long threadCollectInterval = GlobalConfig.getInstance().getSimulatorDynamicConfig().perfThreadCollectInterval() * 1000;
+        List<ThreadInfo> threadInfos = Collections.EMPTY_LIST;
+        if ((threadInfoCollectTime.get() + threadCollectInterval) <= System.currentTimeMillis()) {
+            threadInfoCollectTime.set(System.currentTimeMillis());
+            CommandResponse<List<ThreadInfo>> threadResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_THREAD, PerfConstants.MODULE_COMMAND_THREAD_INFO, threadParams);
+            if (!threadResp.isSuccess()) {
+                logger.error("Perf: collect perf thread info err! {}", threadResp.getMessage());
+            } else {
+                threadInfos = threadResp.getResult();
+            }
+        }
+
         CommandResponse<GcInfo> gcResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_GC, PerfConstants.MODULE_COMMAND_GC_INFO);
         CommandResponse<MemoryInfo> memoryResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_MEMORY, PerfConstants.MODULE_COMMAND_MEMORY_INFO);
-        List<ThreadInfo> threadInfos = Collections.EMPTY_LIST;
-        if (!threadResp.isSuccess()) {
-            logger.error("Perf: collect perf thread info err! {}", threadResp.getMessage());
-        } else {
-            threadInfos = threadResp.getResult();
-        }
 
         GcInfo gcInfo = null;
         if (!gcResp.isSuccess()) {

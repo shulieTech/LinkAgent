@@ -32,7 +32,7 @@ public class WrappedHBTableGetNameInterceptor extends ResultInterceptorAdaptor {
     @Override
     public Object getResult0(Advice advice) {
         Object result = advice.getReturnObj();
-        if (GlobalConfig.getInstance().isShadowHbaseServer()) {
+        if (!GlobalConfig.getInstance().isShadowTableReplace()) {
             return result;
         }
         if (!Pradar.isClusterTest()) {

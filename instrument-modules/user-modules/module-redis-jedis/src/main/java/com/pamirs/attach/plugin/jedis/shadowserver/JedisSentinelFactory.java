@@ -79,9 +79,10 @@ public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentin
             if (datasource != null && JedisSentinelPool.class.isAssignableFrom(datasource.getClass())) {
                 JedisSentinelPool pressureJedisPool = null;
 
+                String bizPassword = String.valueOf(Reflect.on(datasource).get("password"));
                 String masterName = shadowConfig.getMaster();
                 Set nodes = new HashSet(shadowConfig.getNodeNums());
-                String password = shadowConfig.getPassword();
+                String password = shadowConfig.getPassword(bizPassword);
                 GenericObjectPoolConfig poolConfig = Reflect.on(datasource).get("poolConfig");
 
 

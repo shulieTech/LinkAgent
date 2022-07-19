@@ -189,6 +189,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         }
         change(FIELDS.SHADOW_REDIS_SERVER_CONFIG, newConfig.getShadowRedisConfigs());
         change(FIELDS.SHADOW_ES_SERVER_CONFIG, newConfig.getShadowEsServerConfigs());
+        change(FIELDS.SHADOW_HBASE_SERVER_CONFIG, newConfig.getShadowHbaseConfigs());
         if(getPlugin){
             change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME,newConfig.getPluginMaxRedisExpireTime());
         }

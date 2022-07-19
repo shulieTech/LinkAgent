@@ -55,6 +55,9 @@ public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig
         boolean change = false;
 
         if (newValue.size() < 1) {
+            if (old!=null && old.isEmpty()) {
+                return false;
+            }
             GlobalConfig.getInstance().setShadowHbaseServer(false);
             for (Map.Entry<String, ShadowHbaseConfig> entry : old.entrySet()) {
                 EventRouter.router().publish(new ShadowHbaseDisableEvent(entry.getKey()));

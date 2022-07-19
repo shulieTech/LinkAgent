@@ -70,6 +70,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         this.coreModule = coreModule;
         this.isEnableUnsafe = isEnableUnsafe;
         this.eventListenerHandler = eventListenerHandler;
+
     }
 
     // 开始进度

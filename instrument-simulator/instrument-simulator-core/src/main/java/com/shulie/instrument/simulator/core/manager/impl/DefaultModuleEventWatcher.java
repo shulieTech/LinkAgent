@@ -102,7 +102,18 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
             final Progress progress) {
+
         reTransformClasses(watchId, waitingReTransformClasses, progress, false);
+
+        String pauseTime = System.getProperty("reTransform.pause.time.ms");
+        if(pauseTime == null){
+            return;
+        }
+        try {
+            Thread.sleep(Integer.parseInt(pauseTime));
+        }catch (Exception e){
+
+        }
     }
 
     /**

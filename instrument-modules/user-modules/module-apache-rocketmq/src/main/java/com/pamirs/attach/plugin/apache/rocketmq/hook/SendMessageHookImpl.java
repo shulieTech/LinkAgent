@@ -84,7 +84,7 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             }
             final List<String> nameServerAddressList = context.getProducer().getmQClientFactory().getMQClientAPIImpl()
                 .getNameServerAddressList();
-            Collections.sort(nameServerAddressList);
+//            Collections.sort(nameServerAddressList);
             traceBean.setStoreHost(StringUtils
                 .join(nameServerAddressList, ","));
             traceBean.setBrokerName(context.getMq().getBrokerName());

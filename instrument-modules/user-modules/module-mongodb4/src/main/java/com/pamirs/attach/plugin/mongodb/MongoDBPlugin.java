@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.mongodb;
 
+import com.pamirs.attach.plugin.mongodb.interceptor.AggregateOperationImplInterceptor;
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorInterceptor;
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorTraceInterceptor;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
@@ -75,6 +76,15 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
                 instrumentMethod_3.addInterceptor(Listeners.of(DelegateOperationExecutorInterceptor.class));
                 instrumentMethod_4.addInterceptor(Listeners.of(DelegateOperationExecutorInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "com.mongodb.internal.operation.AggregateOperationImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("defaultAggregateTarget")
+                        .addInterceptor(Listeners.of(AggregateOperationImplInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
             }
         });
 

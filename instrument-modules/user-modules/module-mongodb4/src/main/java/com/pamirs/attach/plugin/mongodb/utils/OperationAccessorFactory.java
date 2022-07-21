@@ -16,7 +16,7 @@ package com.pamirs.attach.plugin.mongodb.utils;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.internal.operation.*;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +78,13 @@ public class OperationAccessorFactory {
             @Override
             public MongoNamespace getMongoNamespace(Object operation) {
                 return ((MapReduceWithInlineResultsOperation) operation).getNamespace();
+            }
+        });
+
+        operationNumMap.put(AggregateOperation.class, new ReflectOperationAccessorAdaptor(true) {
+            @Override
+            public MongoNamespace getMongoNamespace(Object operation) {
+                return Reflect.on(operation).call("getNamespace").get();
             }
         });
 

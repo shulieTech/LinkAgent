@@ -82,10 +82,10 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
             } else {
                 MongoNamespace busMongoNamespace = operationAccessor.getMongoNamespace(operation);
                 ErrorReporter.Error error = ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0005")
-                        .setMessage("mongo 对应影子表或影子库:" + busMongoNamespace.getFullName())
-                        .setDetail("mongo 对应影子表或影子库:" + busMongoNamespace.getFullName());
+                    .setErrorType(ErrorTypeEnum.DataSource)
+                    .setErrorCode("datasource-0005")
+                    .setMessage("mongo 对应影子表或影子库:" + busMongoNamespace.getFullName())
+                    .setDetail("mongo 对应影子表或影子库:" + busMongoNamespace.getFullName());
                 error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
                 throw new PressureMeasureError("mongo 对应影子表或影子库:" + busMongoNamespace.getFullName());
@@ -101,11 +101,11 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
     }
 
     private Object doShadowDb(Object[] args, OperationAccessor operationAccessor,
-                              ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
+        ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
         Object operation = args[0];
         MongoNamespace busMongoNamespace = operationAccessor.getMongoNamespace(operation);
         OperationExecutor ptExecutor = Caches.getPtOperationExecutor(operationAccessor, shadowDatabaseConfig,
-                operation, busMongoNamespace);
+            operation, busMongoNamespace);
         if (manager.getDynamicField(ptExecutor, "isCluster") == null){
             manager.setDynamicField(ptExecutor, "isCluster", true);
         }
@@ -117,7 +117,7 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
     }
 
     private void doShadowTable(Object operator, OperationAccessor operationAccessor,
-                               ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
+        ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
         if (operationAccessor.isRead()) {
             setReadPtMongoNamespace(operator, operationAccessor, shadowDatabaseConfig);
         } else {
@@ -141,16 +141,16 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
     }
 
     private void setWritePtMongoNamespace(Object operation, OperationAccessor operationAccessor,
-                                          ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
+        ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
         //写操作未配置则直接抛异常
         MongoNamespace busMongoNamespace = operationAccessor.getMongoNamespace(operation);
         String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
         if (shadowTableName == null) {
             ErrorReporter.Error error = ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0005")
-                    .setMessage("mongo 未配置对应影子表4:" + busMongoNamespace.getFullName())
-                    .setDetail("mongo 未配置对应影子表4:" + busMongoNamespace.getFullName());
+                .setErrorType(ErrorTypeEnum.DataSource)
+                .setErrorCode("datasource-0005")
+                .setMessage("mongo 未配置对应影子表4:" + busMongoNamespace.getFullName())
+                .setDetail("mongo 未配置对应影子表4:" + busMongoNamespace.getFullName());
             error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
             error.report();
             throw new PressureMeasureError("mongo 未配置对应影子表4:" + busMongoNamespace.getFullName());
@@ -160,7 +160,7 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
     }
 
     private void setReadPtMongoNamespace(Object operation, OperationAccessor operationAccessor,
-                                         ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
+        ShadowDatabaseConfig shadowDatabaseConfig) throws Exception {
         //读操作不包含则直接读取业务表
         MongoNamespace busMongoNamespace = operationAccessor.getMongoNamespace(operation);
         String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());

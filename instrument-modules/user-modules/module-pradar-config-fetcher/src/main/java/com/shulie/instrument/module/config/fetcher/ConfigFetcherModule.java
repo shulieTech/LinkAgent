@@ -66,7 +66,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     @Command("getSimulatorDetail")
     public CommandResponse<Object> getSimulatorDetail(Map<String, String> args){
         SimulatorDetail simulatorDetail = new SimulatorDetail();
-        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() == true ? 1 : 0);
+        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() ? 1 : 0);
         CommandResponse<Object> commandResponse = new CommandResponse<Object>();
         commandResponse.setSuccess(true);
         commandResponse.setResult(simulatorDetail);

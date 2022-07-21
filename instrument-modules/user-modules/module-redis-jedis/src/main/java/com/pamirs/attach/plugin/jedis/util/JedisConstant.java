@@ -22,4 +22,6 @@ package com.pamirs.attach.plugin.jedis.util;
 public interface JedisConstant {
     String JEDIS = "redis.clients.jedis.Jedis";
     String BINARY_JEDIS = "redis.clients.jedis.BinaryJedis";
+    String CLIENT = "redis.clients.jedis.Client";
+    String CONNECTION = "redis.clients.jedis.Connection";
 }

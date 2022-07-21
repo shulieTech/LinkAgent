@@ -143,9 +143,9 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
             String topic = producerRecord.topic();
             if (!Pradar.isClusterTestPrefix(topic)) {
                 topic = Pradar.addClusterTestPrefix(topic);
+                initTopicField(producerRecord);
+                setTopic(producerRecord, topic);
             }
-            initTopicField(producerRecord);
-            setTopic(producerRecord, topic);
             if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
                 HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
                 headerProcessor.setHeader(producerRecord, PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());

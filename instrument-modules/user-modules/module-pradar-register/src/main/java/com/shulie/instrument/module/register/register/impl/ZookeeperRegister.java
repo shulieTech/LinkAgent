@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -88,8 +88,8 @@ public class ZookeeperRegister implements Register {
         map.put("md5", md5);
         //服务的 url
         String serviceUrl = "http://" + simulatorConfig.getServerAddress().getAddress().getHostAddress() + ":"
-            + simulatorConfig.getServerAddress().getPort()
-            + "/simulator";
+                + simulatorConfig.getServerAddress().getPort()
+                + "/simulator";
         map.put("service", serviceUrl);
         map.put("port", String.valueOf(simulatorConfig.getServerAddress().getPort()));
         map.put("status", String.valueOf(PradarSwitcher.isClusterTestEnabled()));
@@ -106,16 +106,16 @@ public class ZookeeperRegister implements Register {
         map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
         map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
 
-        if (!SimulatorStatus.statusCalculated()){
+        if (!SimulatorStatus.statusCalculated()) {
             boolean moduleLoadResult = getModuleLoadResult();
-            if (!moduleLoadResult){
+            if (!moduleLoadResult) {
                 SimulatorStatus.installFailed(JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
             } else {
                 SimulatorStatus.installed();
             }
         }
         map.put("agentStatus", SimulatorStatus.getStatus());
-        if (SimulatorStatus.isInstallFailed()){
+        if (SimulatorStatus.isInstallFailed()) {
             map.put("errorMsg", "模块加载异常，请查看模块加载详情");
         }
         // 放入当前环境及用户信息
@@ -123,7 +123,7 @@ public class ZookeeperRegister implements Register {
         map.put("envCode", Pradar.PRADAR_ENV_CODE);
         map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
         map.put("moduleLoadDetail",
-            JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+                JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
         //参数比较
         map.put("simulatorFileConfigsCheck", JSON.toJSONString(checkConfigs()));
         String str = JSON.toJSONString(map);
@@ -157,26 +157,26 @@ public class ZookeeperRegister implements Register {
     private Map<String, String> checkConfigs() {
         Map<String, String> result = new HashMap<String, String>(32, 1);
         Map<String, String> allConfigs = new HashMap<String, String>(
-            simulatorConfig.getSimulatorFileConfigs().size() + simulatorConfig.getAgentFileConfigs().size(), 1);
+                simulatorConfig.getSimulatorFileConfigs().size() + simulatorConfig.getAgentFileConfigs().size(), 1);
         allConfigs.putAll(simulatorConfig.getSimulatorFileConfigs());
         allConfigs.putAll(simulatorConfig.getAgentFileConfigs());
         Map<String, Object> simulatorConfigFromUrl =
-            ConfigUtils.getFixedSimulatorConfigFromUrl(PropertyUtil.getTroControlWebUrl(), simulatorConfig.getAppName(),
-                simulatorConfig.getAgentVersion());
+                ConfigUtils.getFixedSimulatorConfigFromUrl(PropertyUtil.getTroControlWebUrl(), simulatorConfig.getAppName(),
+                        simulatorConfig.getAgentVersion());
         if (simulatorConfigFromUrl == null || simulatorConfigFromUrl.get("success") == null || !Boolean.parseBoolean(
-            simulatorConfigFromUrl.get("success").toString())) {
+                simulatorConfigFromUrl.get("success").toString())) {
             result.put("status", "false");
             result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
             return result;
         }
         boolean status = true;
-        JSONObject jsonObject = (JSONObject)simulatorConfigFromUrl.get("data");
+        JSONObject jsonObject = (JSONObject) simulatorConfigFromUrl.get("data");
         StringBuilder unEqualConfigs = new StringBuilder();
         for (Map.Entry<String, String> entry : allConfigs.entrySet()) {
             if (excludeCheckConfig.contains(entry.getKey())) {
                 continue;
             }
-            String value = (String)jsonObject.get(entry.getKey());
+            String value = (String) jsonObject.get(entry.getKey());
             if (entry.getValue().equals(value)) {
                 result.put(entry.getKey(), "true");
             } else {
@@ -184,7 +184,7 @@ public class ZookeeperRegister implements Register {
                 result.put(entry.getKey(), "false");
                 unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
                         entry.getValue())
-                    .append(",").append("远程参数值:").append(value).append(",");
+                        .append(",").append("远程参数值:").append(value).append(",");
             }
         }
         result.put("status", String.valueOf(result));
@@ -197,7 +197,7 @@ public class ZookeeperRegister implements Register {
 
     private boolean getModuleLoadResult() {
         for (Map.Entry<String, ModuleLoadInfo> entry : NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos()
-            .entrySet()) {
+                .entrySet()) {
             if (entry.getValue().getStatus() == ModuleLoadStatusEnum.LOAD_FAILED) {
                 return false;
             }
@@ -281,15 +281,17 @@ public class ZookeeperRegister implements Register {
              * 如果 jar包是这一些打头的，也过滤掉
              */
             if (StringUtils.startsWith(file, "pradar-")
-                || StringUtils.startsWith(file, "simulator-")
-                || StringUtils.startsWith(file, "module-")) {
+                    || StringUtils.startsWith(file, "simulator-")
+                    || StringUtils.startsWith(file, "module-")) {
                 continue;
             }
 
             /**
              * 如果有依赖包则不添加自身作为依赖。
              */
-            if (processSpringBootProject(list, file)) {continue;}
+            if (processSpringBootProject(list, file)) {
+                continue;
+            }
 
             list.add(file);
         }
@@ -306,7 +308,7 @@ public class ZookeeperRegister implements Register {
                 final String tempPath = System.getProperty("java.io.tmpdir");
                 final String randomPath = UUID.randomUUID().toString().replaceAll("-", "");
                 final String filePath = (tempPath.endsWith(File.separator) ? tempPath : tempPath + File.separator)
-                    + randomPath;
+                        + randomPath;
                 final File fileDir = new File(filePath);
                 if (!fileDir.exists()) {
                     final boolean mkdirs = fileDir.mkdirs();
@@ -314,15 +316,10 @@ public class ZookeeperRegister implements Register {
                         LOGGER.error("中间件信息上报：创建临时目录失败。");
                         return false;
                     }
-                    Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            for (File listFile : fileDir.listFiles()) {
-                                listFile.delete();
-                            }
-                            fileDir.delete();
-                        }
-                    }));
+                    for (File listFile : fileDir.listFiles()) {
+                        listFile.deleteOnExit();
+                    }
+                    fileDir.deleteOnExit();
                 }
                 while (entries.hasMoreElements()) {
                     final JarEntry jarEntry = entries.nextElement();
@@ -334,8 +331,8 @@ public class ZookeeperRegister implements Register {
                             inputStream = jarFile.getInputStream(jarEntry);
                             final String[] split = jarEntry.getName().split(File.separator);
                             jarPath = (filePath.endsWith(File.separator) ? filePath : filePath + File.separator)
-                                + split[
-                                split.length - 1];
+                                    + split[
+                                    split.length - 1];
                             fileOutputStream = new FileOutputStream(jarPath);
                             IOUtils.copy(inputStream, fileOutputStream);
                         } catch (IOException e) {
@@ -480,7 +477,7 @@ public class ZookeeperRegister implements Register {
 
                 try {
                     if (!zkClient.exists(heartbeatPath)) {
-                        LOGGER.info("{}节点不存在，等待重新创建",heartbeatPath);
+                        LOGGER.info("{}节点不存在，等待重新创建", heartbeatPath);
                         //zkClient.ensureDirectoryExists(heartbeatPath);
                         //等待watcher创建
                         scanJarFuture = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
@@ -521,7 +518,7 @@ public class ZookeeperRegister implements Register {
             final PushMiddlewareVO pushMiddlewareVO = new PushMiddlewareVO(AppNameUtils.appName(), middlewareList);
             body = JSON.toJSONString(pushMiddlewareVO);
             final HttpResult httpResult = HttpUtils.doPost(troControlWebUrl + PUSH_MIDDLEWARE_URL,
-                body);
+                    body);
             if (httpResult.isSuccess()) {
                 LOGGER.info(String.format("中间件信息上报成功,body:%s,返回结果：%s", body, httpResult.getResult()));
             } else {
@@ -595,7 +592,7 @@ public class ZookeeperRegister implements Register {
                         heartbeatNode.setData(getHeartbeatDatas());
                     } catch (Throwable e) {
                         LOGGER.error("[pradar-register] refresh node data to zk for heartbeat node err: {}!",
-                            heartbeatPath, e);
+                                heartbeatPath, e);
                         syncStatusFuture = ExecutorServiceFactory.getFactory().schedule(this, 5, TimeUnit.SECONDS);
                     }
                 }
@@ -636,7 +633,7 @@ public class ZookeeperRegister implements Register {
         private final List<MiddlewareRequest> middlewareList;
 
         public PushMiddlewareVO(String applicationName,
-            List<MiddlewareRequest> middlewareList) {
+                                List<MiddlewareRequest> middlewareList) {
             this.applicationName = applicationName;
             this.middlewareList = middlewareList;
         }

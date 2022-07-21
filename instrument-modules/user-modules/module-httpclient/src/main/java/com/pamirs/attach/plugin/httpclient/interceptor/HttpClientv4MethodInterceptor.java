@@ -14,20 +14,10 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
+import com.pamirs.attach.plugin.httpclient.utils.HttpRequestUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -47,26 +37,22 @@ import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpOptions;
-import org.apache.http.client.methods.HttpPatch;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpTrace;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.*;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.URL;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -96,7 +82,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
             if (params instanceof MatchConfig) {
                 try {
-                    MatchConfig config = (MatchConfig)params;
+                    MatchConfig config = (MatchConfig) params;
                     if (config.getScriptContent().contains("return")) {
                         return null;
                     }
@@ -126,8 +112,8 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     public void beforeFirst(Advice advice) throws Exception {
         final Object[] args = advice.getParameterArray();
-        HttpHost httpHost = (HttpHost)args[0];
-        final HttpRequest request = (HttpRequest)args[1];
+        HttpHost httpHost = (HttpHost) args[0];
+        final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
             return;
         }
@@ -145,7 +131,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
             return;
         }
         final Object[] args = advice.getParameterArray();
-        final HttpRequest request = (HttpRequest)args[1];
+        final HttpRequest request = (HttpRequest) args[1];
         String url = advice.attachment();
         if (url == null) {
             return;
@@ -155,16 +141,13 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     private String getUrl(HttpHost httpHost, HttpRequest request, String host) {
         int port = httpHost.getPort();
-        String path = httpHost.getHostName();
-        if (request instanceof HttpUriRequest) {
-            path = ((HttpUriRequest)request).getURI().getPath();
-        }
+        String path = HttpRequestUtil.findPath(request);
         //判断是否在白名单中
         return getService(httpHost.getSchemeName(), host, port, path);
     }
 
     private void httpClusterTest(Advice advice, final Object[] args, final HttpRequest request, String url)
-        throws ProcessControlException {
+            throws ProcessControlException {
         final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
         Header[] headers = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
         if (headers != null && headers.length > 0) {
@@ -178,60 +161,60 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
-            new ExecutionForwardCall() {
-                @Override
-                public Object forward(Object param) {
-                    if (Pradar.isClusterTest()) {
-                        String forwarding = config.getForwarding();
-                        try {
-                            if (null != forwarding && null != request) {
-                                URI uri = new URI(forwarding);
-                                HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
-                                args[0] = httpHost1;
+                new ExecutionForwardCall() {
+                    @Override
+                    public Object forward(Object param) {
+                        if (Pradar.isClusterTest()) {
+                            String forwarding = config.getForwarding();
+                            try {
+                                if (null != forwarding && null != request) {
+                                    URI uri = new URI(forwarding);
+                                    HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
+                                    args[0] = httpHost1;
 
-                                Object uriField = Reflect.on(request).get("uri");
-                                if (uriField instanceof String) {
-                                    Reflect.on(request).set("uri", uri.toASCIIString());
-                                } else {
-                                    try {
-                                        Reflect.on(request).set("uri", uri);
-                                    } catch (Exception e) {
-                                        URL url = new URL(forwarding);
-                                        Reflect.on(request).set("uri", url);
+                                    Object uriField = Reflect.on(request).get("uri");
+                                    if (uriField instanceof String) {
+                                        Reflect.on(request).set("uri", uri.toASCIIString());
+                                    } else {
+                                        try {
+                                            Reflect.on(request).set("uri", uri);
+                                        } catch (Exception e) {
+                                            URL url = new URL(forwarding);
+                                            Reflect.on(request).set("uri", url);
+                                        }
                                     }
                                 }
+                            } catch (Throwable t) {
+                                throw new PressureMeasureError("not support forward type. params: " + param);
                             }
-                        } catch (Throwable t) {
-                            throw new PressureMeasureError("not support forward type. params: " + param);
                         }
+                        return null;
                     }
-                    return null;
-                }
 
-                @Override
-                public Object call(Object param) {
-                    StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+                    @Override
+                    public Object call(Object param) {
+                        StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
 
-                    try {
-                        HttpEntity entity = null;
-                        if (param instanceof String) {
-                            entity = new StringEntity(String.valueOf(param), "UTF-8");
-                        } else {
-                            entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                        try {
+                            HttpEntity entity = null;
+                            if (param instanceof String) {
+                                entity = new StringEntity(String.valueOf(param), "UTF-8");
+                            } else {
+                                entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                            }
+                            BasicHttpResponse response = new BasicHttpResponse(statusline);
+                            response.setEntity(entity);
+
+                            if (HttpClientConstants.clazz == null) {
+                                HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                            }
+                            return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+
+                        } catch (Exception e) {
                         }
-                        BasicHttpResponse response = new BasicHttpResponse(statusline);
-                        response.setEntity(entity);
-
-                        if (HttpClientConstants.clazz == null) {
-                            HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
-                        }
-                        return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
-
-                    } catch (Exception e) {
+                        return null;
                     }
-                    return null;
-                }
-            });
+                });
     }
 
     private Map toMap(String queryString) {
@@ -272,11 +255,11 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     private Map getParameters(HttpRequest httpRequest) {
         if (httpRequest instanceof HttpGet) {
-            HttpGet httpGet = (HttpGet)httpRequest;
+            HttpGet httpGet = (HttpGet) httpRequest;
             return toMap(httpGet.getURI().getQuery());
         }
         if (httpRequest instanceof HttpPost) {
-            HttpPost httpPost = (HttpPost)httpRequest;
+            HttpPost httpPost = (HttpPost) httpRequest;
             HttpEntity httpEntity = httpPost.getEntity();
             Map parameters = toMap(httpPost.getURI().getQuery());
             InputStream in = null;
@@ -296,7 +279,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         }
 
         if (httpRequest instanceof HttpPut) {
-            HttpPut httpPut = (HttpPut)httpRequest;
+            HttpPut httpPut = (HttpPut) httpRequest;
             HttpEntity httpEntity = httpPut.getEntity();
             Map parameters = toMap(httpPut.getURI().getQuery());
             InputStream in = null;
@@ -316,27 +299,27 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         }
 
         if (httpRequest instanceof HttpDelete) {
-            HttpDelete httpDelete = (HttpDelete)httpRequest;
+            HttpDelete httpDelete = (HttpDelete) httpRequest;
             return toMap(httpDelete.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpHead) {
-            HttpHead httpHead = (HttpHead)httpRequest;
+            HttpHead httpHead = (HttpHead) httpRequest;
             return toMap(httpHead.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpOptions) {
-            HttpOptions httpOptions = (HttpOptions)httpRequest;
+            HttpOptions httpOptions = (HttpOptions) httpRequest;
             return toMap(httpOptions.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpTrace) {
-            HttpTrace httpTrace = (HttpTrace)httpRequest;
+            HttpTrace httpTrace = (HttpTrace) httpRequest;
             return toMap(httpTrace.getURI().getQuery());
         }
 
         if (httpRequest instanceof HttpPatch) {
-            HttpPatch httpPatch = (HttpPatch)httpRequest;
+            HttpPatch httpPatch = (HttpPatch) httpRequest;
             HttpEntity httpEntity = httpPatch.getEntity();
             Map parameters = toMap(httpPatch.getURI().getQuery());
             InputStream in = null;
@@ -360,8 +343,8 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpHost httpHost = (HttpHost)args[0];
-        final HttpRequest request = (HttpRequest)args[1];
+        HttpHost httpHost = (HttpHost) args[0];
+        final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
             return null;
         }
@@ -372,7 +355,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
             @Override
             public void transfer(String key, String value) {
                 if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null || request.getHeaders(
-                    HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                        HeaderMark.DONT_MODIFY_HEADER).length == 0) {
                     request.setHeader(key, value);
                 }
             }
@@ -382,18 +365,15 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpHost httpHost = (HttpHost)args[0];
-        final HttpRequest request = (HttpRequest)args[1];
+        HttpHost httpHost = (HttpHost) args[0];
+        final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
             return null;
         }
         InnerWhiteListCheckUtil.check();
         String host = httpHost.getHostName();
         int port = httpHost.getPort();
-        String path = httpHost.getHostName();
-        if (request instanceof HttpUriRequest) {
-            path = ((HttpUriRequest)request).getURI().getPath();
-        }
+        String path = HttpRequestUtil.findPath(request);
         SpanRecord record = new SpanRecord();
         record.setService(path);
         String reqStr = request.toString();
@@ -418,10 +398,10 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord afterTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpRequest request = (HttpRequest)args[1];
+        HttpRequest request = (HttpRequest) args[1];
         SpanRecord record = new SpanRecord();
         if (advice.getReturnObj() instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse)advice.getReturnObj();
+            HttpResponse response = (HttpResponse) advice.getReturnObj();
             try {
                 record.setResponseSize(response == null ? 0 : response.getEntity().getContentLength());
             } catch (Throwable e) {
@@ -442,7 +422,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
         Object[] args = advice.getParameterArray();
-        HttpRequest request = (HttpRequest)args[1];
+        HttpRequest request = (HttpRequest) args[1];
         SpanRecord record = new SpanRecord();
         InnerWhiteListCheckUtil.check();
         if (advice.getThrowable() instanceof SocketTimeoutException) {

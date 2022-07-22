@@ -44,8 +44,8 @@ public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethod
         record.setRemoteIp(getHost(target, methodName, args));
         record.setPort(getPort(target, methodName, args));
         record.setMiddlewareName(RedissonConstants.MIDDLEWARE_NAME);
-        record.setService(String.valueOf(getDatabase(target, methodName, args)));
-        record.setMethod(target.getClass().getName() + "." + methodName);
+        record.setService(methodName);
+        record.setMethod(methodName);
         if (target instanceof RedissonObject) {
             String name = ((RedissonObject)target).getName();
             List<Object> list = new ArrayList<Object>();

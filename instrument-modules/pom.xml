@@ -11,7 +11,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <simulator.version>5.3.1</simulator.version>
+        <simulator.version>5.1.0</simulator.version>
         <pradar.core.version>2.0.1.0</pradar.core.version>
         <pradar.register.version>2.0.0.0</pradar.register.version>
         <simulator.bootstrap.api.version>1.0.0</simulator.bootstrap.api.version>

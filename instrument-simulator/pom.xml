@@ -5,7 +5,7 @@
 
     <groupId>io.shulie.instrument.simulator</groupId>
     <artifactId>simulator</artifactId>
-    <version>5.3.1</version>
+    <version>5.1.0</version>
     <packaging>pom</packaging>
 
     <name>simulator ${project.version}</name>

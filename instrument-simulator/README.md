@@ -6,7 +6,7 @@ simulator 模块，
 
 5.3.0.1 matchConfig的调整升级
 
-5.3.1.0版本：
+5.1.0.0版本：
 支持影子库账密前缀处理。
 仿真系统新增配置项：
 shadow.datasource.account.prefix（前缀参数，默认是PT_）

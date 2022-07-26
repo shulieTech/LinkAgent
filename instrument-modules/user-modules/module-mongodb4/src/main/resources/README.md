@@ -5,4 +5,4 @@ mongodb中间件支持模块，
 
 
 
-2.0.0.1版本：mongo aggregate操作支持
+2.0.0.2版本：mongo aggregate操作支持

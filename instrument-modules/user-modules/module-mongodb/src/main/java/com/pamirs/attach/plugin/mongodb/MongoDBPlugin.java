@@ -136,12 +136,12 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
 
                 InstrumentMethod instrumentMethod_3 = target.getDeclaredMethod("execute",
-                        "com.mongodb.internal.operation.ReadOperation", "com.mongodb.ReadPreference",
-                        "com.mongodb.ReadConcern", "com.mongodb.client.ClientSession");
+                    "com.mongodb.internal.operation.ReadOperation", "com.mongodb.ReadPreference",
+                    "com.mongodb.ReadConcern", "com.mongodb.client.ClientSession");
 
                 InstrumentMethod instrumentMethod_4 = target.getDeclaredMethod("execute",
-                        "com.mongodb.internal.operation.WriteOperation", "com.mongodb.ReadConcern",
-                        "com.mongodb.client.ClientSession");
+                    "com.mongodb.internal.operation.WriteOperation", "com.mongodb.ReadConcern",
+                    "com.mongodb.client.ClientSession");
 
                 instrumentMethod_3.addInterceptor(Listeners.of(SyncDelegateOperationExecutorInterceptor.class));
                 instrumentMethod_4.addInterceptor(Listeners.of(SyncDelegateOperationExecutorInterceptor.class));
@@ -188,68 +188,68 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 instrumentMethod_1.addInterceptor(Listeners.of(DBCollectionFineOneInterceptor.class,"DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("insert", "java.util.List", "com.mongodb.WriteConcern", "com.mongodb.DBEncoder")
-                        .addInterceptor(Listeners.of(DBCollectionInsertInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionInsertInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("insert", "java.util.List", "com.mongodb.InsertOptions")
-                        .addInterceptor(Listeners.of(DBCollectionInsertInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionInsertInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("update", "com.mongodb.DBObject", "com.mongodb.DBObject", "boolean", "boolean", "com.mongodb.WriteConcern", "boolean", "com.mongodb.DBEncoder")
-                        .addInterceptor(Listeners.of(DBCollectionUpdateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionUpdateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("update", "com.mongodb.DBObject", "com.mongodb.DBObject", "boolean", "boolean", "com.mongodb.WriteConcern", "com.mongodb.DBEncoder")
-                        .addInterceptor(Listeners.of(DBCollectionUpdateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionUpdateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("find")
-                        .addInterceptor(Listeners.of(DBCollectionFindInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionFindInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("find", "com.mongodb.DBObject", "com.mongodb.DBObject")
-                        .addInterceptor(Listeners.of(DBCollectionFindInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionFindInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("find", "com.mongodb.DBObject")
-                        .addInterceptor(Listeners.of(DBCollectionFindInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionFindInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("drop")
-                        .addInterceptor(Listeners.of(DBCollectionDropInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionDropInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("findAndModify", "com.mongodb.DBObject", "com.mongodb.DBObject", "com.mongodb.DBObject", "boolean", "com.mongodb.DBObject", "boolean", "boolean", "com.mongodb.WriteConcern")
-                        .addInterceptor(Listeners.of(DBCollectionFindAndModifyInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionFindAndModifyInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("findAndModify", "com.mongodb.DBObject", "com.mongodb.DBObject", "com.mongodb.DBObject", "boolean", "com.mongodb.DBObject", "boolean", "boolean", "boolean", "long", "java.util.concurrent.TimeUnit", "com.mongodb.WriteConcern")
-                        .addInterceptor(Listeners.of(DBCollectionFindAndModifyInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionFindAndModifyInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("findAndModify", "com.mongodb.DBObject", "com.mongodb.DBObject", "com.mongodb.DBObject", "boolean", "com.mongodb.DBObject", "boolean", "boolean", "long", "java.util.concurrent.TimeUnit", "com.mongodb.WriteConcern")
-                        .addInterceptor(Listeners.of(DBCollectionFindAndModifyInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionFindAndModifyInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("aggregate", "java.util.List", "com.mongodb.ReadPreference")
-                        .addInterceptor(Listeners.of(DBCollectionAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("aggregate", "java.util.List", "com.mongodb.AggregationOptions")
-                        .addInterceptor(Listeners.of(DBCollectionAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("initializeOrderedBulkOperation")
-                        .addInterceptor(Listeners.of(DBCollectionInitializeOrderedBulkOperationInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionInitializeOrderedBulkOperationInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("initializeUnorderedBulkOperation")
-                        .addInterceptor(Listeners.of(DBCollectionInitializeUnorderedBulkOperationInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionInitializeUnorderedBulkOperationInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("count", "com.mongodb.DBObject", "com.mongodb.ReadPreference")
-                        .addInterceptor(Listeners.of(DBCollectionCountInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionCountInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("getDB")
-                        .addInterceptor(Listeners.of(DBCollectionGetDBInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionGetDBInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("createIndex", "com.mongodb.DBObject", "java.lang.String", "boolean")
-                        .addInterceptor(Listeners.of(DBCollectionCreateIndexInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionCreateIndexInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("dropIndexes", "java.lang.String")
-                        .addInterceptor(Listeners.of(DBCollectionDropIndexesInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionDropIndexesInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("distinct", "java.lang.String", "com.mongodb.DBObject", "com.mongodb.ReadPreference")
-                        .addInterceptor(Listeners.of(DBCollectionDistinctInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionDistinctInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("group", "com.mongodb.DBObject")
-                        .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("group", "com.mongodb.DBObject", "com.mongodb.DBObject", "com.mongodb.DBObject", "java.lang.String", "java.lang.String")
-                        .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("group", "com.mongodb.DBObject", "com.mongodb.DBObject", "com.mongodb.DBObject", "java.lang.String", "java.lang.String", "com.mongodb.ReadPreference")
-                        .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 target.getDeclaredMethod("group", "com.mongodb.GroupCommand", "com.mongodb.ReadPreference")
-                        .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionGroupInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("explainAggregate", "java.util.List", "com.mongodb.AggregationOptions")
-                        .addInterceptor(Listeners.of(DBCollectionExplainAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionExplainAggregateInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
 //                target.getDeclaredMethods("insert", "update","find","drop", "findAndModify","aggregate",
 //                    "count","createIndex","dropIndexes", "group", "explainAggregate", "remove", "getIndexInfo", "parallelScan")
@@ -261,13 +261,13 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             @Override
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethod("remove", "com.mongodb.DBObject", "com.mongodb.WriteConcern", "com.mongodb.DBEncoder")
-                        .addInterceptor(Listeners.of(DBCollectionRemoveInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionRemoveInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("getIndexInfo")
-                        .addInterceptor(Listeners.of(DBCollectionGetIndexInfoInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionGetIndexInfoInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 target.getDeclaredMethod("parallelScan", "com.mongodb.ParallelScanOptions")
-                        .addInterceptor(Listeners.of(DBCollectionParallelScanInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    .addInterceptor(Listeners.of(DBCollectionParallelScanInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
 
@@ -275,7 +275,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             @Override
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethods(MongodbConstants.mongoCollectionList)
-                        .addInterceptor(Listeners.of(MongoCollectionTraceInterceptor.class));
+                    .addInterceptor(Listeners.of(MongoCollectionTraceInterceptor.class));
             }
         });
 
@@ -283,7 +283,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             @Override
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethods(MongodbConstants.mongoCollectionList)
-                        .addInterceptor(Listeners.of(MongoCollectionInternalTraceInterceptor.class));
+                    .addInterceptor(Listeners.of(MongoCollectionInternalTraceInterceptor.class));
             }
         });
 

@@ -82,6 +82,9 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
             return null;
         }
         Iterator iterator = consumerRecords.iterator();
+        if(!iterator.hasNext()){
+            return null;
+        }
         Object next = iterator.next();
         if (!(next instanceof ConsumerRecord)) {
             return null;
@@ -117,6 +120,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setResponse("next poll");
         spanRecord.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
+        spanRecord.setMiddlewareName(KafkaConstants.PLUGIN_NAME);
         return spanRecord;
     }
 

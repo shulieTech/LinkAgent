@@ -14,6 +14,12 @@
  */
 package com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -23,14 +29,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 /**
  * Hbase影子库协调者
@@ -58,9 +64,11 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         try {
             Object ptConfiguration = matching(args[0]);
             if (null == ptConfiguration) {
+                logger.error("Hbase 影子Server未找到相关配置，请检查配置是否正确");
                 throw new PressureMeasureError("Hbase 影子Server未找到相关配置，请检查配置是否正确");
             }
-            return ConnectionFactory.createConnection((Configuration) ptConfiguration, (ExecutorService) args[1], (User) args[2]);
+            return ConnectionFactory.createConnection((Configuration)ptConfiguration, (ExecutorService)args[1],
+                (User)args[2]);
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
@@ -72,7 +80,7 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         if (!(arg1 instanceof Configuration)) {
             return null;
         }
-        Configuration configuration = (Configuration) arg1;
+        Configuration configuration = (Configuration)arg1;
         String quorum = configuration.get(HConstants.ZOOKEEPER_QUORUM);
         String port = configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT);
         String znode = configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
@@ -82,11 +90,12 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         SS:
         for (Map.Entry<String, ShadowHbaseConfig> entry : hbaseConfigMap.entrySet()) {
             String[] split = entry.getKey().split("\\|");
+            ShadowHbaseConfig shadowHbaseConfig = entry.getValue();
             if (split.length == 3) {
                 if (logger.isInfoEnabled()) {
                     logger.info("business config quorums:{}, port:{}, znode:{} ---------- " +
-                                    "perfomanceTest config quorums:{}, port:{}, znode:{}",
-                            quorum, port, znode, split[0], split[1], split[2]);
+                            "perfomanceTest config quorums:{}, port:{}, znode:{}",
+                        quorum, port, znode, shadowHbaseConfig.getQuorum(), shadowHbaseConfig.getPort(), shadowHbaseConfig.getZnode());
                 }
                 if (!split[1].equals(port) || !split[2].equals(znode)) {
                     continue;
@@ -103,6 +112,10 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
             } else {
                 logger.error("business config key is error:{}", entry.getKey());
             }
+        }
+
+        if (ptConfig == null) {
+            logger.warn("hbase shadow base config not find , business config key is {}", quorum+"|"+port+"|"+znode);
         }
 
         if (ptConfig != null) {

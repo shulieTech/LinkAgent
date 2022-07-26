@@ -46,6 +46,7 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 创建影子Consumer
@@ -139,6 +140,15 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             groupId = Reflect.on(containerProperties).call(KafkaConstants.REFLECT_METHOD_GET_GROUP_ID).get();
         } catch (ReflectException e) {
         }
+        if(groupId == null){
+            groupId = fetchGroupIdFromConfig(containerProperties);
+        }
+        if(groupId == null){
+            logger.warn("SIMULATOR: shadow kafka consumer config cant find groupId, containerProperties : {}",containerProperties );
+            return;
+        }
+        Reflect.on(containerProperties).call("setGroupId", groupId);
+        logger.info("SIMULATOR: shadow kafka consumer groupId: {}", groupId);
         /**
          * 如果是影子 topic，则不需要再创建对应的消费者
          */
@@ -391,6 +401,47 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             }
         }
         return topicList;
+    }
+
+    /**
+     * 如果最终都没有取到groupId, 则从控制台配置上获取
+     *
+     * @param object
+     * @return
+     */
+    private String fetchGroupIdFromConfig(Object object){
+        String[] topics = null;
+        try {
+            topics = Reflect.on(object).call(KafkaConstants.REFLECT_METHOD_GET_TOPICS).get();
+        } catch (ReflectException e) {
+        }
+        if (topics == null) {
+            try {
+                topics = Reflect.on(object).get(KafkaConstants.REFLECT_FIELD_TOPICS);
+            } catch (ReflectException e) {
+            }
+        }
+        if(!PradarSwitcher.whiteListSwitchOn()){
+            return null;
+        }
+        if (topics != null) {
+            Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
+            for (String topic : topics) {
+                /**
+                 * topic 都需要在白名单中配置好才可以启动
+                 */
+                if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
+                    for (String mq : mqWhiteList) {
+                        String[] list = mq.split("#");
+                        if(list.length == 2 && topic.equals(list[0])){
+                            return list[1];
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+
     }
 
     @Override

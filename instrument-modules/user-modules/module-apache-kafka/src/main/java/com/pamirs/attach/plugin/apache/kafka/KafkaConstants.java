@@ -73,4 +73,6 @@ public class KafkaConstants {
 
     public static final String KEY_BOOTSTRAP_SERVERS = "bootstrap.servers";
     public static final String KEY_ZOOKEEPER_CONNECT = "zookeeper.connect";
+
+    public static final String SINGLE_THREAD_CONSUMER = "single.kafka.consumer";
 }

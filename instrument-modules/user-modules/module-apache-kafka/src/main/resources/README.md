@@ -1,2 +1,2 @@
-2.0.0.9
-修复spring-kafka trace日志group丢失问题
+2.0.0.10
+适配比较老的kafka版本0.11.0.0

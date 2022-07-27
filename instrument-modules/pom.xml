@@ -279,7 +279,5 @@
         <module>bootstrap-inject</module>
         <module>user-modules</module>
         <module>biz-classloader-inject</module>
-        <module>user-modules/module-isolation</module>
-        <module>user-modules/module-messaging-common</module>
     </modules>
 </project>

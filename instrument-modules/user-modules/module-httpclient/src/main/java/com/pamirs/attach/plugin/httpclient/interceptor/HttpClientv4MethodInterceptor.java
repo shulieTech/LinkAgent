@@ -18,6 +18,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.attach.plugin.httpclient.utils.HttpRequestUtil;
+import com.pamirs.attach.plugin.httpclient.utils.ResponseHandlerUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -38,6 +39,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
+import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.*;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
@@ -58,10 +60,10 @@ import java.util.Map;
  * Created by xiaobin on 2016/12/15.
  */
 public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
+
     @Override
     public String getPluginName() {
         return HttpClientConstants.PLUGIN_NAME;
-
     }
 
     @Override
@@ -98,7 +100,20 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
                         HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                     }
                     Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
-                    ProcessController.returnImmediately(returnType, object);
+                    Advice advice = (Advice) config.getArgs().get("advice");
+                    Object[] methodParams = advice.getParameterArray();
+                    ResponseHandler responseHandler = null;
+                    for (Object methodParam : methodParams) {
+                        if (methodParam instanceof ResponseHandler) {
+                            responseHandler = (ResponseHandler) methodParam;
+                            break;
+                        }
+                    }
+                    if (responseHandler == null) {
+                        ProcessController.returnImmediately(returnType, object);
+                    }
+                    Object result = ResponseHandlerUtil.handleResponse(responseHandler, (CloseableHttpResponse) object);
+                    ProcessController.returnImmediately(result);
                 } catch (ProcessControlException pe) {
                     throw pe;
                 } catch (Throwable t) {
@@ -157,6 +172,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
+        config.addArgs("advice", advice);
         if (config.getStrategy() instanceof JsonMockStrategy) {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
@@ -208,8 +224,21 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
                             if (HttpClientConstants.clazz == null) {
                                 HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                             }
-                            return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                            Object obj = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
 
+                            Advice advice = (Advice) config.getArgs().get("advice");
+                            Object[] methodParams = advice.getParameterArray();
+                            ResponseHandler responseHandler = null;
+                            for (Object methodParam : methodParams) {
+                                if (methodParam instanceof ResponseHandler) {
+                                    responseHandler = (ResponseHandler) methodParam;
+                                    break;
+                                }
+                            }
+                            if (responseHandler != null) {
+                                obj = ResponseHandlerUtil.handleResponse(responseHandler, (CloseableHttpResponse) obj);
+                            }
+                            return obj;
                         } catch (Exception e) {
                         }
                         return null;

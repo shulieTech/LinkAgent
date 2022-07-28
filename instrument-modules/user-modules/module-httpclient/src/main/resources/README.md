@@ -1,4 +1,1 @@
-注意！！！！！
-每次更新插件请都更新内容到以下内容，
-httpclient中间件支持模块，
-新增模块版本信息，初始版本为1.0.0，README.md为模块更新内容描述文件，
+修复 org.apache.http.impl.client.CloseableHttpClient.execute(org.apache.http.client.methods.HttpUriRequest, org.apache.http.client.ResponseHandler<? extends T>) mock不支持问题

@@ -20,6 +20,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.springframework.amqp.core.Queue;
@@ -46,6 +47,7 @@ public class SpringRabbitRabbitAdminDeclareQueueInterceptor extends TraceInterce
 
     @Override
     public void beforeFirst(Advice advice) {
+        FailTestUtil.failTest();
         Object[] args = advice.getParameterArray();
         Object target = advice.getTarget();
         Queue targetQueue = (Queue) args[0];

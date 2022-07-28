@@ -3,6 +3,7 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ public class AbstractConfigGetInstanceInterceptor extends CutoffInterceptorAdapt
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
+        FailTestUtil.failTest();
         Class<?> clazz = (Class<?>) advice.getParameterArray()[1];
         if (!"org.apache.kafka.clients.consumer.ConsumerInterceptor".equals(clazz.getName())) {
             return CutOffResult.PASSED;

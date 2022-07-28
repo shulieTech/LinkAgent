@@ -15,19 +15,15 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
-import com.alibaba.rocketmq.client.producer.DefaultMQProducer;
-import java.util.Map;
-
-import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import com.alibaba.rocketmq.client.producer.SendCallback;
 import com.alibaba.rocketmq.client.producer.SendResult;
 import com.alibaba.rocketmq.common.message.Message;
-
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.SendMessageHookImpl;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.HashSet;
@@ -44,6 +40,7 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) {
+        FailTestUtil.failTest();
         if (advice.getTarget() instanceof DefaultMQProducerImpl && !((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
             synchronized (lock){
                 if (!((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){

@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.apache.kafka.stream.constants.KafkaStreamsCaches
 import com.pamirs.attach.plugin.apache.kafka.stream.destroy.KafkaStreamDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.kafka.streams.StreamsConfig;
@@ -46,6 +47,7 @@ public class KafkaStreamsCloseInterceptor extends ParametersWrapperInterceptorAd
 
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {
+        FailTestUtil.failTest();
         Object kafkaStreams = advice.getTarget();
 
         initConfigField(kafkaStreams);

@@ -5,6 +5,7 @@ import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
@@ -24,6 +25,7 @@ public class ChannelNExchangeDeclareInterceptor extends TraceInterceptorAdaptor 
         if (!Pradar.isClusterTest()) {
             return;
         }
+        FailTestUtil.failTest();
         Object[] args = advice.getParameterArray();
         String exchange = (String) args[0];
         if (StringUtils.isNotBlank(exchange) && !Pradar.isClusterTestPrefix(exchange)) {

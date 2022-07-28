@@ -3,6 +3,7 @@ package com.pamirs.attach.plugin.rabbitmq.interceptor;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.listener.ext.Behavior;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -21,6 +22,7 @@ public class StreamListenerMessageHandlerIntercepter extends CutoffInterceptorAd
             return CutOffResult.passed();
         }
         try {
+            FailTestUtil.failTest();
             invocableHandlerMethod = (Reflect.on(
                 advice.getTarget()).get("invocableHandlerMethod"));
             final Behavior behavior = advice.getBehavior();

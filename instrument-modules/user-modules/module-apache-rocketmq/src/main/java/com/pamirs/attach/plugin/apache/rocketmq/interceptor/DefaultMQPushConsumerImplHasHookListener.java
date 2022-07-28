@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
@@ -30,6 +31,7 @@ public class DefaultMQPushConsumerImplHasHookListener extends AroundInterceptor 
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        FailTestUtil.failTest();
         /**
          * 主要负责Consumer 注册，每一批的消息消费都会经过此方法
          * 如果是已经注册过的，则忽略

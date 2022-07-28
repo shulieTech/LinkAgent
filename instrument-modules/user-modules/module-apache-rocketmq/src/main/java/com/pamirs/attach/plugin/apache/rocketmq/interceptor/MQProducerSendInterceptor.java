@@ -19,6 +19,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
@@ -36,6 +37,7 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) {
+        FailTestUtil.failTest();
         DefaultMQProducerImpl defaultMQProducerImpl = null;
         if (advice.getTarget() instanceof DefaultMQProducer) {
             defaultMQProducerImpl = ((DefaultMQProducer)advice.getTarget()).getDefaultMQProducerImpl();

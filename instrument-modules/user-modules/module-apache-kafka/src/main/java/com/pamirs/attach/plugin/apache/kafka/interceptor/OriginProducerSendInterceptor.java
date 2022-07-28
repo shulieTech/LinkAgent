@@ -21,6 +21,7 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -102,6 +103,7 @@ public class OriginProducerSendInterceptor extends TraceInterceptorAdaptor {
         if (!Pradar.isClusterTest()) {
             return;
         }
+        FailTestUtil.failTest();
         Object[] args = advice.getParameterArray();
         if (args.length < 1) {
             return;

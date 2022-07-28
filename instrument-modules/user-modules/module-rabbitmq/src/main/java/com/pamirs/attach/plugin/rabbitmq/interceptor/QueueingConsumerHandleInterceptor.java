@@ -14,9 +14,6 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
@@ -27,6 +24,7 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ReversedTraceInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
@@ -37,6 +35,9 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @Author: guohz
@@ -66,6 +67,7 @@ public class QueueingConsumerHandleInterceptor extends ReversedTraceInterceptorA
     @Override
     public void beforeLast(Advice advice) {
         Object[] args = advice.getParameterArray();
+        FailTestUtil.failTest();
         if (args == null || args[0] == null) {
             return;
         }

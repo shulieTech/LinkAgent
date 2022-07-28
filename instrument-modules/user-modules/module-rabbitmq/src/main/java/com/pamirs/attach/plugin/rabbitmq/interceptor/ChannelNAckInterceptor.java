@@ -14,13 +14,12 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.rabbitmq.client.Channel;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
@@ -29,6 +28,8 @@ import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -50,6 +51,7 @@ public class ChannelNAckInterceptor extends CutoffInterceptorAdaptor {
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
         if (Pradar.isClusterTest()) {
+            FailTestUtil.failTest();
             Channel target = (Channel)advice.getTarget();
             Channel ptChannel = ChannelHolder.isShadowChannel(target) ? target : ChannelHolder.getShadowChannel(
                 (Channel)advice.getTarget());

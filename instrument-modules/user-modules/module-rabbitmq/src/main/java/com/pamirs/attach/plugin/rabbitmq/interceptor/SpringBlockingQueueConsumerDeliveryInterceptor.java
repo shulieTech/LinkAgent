@@ -14,17 +14,6 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.LastMqWhiteListHolder;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
@@ -34,7 +23,7 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.rabbitmq.client.Address;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -49,6 +38,10 @@ import org.springframework.amqp.rabbit.connection.CachingConnectionFactory.Cache
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Author: guohz
@@ -77,6 +70,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptor extends TraceInterce
      */
     @Override
     public void afterLast(Advice advice) {
+        FailTestUtil.failTest();
         final AbstractMessageListenerContainer abstractMessageListenerContainer
             = (AbstractMessageListenerContainer)advice.getTarget();
         final String listenerId = abstractMessageListenerContainer.getListenerId();

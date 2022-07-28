@@ -14,9 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
@@ -31,6 +28,7 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -42,6 +40,9 @@ import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.utils.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -60,6 +61,7 @@ public class ConsumerPollInterceptor extends CutoffInterceptorAdaptor {
         if (!PradarSwitcher.isClusterTestEnabled()) {
             return CutOffResult.passed();
         }
+        FailTestUtil.failTest();
         if (ConsumerHolder.isWorkWithOtherFramework((Consumer<?, ?>)advice.getTarget())) {
             doWithSpringIntercept(advice);
             return CutOffResult.passed();

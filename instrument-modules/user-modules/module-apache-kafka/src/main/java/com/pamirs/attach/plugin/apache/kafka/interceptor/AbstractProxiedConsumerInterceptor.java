@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -28,6 +29,7 @@ public abstract class AbstractProxiedConsumerInterceptor extends CutoffIntercept
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
+        FailTestUtil.failTest();
         ConsumerProxy consumerProxy = ConsumerHolder.getProxy(advice.getTarget());
         if (consumerProxy == null) {
             return CutOffResult.passed();

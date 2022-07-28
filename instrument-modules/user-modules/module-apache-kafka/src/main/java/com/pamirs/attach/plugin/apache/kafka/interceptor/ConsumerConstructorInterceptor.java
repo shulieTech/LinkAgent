@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
@@ -40,6 +41,7 @@ public class ConsumerConstructorInterceptor extends AroundInterceptor {
 
     @Override
     public void doAfter(Advice advice) {
+        FailTestUtil.failTest();
         ConsumerConfig consumerConfig = getConsumerConfig(advice.getParameterArray());
         if (consumerConfig == null) {
             return;

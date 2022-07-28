@@ -25,6 +25,7 @@ import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -72,6 +73,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
                 return;
             }
         }
+        FailTestUtil.failTest();
         Object thisObj = advice.getTarget();
         /**
          * 如果已经初始化过了，则忽略

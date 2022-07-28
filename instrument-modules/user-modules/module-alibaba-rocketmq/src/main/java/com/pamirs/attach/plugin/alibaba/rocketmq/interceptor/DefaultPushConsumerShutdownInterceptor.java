@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -18,6 +18,7 @@ import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.alibaba.rocketmq.destroy.MqDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
@@ -29,6 +30,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 public class DefaultPushConsumerShutdownInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {
+        FailTestUtil.failTest();
         DefaultMQPushConsumer target = (DefaultMQPushConsumer) advice.getTarget();
         ConsumerRegistry.shutdownShadowConsumerByBusinessConsumer(target);
     }

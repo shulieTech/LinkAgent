@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -34,6 +35,7 @@ public class SpringKafkaProcessSeeksInterceptor extends AroundInterceptor {
     @Override
     public void doBefore(Advice advice) throws Throwable {
         try {
+            FailTestUtil.failTest();
             Object consumer = Reflect.on(advice.getTarget()).get(KafkaConstants.REFLECT_FIELD_CONSUMER);
             if (consumer instanceof Consumer) {
                 if (consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {

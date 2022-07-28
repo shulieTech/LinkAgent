@@ -24,6 +24,7 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
@@ -59,6 +60,7 @@ public class SpringBlockingQueueConsumerDeliveryInterceptorV2 extends TraceInter
 
     @Override
     public void beforeFirst(Advice advice) {
+        FailTestUtil.failTest();
         Object[] args = advice.getParameterArray();
         if (args == null || args[0] == null) {
             return;

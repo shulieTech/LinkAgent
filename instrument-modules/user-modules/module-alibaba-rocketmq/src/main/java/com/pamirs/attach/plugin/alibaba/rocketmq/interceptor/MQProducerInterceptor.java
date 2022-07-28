@@ -18,6 +18,7 @@ import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import com.alibaba.rocketmq.client.producer.DefaultMQProducer;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.SendMessageHookImpl;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.utils.FailTestUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 /**
@@ -26,6 +27,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 public class MQProducerInterceptor extends AroundInterceptor {
     @Override
     public void doBefore(Advice advice) {
+        FailTestUtil.failTest();
         DefaultMQProducer producer = (DefaultMQProducer) advice.getTarget();
         DefaultMQProducerImpl consumerImpl = producer.getDefaultMQProducerImpl();
         if (consumerImpl != null) {

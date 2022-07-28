@@ -40,7 +40,7 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver</artifactId>
-            <version>3.11.2</version>
+            <version>3.11.3</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

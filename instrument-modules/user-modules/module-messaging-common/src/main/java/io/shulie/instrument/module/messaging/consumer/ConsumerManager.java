@@ -119,7 +119,12 @@ public class ConsumerManager {
         for (Map.Entry<SyncObjectData, ShadowConsumer> entry : consumerModule.getShadowConsumerMap().entrySet()) {
             ShadowConsumer shadowConsumer = entry.getValue();
             if (!shadowConsumer.isStarted()) {
+                //todo@langyi 支持多topic情况
+                //todo@langyi 支持集群模式
                 String key = shadowConsumer.getConsumerConfig().keyOfConfig();
+                if (key == null) {
+                    continue;
+                }
                 if (mqWhiteList.contains(key)) {
                     fetchShadowServer(consumerModule, shadowConsumer, key);
                     doStartShadowServer(shadowConsumer);

@@ -92,6 +92,7 @@
         <module>module-sync-fetch-obj</module>
         <module>module-isolation</module>
         <module>module-messaging-common</module>
+        <module>module-spring-kafka</module>
     </modules>
 
     <build>

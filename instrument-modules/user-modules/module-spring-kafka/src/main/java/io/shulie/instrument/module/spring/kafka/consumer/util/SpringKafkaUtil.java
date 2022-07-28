@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.spring.kafka.consumer.util;
 
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,7 @@ public class SpringKafkaUtil {
         Field field = fieldMap.get(key);
         try {
             if (field == null) {
-                field = obj.getClass().getField(fieldName);
+                field = Reflect.on(obj).field0(fieldName);
                 field.setAccessible(true);
                 fieldMap.put(key, field);
             }

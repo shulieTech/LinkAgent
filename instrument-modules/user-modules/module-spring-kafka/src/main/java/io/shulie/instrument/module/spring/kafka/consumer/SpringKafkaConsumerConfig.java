@@ -14,14 +14,23 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
     private ConsumerFactory consumerFactory;
     private ContainerProperties containerProperties;
 
-    private TopicPartitionOffset[] topicPartitions;
+    private String bizTopic;
+    private String bizGroupId;
 
-    public TopicPartitionOffset[] getTopicPartitions() {
-        return topicPartitions;
+    public String getBizTopic() {
+        return bizTopic;
     }
 
-    public void setTopicPartitions(TopicPartitionOffset[] topicPartitions) {
-        this.topicPartitions = topicPartitions;
+    public void setBizTopic(String bizTopic) {
+        this.bizTopic = bizTopic;
+    }
+
+    public String getBizGroupId() {
+        return bizGroupId;
+    }
+
+    public void setBizGroupId(String bizGroupId) {
+        this.bizGroupId = bizGroupId;
     }
 
     public ContainerProperties getContainerProperties() {
@@ -42,11 +51,6 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
 
     @Override
     public String keyOfConfig() {
-        String[] topics = containerProperties.getTopics();
-        String groupId = containerProperties.getGroupId();
-        if (topics == null || topics.length == 0) {
-            return null;
-        }
-        return topics[0] + "#" + groupId;
+        return bizTopic + "#" + bizGroupId;
     }
 }

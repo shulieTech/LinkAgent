@@ -31,7 +31,8 @@ public class ConsumerManager {
 
     private static ScheduledExecutorService taskService;
     private static final SyncObject EMPTY_SYNC_OBJECT = new SyncObject();
-    ;
+    private static final int initialDelay = 30;
+    private static final int delay=120;
 
     static List<ShadowConsumer> runningShadowConsumer(){
         List<ShadowConsumer> list = new ArrayList<ShadowConsumer>();
@@ -54,9 +55,8 @@ public class ConsumerManager {
                 consumerModule.getSyncObjectMap().put(syncClassMethod, EMPTY_SYNC_OBJECT);
             }
         }
-        refreshSyncObj(consumerModule);
         registerList.add(consumerModule);
-        doConsumerRegister(consumerModule);
+        runTask(consumerModule);
 
         startTask();
     }
@@ -97,6 +97,7 @@ public class ConsumerManager {
                     try {
                         ConsumerConfig consumerConfig = consumerModule.getConsumerRegister().getConsumerExecute().prepareConfig(objectData);
                         if (consumerConfig != null) {
+                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), consumerConfig.keyOfConfig());
                             consumerModule.getShadowConsumerMap().put(objectData, new ShadowConsumer(consumerConfig));
                         }
                     } catch (Exception e) {
@@ -109,26 +110,44 @@ public class ConsumerManager {
 
     private static void runTask(){
         for (ConsumerModule consumerModule : registerList) {
-            refreshSyncObj(consumerModule);
-            tryToStartConsumer(consumerModule);
+            runTask(consumerModule);
+        }
+    }
+
+    private static  void runTask(ConsumerModule consumerModule){
+        try {
+            synchronized (consumerModule) {
+                refreshSyncObj(consumerModule);
+                tryToStartConsumer(consumerModule);
+            }
+        } catch (Throwable e) {
+            logger.warn("start task fail,will try next time: {}", JSON.toJSONString(consumerModule), e);
         }
     }
 
     private static void tryToStartConsumer(ConsumerModule consumerModule) {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         for (Map.Entry<SyncObjectData, ShadowConsumer> entry : consumerModule.getShadowConsumerMap().entrySet()) {
-            ShadowConsumer shadowConsumer = entry.getValue();
-            if (!shadowConsumer.isStarted()) {
-                //todo@langyi 支持多topic情况
-                //todo@langyi 支持集群模式
-                String key = shadowConsumer.getConsumerConfig().keyOfConfig();
-                if (key == null) {
-                    continue;
+            try {
+                ShadowConsumer shadowConsumer = entry.getValue();
+                if (!shadowConsumer.isStarted()) {
+                    //todo@langyi 支持多topic情况
+                    //todo@langyi 支持集群模式
+                    String key = shadowConsumer.getConsumerConfig().keyOfConfig();
+                    if (key == null) {
+                        continue;
+                    }
+                    if (mqWhiteList.contains(key)) {
+                        fetchShadowServer(consumerModule, shadowConsumer, key);
+                        logger.info("[messaging-common]success fetch shadowServer with key:{}", key);
+                        doStartShadowServer(shadowConsumer);
+                        logger.info("[messaging-common]success start shadowServer with key:{}", key);
+                    }else{
+                        logger.info("[messaging-common] key {} is not allow to consumer message", key);
+                    }
                 }
-                if (mqWhiteList.contains(key)) {
-                    fetchShadowServer(consumerModule, shadowConsumer, key);
-                    doStartShadowServer(shadowConsumer);
-                }
+            } catch (Throwable e) {
+                logger.error("[messaging-common]try to start consumer server fail with key:{}", entry.getValue().getConsumerConfig().keyOfConfig(), e);
             }
         }
     }
@@ -151,7 +170,7 @@ public class ConsumerManager {
             }else{
                 shadowConsumer.setStarted(false);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error("start shadow consumer fail:{}", JSON.toJSON(shadowConsumer.getConsumerConfig()), e);
         }
     }
@@ -162,6 +181,7 @@ public class ConsumerManager {
             //当时获取不到的，重新再获取一次
             if (entry.getValue() == EMPTY_SYNC_OBJECT) {
                 String key = entry.getKey();
+                logger.info("[messaging-common]success fetch sync data from {}", key);
                 entry.setValue(SyncObjectService.getSyncObject(key));
                 isRefreshed = true;
             }
@@ -189,7 +209,7 @@ public class ConsumerManager {
                         logger.error("run messaging task fail!", e);
                     }
                 }
-            }, 0, 300, TimeUnit.SECONDS);
+            }, initialDelay, delay, TimeUnit.SECONDS);
         }
     }
 

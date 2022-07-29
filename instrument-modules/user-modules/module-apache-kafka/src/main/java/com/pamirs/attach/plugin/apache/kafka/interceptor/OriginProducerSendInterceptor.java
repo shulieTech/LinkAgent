@@ -147,7 +147,8 @@ public class OriginProducerSendInterceptor extends TraceInterceptorAdaptor {
     private String getRemoteAddress(Object remoteAddressFieldAccessor) {
         initProducerConfigField();
         try {
-            ProducerConfig producerConfig = Reflect.on(Reflect.on(remoteAddressFieldAccessor).get("underlying")).get(producerConfigField);
+            Object obj = Reflect.on(remoteAddressFieldAccessor).get("underlying");
+            ProducerConfig producerConfig = Reflect.on(obj).get(producerConfigField);
             String value = Reflect.on(producerConfig).get("brokerList");
             if (value == null) {
                 return KafkaConstants.UNKNOWN;

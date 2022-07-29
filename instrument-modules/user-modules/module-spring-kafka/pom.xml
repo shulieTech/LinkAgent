@@ -11,6 +11,10 @@
 
     <artifactId>module-spring-kafka</artifactId>
 
+    <properties>
+        <module-name>spring-kafka</module-name>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>

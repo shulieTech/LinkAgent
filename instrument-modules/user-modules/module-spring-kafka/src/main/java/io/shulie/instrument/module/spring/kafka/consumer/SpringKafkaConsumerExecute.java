@@ -76,6 +76,7 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
 
         BeanUtils.copyProperties(bizContainerProperties, containerProperties,
                 "topics", "topicPartitions", "topicPattern", "ackCount", "ackTime", "subBatchPerPartition");
+        containerProperties.setGroupId(addClusterTest(containerProperties.getGroupId()));
 
         if (bizContainerProperties.getAckCount() > 0) {
             containerProperties.setAckCount(bizContainerProperties.getAckCount());

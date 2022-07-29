@@ -3,6 +3,7 @@ package io.shulie.instrument.module.messaging.consumer.module;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,14 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ConsumerModule {
     private final Map<String, SyncObject> syncObjectMap = new ConcurrentHashMap<String, SyncObject>();
-    private final Map<SyncObjectData, ShadowConsumer> shadowConsumerMap = new ConcurrentHashMap<SyncObjectData, ShadowConsumer>();
+    private final Map<SyncObjectData, List<ShadowConsumer>> shadowConsumerMap = new ConcurrentHashMap<SyncObjectData, List<ShadowConsumer>>();
     private ConsumerRegister consumerRegister;
 
     public Map<String, SyncObject> getSyncObjectMap() {
         return syncObjectMap;
     }
 
-    public Map<SyncObjectData, ShadowConsumer> getShadowConsumerMap() {
+    public Map<SyncObjectData, List<ShadowConsumer>> getShadowConsumerMap() {
         return shadowConsumerMap;
     }
 

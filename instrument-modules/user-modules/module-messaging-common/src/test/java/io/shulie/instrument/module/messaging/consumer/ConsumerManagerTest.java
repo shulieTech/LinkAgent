@@ -12,10 +12,10 @@ import io.shulie.instrument.module.messaging.consumer.module.ShadowConsumer;
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Licey
@@ -30,6 +30,7 @@ public class ConsumerManagerTest extends TestCase {
 
         HashSet<String> mqWhiteList = new HashSet<String>();
         mqWhiteList.add("aaa");
+        mqWhiteList.add("bbb");
         GlobalConfig.getInstance().setMqWhiteList(mqWhiteList);
 
     }
@@ -37,14 +38,22 @@ public class ConsumerManagerTest extends TestCase {
     public void testRegister() throws InterruptedException {
         ConsumerRegister register = ConsumerRegister.init().consumerExecute(new ShadowConsumerExecute() {
             @Override
-            public ConsumerConfig prepareConfig(SyncObjectData syncObjectData) {
-                return new ConsumerConfig(){
+            public List<ConsumerConfig> prepareConfig(SyncObjectData syncObjectData) {
+                ConsumerConfig c1 = new ConsumerConfig() {
 
                     @Override
                     public String keyOfConfig() {
                         return "aaa";
                     }
                 };
+                ConsumerConfig c2 = new ConsumerConfig() {
+
+                    @Override
+                    public String keyOfConfig() {
+                        return "bbb";
+                    }
+                };
+                return Arrays.asList(c1, c2);
             }
 
             @Override
@@ -72,6 +81,7 @@ public class ConsumerManagerTest extends TestCase {
         Thread.sleep(10 * 1000);
         List<ShadowConsumer> list = ConsumerManager.runningShadowConsumer();
         Assert.assertFalse(list.isEmpty());
+        Assert.assertEquals(list.size(), 2);
     }
 
     public void testRegisterNotNull() {

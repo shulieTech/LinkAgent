@@ -1,6 +1,7 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.bean.SyncObjectData;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
@@ -25,7 +26,7 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
     private static final Logger logger = LoggerFactory.getLogger(SpringKafkaConsumerExecute.class);
 
     @Override
-    public ConsumerConfig prepareConfig(com.pamirs.pradar.bean.SyncObjectData syncObjectData) {
+    public ConsumerConfig prepareConfig(SyncObjectData syncObjectData) {
         Object target = syncObjectData.getTarget();
         //noinspection rawtypes
         KafkaMessageListenerContainer bizContainer = (KafkaMessageListenerContainer) target;

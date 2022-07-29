@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author Licey
@@ -37,9 +38,11 @@ public class ConsumerManager {
     static List<ShadowConsumer> runningShadowConsumer(){
         List<ShadowConsumer> list = new ArrayList<ShadowConsumer>();
         for (ConsumerModule consumerModule : registerList) {
-            for (ShadowConsumer shadowConsumer : consumerModule.getShadowConsumerMap().values()) {
-                if (shadowConsumer.isStarted()) {
-                    list.add(shadowConsumer);
+            for (List<ShadowConsumer> shadowConsumers : consumerModule.getShadowConsumerMap().values()) {
+                for (ShadowConsumer shadowConsumer : shadowConsumers) {
+                    if (shadowConsumer.isStarted()) {
+                        list.add(shadowConsumer);
+                    }
                 }
             }
         }
@@ -95,10 +98,10 @@ public class ConsumerManager {
             for (SyncObjectData objectData : entry.getValue().getDatas()) {
                 if (!consumerModule.getShadowConsumerMap().containsKey(objectData)) {
                     try {
-                        ConsumerConfig consumerConfig = consumerModule.getConsumerRegister().getConsumerExecute().prepareConfig(objectData);
-                        if (consumerConfig != null) {
-                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), consumerConfig.keyOfConfig());
-                            consumerModule.getShadowConsumerMap().put(objectData, new ShadowConsumer(consumerConfig));
+                        List<ConsumerConfig> configList = consumerModule.getConsumerRegister().getConsumerExecute().prepareConfig(objectData);
+                        if (configList != null && !configList.isEmpty()) {
+                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
+                            consumerModule.getShadowConsumerMap().put(objectData, configList.stream().map(ShadowConsumer::new).collect(Collectors.toList()));
                         }
                     } catch (Exception e) {
                         logger.error("prepare Config fail:{}", JSON.toJSONString(consumerModule.getConsumerRegister()), e);
@@ -127,27 +130,28 @@ public class ConsumerManager {
 
     private static void tryToStartConsumer(ConsumerModule consumerModule) {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
-        for (Map.Entry<SyncObjectData, ShadowConsumer> entry : consumerModule.getShadowConsumerMap().entrySet()) {
-            try {
-                ShadowConsumer shadowConsumer = entry.getValue();
-                if (!shadowConsumer.isStarted()) {
-                    //todo@langyi 支持多topic情况
-                    //todo@langyi 支持集群模式
-                    String key = shadowConsumer.getConsumerConfig().keyOfConfig();
-                    if (key == null) {
-                        continue;
+        for (Map.Entry<SyncObjectData, List<ShadowConsumer>> entry : consumerModule.getShadowConsumerMap().entrySet()) {
+            for (ShadowConsumer shadowConsumer : entry.getValue()) {
+                try {
+                    if (!shadowConsumer.isStarted()) {
+                        //todo@langyi 支持集群模式
+                        String key = shadowConsumer.getConsumerConfig().keyOfConfig();
+                        if (key == null) {
+                            continue;
+                        }
+                        if (mqWhiteList.contains(key)) {
+                            fetchShadowServer(consumerModule, shadowConsumer, key);
+                            logger.info("[messaging-common]success fetch shadowServer with key:{}", key);
+                            doStartShadowServer(shadowConsumer);
+                            logger.info("[messaging-common]success start shadowServer with key:{}", key);
+                        }else{
+                            logger.info("[messaging-common] key {} is not allow to consumer message", key);
+                        }
                     }
-                    if (mqWhiteList.contains(key)) {
-                        fetchShadowServer(consumerModule, shadowConsumer, key);
-                        logger.info("[messaging-common]success fetch shadowServer with key:{}", key);
-                        doStartShadowServer(shadowConsumer);
-                        logger.info("[messaging-common]success start shadowServer with key:{}", key);
-                    }else{
-                        logger.info("[messaging-common] key {} is not allow to consumer message", key);
-                    }
+                } catch (Throwable e) {
+                    logger.error("[messaging-common]try to start consumer server fail with key:{}", shadowConsumer.getConsumerConfig().keyOfConfig(), e);
                 }
-            } catch (Throwable e) {
-                logger.error("[messaging-common]try to start consumer server fail with key:{}", entry.getValue().getConsumerConfig().keyOfConfig(), e);
+
             }
         }
     }

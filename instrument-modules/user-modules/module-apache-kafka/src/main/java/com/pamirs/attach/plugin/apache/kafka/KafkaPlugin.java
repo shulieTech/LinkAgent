@@ -50,9 +50,10 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         if (simulatorConfig.getBooleanProperty("kafka.use.other.plugin", false)) {
             return true;
         }
-        final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
-        EventRouter.router().addListener(shadowConsumerDisableListener);
-        return addConsumerRegisterInterceptor();
+//        final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
+//        EventRouter.router().addListener(shadowConsumerDisableListener);
+//        return addConsumerRegisterInterceptor();
+        return addConsumerTraceInterceptor();
     }
 
     private boolean addProducerInterceptor() {
@@ -79,8 +80,33 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         return true;
     }
 
-    private boolean addConsumerRegisterInterceptor() {
+    private boolean addConsumerTraceInterceptor() {
 
+        enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RecordMessagingMessageListenerAdapter");
+        enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RetryingMessageListenerAdapter");
+        enhanceBatchMessagingMessage("org.springframework.kafka.listener.adapter.BatchMessagingMessageListenerAdapter");
+
+//        enhanceSetMessageListener("org.springframework.kafka.listener.KafkaMessageListenerContainer$ListenerConsumer");
+
+        this.enhanceTemplate.enhance(this, "org.apache.kafka.clients.consumer.KafkaConsumer", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod constructor = target.getConstructors();
+                constructor.addInterceptor(
+                        Listeners.of(ConsumerConstructorInterceptor.class, "KafkaConsumerConstructorScope",
+                                ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                // Version 2.2.0+ is supported.
+                InstrumentMethod pollMethod = target.getDeclaredMethods("poll", "org.apache.kafka.common.utils.Timer", "boolean");
+                pollMethod.addInterceptor(
+                        Listeners.of(ConsumerTraceInterceptor.class, "kafkaTraceScope", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
+            }
+        });
+        return true;
+    }
+
+    private boolean addConsumerRegisterInterceptor() {
         enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RecordMessagingMessageListenerAdapter");
         enhanceConsumerRecordEntryPoint("org.springframework.kafka.listener.adapter.RetryingMessageListenerAdapter");
         enhanceBatchMessagingMessage("org.springframework.kafka.listener.adapter.BatchMessagingMessageListenerAdapter");

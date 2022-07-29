@@ -16,6 +16,8 @@ import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.kafka.support.TopicPartitionOffset;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -26,30 +28,29 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
     private static final Logger logger = LoggerFactory.getLogger(SpringKafkaConsumerExecute.class);
 
     @Override
-    public ConsumerConfig prepareConfig(SyncObjectData syncObjectData) {
+    public List<ConsumerConfig> prepareConfig(SyncObjectData syncObjectData) {
         Object target = syncObjectData.getTarget();
         //noinspection rawtypes
         KafkaMessageListenerContainer bizContainer = (KafkaMessageListenerContainer) target;
 
-        SpringKafkaConsumerConfig config = new SpringKafkaConsumerConfig();
+        List<ConsumerConfig> consumerConfigs = new ArrayList<ConsumerConfig>();
 
         ConsumerFactory consumerFactory = SpringKafkaUtil.readConsumerFactory(bizContainer);
         if (consumerFactory == null) {
             logger.error("spring kafka not support! can not read consumerFactory!");
             return null;
         }
-        config.setConsumerFactory(consumerFactory);
 
         ContainerProperties containerProperties = bizContainer.getContainerProperties();
-        config.setContainerProperties(containerProperties);
+        for (String topic : containerProperties.getTopics()) {
+            SpringKafkaConsumerConfig config = new SpringKafkaConsumerConfig();
+            config.setTopic(topic);
+            config.setConsumerFactory(consumerFactory);
+            config.setContainerProperties(containerProperties);
+            consumerConfigs.add(config);
+        }
 
-//        TopicPartitionOffset[] topicPartitions = SpringKafkaUtil.readTopicPartitions(bizContainer);
-//        if (topicPartitions == null) {
-//            logger.error("spring kafka not support! can not read topicPartitions!");
-//            return null;
-//        }
-//        config.setTopicPartitions(topicPartitions);
-        return config;
+        return consumerConfigs;
     }
 
     @Override
@@ -59,8 +60,7 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
         ContainerProperties properties = prepareContainerProperties(springKafkaConsumerConfig.getContainerProperties());
         KafkaMessageListenerContainer container = new KafkaMessageListenerContainer(springKafkaConsumerConfig.getConsumerFactory(),
                 properties);
-        SpringKafkaShadowServer shadowServer = new SpringKafkaShadowServer(container);
-        return shadowServer;
+        return new SpringKafkaShadowServer(container);
     }
 
     private ContainerProperties prepareContainerProperties(ContainerProperties bizContainerProperties) {
@@ -106,7 +106,7 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
             int partition = topicPartitions[i].getPartition();
             TopicPartitionOffset.SeekPosition position = topicPartitions[i].getPosition();
             Long offset = topicPartitions[i].getOffset();
-            offsets[i]= new TopicPartitionOffset(topic,partition,offset,position);
+            offsets[i] = new TopicPartitionOffset(topic, partition, offset, position);
             offsets[i].setRelativeToCurrent(topicPartitions[i].isRelativeToCurrent());
         }
         return offsets;
@@ -123,6 +123,7 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
         }
         return ctData;
     }
+
     private String addClusterTest(String data) {
         return Pradar.addClusterTestPrefix(data);
     }

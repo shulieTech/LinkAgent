@@ -93,6 +93,8 @@
         <module>module-isolation</module>
         <module>module-messaging-common</module>
         <module>module-spring-kafka</module>
+        <module>module-alibaba-rocketmqv2</module>
+        <module>module-apache-rocketmqv2</module>
     </modules>
 
     <build>

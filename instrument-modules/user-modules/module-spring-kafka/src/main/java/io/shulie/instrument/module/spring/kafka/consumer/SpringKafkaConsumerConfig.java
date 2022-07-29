@@ -1,7 +1,6 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.TopicPartitionOffset;
@@ -13,8 +12,13 @@ import org.springframework.kafka.support.TopicPartitionOffset;
 public class SpringKafkaConsumerConfig extends ConsumerConfig {
     private ConsumerFactory consumerFactory;
     private ContainerProperties containerProperties;
-
+    private String topic;
     private TopicPartitionOffset[] topicPartitions;
+
+    @Override
+    public String keyOfConfig() {
+        return topic + "#" + containerProperties.getGroupId();
+    }
 
     public TopicPartitionOffset[] getTopicPartitions() {
         return topicPartitions;
@@ -40,13 +44,11 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
         this.consumerFactory = consumerFactory;
     }
 
-    @Override
-    public String keyOfConfig() {
-        String[] topics = containerProperties.getTopics();
-        String groupId = containerProperties.getGroupId();
-        if (topics == null || topics.length == 0) {
-            return null;
-        }
-        return topics[0] + "#" + groupId;
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
     }
 }

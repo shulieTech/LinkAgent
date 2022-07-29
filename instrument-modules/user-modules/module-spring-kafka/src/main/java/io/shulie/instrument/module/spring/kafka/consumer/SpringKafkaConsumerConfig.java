@@ -1,6 +1,7 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.TopicPartitionOffset;
@@ -12,20 +13,24 @@ import org.springframework.kafka.support.TopicPartitionOffset;
 public class SpringKafkaConsumerConfig extends ConsumerConfig {
     private ConsumerFactory consumerFactory;
     private ContainerProperties containerProperties;
-    private String topic;
-    private TopicPartitionOffset[] topicPartitions;
 
-    @Override
-    public String keyOfConfig() {
-        return topic + "#" + containerProperties.getGroupId();
+    private String bizTopic;
+    private String bizGroupId;
+
+    public String getBizTopic() {
+        return bizTopic;
     }
 
-    public TopicPartitionOffset[] getTopicPartitions() {
-        return topicPartitions;
+    public void setBizTopic(String bizTopic) {
+        this.bizTopic = bizTopic;
     }
 
-    public void setTopicPartitions(TopicPartitionOffset[] topicPartitions) {
-        this.topicPartitions = topicPartitions;
+    public String getBizGroupId() {
+        return bizGroupId;
+    }
+
+    public void setBizGroupId(String bizGroupId) {
+        this.bizGroupId = bizGroupId;
     }
 
     public ContainerProperties getContainerProperties() {
@@ -44,11 +49,8 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
         this.consumerFactory = consumerFactory;
     }
 
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
+    @Override
+    public String keyOfConfig() {
+        return bizTopic + "#" + bizGroupId;
     }
 }

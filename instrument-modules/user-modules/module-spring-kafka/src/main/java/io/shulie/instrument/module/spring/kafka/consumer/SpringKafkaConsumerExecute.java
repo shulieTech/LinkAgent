@@ -17,6 +17,7 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.kafka.support.TopicPartitionOffset;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -32,52 +33,57 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
         Object target = syncObjectData.getTarget();
         //noinspection rawtypes
         KafkaMessageListenerContainer bizContainer = (KafkaMessageListenerContainer) target;
+        ContainerProperties containerProperties = bizContainer.getContainerProperties();
 
-        List<ConsumerConfig> consumerConfigs = new ArrayList<ConsumerConfig>();
-
-        ConsumerFactory consumerFactory = SpringKafkaUtil.readConsumerFactory(bizContainer);
-        if (consumerFactory == null) {
-            logger.error("spring kafka not support! can not read consumerFactory!");
+        String[] topics = containerProperties.getTopics();
+        if (topics == null) {
+            logger.error("not support spring-kafka topic type,TopicPartitions:{},TopicPattern:{}", containerProperties.getTopicPartitions(), containerProperties.getTopicPattern());
             return null;
         }
 
-        ContainerProperties containerProperties = bizContainer.getContainerProperties();
-        for (String topic : containerProperties.getTopics()) {
+        List<ConsumerConfig> list = new ArrayList<ConsumerConfig>();
+
+        for (String topic : topics) {
             SpringKafkaConsumerConfig config = new SpringKafkaConsumerConfig();
-            config.setTopic(topic);
+            ConsumerFactory consumerFactory = SpringKafkaUtil.readConsumerFactory(bizContainer);
+            if (consumerFactory == null) {
+                logger.error("spring kafka not support! can not read consumerFactory!");
+                return null;
+            }
             config.setConsumerFactory(consumerFactory);
             config.setContainerProperties(containerProperties);
-            consumerConfigs.add(config);
+            config.setBizTopic(topic);
+            config.setBizGroupId(containerProperties.getGroupId());
+            list.add(config);
         }
-
-        return consumerConfigs;
+        return list;
     }
 
     @Override
     public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
         SpringKafkaConsumerConfig springKafkaConsumerConfig = (SpringKafkaConsumerConfig) config;
 
-        ContainerProperties properties = prepareContainerProperties(springKafkaConsumerConfig.getContainerProperties());
-        KafkaMessageListenerContainer container = new KafkaMessageListenerContainer(springKafkaConsumerConfig.getConsumerFactory(),
-                properties);
+        ContainerProperties properties = prepareContainerProperties(springKafkaConsumerConfig.getContainerProperties(), springKafkaConsumerConfig.getBizTopic(), springKafkaConsumerConfig.getBizGroupId());
+        KafkaMessageListenerContainer container = new KafkaMessageListenerContainer(springKafkaConsumerConfig.getConsumerFactory(), properties);
         return new SpringKafkaShadowServer(container);
     }
 
-    private ContainerProperties prepareContainerProperties(ContainerProperties bizContainerProperties) {
-        ContainerProperties containerProperties;
-        if (bizContainerProperties.getTopics() != null) {
-            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopics()));
-        } else if (bizContainerProperties.getTopicPattern() != null) {
-            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopicPattern()));
-        } else if (bizContainerProperties.getTopicPartitions() != null) {
-            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopicPartitions()));
-        } else {
-            throw new IllegalStateException("topics, topicPattern, or topicPartitions must be provided");
-        }
+    private ContainerProperties prepareContainerProperties(ContainerProperties bizContainerProperties, String bizTopic, String bizGroupId) {
+        ContainerProperties containerProperties = new ContainerProperties(addClusterTest(new String[]{bizTopic}));
+//        if (bizContainerProperties.getTopics() != null) {
+//            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopics()));
+//        } else if (bizContainerProperties.getTopicPattern() != null) {
+//            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopicPattern()));
+//        } else if (bizContainerProperties.getTopicPartitions() != null) {
+//            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopicPartitions()));
+//        } else {
+//            throw new IllegalStateException("topics, topicPattern, or topicPartitions must be provided");
+//        }
 
         BeanUtils.copyProperties(bizContainerProperties, containerProperties,
                 "topics", "topicPartitions", "topicPattern", "ackCount", "ackTime", "subBatchPerPartition");
-        containerProperties.setGroupId(addClusterTest(containerProperties.getGroupId()));
+
+        containerProperties.setGroupId(addClusterTest(bizGroupId));
 
         if (bizContainerProperties.getAckCount() > 0) {
             containerProperties.setAckCount(bizContainerProperties.getAckCount());

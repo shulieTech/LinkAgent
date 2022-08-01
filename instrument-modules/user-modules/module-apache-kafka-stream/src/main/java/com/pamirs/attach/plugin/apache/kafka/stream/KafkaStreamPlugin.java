@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.apache.kafka.stream;
 
 import com.pamirs.attach.plugin.apache.kafka.stream.interceptor.KStreamMapProcessorProcessInterceptor;
 import com.pamirs.attach.plugin.apache.kafka.stream.interceptor.KStreamPeekProcessorProcessInterceptor;
-import com.pamirs.attach.plugin.apache.kafka.stream.interceptor.KafkaStreamsCloseInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -56,13 +55,13 @@ public class KafkaStreamPlugin extends ModuleLifecycleAdapter implements Extensi
             }
         });
 
-        this.enhanceTemplate.enhance(this, "org.apache.kafka.streams.KafkaStreams", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                InstrumentMethod processMethod = target.getDeclaredMethod("close", "long", "java.util.concurrent.TimeUnit");
-                processMethod.addInterceptor(Listeners.of(KafkaStreamsCloseInterceptor.class));
-            }
-        });
+//        this.enhanceTemplate.enhance(this, "org.apache.kafka.streams.KafkaStreams", new EnhanceCallback() {
+//            @Override
+//            public void doEnhance(InstrumentClass target) {
+//                InstrumentMethod processMethod = target.getDeclaredMethod("close", "long", "java.util.concurrent.TimeUnit");
+//                processMethod.addInterceptor(Listeners.of(KafkaStreamsCloseInterceptor.class));
+//            }
+//        });
 
         return true;
     }

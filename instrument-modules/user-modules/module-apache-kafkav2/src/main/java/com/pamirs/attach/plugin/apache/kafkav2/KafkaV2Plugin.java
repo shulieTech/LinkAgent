@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-package com.pamirs.attach.plugin.apache.rocketmqv2;
+package com.pamirs.attach.plugin.apache.kafkav2;
 
-import com.pamirs.attach.plugin.apache.rocketmqv2.consumer.RocketmqShadowConsumerExecute;
+import com.pamirs.attach.plugin.apache.kafkav2.consumer.KafkaExecute;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -28,17 +28,17 @@ import org.slf4j.LoggerFactory;
 /**
  * @Description
  * @Author ocean_wll
- * @Date 2022/7/29 15:46
+ * @Date 2022/8/2 10:10
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "apache-rocketmqv2", version = "1.0.0", author = "wanglinglong@shulie.io", description = "apache-rocketmq新版插件")
-public class RocketMqv2Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
-    private static final Logger logger = LoggerFactory.getLogger(RocketMqv2Plugin.class);
+@ModuleInfo(id = "kafkav2", version = "1.0.0", author = "wanglinglong@shulie.io", description = "kafka新版插件")
+public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
+    private static final Logger logger = LoggerFactory.getLogger(KafkaV2Plugin.class);
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(RocketmqShadowConsumerExecute.class);
-        ConsumerManager.register(consumerRegister, "org.apache.rocketmq.client.consumer.DefaultMQPushConsumer#start");
+        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);
+        ConsumerManager.register(streamMapRegister, "org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");
         return true;
     }
 }

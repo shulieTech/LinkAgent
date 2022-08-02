@@ -37,7 +37,7 @@ public class RocketMqv2Plugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(new RocketmqShadowConsumerExecute());
+        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(RocketmqShadowConsumerExecute.class);
         ConsumerManager.register(consumerRegister, "com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer#start");
         return true;
     }

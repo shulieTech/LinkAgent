@@ -37,6 +37,11 @@ public class RocketmqConsumerConfig extends ConsumerConfig {
         return topic + "#" + businessConsumer.getConsumerGroup();
     }
 
+    @Override
+    public String keyOfServer() {
+        return "";
+    }
+
     public DefaultMQPushConsumer getBusinessConsumer() {
         return businessConsumer;
     }

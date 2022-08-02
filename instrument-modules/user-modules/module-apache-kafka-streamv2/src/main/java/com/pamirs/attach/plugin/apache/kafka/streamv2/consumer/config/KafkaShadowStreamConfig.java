@@ -43,6 +43,11 @@ public class KafkaShadowStreamConfig extends ConsumerConfig {
         return topic + "#" + applicationId;
     }
 
+    @Override
+    public String keyOfServer() {
+        return "";
+    }
+
     public Properties getProperties() {
         return properties;
     }

@@ -13,42 +13,24 @@
  * limitations under the License.
  */
 
-package com.pamirs.attach.plugin.alibaba.rocketmqv2.consumer.config;
+package com.pamirs.attach.plugin.apache.kafkav2.consumer.config;
 
-import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 
 /**
  * @Description
  * @Author ocean_wll
- * @Date 2022/7/29 11:40
+ * @Date 2022/8/2 14:34
  */
-public class RocketmqConsumerConfig extends ConsumerConfig {
-
-    private final DefaultMQPushConsumer businessConsumer;
-
-    private final String topic;
-
-    public RocketmqConsumerConfig(DefaultMQPushConsumer businessConsumer, String topic) {
-        this.businessConsumer = businessConsumer;
-        this.topic = topic;
-    }
+public class KafkaShadowConsumerConfig extends ConsumerConfig {
 
     @Override
     public String keyOfConfig() {
-        return topic + "#" + businessConsumer.getConsumerGroup();
+        return null;
     }
 
     @Override
     public String keyOfServer() {
-        return "";
-    }
-
-    public DefaultMQPushConsumer getBusinessConsumer() {
-        return businessConsumer;
-    }
-
-    public String getTopic() {
-        return topic;
+        return null;
     }
 }

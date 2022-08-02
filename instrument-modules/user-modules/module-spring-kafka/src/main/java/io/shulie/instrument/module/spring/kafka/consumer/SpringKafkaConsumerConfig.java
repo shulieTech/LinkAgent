@@ -1,10 +1,8 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
-import org.springframework.kafka.support.TopicPartitionOffset;
 
 /**
  * @author Licey
@@ -56,6 +54,6 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
 
     @Override
     public String keyOfServer() {
-        return null;
+        return "";
     }
 }

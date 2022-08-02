@@ -38,6 +38,18 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>module-isolation</artifactId>
+            <version>${module.isolation.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>module-messaging-common</artifactId>
+            <version>${module.messaging.common.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>0.11.0.1</version>
@@ -89,12 +101,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>module-messaging-common</artifactId>
-            <version>1.0.0</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>

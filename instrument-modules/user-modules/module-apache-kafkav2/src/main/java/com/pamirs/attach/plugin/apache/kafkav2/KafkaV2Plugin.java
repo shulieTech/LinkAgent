@@ -37,8 +37,10 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);
-        ConsumerManager.register(streamMapRegister, "org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");
+        Isoman
+
+//        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);
+//        ConsumerManager.register(streamMapRegister, "org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");
         return true;
     }
 }

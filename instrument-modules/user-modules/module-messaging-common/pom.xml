@@ -8,6 +8,7 @@
         <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
+    <version>${module.messaging.common.version}</version>
 
     <artifactId>module-messaging-common</artifactId>
     <build>

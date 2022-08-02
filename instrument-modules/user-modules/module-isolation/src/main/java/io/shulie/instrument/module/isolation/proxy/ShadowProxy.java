@@ -23,7 +23,7 @@ public class ShadowProxy {
     private EnhanceClass enhanceClass;
     private EnhanceMethod enhanceMethod;
 
-    private Map<Object,Object> shadowTargetMap;
+    private Map<Object, Object> shadowTargetMap;
 
     public ShadowProxy(String module, EnhanceClass enhanceClass, EnhanceMethod enhanceMethod) {
         this.module = module;
@@ -36,20 +36,19 @@ public class ShadowProxy {
         if (o == null) {
             o = fetchShadowTarget(bizTarget);
         }
-        //todo@langyi 代理执行方法
-        return null;
+        return enhanceMethod.getMethodProxy().executeMethod(o, method, args);
     }
 
-    private synchronized Object fetchShadowTarget(Object bizTarget){
+    private synchronized Object fetchShadowTarget(Object bizTarget) {
         Object o = shadowTargetMap.get(bizTarget);
         if (o == null) {
-            ShadowResourceLifecycle shadowResource = resourceProxyFactory.createShadowResource(bizTarget);
+            ShadowResourceLifecycle shadowResource = enhanceClass.getProxyFactory().createShadowResource(bizTarget);
             if (shadowResource != null) {
                 shadowTargetMap.put(bizTarget, shadowResource);
             }
         }
         if (o == null) {
-            throw new IsolationRuntimeException("can not init shadowResource with class:" + " method:"+);
+            throw new IsolationRuntimeException("can not init shadowResource with class:" + enhanceClass.getClassName() + " method:" + enhanceMethod.getMethod());
         }
         return o;
     }
@@ -62,12 +61,27 @@ public class ShadowProxy {
         this.shadowTargetMap = shadowTargetMap;
     }
 
-    public ShadowMethodProxy getMethodProxy() {
-        return methodProxy;
+    public EnhanceClass getEnhanceClass() {
+        return enhanceClass;
     }
 
-    public void setMethodProxy(ShadowMethodProxy methodProxy) {
-        this.methodProxy = methodProxy;
+    public void setEnhanceClass(EnhanceClass enhanceClass) {
+        this.enhanceClass = enhanceClass;
     }
 
+    public EnhanceMethod getEnhanceMethod() {
+        return enhanceMethod;
+    }
+
+    public void setEnhanceMethod(EnhanceMethod enhanceMethod) {
+        this.enhanceMethod = enhanceMethod;
+    }
+
+    public String getModule() {
+        return module;
+    }
+
+    public void setModule(String module) {
+        this.module = module;
+    }
 }

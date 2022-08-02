@@ -20,7 +20,8 @@ public class EnhanceClass {
 
     private boolean isConvertImpl;
 
-    public EnhanceClass() {
+    public EnhanceClass(String className) {
+        this.className = className;
         methodList = new ArrayList<EnhanceMethod>();
     }
 

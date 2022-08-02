@@ -15,7 +15,7 @@
     <properties>
         <module-name>isolation</module-name>
     </properties>
-    <version>2.0.0.0</version>
+    <version>${module.isolation.version}</version>
 
     <dependencies>
         <dependency>

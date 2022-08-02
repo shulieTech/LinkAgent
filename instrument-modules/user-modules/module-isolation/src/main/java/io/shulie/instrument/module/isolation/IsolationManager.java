@@ -26,12 +26,16 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class IsolationManager {
     private static final Logger logger = LoggerFactory.getLogger(IsolationManager.class);
-    public static ModuleEventWatcher moduleEventWatcher;
+    private static ModuleEventWatcher moduleEventWatcher;
 
     private static final Map<String, List<EventWatcher>> moduleWatcherMap = new ConcurrentHashMap<String, List<EventWatcher>>();
 
+    public static void init(ModuleEventWatcher moduleEventWatcher){
+        IsolationManager.moduleEventWatcher = moduleEventWatcher;
+    }
 
-    public void register(ShadowProxyConfig proxyConfig) {
+
+    public static void register(ShadowProxyConfig proxyConfig) {
         String moduleName = proxyConfig.getModuleName();
 
         List<EventWatcher> watcherList = moduleWatcherMap.get(moduleName);
@@ -47,10 +51,9 @@ public class IsolationManager {
             }
             watcherList.add(enhanceClassMethod(proxyConfig.getModuleName(), enhanceClass, proxyFactory));
         }
-
     }
 
-    public EventWatcher enhanceClassMethod(String module, EnhanceClass enhanceClass, ShadowResourceProxyFactory proxyFactory) {
+    public static EventWatcher enhanceClassMethod(String module, EnhanceClass enhanceClass, ShadowResourceProxyFactory proxyFactory) {
         logger.info("[isolation]pre enhance class:{}", enhanceClass.getClassName());
 
         IClassMatchBuilder buildingForClass = new EventWatchBuilder(moduleEventWatcher).onClass(enhanceClass.getClassName());

@@ -16,7 +16,6 @@ public class IsolationModule extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
-        //todo@langyi
-        return super.onActive();
+        return true;
     }
 }

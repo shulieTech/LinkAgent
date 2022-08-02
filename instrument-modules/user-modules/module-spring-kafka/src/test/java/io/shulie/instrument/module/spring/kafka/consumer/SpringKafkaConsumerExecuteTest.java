@@ -15,6 +15,7 @@ import org.springframework.kafka.listener.MessageListener;
 import org.springframework.kafka.support.Acknowledgment;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -77,8 +78,8 @@ public class SpringKafkaConsumerExecuteTest extends TestCase {
 
     public void testFetchShadowServer() throws InterruptedException {
         SpringKafkaConsumerExecute springKafkaConsumerExecute = new SpringKafkaConsumerExecute();
-        io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig config = springKafkaConsumerExecute.prepareConfig(syncObjectData);
-        ShadowServer shadowServer = springKafkaConsumerExecute.fetchShadowServer(config, "");
+        List<io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig> configList = springKafkaConsumerExecute.prepareConfig(syncObjectData);
+        ShadowServer shadowServer = springKafkaConsumerExecute.fetchShadowServer(configList.get(0), "");
         shadowServer.start();
         Thread.sleep(5 * 1000);
         assertTrue(shadowServer.isRunning());

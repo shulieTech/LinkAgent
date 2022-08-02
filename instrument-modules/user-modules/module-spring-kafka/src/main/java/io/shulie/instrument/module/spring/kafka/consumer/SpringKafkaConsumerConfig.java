@@ -53,4 +53,9 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
     public String keyOfConfig() {
         return bizTopic + "#" + bizGroupId;
     }
+
+    @Override
+    public String keyOfServer() {
+        return null;
+    }
 }

@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.messaging.consumer.module;
 
+import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 
 /**
@@ -8,11 +9,24 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
  */
 public class ShadowConsumer {
     private ConsumerConfig consumerConfig;
+    private ShadowConsumerExecute consumerExecute;
     private ShadowServer shadowServer;
+
+    private ClassLoader bizClassLoad;
     private boolean started;
 
-    public ShadowConsumer(ConsumerConfig consumerConfig) {
+    public ShadowConsumer(ConsumerConfig consumerConfig, ShadowConsumerExecute consumerExecute,ClassLoader bizClassLoad) {
         this.consumerConfig = consumerConfig;
+        this.consumerExecute = consumerExecute;
+        this.bizClassLoad = bizClassLoad;
+    }
+
+    public ShadowConsumerExecute getConsumerExecute() {
+        return consumerExecute;
+    }
+
+    public void setConsumerExecute(ShadowConsumerExecute consumerExecute) {
+        this.consumerExecute = consumerExecute;
     }
 
     public ConsumerConfig getConsumerConfig() {

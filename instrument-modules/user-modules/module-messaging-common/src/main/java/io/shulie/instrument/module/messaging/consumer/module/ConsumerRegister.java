@@ -10,19 +10,18 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
  */
 public class ConsumerRegister {
     @NotNull
-    private ShadowConsumerExecute consumerExecute;
+    private Class<? extends ShadowConsumerExecute> consumerExecuteClass;
 
     public static ConsumerRegister init(){
         return new ConsumerRegister();
     }
 
-    public ConsumerRegister consumerExecute(ShadowConsumerExecute consumerExecute){
-        this.consumerExecute = consumerExecute;
+    public ConsumerRegister consumerExecute(Class<? extends ShadowConsumerExecute> consumerExecuteClass){
+        this.consumerExecuteClass = consumerExecuteClass;
         return this;
     }
 
-    public ShadowConsumerExecute getConsumerExecute() {
-        return consumerExecute;
+    public Class<? extends ShadowConsumerExecute> getConsumerExecuteClass() {
+        return consumerExecuteClass;
     }
-
 }

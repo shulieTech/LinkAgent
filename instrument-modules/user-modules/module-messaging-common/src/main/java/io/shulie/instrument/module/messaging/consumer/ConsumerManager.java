@@ -6,6 +6,7 @@ import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import io.shulie.instrument.module.messaging.annoation.NotNull;
+import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
@@ -13,8 +14,10 @@ import io.shulie.instrument.module.messaging.consumer.module.ConsumerModule;
 import io.shulie.instrument.module.messaging.consumer.module.ShadowConsumer;
 import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -29,21 +32,18 @@ public class ConsumerManager {
     private static final Set<Field> notNullList = new HashSet<Field>();
 
     private final static List<ConsumerModule> registerList = new Vector<ConsumerModule>();
+    private final static Map<ConsumerConfig, ShadowConsumer> shadowConsumerMap = new ConcurrentHashMap<>();
 
     private static ScheduledExecutorService taskService;
     private static final SyncObject EMPTY_SYNC_OBJECT = new SyncObject();
     private static final int initialDelay = 30;
-    private static final int delay=120;
+    private static final int delay = 120;
 
-    static List<ShadowConsumer> runningShadowConsumer(){
+    static List<ShadowConsumer> runningShadowConsumer() {
         List<ShadowConsumer> list = new ArrayList<ShadowConsumer>();
-        for (ConsumerModule consumerModule : registerList) {
-            for (List<ShadowConsumer> shadowConsumers : consumerModule.getShadowConsumerMap().values()) {
-                for (ShadowConsumer shadowConsumer : shadowConsumers) {
-                    if (shadowConsumer.isStarted()) {
-                        list.add(shadowConsumer);
-                    }
-                }
+        for (ShadowConsumer shadowConsumer : shadowConsumerMap.values()) {
+            if (shadowConsumer.isStarted()) {
+                list.add(shadowConsumer);
             }
         }
         return list;
@@ -94,84 +94,116 @@ public class ConsumerManager {
     }
 
     private static void doConsumerRegister(ConsumerModule consumerModule) {
-        for (Map.Entry<String, SyncObject> entry : consumerModule.getSyncObjectMap().entrySet()) {
-            for (SyncObjectData objectData : entry.getValue().getDatas()) {
-                if (!consumerModule.getShadowConsumerMap().containsKey(objectData)) {
-                    try {
-                        List<ConsumerConfig> configList = consumerModule.getConsumerRegister().getConsumerExecute().prepareConfig(objectData);
-                        if (configList != null && !configList.isEmpty()) {
-                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
-                            consumerModule.getShadowConsumerMap().put(objectData, configList.stream().map(ShadowConsumer::new).collect(Collectors.toList()));
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            for (Map.Entry<String, SyncObject> entry : consumerModule.getSyncObjectMap().entrySet()) {
+                for (SyncObjectData objectData : entry.getValue().getDatas()) {
+                    if (!consumerModule.getSyncObjectDataMap().containsKey(objectData)) {
+                        Thread.currentThread().setContextClassLoader(objectData.getTarget().getClass().getClassLoader());
+                        try {
+                            ShadowConsumerExecute shadowConsumerExecute = prepareShadowConsumerExecute(consumerModule, objectData);
+                            List<ConsumerConfig> configList = shadowConsumerExecute.prepareConfig(objectData);
+                            if (configList != null && !configList.isEmpty()) {
+                                logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
+                                for (ConsumerConfig consumerConfig : configList) {
+                                    if (!shadowConsumerMap.containsKey(consumerConfig)) {
+                                        addShadowConsumer(consumerConfig, shadowConsumerExecute);
+                                    }
+                                }
+                            }
+                        } catch (Throwable e) {
+                            logger.error("prepare Config fail:{}", JSON.toJSONString(consumerModule.getConsumerRegister()), e);
                         }
-                    } catch (Exception e) {
-                        logger.error("prepare Config fail:{}", JSON.toJSONString(consumerModule.getConsumerRegister()), e);
                     }
                 }
             }
+        } finally {
+            Thread.currentThread().setContextClassLoader(cl);
         }
     }
 
-    private static void runTask(){
+    private static ShadowConsumerExecute prepareShadowConsumerExecute(ConsumerModule consumerModule, SyncObjectData objectData) {
+        ShadowConsumerExecute shadowConsumerExecute = consumerModule.getSyncObjectDataMap().get(objectData);
+        if (shadowConsumerExecute == null) {
+            try {
+                Constructor<? extends ShadowConsumerExecute> constructor = consumerModule.getConsumerRegister().getConsumerExecuteClass().getDeclaredConstructor();
+                constructor.setAccessible(true);
+                shadowConsumerExecute= constructor.newInstance();
+            }catch (Throwable e) {
+                throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + JSON.toJSONString(consumerModule.getConsumerRegister()), e);
+            }
+            consumerModule.getSyncObjectDataMap().put(objectData, shadowConsumerExecute);
+        }
+        return shadowConsumerExecute;
+    }
+
+    private static synchronized void addShadowConsumer(ConsumerConfig consumerConfig, ShadowConsumerExecute shadowConsumerExecute) {
+        if (!shadowConsumerMap.containsKey(consumerConfig)) {
+            shadowConsumerMap.put(consumerConfig, new ShadowConsumer(consumerConfig, shadowConsumerExecute, Thread.currentThread().getContextClassLoader()));
+        }
+    }
+
+    private static void runTask() {
         for (ConsumerModule consumerModule : registerList) {
             runTask(consumerModule);
         }
     }
 
-    private static  void runTask(ConsumerModule consumerModule){
+    private static void runTask(ConsumerModule consumerModule) {
         try {
             synchronized (consumerModule) {
                 refreshSyncObj(consumerModule);
-                tryToStartConsumer(consumerModule);
+                tryToStartConsumer();
             }
         } catch (Throwable e) {
             logger.warn("start task fail,will try next time: {}", JSON.toJSONString(consumerModule), e);
         }
     }
 
-    private static void tryToStartConsumer(ConsumerModule consumerModule) {
+    private synchronized static void tryToStartConsumer() {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
-        for (Map.Entry<SyncObjectData, List<ShadowConsumer>> entry : consumerModule.getShadowConsumerMap().entrySet()) {
-            for (ShadowConsumer shadowConsumer : entry.getValue()) {
-                try {
-                    if (!shadowConsumer.isStarted()) {
-                        //todo@langyi 支持集群模式
-                        String key = shadowConsumer.getConsumerConfig().keyOfConfig();
-                        if (key == null) {
-                            continue;
-                        }
-                        if (mqWhiteList.contains(key)) {
-                            fetchShadowServer(consumerModule, shadowConsumer, key);
-                            logger.info("[messaging-common]success fetch shadowServer with key:{}", key);
-                            doStartShadowServer(shadowConsumer);
-                            logger.info("[messaging-common]success start shadowServer with key:{}", key);
-                        }else{
-                            logger.info("[messaging-common] key {} is not allow to consumer message", key);
-                        }
+        for (Map.Entry<ConsumerConfig, ShadowConsumer> entry : shadowConsumerMap.entrySet()) {
+            ShadowConsumer shadowConsumer = entry.getValue();
+            try {
+                if (!shadowConsumer.isStarted()) {
+                    //todo@langyi 支持集群模式
+                    String key = shadowConsumer.getConsumerConfig().keyOfConfig();
+                    if (key == null) {
+                        continue;
                     }
-                } catch (Throwable e) {
-                    logger.error("[messaging-common]try to start consumer server fail with key:{}", shadowConsumer.getConsumerConfig().keyOfConfig(), e);
+                    if (mqWhiteList.contains(key)) {
+                        fetchShadowServer(shadowConsumer, key);
+                        logger.info("[messaging-common]success fetch shadowServer with key:{}", key);
+                        doStartShadowServer(shadowConsumer);
+                        logger.info("[messaging-common]success start shadowServer with key:{}", key);
+                    } else {
+                        logger.info("[messaging-common] key {} is not allow to consumer message", key);
+                    }
                 }
+            } catch (Throwable e) {
+                logger.error("[messaging-common]try to start consumer server fail with key:{}", shadowConsumer.getConsumerConfig().keyOfConfig(), e);
+            } finally {
 
             }
         }
     }
 
-    private static void fetchShadowServer(ConsumerModule consumerModule, ShadowConsumer shadowConsumer,String config) {
+    private static void fetchShadowServer(ShadowConsumer shadowConsumer, String config) {
         try {
             //todo@langyi 传入影子消费者的配置
-            ShadowServer shadowServer = consumerModule.getConsumerRegister().getConsumerExecute().fetchShadowServer(shadowConsumer.getConsumerConfig(), config);
+            ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(shadowConsumer.getConsumerConfig(), config);
             shadowConsumer.setShadowServer(shadowServer);
         } catch (Exception e) {
             logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getConsumerConfig()), e);
         }
     }
 
-    private static void doStartShadowServer(ShadowConsumer shadowConsumer){
+    private static void doStartShadowServer(ShadowConsumer shadowConsumer) {
         try {
             if (shadowConsumer.getShadowServer() != null) {
                 shadowConsumer.getShadowServer().start();
                 shadowConsumer.setStarted(true);
-            }else{
+            } else {
                 shadowConsumer.setStarted(false);
             }
         } catch (Throwable e) {
@@ -195,13 +227,13 @@ public class ConsumerManager {
         }
     }
 
-    private static void startTask(){
+    private static void startTask() {
         if (taskService == null) {
             initTask();
         }
     }
 
-    private synchronized static void initTask(){
+    private synchronized static void initTask() {
         if (taskService == null) {
             taskService = Executors.newScheduledThreadPool(1);
             taskService.scheduleWithFixedDelay(new Runnable() {

@@ -377,7 +377,7 @@ public class Advice implements Attachment {
      * @param object 返回对象
      * @throws ProcessControlException 抛出立即返回流程控制异常
      */
-    public void returnImmediately(final Object object) throws ProcessControlException {
+    public void returnImmediately(final Object object){
         //fix bug if object can not cast target  type
         Castor.canCast(this.getBehavior().getReturnType(), object);
         this.processControlEntity = ProcessControlEntity.returnImmediately(object);

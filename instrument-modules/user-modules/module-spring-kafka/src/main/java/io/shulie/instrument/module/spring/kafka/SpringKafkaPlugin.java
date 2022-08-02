@@ -27,7 +27,7 @@ public class SpringKafkaPlugin extends ModuleLifecycleAdapter implements Extensi
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(new SpringKafkaConsumerExecute());
+        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(SpringKafkaConsumerExecute.class);
         ConsumerManager.register(consumerRegister, "org.springframework.kafka.listener.KafkaMessageListenerContainer#doStart");
 
 //        enhanceTemplate.enhance(this, "org.springframework.kafka.listener.KafkaMessageListenerContainer", new EnhanceCallback() {

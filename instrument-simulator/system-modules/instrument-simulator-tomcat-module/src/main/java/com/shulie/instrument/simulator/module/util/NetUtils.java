@@ -66,7 +66,11 @@ public class NetUtils {
         } catch (IOException e) {
             return new Response(e.getMessage(), false);
         } finally {
-            IOUtils.close(in);
+            try {
+                in.close();
+            } catch (IOException e) {
+
+            }
             if (urlConnection != null) {
                 urlConnection.disconnect();
             }

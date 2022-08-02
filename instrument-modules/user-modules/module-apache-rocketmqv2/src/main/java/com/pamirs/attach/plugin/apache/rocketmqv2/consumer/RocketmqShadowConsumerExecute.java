@@ -30,7 +30,6 @@ import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.MessageListener;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
-import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.slf4j.Logger;
@@ -92,7 +91,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
      * @param topic            需要注册的topic
      * @return 返回注册的影子消费者，如果初始化失败会返回 null
      */
-    private synchronized static DefaultMQPushConsumer buildMQPushConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
+    private DefaultMQPushConsumer buildMQPushConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
         ConcurrentMap<String, SubscriptionData> map = businessConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner();
         if (map == null || !map.containsKey(topic)) {
             return null;
@@ -283,7 +282,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
         if (filterClassSource != null) {
             try {
                 defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString, filterClassSource);
-            } catch (MQClientException e) {
+            } catch (Throwable e) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.MQ)
                         .setErrorCode("MQ-0001")
@@ -301,7 +300,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
         } else {
             try {
                 defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString);
-            } catch (MQClientException e) {
+            } catch (Throwable e) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.MQ)
                         .setErrorCode("MQ-0001")

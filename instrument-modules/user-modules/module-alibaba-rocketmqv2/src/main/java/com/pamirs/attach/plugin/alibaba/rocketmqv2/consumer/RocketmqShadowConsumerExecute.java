@@ -19,7 +19,6 @@ import com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer;
 import com.alibaba.rocketmq.client.consumer.listener.MessageListener;
 import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import com.alibaba.rocketmq.client.consumer.listener.MessageListenerOrderly;
-import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import com.pamirs.attach.plugin.alibaba.rocketmqv2.consumer.config.RocketmqConsumerConfig;
@@ -90,7 +89,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
      * @param topic            需要注册的topic
      * @return 返回注册的影子消费者，如果初始化失败会返回 null
      */
-    private synchronized DefaultMQPushConsumer buildMQPushConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
+    private DefaultMQPushConsumer buildMQPushConsumer(DefaultMQPushConsumer businessConsumer, String topic) {
         ConcurrentMap<String, SubscriptionData> map;
         try {
             map = businessConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner();
@@ -124,13 +123,11 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
         }
         try {
             defaultMQPushConsumer.setAdjustThreadPoolNumsThreshold(businessConsumer.getAdjustThreadPoolNumsThreshold());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             defaultMQPushConsumer.setAllocateMessageQueueStrategy(businessConsumer.getAllocateMessageQueueStrategy());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         defaultMQPushConsumer.setConsumeConcurrentlyMaxSpan(businessConsumer.getConsumeConcurrentlyMaxSpan());
         defaultMQPushConsumer.setConsumeTimestamp(businessConsumer.getConsumeTimestamp());
@@ -142,41 +139,34 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
         defaultMQPushConsumer.setUnitMode(businessConsumer.isUnitMode());
         try {
             defaultMQPushConsumer.setClientCallbackExecutorThreads(businessConsumer.getClientCallbackExecutorThreads());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             defaultMQPushConsumer.setClientIP(businessConsumer.getClientIP());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             defaultMQPushConsumer.setHeartbeatBrokerInterval(businessConsumer.getHeartbeatBrokerInterval());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             defaultMQPushConsumer.setPersistConsumerOffsetInterval(businessConsumer.getPersistConsumerOffsetInterval());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             defaultMQPushConsumer.setPollNameServerInteval(businessConsumer.getPollNameServerInteval());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             defaultMQPushConsumer.setUnitName(businessConsumer.getUnitName());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             /**
              * 高版本才有，低版本无此方法，所以需要做一下此方法的兼容
              */
             defaultMQPushConsumer.setVipChannelEnabled(businessConsumer.isVipChannelEnabled());
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
+        } catch (Throwable ignored) {
         }
 
         MessageListener messageListener = businessConsumer.getMessageListener();
@@ -208,9 +198,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
              * 高版本才有这个方法
              */
             filterClassSource = subscriptionData.getFilterClassSource();
-        } catch (AbstractMethodError ignored) {
-        } catch (NoSuchMethodError ignored) {
-
+        } catch (Throwable ignored) {
         }
         if (filterClassSource != null) {
             try {
@@ -218,7 +206,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
                 logger.info(
                         "Alibaba-RocketMQ shadow consumer subscribe topic : {} subString : {} filterClassSource : {}",
                         Pradar.addClusterTestPrefix(topic), subString, filterClassSource);
-            } catch (MQClientException e) {
+            } catch (Throwable e) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.MQ)
                         .setErrorCode("MQ-0001")
@@ -238,7 +226,7 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
                 defaultMQPushConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString);
                 logger.info("Alibaba-RocketMQ shadow consumer subscribe topic : {} subString : {}",
                         Pradar.addClusterTestPrefix(topic), subString);
-            } catch (MQClientException e) {
+            } catch (Throwable e) {
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.MQ)
                         .setErrorCode("MQ-0001")

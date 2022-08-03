@@ -97,6 +97,7 @@
         <module>module-apache-rocketmqv2</module>
         <module>module-apache-kafka-streamv2</module>
         <module>module-apache-kafkav2</module>
+        <module>module-spring-rabbitmq</module>
     </modules>
 
     <build>

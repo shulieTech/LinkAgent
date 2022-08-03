@@ -18,19 +18,40 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>io.shulie.instrument.module</groupId>
         <artifactId>user-modules</artifactId>
+        <groupId>io.shulie.instrument.module</groupId>
         <version>1.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>module-apache-kafkav2</artifactId>
+
+    <artifactId>module-spring-rabbitmq</artifactId>
 
     <properties>
-        <module-name>apache-kafkav2</module-name>
+        <module-name>rabbitmq</module-name>
     </properties>
     <version>2.0.0.0</version>
 
     <dependencies>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>2.0.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>2.9.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>2.9.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>11.0.1</version>
+        </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
@@ -38,48 +59,22 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>module-isolation</artifactId>
-            <version>${module.isolation.version}</version>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit</artifactId>
+            <version>1.7.15.RELEASE</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>module-messaging-common</artifactId>
-            <version>${module.messaging.common.version}</version>
-            <scope>provided</scope>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>2.6.3</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.zipkin.brave</groupId>
-            <artifactId>brave-instrumentation-kafka-clients</artifactId>
-            <version>5.6.1</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!--<dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-            <version>1.0.5.RELEASE</version>
-            <scope>provided</scope>
-        </dependency>-->
-
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-            <version>2.3.1.RELEASE</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.aliyun.openservices</groupId>
-            <artifactId>ons-client</artifactId>
-            <version>1.8.0.Final</version>
-            <scope>provided</scope>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
@@ -89,20 +84,11 @@
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>simulator-internal-bootstrap-api</artifactId>
-            <version>${simulator.internal.bootstrap.api.version}</version>
+            <artifactId>module-messaging-common</artifactId>
+            <version>${module.messaging.common.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.10</artifactId>
-            <version>0.8.2.1</version>
-            <scope>provided</scope>
-        </dependency>
-
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
@@ -117,7 +103,7 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>src/main/java-kafka</source>
+                                <source>src/main/java-rabbitmq</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -137,16 +123,8 @@
                 <configuration>
                     <tasks>
                         <echo>Removing dummy classes</echo>
-                        <delete dir="target/classes/org/apache" />
+                        <delete dir="target/classes/com/rabbitmq/" />
                     </tasks>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>8</source>
-                    <target>8</target>
                 </configuration>
             </plugin>
         </plugins>

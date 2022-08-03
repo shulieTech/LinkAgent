@@ -13,30 +13,31 @@
  * limitations under the License.
  */
 
-package com.pamirs.attach.plugin.apache.kafkav2.consumer.server;
+package com.pamirs.attach.plugin.spring.rabbitmq.consumer.server;
 
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Description
  * @Author ocean_wll
- * @Date 2022/8/2 14:35
+ * @Date 2022/8/3 14:32
  */
-public class KafkaShadowConsumerServer implements ShadowServer {
+public class SpringRabbitmqShadowServer implements ShadowServer {
 
-    private final KafkaConsumer shadowConsumer;
+    private final AbstractMessageListenerContainer shadowContainer;
 
     private final AtomicBoolean started = new AtomicBoolean(false);
 
-    public KafkaShadowConsumerServer(KafkaConsumer shadowConsumer) {
-        this.shadowConsumer = shadowConsumer;
+    public SpringRabbitmqShadowServer(AbstractMessageListenerContainer shadowContainer) {
+        this.shadowContainer = shadowContainer;
     }
 
     @Override
     public void start() {
+        shadowContainer.start();
         started.set(true);
     }
 
@@ -47,7 +48,7 @@ public class KafkaShadowConsumerServer implements ShadowServer {
 
     @Override
     public void stop() {
-        shadowConsumer.close();
+        shadowContainer.stop();
         started.set(false);
     }
 }

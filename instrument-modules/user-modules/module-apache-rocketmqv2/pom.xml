@@ -49,7 +49,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-messaging-common</artifactId>
-            <version>1.0.0</version>
+            <version>${module.messaging.common.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

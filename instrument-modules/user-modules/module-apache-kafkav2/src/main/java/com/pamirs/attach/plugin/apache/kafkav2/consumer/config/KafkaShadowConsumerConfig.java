@@ -16,6 +16,7 @@
 package com.pamirs.attach.plugin.apache.kafkav2.consumer.config;
 
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 /**
  * @Description
@@ -24,13 +25,44 @@ import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
  */
 public class KafkaShadowConsumerConfig extends ConsumerConfig {
 
+    private final String topic;
+
+    private final String groupId;
+
+    private final String bootstrapServers;
+
+    private final KafkaConsumer kafkaConsumer;
+
+    public KafkaShadowConsumerConfig(String topic, String groupId, String bootstrapServers, KafkaConsumer kafkaConsumer) {
+        this.topic = topic;
+        this.groupId = groupId;
+        this.bootstrapServers = bootstrapServers;
+        this.kafkaConsumer = kafkaConsumer;
+    }
+
     @Override
     public String keyOfConfig() {
-        return null;
+        return this.topic + "#" + this.groupId;
     }
 
     @Override
     public String keyOfServer() {
-        return null;
+        return "";
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public String getBootstrapServers() {
+        return bootstrapServers;
+    }
+
+    public KafkaConsumer getKafkaConsumer() {
+        return kafkaConsumer;
     }
 }

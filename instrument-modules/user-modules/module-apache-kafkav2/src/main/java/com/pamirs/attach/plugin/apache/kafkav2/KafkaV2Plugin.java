@@ -15,12 +15,9 @@
 
 package com.pamirs.attach.plugin.apache.kafkav2;
 
-import com.pamirs.attach.plugin.apache.kafkav2.consumer.KafkaExecute;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
-import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
-import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,8 +34,7 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
-        Isoman
-
+        // apache kafka poll不需要增强底层方法，有用户用到consumer.poll()这个方法的，直接增强业务的类
 //        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);
 //        ConsumerManager.register(streamMapRegister, "org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");
         return true;

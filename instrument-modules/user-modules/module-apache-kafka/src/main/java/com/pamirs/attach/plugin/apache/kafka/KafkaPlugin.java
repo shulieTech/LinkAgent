@@ -14,12 +14,10 @@
  */
 package com.pamirs.attach.plugin.apache.kafka;
 
-import com.pamirs.attach.plugin.apache.kafka.destroy.ShadowConsumerDisableListenerImpl;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProvider;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.*;
 import com.pamirs.pradar.interceptor.Interceptors;
-import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -28,7 +26,6 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 /**
@@ -124,26 +121,26 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 // Version 2.2.0+ is supported.
                 InstrumentMethod pollMethod = target.getDeclaredMethod("poll", "org.apache.kafka.common.utils.Timer",
                         "boolean");
-                pollMethod.addInterceptor(Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
-                        Interceptors.SCOPE_CALLBACK));
+//                pollMethod.addInterceptor(Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
+//                        Interceptors.SCOPE_CALLBACK));
                 pollMethod.addInterceptor(
                         Listeners.of(ConsumerTraceInterceptor.class, "kafkaTraceScope", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));
 
                 // Version 2.0.0+ is supported.
                 InstrumentMethod pollMethod1 = target.getDeclaredMethod("poll", "long", "boolean");
-                pollMethod1.addInterceptor(
-                        Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
-                                Interceptors.SCOPE_CALLBACK));
+//                pollMethod1.addInterceptor(
+//                        Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
+//                                Interceptors.SCOPE_CALLBACK));
                 pollMethod1.addInterceptor(
                         Listeners.of(ConsumerTraceInterceptor.class, "kafkaTraceScope", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));
 
                 // Version 2.0.0-
                 InstrumentMethod pollMethod2 = target.getDeclaredMethod("poll", "long");
-                pollMethod2.addInterceptor(
-                        Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
-                                Interceptors.SCOPE_CALLBACK));
+//                pollMethod2.addInterceptor(
+//                        Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
+//                                Interceptors.SCOPE_CALLBACK));
                 pollMethod2.addInterceptor(
                         Listeners.of(ConsumerTraceInterceptor.class, "kafkaTraceScope", ExecutionPolicy.BOUNDARY,
                                 Interceptors.SCOPE_CALLBACK));

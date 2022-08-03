@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,7 +16,7 @@ package com.shulie.instrument.simulator.module.util;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.util.IOUtils;
+import com.alibaba.fastjson2.util.IOUtils;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -35,6 +35,7 @@ public class NetUtils {
 
     /**
      * This implementation is based on Apache HttpClient.
+     *
      * @param urlString the requested url
      * @return the response string of given url
      */
@@ -43,7 +44,7 @@ public class NetUtils {
         InputStream in = null;
         try {
             URL url = new URL(urlString);
-            urlConnection = (HttpURLConnection)url.openConnection();
+            urlConnection = (HttpURLConnection) url.openConnection();
             // prefer json to text
             urlConnection.setRequestProperty("Accept", "application/json,text/plain;q=0.2");
             in = urlConnection.getInputStream();
@@ -74,11 +75,10 @@ public class NetUtils {
     }
 
     /**
-     * @deprecated
-     * This implementation is based on HttpURLConnection,
-     * which can not detail with status code other than 200.
      * @param url the requested url
      * @return the response string of given url
+     * @deprecated This implementation is based on HttpURLConnection,
+     * which can not detail with status code other than 200.
      */
     public static String simpleRequest(String url) {
         BufferedReader br = null;
@@ -125,6 +125,7 @@ public class NetUtils {
      * and display the response.
      * Note that pandora qos response is not fully HTTP compatible under version 2.1.0,
      * so we filtered some of the content and only display useful content.
+     *
      * @param path the path relative to http://localhost:12201
      *             e.g. /pandora/ls
      *             For commands that requires arguments, use the following format

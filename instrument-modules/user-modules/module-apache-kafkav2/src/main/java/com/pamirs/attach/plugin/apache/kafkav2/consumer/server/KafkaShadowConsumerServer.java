@@ -16,6 +16,9 @@
 package com.pamirs.attach.plugin.apache.kafkav2.consumer.server;
 
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Description
@@ -24,18 +27,27 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
  */
 public class KafkaShadowConsumerServer implements ShadowServer {
 
+    private final KafkaConsumer shadowConsumer;
+
+    private final AtomicBoolean started = new AtomicBoolean(false);
+
+    public KafkaShadowConsumerServer(KafkaConsumer shadowConsumer) {
+        this.shadowConsumer = shadowConsumer;
+    }
+
     @Override
     public void start() {
-
+        started.set(true);
     }
 
     @Override
     public boolean isRunning() {
-        return false;
+        return started.get();
     }
 
     @Override
     public void stop() {
-
+        shadowConsumer.close();
+        started.set(false);
     }
 }

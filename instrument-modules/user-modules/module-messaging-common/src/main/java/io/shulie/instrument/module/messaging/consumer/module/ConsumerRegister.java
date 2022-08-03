@@ -1,6 +1,7 @@
 package io.shulie.instrument.module.messaging.consumer.module;
 
 import io.shulie.instrument.module.messaging.annoation.NotNull;
+import io.shulie.instrument.module.messaging.common.ResourceInit;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 
@@ -10,18 +11,18 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
  */
 public class ConsumerRegister {
     @NotNull
-    private Class<? extends ShadowConsumerExecute> consumerExecuteClass;
+    private ResourceInit<ShadowConsumerExecute> consumerExecuteResourceInit;
 
     public static ConsumerRegister init(){
         return new ConsumerRegister();
     }
 
-    public ConsumerRegister consumerExecute(Class<? extends ShadowConsumerExecute> consumerExecuteClass){
-        this.consumerExecuteClass = consumerExecuteClass;
+    public ConsumerRegister consumerExecute(ResourceInit<ShadowConsumerExecute> consumerExecuteResourceInit){
+        this.consumerExecuteResourceInit = consumerExecuteResourceInit;
         return this;
     }
 
-    public Class<? extends ShadowConsumerExecute> getConsumerExecuteClass() {
-        return consumerExecuteClass;
+    public ResourceInit<ShadowConsumerExecute> getConsumerExecuteResourceInit() {
+        return consumerExecuteResourceInit;
     }
 }

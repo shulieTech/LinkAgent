@@ -41,7 +41,7 @@ public class ConsumerManagerTest extends TestCase {
     }
 
     public void testRegister() throws InterruptedException {
-        ConsumerRegister register = ConsumerRegister.init().consumerExecute(TestShadowConsumerExecute.class);
+        ConsumerRegister register = ConsumerRegister.init().consumerExecute(TestShadowConsumerExecute::new);
 
         ConsumerManager.register(register, "class#method","class#method2");
         Thread.sleep(10 * 1000);

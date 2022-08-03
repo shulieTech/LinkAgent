@@ -13,6 +13,7 @@ import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerModule;
 import io.shulie.instrument.module.messaging.consumer.module.ShadowConsumer;
 import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
+import org.checkerframework.checker.units.qual.C;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -126,10 +127,8 @@ public class ConsumerManager {
         ShadowConsumerExecute shadowConsumerExecute = consumerModule.getSyncObjectDataMap().get(objectData);
         if (shadowConsumerExecute == null) {
             try {
-                Constructor<? extends ShadowConsumerExecute> constructor = consumerModule.getConsumerRegister().getConsumerExecuteClass().getDeclaredConstructor();
-                constructor.setAccessible(true);
-                shadowConsumerExecute= constructor.newInstance();
-            }catch (Throwable e) {
+                shadowConsumerExecute = consumerModule.getConsumerRegister().getConsumerExecuteResourceInit().init();
+            } catch (Throwable e) {
                 throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + JSON.toJSONString(consumerModule.getConsumerRegister()), e);
             }
             consumerModule.getSyncObjectDataMap().put(objectData, shadowConsumerExecute);
@@ -217,9 +216,12 @@ public class ConsumerManager {
             //当时获取不到的，重新再获取一次
             if (entry.getValue() == EMPTY_SYNC_OBJECT) {
                 String key = entry.getKey();
-                logger.info("[messaging-common]success fetch sync data from {}", key);
-                entry.setValue(SyncObjectService.getSyncObject(key));
-                isRefreshed = true;
+                SyncObject newData = SyncObjectService.getSyncObject(key);
+                if (newData != null) {
+                    logger.info("[messaging-common]success fetch sync data from {}", key);
+                    entry.setValue(newData);
+                    isRefreshed = true;
+                }
             }
         }
         if (isRefreshed) {

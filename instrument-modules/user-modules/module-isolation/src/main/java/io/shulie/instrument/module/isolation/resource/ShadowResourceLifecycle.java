@@ -5,4 +5,12 @@ package io.shulie.instrument.module.isolation.resource;
  * @date 2022/7/26
  */
 public interface ShadowResourceLifecycle {
+
+    Object getTarget();
+
+    boolean isRunning();
+
+    void start();
+
+    void destroy(long timeout);
 }

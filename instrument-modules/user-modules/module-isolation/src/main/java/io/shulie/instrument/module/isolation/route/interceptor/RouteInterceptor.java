@@ -9,6 +9,8 @@ import io.shulie.instrument.module.isolation.proxy.ShadowProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+
 /**
  * @author Licey
  * @date 2022/7/26
@@ -24,9 +26,15 @@ public class RouteInterceptor extends AdviceListener {
 
     @Override
     public void before(Advice advice) throws Throwable {
+        //todo@langyi 如果进入的是影子对象，需要检查
         if (Pradar.isClusterTest()) {
+            //todo@langyi 如果进入的是影子对象，不能进行路由
             try {
-                Object res = shadowProxy.executeMethod(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray());
+                Object[] parameterArray = advice.getParameterArray();
+                Object res = shadowProxy.executeMethod(
+                        advice.getTarget()
+                        , advice.getBehaviorName()
+                        , parameterArray == null ? null : Arrays.copyOf(parameterArray, parameterArray.length));
                 advice.returnImmediately(res);
             } catch (Throwable e) {
                 throw new PressureMeasureError("execute shadow proxy fail", e);

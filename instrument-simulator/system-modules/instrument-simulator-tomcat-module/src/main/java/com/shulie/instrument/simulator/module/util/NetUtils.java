@@ -16,7 +16,7 @@ package com.shulie.instrument.simulator.module.util;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.util.IOUtils;
+import com.alibaba.fastjson2.util.IOUtils;
 
 import java.io.*;
 import java.net.HttpURLConnection;

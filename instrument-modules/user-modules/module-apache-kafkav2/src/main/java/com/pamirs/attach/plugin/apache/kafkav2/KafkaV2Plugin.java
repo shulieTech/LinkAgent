@@ -16,9 +16,19 @@
 package com.pamirs.attach.plugin.apache.kafkav2;
 
 import com.pamirs.attach.plugin.apache.kafkav2.consumer.KafkaExecute;
+import com.pamirs.attach.plugin.apache.kafkav2.producer.factory.ApacheKafkaProducerFactory;
+import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendMethodProxy;
+import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendOffsetsToTransactionMethodProxy;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import io.shulie.instrument.module.isolation.IsolationManager;
+import io.shulie.instrument.module.isolation.common.ResourceInit;
+import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
+import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
+import io.shulie.instrument.module.isolation.proxy.impl.AddClusterRouteShadowMethodProxy;
+import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
+import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
@@ -31,13 +41,21 @@ import org.slf4j.LoggerFactory;
  * @Date 2022/8/2 10:10
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "kafkav2", version = "1.0.0", author = "wanglinglong@shulie.io", description = "kafka新版插件")
+@ModuleInfo(id = KafkaV2Plugin.moduleName, version = "1.0.0", author = "wanglinglong@shulie.io", description = "kafka新版插件")
 public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static final Logger logger = LoggerFactory.getLogger(KafkaV2Plugin.class);
+    static final String moduleName = "kafkav2";
 
     @Override
     public boolean onActive() throws Throwable {
-        Isoman
+        ShadowProxyConfig proxyConfig = new ShadowProxyConfig(moduleName);
+        proxyConfig.addEnhance(new EnhanceClass("org.apache.kafka.clients.producer.KafkaProducer")
+                .setFactoryResourceInit(ApacheKafkaProducerFactory::new)
+                .addEnhanceMethod("send", SendMethodProxy::new)
+                .addEnhanceMethod("sendOffsetsToTransaction", SendOffsetsToTransactionMethodProxy::new)
+                .addEnhanceMethod("partitionsFor", () -> new AddClusterRouteShadowMethodProxy(0))
+                .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"));
+        IsolationManager.register(proxyConfig);
 
 //        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);
 //        ConsumerManager.register(streamMapRegister, "org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");

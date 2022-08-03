@@ -70,7 +70,8 @@ public class KafkaShadowStreamStartExecute implements ShadowConsumerExecute {
         KafkaStreams bizStream = (KafkaStreams) syncObjectData.getTarget();
 
         // 因为2.0版本与1.0版本对应的类名不一致，所以通过反射获取对应的Object对象
-        Object topologyBuilder = Reflect.on(Reflect.on(bizStream).get("streamsMetadataState")).get("builder");
+        Object state = Reflect.on(bizStream).get("streamsMetadataState");
+        Object topologyBuilder = Reflect.on(state).get("builder");
         Set<String> sourceTopicNames = Reflect.on(topologyBuilder).get("sourceTopicNames");
 
         List<ConsumerConfig> configs = new ArrayList<ConsumerConfig>();

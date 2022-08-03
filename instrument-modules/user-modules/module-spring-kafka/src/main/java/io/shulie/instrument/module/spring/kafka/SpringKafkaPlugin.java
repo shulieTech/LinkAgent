@@ -32,7 +32,7 @@ public class SpringKafkaPlugin extends ModuleLifecycleAdapter implements Extensi
     @Override
     public boolean onActive() throws Throwable {
         //spring-kafka 的发送使用原生kafka 代码
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(SpringKafkaConsumerExecute.class);
+        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(SpringKafkaConsumerExecute::new);
         ConsumerManager.register(consumerRegister, "org.springframework.kafka.listener.KafkaMessageListenerContainer#doStart");
         return true;
     }

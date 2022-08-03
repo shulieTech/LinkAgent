@@ -43,7 +43,7 @@ public class KafkaStreamV2plugin extends ModuleLifecycleAdapter implements Exten
 //        ConsumerRegister streamPeekRegister = new ConsumerRegister().consumerExecute(new KafkaShadowStreamPeekExecute());
 //        ConsumerManager.register(streamPeekRegister, "org.apache.kafka.streams.kstream.internals.KStreamPeek$KStreamPeekProcessor#process");
 
-        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaShadowStreamStartExecute.class);
+        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaShadowStreamStartExecute::new);
         ConsumerManager.register(streamMapRegister, "org.apache.kafka.streams.KafkaStreams#start");
         return true;
     }

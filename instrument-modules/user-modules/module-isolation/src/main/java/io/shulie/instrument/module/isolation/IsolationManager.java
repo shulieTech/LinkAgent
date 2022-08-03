@@ -6,6 +6,7 @@ import com.shulie.instrument.simulator.api.listener.ext.EventWatcher;
 import com.shulie.instrument.simulator.api.listener.ext.IBehaviorMatchBuilder;
 import com.shulie.instrument.simulator.api.listener.ext.IClassMatchBuilder;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
+import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.enhance.EnhanceMethod;
 import io.shulie.instrument.module.isolation.exception.IsolationRuntimeException;
@@ -45,20 +46,23 @@ public class IsolationManager {
         }
         //todo@langyi 只实现了对指定方法的增强和实现， 对类中其他方法的增强和检查，暂未实现。  这里还没获取到业务类加载器，无法提前检查/增强非指定方法
         for (EnhanceClass enhanceClass : proxyConfig.getEnhanceClassList()) {
-            ShadowResourceProxyFactory proxyFactory = enhanceClass.getProxyFactory();
-            if (proxyFactory == null) {
-                throw new IsolationRuntimeException("class " + enhanceClass.getClassName() + " proxyFactory is null!");
+            ResourceInit<ShadowResourceProxyFactory> factoryResourceInit = enhanceClass.getFactoryResourceInit();
+            if (factoryResourceInit == null) {
+                throw new IsolationRuntimeException("class " + enhanceClass.getClassName() + " proxyFactoryInit is null!");
             }
-            watcherList.add(enhanceClassMethod(proxyConfig.getModuleName(), enhanceClass, proxyFactory));
+            watcherList.add(enhanceClassMethod(proxyConfig.getModuleName(), enhanceClass));
         }
     }
 
-    public static EventWatcher enhanceClassMethod(String module, EnhanceClass enhanceClass, ShadowResourceProxyFactory proxyFactory) {
+    public static EventWatcher enhanceClassMethod(String module, EnhanceClass enhanceClass) {
         logger.info("[isolation]pre enhance class:{}", enhanceClass.getClassName());
 
         IClassMatchBuilder buildingForClass = new EventWatchBuilder(moduleEventWatcher).onClass(enhanceClass.getClassName());
 
         for (EnhanceMethod enhanceMethod : enhanceClass.getMethodList()) {
+            if (enhanceMethod.getMethodProxyInit() == null) {
+                throw new IsolationRuntimeException("class " + enhanceClass.getClassName() + ",method:" + enhanceMethod.getMethod() + " methodProxyInit is null!");
+            }
             IBehaviorMatchBuilder buildingForBehavior = buildingForClass.onAnyBehavior(enhanceMethod.getMethod());
             if (enhanceMethod.getArgTypes() != null && enhanceMethod.getArgTypes().length > 0) {
                 buildingForBehavior.withParameterTypes(enhanceMethod.getArgTypes());

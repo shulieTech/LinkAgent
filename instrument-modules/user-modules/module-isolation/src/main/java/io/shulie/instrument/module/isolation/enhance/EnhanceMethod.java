@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.isolation.enhance;
 
+import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 
 /**
@@ -9,7 +10,8 @@ import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 public class EnhanceMethod {
     private String method;
     private Class[] argTypes;
-    private ShadowMethodProxy methodProxy;
+
+    private ResourceInit<ShadowMethodProxy> methodProxyInit;
 
     public String getMethod() {
         return method;
@@ -27,11 +29,11 @@ public class EnhanceMethod {
         this.argTypes = argTypes;
     }
 
-    public ShadowMethodProxy getMethodProxy() {
-        return methodProxy;
+    public ResourceInit<ShadowMethodProxy> getMethodProxyInit() {
+        return methodProxyInit;
     }
 
-    public void setMethodProxy(ShadowMethodProxy methodProxy) {
-        this.methodProxy = methodProxy;
+    public void setMethodProxyInit(ResourceInit<ShadowMethodProxy> methodProxyInit) {
+        this.methodProxyInit = methodProxyInit;
     }
 }

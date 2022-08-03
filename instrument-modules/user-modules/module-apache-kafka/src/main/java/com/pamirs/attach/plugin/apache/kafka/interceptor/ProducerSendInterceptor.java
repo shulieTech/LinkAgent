@@ -57,16 +57,16 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
     private Field topicField;
     private Field producerConfigField;
 
-    private void initTopicField(Object target) {
-        if (topicField != null) {
-            return;
-        }
-        try {
-            topicField = target.getClass().getDeclaredField(KafkaConstants.REFLECT_FIELD_TOPIC);
-            topicField.setAccessible(true);
-        } catch (Throwable e) {
-        }
-    }
+//    private void initTopicField(Object target) {
+//        if (topicField != null) {
+//            return;
+//        }
+//        try {
+//            topicField = target.getClass().getDeclaredField(KafkaConstants.REFLECT_FIELD_TOPIC);
+//            topicField.setAccessible(true);
+//        } catch (Throwable e) {
+//        }
+//    }
 
     private void initProducerConfigField(Object target) {
         if (producerConfigField != null) {
@@ -79,23 +79,23 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
         }
     }
 
-    private void setTopic(Object producerRecord, String topic) {
-        if (topicField != null) {
-            try {
-                topicField.set(producerRecord, topic);
-            } catch (Throwable e) {
-                try {
-                    Reflect.on(producerRecord).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
-                } catch (ReflectException ex) {
-                }
-            }
-        } else {
-            try {
-                Reflect.on(producerRecord).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
-            } catch (ReflectException ex) {
-            }
-        }
-    }
+//    private void setTopic(Object producerRecord, String topic) {
+//        if (topicField != null) {
+//            try {
+//                topicField.set(producerRecord, topic);
+//            } catch (Throwable e) {
+//                try {
+//                    Reflect.on(producerRecord).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
+//                } catch (ReflectException ex) {
+//                }
+//            }
+//        } else {
+//            try {
+//                Reflect.on(producerRecord).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
+//            } catch (ReflectException ex) {
+//            }
+//        }
+//    }
 
     @Override
     public String getPluginName() {
@@ -140,12 +140,12 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
 
         ProducerRecord producerRecord = (ProducerRecord)args[0];
         if (null != producerRecord && Pradar.isClusterTest()) {
-            String topic = producerRecord.topic();
-            if (!Pradar.isClusterTestPrefix(topic)) {
-                topic = Pradar.addClusterTestPrefix(topic);
-                initTopicField(producerRecord);
-                setTopic(producerRecord, topic);
-            }
+//            String topic = producerRecord.topic();
+//            if (!Pradar.isClusterTestPrefix(topic)) {
+//                topic = Pradar.addClusterTestPrefix(topic);
+//                initTopicField(producerRecord);
+//                setTopic(producerRecord, topic);
+//            }
             if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
                 HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
                 headerProcessor.setHeader(producerRecord, PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());

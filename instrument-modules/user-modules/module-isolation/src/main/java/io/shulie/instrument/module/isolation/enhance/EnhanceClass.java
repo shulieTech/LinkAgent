@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.isolation.enhance;
 
+import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 
@@ -16,7 +17,7 @@ public class EnhanceClass {
     private String className;
     private List<EnhanceMethod> methodList;
 
-    private ShadowResourceProxyFactory proxyFactory;
+    private ResourceInit<ShadowResourceProxyFactory> factoryResourceInit;
 
     private boolean isConvertImpl;
 
@@ -25,21 +26,17 @@ public class EnhanceClass {
         methodList = new ArrayList<EnhanceMethod>();
     }
 
-    public EnhanceClass addEnhanceMethod(String method, ShadowMethodProxy methodProxy, Class... args) {
+    public EnhanceClass addEnhanceMethod(String method, ResourceInit<ShadowMethodProxy> methodProxyInit, Class... args) {
         EnhanceMethod enhanceMethod = new EnhanceMethod();
         enhanceMethod.setMethod(method);
         enhanceMethod.setArgTypes(args);
-        enhanceMethod.setMethodProxy(methodProxy);
+        enhanceMethod.setMethodProxyInit(methodProxyInit);
         methodList.add(enhanceMethod);
         return this;
     }
 
-    public ShadowResourceProxyFactory getProxyFactory() {
-        return proxyFactory;
-    }
-
-    public EnhanceClass setProxyFactory(ShadowResourceProxyFactory proxyFactory) {
-        this.proxyFactory = proxyFactory;
+    public EnhanceClass setFactoryResourceInit(ResourceInit<ShadowResourceProxyFactory> factoryResourceInit) {
+        this.factoryResourceInit = factoryResourceInit;
         return this;
     }
 
@@ -56,7 +53,7 @@ public class EnhanceClass {
         return this;
     }
 
-    public EnhanceClass addEnhanceMethods(ShadowMethodProxy methodProxy,String... method) {
+    public EnhanceClass addEnhanceMethods(ResourceInit<ShadowMethodProxy> methodProxy,String... method) {
         if (method != null) {
             for (String s : method) {
                 addEnhanceMethod(s, methodProxy, (Class[]) null);
@@ -87,4 +84,7 @@ public class EnhanceClass {
         return methodList;
     }
 
+    public ResourceInit<ShadowResourceProxyFactory> getFactoryResourceInit() {
+        return factoryResourceInit;
+    }
 }

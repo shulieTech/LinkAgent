@@ -9,7 +9,7 @@ import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
  */
 public class EnhanceMethod {
     private String method;
-    private Class[] argTypes;
+    private String[] argTypes;
 
     private ResourceInit<ShadowMethodProxy> methodProxyInit;
 
@@ -21,11 +21,11 @@ public class EnhanceMethod {
         this.method = method;
     }
 
-    public Class[] getArgTypes() {
+    public String[] getArgTypes() {
         return argTypes;
     }
 
-    public void setArgTypes(Class[] argTypes) {
+    public void setArgTypes(String[] argTypes) {
         this.argTypes = argTypes;
     }
 

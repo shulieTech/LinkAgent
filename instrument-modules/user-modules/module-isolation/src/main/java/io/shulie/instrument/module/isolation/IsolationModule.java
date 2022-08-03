@@ -16,6 +16,7 @@ public class IsolationModule extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
+        IsolationManager.init(moduleEventWatcher);
         return true;
     }
 }

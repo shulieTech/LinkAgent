@@ -11,6 +11,11 @@ public class Main {
         System.out.println("Hello world!");
         Castor.canCast(Main.class.getDeclaredMethod("ttt").getReturnType(),null);
         System.out.println(Main.class.getDeclaredMethod("ttt").getReturnType());
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("aaa,");
+        stringBuilder.deleteCharAt(stringBuilder.length()-1);
+        System.out.println(stringBuilder);
     }
 
     public static void ttt(){

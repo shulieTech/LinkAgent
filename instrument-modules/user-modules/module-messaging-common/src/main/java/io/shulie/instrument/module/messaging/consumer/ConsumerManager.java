@@ -1,6 +1,7 @@
 package io.shulie.instrument.module.messaging.consumer;
 
 import com.alibaba.fastjson.JSON;
+import com.pamirs.pradar.BizClassLoaderService;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
@@ -95,31 +96,28 @@ public class ConsumerManager {
     }
 
     private static void doConsumerRegister(ConsumerModule consumerModule) {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        try {
-            for (Map.Entry<String, SyncObject> entry : consumerModule.getSyncObjectMap().entrySet()) {
-                for (SyncObjectData objectData : entry.getValue().getDatas()) {
-                    if (!consumerModule.getSyncObjectDataMap().containsKey(objectData)) {
-                        Thread.currentThread().setContextClassLoader(objectData.getTarget().getClass().getClassLoader());
-                        try {
-                            ShadowConsumerExecute shadowConsumerExecute = prepareShadowConsumerExecute(consumerModule, objectData);
-                            List<ConsumerConfig> configList = shadowConsumerExecute.prepareConfig(objectData);
-                            if (configList != null && !configList.isEmpty()) {
-                                logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
-                                for (ConsumerConfig consumerConfig : configList) {
-                                    if (!shadowConsumerMap.containsKey(consumerConfig)) {
-                                        addShadowConsumer(consumerConfig, shadowConsumerExecute);
-                                    }
+        for (Map.Entry<String, SyncObject> entry : consumerModule.getSyncObjectMap().entrySet()) {
+            for (SyncObjectData objectData : entry.getValue().getDatas()) {
+                if (!consumerModule.getSyncObjectDataMap().containsKey(objectData)) {
+                    try {
+//                        BizClassLoaderService.setBizClassLoader(objectData.getTarget().getClass().getClassLoader());
+                        ShadowConsumerExecute shadowConsumerExecute = prepareShadowConsumerExecute(consumerModule, objectData);
+                        List<ConsumerConfig> configList = shadowConsumerExecute.prepareConfig(objectData);
+                        if (configList != null && !configList.isEmpty()) {
+                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
+                            for (ConsumerConfig consumerConfig : configList) {
+                                if (!shadowConsumerMap.containsKey(consumerConfig)) {
+                                    addShadowConsumer(consumerConfig, shadowConsumerExecute);
                                 }
                             }
-                        } catch (Throwable e) {
-                            logger.error("prepare Config fail:{}", JSON.toJSONString(consumerModule.getConsumerRegister()), e);
                         }
+                    } catch (Throwable e) {
+                        logger.error("prepare Config fail:{}", JSON.toJSONString(consumerModule.getConsumerRegister()), e);
+                    }finally {
+//                        BizClassLoaderService.clearBizClassLoader();
                     }
                 }
             }
-        } finally {
-            Thread.currentThread().setContextClassLoader(cl);
         }
     }
 

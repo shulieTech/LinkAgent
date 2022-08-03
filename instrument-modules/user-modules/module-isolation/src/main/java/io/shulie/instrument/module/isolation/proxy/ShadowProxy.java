@@ -53,9 +53,9 @@ public class ShadowProxy {
     }
 
     private synchronized ShadowResourceLifecycle fetchShadowTarget(Object bizTarget) {
-        ShadowResourceLifecycle o = shadowTargetMap.get(bizTarget);
-        if (o == null) {
-            ShadowResourceLifecycle shadowResource = resourceProxyFactory.createShadowResource(bizTarget);
+        ShadowResourceLifecycle shadowResource = shadowTargetMap.get(bizTarget);
+        if (shadowResource == null) {
+            shadowResource = resourceProxyFactory.createShadowResource(bizTarget);
             if (shadowResource != null) {
                 if (!shadowResource.isRunning()) {
                     shadowResource.start();
@@ -67,10 +67,10 @@ public class ShadowProxy {
                 }
             }
         }
-        if (o == null) {
+        if (shadowResource == null) {
             throw new IsolationRuntimeException("can not init shadowResource with class:" + enhanceClass.getClassName() + " method:" + enhanceMethod.getMethod());
         }
-        return o;
+        return shadowResource;
     }
 
     public Map<Object, ShadowResourceLifecycle> getShadowTargetMap() {

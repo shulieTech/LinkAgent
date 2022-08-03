@@ -51,10 +51,11 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
         ShadowProxyConfig proxyConfig = new ShadowProxyConfig(moduleName);
         proxyConfig.addEnhance(new EnhanceClass("org.apache.kafka.clients.producer.KafkaProducer")
                 .setFactoryResourceInit(ApacheKafkaProducerFactory::new)
-                .addEnhanceMethod("send", SendMethodProxy::new)
+                .addEnhanceMethod("send", SendMethodProxy::new, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
                 .addEnhanceMethod("sendOffsetsToTransaction", SendOffsetsToTransactionMethodProxy::new)
                 .addEnhanceMethod("partitionsFor", () -> new AddClusterRouteShadowMethodProxy(0))
                 .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"));
+
         IsolationManager.register(proxyConfig);
 
 //        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);

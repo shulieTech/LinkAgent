@@ -107,52 +107,6 @@ public class ProducerSendInterceptor extends TraceInterceptorAdaptor {
         return KafkaConstants.PLUGIN_TYPE;
     }
 
-    @Override
-    public void beforeFirst(Advice advice) {
-        if (!Pradar.isClusterTest()) {
-            return;
-        }
-        Object[] args = advice.getParameterArray();
-        ClusterTestUtils.validateClusterTest();
-        try {
-            final Callback callback = (Callback)advice.getParameterArray()[1];
-            final Map<String, String> context = Pradar.getInvokeContextMap();
-            if (callback != null) {
-                advice.changeParameter(1, new Callback() {
-                    @Override
-                    public void onCompletion(RecordMetadata metadata, Exception exception) {
-                        boolean clear = false;
-                        if (PradarService.getInvokeContext().isEmpty()) {
-                            PradarInternalService.setInvokeContext(context);
-                            clear = true;
-                        }
-                        callback.onCompletion(metadata, exception);
-                        if (clear) {
-                            PradarInternalService.clearInvokeContext();
-                        }
-                    }
-                });
-            }
-
-        } catch (Throwable e) {
-            LOGGER.warn("SIMULATOR: kafka send message wrap callback failed.", e);
-        }
-
-        ProducerRecord producerRecord = (ProducerRecord)args[0];
-        if (null != producerRecord && Pradar.isClusterTest()) {
-//            String topic = producerRecord.topic();
-//            if (!Pradar.isClusterTestPrefix(topic)) {
-//                topic = Pradar.addClusterTestPrefix(topic);
-//                initTopicField(producerRecord);
-//                setTopic(producerRecord, topic);
-//            }
-            if (PradarSwitcher.isKafkaMessageHeadersEnabled() && !isHeadReadOnly(producerRecord)) {
-                HeaderProcessor headerProcessor = HeaderProvider.getHeaderProcessor(producerRecord);
-                headerProcessor.setHeader(producerRecord, PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
-            }
-        }
-    }
-
     private String getValue(ProducerConfig producerConfig, String key) {
         ProducerConfigProcessor processor = ProducerConfigProvider.getProducerConfigProcessor(producerConfig);
         return processor.getValue(producerConfig, key);

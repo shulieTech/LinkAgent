@@ -1,11 +1,13 @@
 package io.shulie.instrument.module.isolation;
 
+import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.listener.ext.EventWatchBuilder;
 import com.shulie.instrument.simulator.api.listener.ext.EventWatcher;
 import com.shulie.instrument.simulator.api.listener.ext.IBehaviorMatchBuilder;
 import com.shulie.instrument.simulator.api.listener.ext.IClassMatchBuilder;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
+import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.enhance.EnhanceMethod;
@@ -67,8 +69,25 @@ public class IsolationManager {
             if (enhanceMethod.getArgTypes() != null && enhanceMethod.getArgTypes().length > 0) {
                 buildingForBehavior.withParameterTypes(enhanceMethod.getArgTypes());
             }
-            buildingForBehavior.onListener(Listeners.of(RouteInterceptor.class, new Object[]{new ShadowProxy(module, enhanceClass, enhanceMethod)}));
+            buildingForBehavior.onListener(Listeners.of(RouteInterceptor.class, keyOfScope(enhanceClass,enhanceMethod), ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[]{new ShadowProxy(module, enhanceClass, enhanceMethod)}));
         }
         return buildingForClass.onWatch();
     }
+
+    private static String keyOfScope(EnhanceClass enhanceClass, EnhanceMethod enhanceMethod) {
+        StringBuilder args = new StringBuilder();
+        //去掉参数， 这里不需要参数，如果是会重复调用的，本来就应该只拦截一次就够了
+//        args.append("(");
+//        if (enhanceMethod.getArgTypes() != null) {
+//            for (String argType : enhanceMethod.getArgTypes()) {
+//                if (args.length() != 1) {
+//                    args.append(",");
+//                }
+//                args.append(argType);
+//            }
+//        }
+//        args.append(")");
+        return enhanceClass.getClassName() + "#" + enhanceMethod.getMethod() + args.toString() + "-routeInterceptor";
+    }
+
 }

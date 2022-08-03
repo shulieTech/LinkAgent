@@ -26,7 +26,7 @@ public class EnhanceClass {
         methodList = new ArrayList<EnhanceMethod>();
     }
 
-    public EnhanceClass addEnhanceMethod(String method, ResourceInit<ShadowMethodProxy> methodProxyInit, Class... args) {
+    public EnhanceClass addEnhanceMethod(String method, ResourceInit<ShadowMethodProxy> methodProxyInit, String... args) {
         EnhanceMethod enhanceMethod = new EnhanceMethod();
         enhanceMethod.setMethod(method);
         enhanceMethod.setArgTypes(args);
@@ -40,14 +40,14 @@ public class EnhanceClass {
         return this;
     }
 
-    public EnhanceClass addEnhanceMethod(String method, Class... args) {
+    public EnhanceClass addEnhanceMethod(String method, String... args) {
         return addEnhanceMethod(method, ROUTE_SHADOW_METHOD_PROXY, args);
     }
 
     public EnhanceClass addEnhanceMethods(String... method) {
         if (method != null) {
             for (String s : method) {
-                addEnhanceMethod(s, (Class[]) null);
+                addEnhanceMethod(s, (String[]) null);
             }
         }
         return this;
@@ -56,7 +56,7 @@ public class EnhanceClass {
     public EnhanceClass addEnhanceMethods(ResourceInit<ShadowMethodProxy> methodProxy,String... method) {
         if (method != null) {
             for (String s : method) {
-                addEnhanceMethod(s, methodProxy, (Class[]) null);
+                addEnhanceMethod(s, methodProxy, (String[]) null);
             }
         }
         return this;

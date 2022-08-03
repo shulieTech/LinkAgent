@@ -14,6 +14,8 @@
  */
 package com.shulie.instrument.simulator.core.classloader;
 
+import com.pamirs.pradar.BizClassLoaderService;
+import com.pamirs.pradar.IBizClassLoaderService;
 import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +56,7 @@ public class BizClassLoaderHolder {
         if (null == classLoader) {
             classLoader = Thread.currentThread().getContextClassLoader();
             if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
-                LOGGER.warn("setBizClassLoader classLoader is isSimulatorClassLoader!", new Exception());
+                LOGGER.warn("setBizClassLoader classLoader is isSimulatorClassLoader!", new Exception("setBizClassLoader classLoader is isSimulatorClassLoader!"));
                 return;
             }
         }
@@ -122,5 +124,19 @@ public class BizClassLoaderHolder {
         ClassLoader getClassLoader() {
             return classLoader == null ? null : classLoader.get();
         }
+    }
+
+    static {
+        BizClassLoaderService.register(new IBizClassLoaderService() {
+            @Override
+            public void setBizClassLoader(ClassLoader classLoader) {
+                BizClassLoaderHolder.setBizClassLoader(classLoader);
+            }
+
+            @Override
+            public void clearBizClassLoader() {
+                BizClassLoaderHolder.clearBizClassLoader();
+            }
+        });
     }
 }

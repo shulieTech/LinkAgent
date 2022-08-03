@@ -24,8 +24,8 @@ public class ApacheKafkaProducerFactory implements ShadowResourceProxyFactory {
 
         ProducerConfig producerConfig = Reflect.on(bizProducer).field("producerConfig").get();
         Map originals = Reflect.on(producerConfig).field("originals").get();
-        Serializer keySerializer = Reflect.on(producerConfig).field("keySerializer").get();
-        Serializer valueSerializer = Reflect.on(producerConfig).field("valueSerializer").get();
+        Serializer keySerializer = Reflect.on(bizProducer).field("keySerializer").get();
+        Serializer valueSerializer = Reflect.on(bizProducer).field("valueSerializer").get();
 
         KafkaProducer producer = new KafkaProducer(originals, keySerializer, valueSerializer);
         resource.setKafkaProducer(producer);

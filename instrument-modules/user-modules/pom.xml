@@ -98,6 +98,7 @@
         <module>module-apache-kafka-streamv2</module>
         <module>module-apache-kafkav2</module>
         <module>module-spring-rabbitmq</module>
+        <module>module-rabbitmqv2</module>
     </modules>
 
     <build>

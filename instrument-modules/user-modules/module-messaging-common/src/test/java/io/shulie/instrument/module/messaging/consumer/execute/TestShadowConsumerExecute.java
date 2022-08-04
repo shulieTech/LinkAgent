@@ -2,6 +2,7 @@ package io.shulie.instrument.module.messaging.consumer.execute;
 
 import com.pamirs.pradar.bean.SyncObjectData;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +23,7 @@ public class TestShadowConsumerExecute implements ShadowConsumerExecute {
 
             @Override
             public String keyOfServer() {
-                return null;
+                return "ssss";
             }
         };
         ConsumerConfig c2 = new ConsumerConfig() {
@@ -34,14 +35,14 @@ public class TestShadowConsumerExecute implements ShadowConsumerExecute {
 
             @Override
             public String keyOfServer() {
-                return null;
+                return "ssss";
             }
         };
         return Arrays.asList(c1, c2);
     }
 
     @Override
-    public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
+    public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> dataList) {
         return new ShadowServer() {
             @Override
             public void start() {

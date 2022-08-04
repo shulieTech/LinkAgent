@@ -3,22 +3,35 @@ package io.shulie.instrument.module.messaging.consumer.module;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * @author Licey
  * @date 2022/7/27
  */
 public class ShadowConsumer {
-    private ConsumerConfig consumerConfig;
+    private Set<ConsumerConfig> configSet;
     private ShadowConsumerExecute consumerExecute;
     private ShadowServer shadowServer;
+    private Object bizTarget;
+    private Set<ConsumerConfig> enableConfigSet;
 
-    private ClassLoader bizClassLoad;
-    private boolean started;
-
-    public ShadowConsumer(ConsumerConfig consumerConfig, ShadowConsumerExecute consumerExecute,ClassLoader bizClassLoad) {
-        this.consumerConfig = consumerConfig;
+    public ShadowConsumer(ShadowConsumerExecute consumerExecute,Object bizTarget) {
+        this.configSet = new HashSet<>();
+        this.enableConfigSet = new HashSet<>();
         this.consumerExecute = consumerExecute;
-        this.bizClassLoad = bizClassLoad;
+        this.bizTarget = bizTarget;
+    }
+
+    public Set<ConsumerConfig> getEnableConfigSet() {
+        return enableConfigSet;
+    }
+
+    public void setEnableConfigSet(Set<ConsumerConfig> enableConfigSet) {
+        this.enableConfigSet = enableConfigSet;
     }
 
     public ShadowConsumerExecute getConsumerExecute() {
@@ -29,12 +42,20 @@ public class ShadowConsumer {
         this.consumerExecute = consumerExecute;
     }
 
-    public ConsumerConfig getConsumerConfig() {
-        return consumerConfig;
+    public Set<ConsumerConfig> getConfigSet() {
+        return configSet;
     }
 
-    public void setConsumerConfig(ConsumerConfig consumerConfig) {
-        this.consumerConfig = consumerConfig;
+    public void setConfigSet(Set<ConsumerConfig> configSet) {
+        this.configSet = configSet;
+    }
+
+    public Object getBizTarget() {
+        return bizTarget;
+    }
+
+    public void setBizTarget(Object bizTarget) {
+        this.bizTarget = bizTarget;
     }
 
     public ShadowServer getShadowServer() {
@@ -46,10 +67,7 @@ public class ShadowConsumer {
     }
 
     public boolean isStarted() {
-        return started;
+        return shadowServer != null && shadowServer.isRunning();
     }
 
-    public void setStarted(boolean started) {
-        this.started = started;
-    }
 }

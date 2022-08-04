@@ -5,6 +5,7 @@ import com.pamirs.pradar.bean.SyncObjectData;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
 import io.shulie.instrument.module.spring.kafka.consumer.util.SpringKafkaUtil;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * @author Licey
@@ -60,16 +62,19 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
     }
 
     @Override
-    public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
-        SpringKafkaConsumerConfig springKafkaConsumerConfig = (SpringKafkaConsumerConfig) config;
+    public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> dataList) {
+        SpringKafkaConsumerConfig springKafkaConsumerConfig = (SpringKafkaConsumerConfig) dataList.get(0).getConsumerConfig();
 
-        ContainerProperties properties = prepareContainerProperties(springKafkaConsumerConfig.getContainerProperties(), springKafkaConsumerConfig.getBizTopic(), springKafkaConsumerConfig.getBizGroupId());
+        ContainerProperties properties = prepareContainerProperties(
+                springKafkaConsumerConfig.getContainerProperties()
+                , dataList.stream().map((d) -> ((SpringKafkaConsumerConfig) d.getConsumerConfig()).getBizTopic()).collect(Collectors.toList()).toArray(new String[dataList.size()])
+                , springKafkaConsumerConfig.getBizGroupId());
         KafkaMessageListenerContainer container = new KafkaMessageListenerContainer(springKafkaConsumerConfig.getConsumerFactory(), properties);
         return new SpringKafkaShadowServer(container);
     }
 
-    private ContainerProperties prepareContainerProperties(ContainerProperties bizContainerProperties, String bizTopic, String bizGroupId) {
-        ContainerProperties containerProperties = new ContainerProperties(addClusterTest(new String[]{bizTopic}));
+    private ContainerProperties prepareContainerProperties(ContainerProperties bizContainerProperties, String[] bizTopics, String bizGroupId) {
+        ContainerProperties containerProperties = new ContainerProperties(addClusterTest(bizTopics));
 //        if (bizContainerProperties.getTopics() != null) {
 //            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopics()));
 //        } else if (bizContainerProperties.getTopicPattern() != null) {

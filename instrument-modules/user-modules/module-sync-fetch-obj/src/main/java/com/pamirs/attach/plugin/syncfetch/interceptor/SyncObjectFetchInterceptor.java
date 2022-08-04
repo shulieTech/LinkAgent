@@ -28,7 +28,7 @@ public class SyncObjectFetchInterceptor extends AdviceListener {
         String key = getKey(advice.getTarget().getClass(), advice.getBehaviorName());
         logger.info("success save sync object from : {}", key);
         SyncObjectService.saveSyncObject(key, new SyncObject()
-                .addData(new SyncObjectData(advice.getTarget(), advice.getParameterArray(), advice.getReturnObj())));
+                .addData(new SyncObjectData(advice.getTarget(),advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj())));
     }
 
     private synchronized void initKeys() {

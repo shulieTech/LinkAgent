@@ -51,6 +51,7 @@ public class Advice implements Attachment {
     private WeakReference<ClassLoader> classLoader;
     private Behavior behavior;
     private String behaviorName;
+    private String behaviorNameDesc;
     private Object[] parameterArray;
     private Object target;
 
@@ -82,6 +83,7 @@ public class Advice implements Attachment {
     Advice(final int processId,
            final int invokeId,
            final String behaviorName,
+           final String behaviorNameDesc,
            final Behavior behaviorLazyGet,
            final Class targetClass,
            final ClassLoader classLoader,
@@ -90,6 +92,7 @@ public class Advice implements Attachment {
         this.processId = processId;
         this.invokeId = invokeId;
         this.behaviorName = behaviorName;
+        this.behaviorNameDesc = behaviorNameDesc;
         this.behavior = behaviorLazyGet;
         this.targetClass = targetClass;
         if (classLoader != null) {
@@ -424,6 +427,10 @@ public class Advice implements Attachment {
 
     public void setProcessControlEntity(ProcessControlEntity processControlEntity) {
         this.processControlEntity = processControlEntity;
+    }
+
+    public String getBehaviorNameDesc() {
+        return behaviorNameDesc;
     }
 
     /**

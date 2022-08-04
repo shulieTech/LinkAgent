@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.isolation.proxy;
 
+import com.shulie.instrument.simulator.api.util.BehaviorDescriptor;
 import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.enhance.EnhanceMethod;
@@ -10,7 +11,9 @@ import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -32,10 +35,13 @@ public class ShadowProxy {
     private ShadowMethodProxy methodProxy;
     private ShadowResourceProxyFactory resourceProxyFactory;
 
-    private Map<Object, ShadowResourceLifecycle> shadowTargetMap;
+    private Map<Object, ShadowResourceLifecycleModule> shadowTargetMap;
+
+    private Map<String, Method> methodMap;
 
     public ShadowProxy(String module, EnhanceClass enhanceClass, EnhanceMethod enhanceMethod) {
-        shadowTargetMap = new ConcurrentHashMap<Object, ShadowResourceLifecycle>();
+        shadowTargetMap = new ConcurrentHashMap<Object, ShadowResourceLifecycleModule>();
+        methodMap = new ConcurrentHashMap<String, Method>();
         this.module = module;
         this.enhanceClass = enhanceClass;
         this.enhanceMethod = enhanceMethod;
@@ -44,41 +50,34 @@ public class ShadowProxy {
 
     }
 
-    public Object executeMethod(Object bizTarget, String method, Object... args) {
-        ShadowResourceLifecycle o = shadowTargetMap.get(bizTarget);
+    public Object executeMethod(Object bizTarget, String method, String methodDesc, Object... args) {
+        ShadowResourceLifecycleModule o = shadowTargetMap.get(bizTarget);
         if (o == null) {
             o = fetchShadowTarget(bizTarget);
         }
-        return methodProxy.executeMethod(o.getTarget(), method, args);
+        return methodProxy.executeMethod(o.shadowResourceLifecycle.getTarget(), o.fetchMethod(method,methodDesc), args);
     }
 
-    private synchronized ShadowResourceLifecycle fetchShadowTarget(Object bizTarget) {
-        ShadowResourceLifecycle shadowResource = shadowTargetMap.get(bizTarget);
-        if (shadowResource == null) {
-            shadowResource = resourceProxyFactory.createShadowResource(bizTarget);
+    private synchronized ShadowResourceLifecycleModule fetchShadowTarget(Object bizTarget) {
+        ShadowResourceLifecycleModule lifecycleModule = shadowTargetMap.get(bizTarget);
+        if (lifecycleModule == null) {
+            ShadowResourceLifecycle shadowResource = resourceProxyFactory.createShadowResource(bizTarget);
             if (shadowResource != null) {
                 if (!shadowResource.isRunning()) {
                     shadowResource.start();
                 }
                 if (shadowResource.isRunning()) {
-                    shadowTargetMap.put(bizTarget, shadowResource);
+                    lifecycleModule = new ShadowResourceLifecycleModule(shadowResource);
+                    shadowTargetMap.put(bizTarget, lifecycleModule);
                 }else {
                     throw new IsolationRuntimeException("can not start shadowResource with class:" + enhanceClass.getClassName() + " method:" + enhanceMethod.getMethod());
                 }
             }
         }
-        if (shadowResource == null) {
+        if (lifecycleModule == null) {
             throw new IsolationRuntimeException("can not init shadowResource with class:" + enhanceClass.getClassName() + " method:" + enhanceMethod.getMethod());
         }
-        return shadowResource;
-    }
-
-    public Map<Object, ShadowResourceLifecycle> getShadowTargetMap() {
-        return shadowTargetMap;
-    }
-
-    public void setShadowTargetMap(Map<Object, ShadowResourceLifecycle> shadowTargetMap) {
-        this.shadowTargetMap = shadowTargetMap;
+        return lifecycleModule;
     }
 
     public EnhanceClass getEnhanceClass() {
@@ -104,4 +103,43 @@ public class ShadowProxy {
     public void setModule(String module) {
         this.module = module;
     }
+
+    static class ShadowResourceLifecycleModule {
+        ShadowResourceLifecycle shadowResourceLifecycle;
+        Map<String, Method> methodMap;
+
+        public ShadowResourceLifecycleModule(ShadowResourceLifecycle shadowResourceLifecycle) {
+            this.shadowResourceLifecycle = shadowResourceLifecycle;
+            methodMap = new ConcurrentHashMap<String, Method>();
+        }
+
+        Method fetchMethod(String method, String methodDesc) {
+            //todo@langyi 优化性能和内存.
+            Object ptTarget = shadowResourceLifecycle.getTarget();
+            String key = toString(ptTarget);
+            String keyTemp = keyOfMethod(method, methodDesc);
+            String methodKey = key + keyTemp;
+            Method m = methodMap.get(methodKey);
+            if (m == null) {
+                for (final Method temp : ptTarget.getClass().getDeclaredMethods()) {
+                    methodMap.put(key + keyOfMethod(temp.getName(), new BehaviorDescriptor(temp).getDescriptor()), temp);
+                }
+                m = methodMap.get(methodKey);
+            }
+            if (m == null) {
+                throw new IsolationRuntimeException("[isolation]can not found method {}" + methodKey + " in " + ptTarget);
+            }
+            return m;
+        }
+
+        private String keyOfMethod(String method, String methodDesc){
+            return ":" + method + methodDesc;
+        }
+
+        public String toString(Object obj) {
+            return obj.getClass().getName() + "@" + Integer.toHexString(obj.hashCode());
+        }
+    }
+
+
 }

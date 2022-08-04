@@ -2,6 +2,7 @@ package io.shulie.instrument.module.messaging.consumer.execute;
 
 import com.pamirs.pradar.bean.SyncObjectData;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 
 import java.util.List;
 
@@ -13,5 +14,5 @@ public interface ShadowConsumerExecute {
 
     List<ConsumerConfig> prepareConfig(SyncObjectData syncObjectData);
 
-    ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig);
+    ShadowServer fetchShadowServer(List<ConsumerConfigWithData> configList);
 }

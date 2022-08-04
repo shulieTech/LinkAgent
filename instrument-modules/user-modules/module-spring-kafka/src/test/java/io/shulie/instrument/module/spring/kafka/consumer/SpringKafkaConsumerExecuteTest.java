@@ -2,6 +2,7 @@ package io.shulie.instrument.module.spring.kafka.consumer;
 
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import com.pamirs.pradar.bean.SyncObjectData;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import junit.framework.TestCase;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -15,6 +16,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author Licey
@@ -55,7 +57,7 @@ public class SpringKafkaConsumerExecuteTest extends TestCase {
             }
         });
         KafkaMessageListenerContainer target = new KafkaMessageListenerContainer(consumerFactory, containerProperties);
-        syncObjectData = new SyncObjectData(target, null, null);
+        syncObjectData = new SyncObjectData(target, null, null, null, null);
 
         target.start();
     }
@@ -76,8 +78,8 @@ public class SpringKafkaConsumerExecuteTest extends TestCase {
 
     public void testFetchShadowServer() throws InterruptedException {
         SpringKafkaConsumerExecute springKafkaConsumerExecute = new SpringKafkaConsumerExecute();
-        List<io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig> configList = springKafkaConsumerExecute.prepareConfig(syncObjectData);
-        ShadowServer shadowServer = springKafkaConsumerExecute.fetchShadowServer(configList.get(0), "");
+        List<ConsumerConfigWithData> configList = springKafkaConsumerExecute.prepareConfig(syncObjectData).stream().map(ConsumerConfigWithData::new).collect(Collectors.toList());
+        ShadowServer shadowServer = springKafkaConsumerExecute.fetchShadowServer(configList);
         shadowServer.start();
         Thread.sleep(5 * 1000);
 //        assertTrue(shadowServer.isRunning());

@@ -1,6 +1,7 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 
@@ -54,6 +55,6 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
 
     @Override
     public String keyOfServer() {
-        return "";
+        return String.valueOf(consumerFactory.getConfigurationProperties().get("bootstrap.servers"));
     }
 }

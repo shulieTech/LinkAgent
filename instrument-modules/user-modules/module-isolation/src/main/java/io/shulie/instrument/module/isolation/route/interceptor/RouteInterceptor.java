@@ -10,7 +10,10 @@ import io.shulie.instrument.module.isolation.proxy.ShadowProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Licey
@@ -18,6 +21,8 @@ import java.util.Arrays;
  */
 public class RouteInterceptor extends CutoffInterceptorAdaptor {
     private static final Logger logger = LoggerFactory.getLogger(RouteInterceptor.class);
+
+    private Map<String, Method> methodMap = new ConcurrentHashMap<String, Method>();
 
     private ShadowProxy shadowProxy;
 
@@ -35,8 +40,9 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
                 Object res = shadowProxy.executeMethod(
                         advice.getTarget()
                         , advice.getBehaviorName()
+                        , advice.getBehaviorNameDesc()
                         , parameterArray == null ? null : Arrays.copyOf(parameterArray, parameterArray.length));
-                CutOffResult.cutoff(res);
+                return CutOffResult.cutoff(res);
             } catch (Throwable e) {
                 logger.error("execute shadow proxy fail: {}", JSON.toJSONString(this.shadowProxy), e);
                 throw new PressureMeasureError("execute shadow proxy fail", e);
@@ -44,17 +50,4 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
         }
         return CutOffResult.passed();
     }
-
-    @Override
-    public void after(Advice advice) throws Throwable {
-    }
-
-    @Override
-    public void afterReturning(Advice advice) throws Throwable {
-    }
-
-    @Override
-    public void afterThrowing(Advice advice) throws Throwable {
-    }
-
 }

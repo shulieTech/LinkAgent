@@ -26,11 +26,11 @@ public class ConsumerManagerTest extends TestCase {
 
     public void setUp() throws Exception {
         SyncObject syncObject = new SyncObject();
-        syncObject.addData(new SyncObjectData(new Object(), null, null));
+        syncObject.addData(new SyncObjectData(new Object(), null,null,null, null));
         SyncObjectService.saveSyncObject("class#method", syncObject);
 
         SyncObject syncObject2 = new SyncObject();
-        syncObject2.addData(new SyncObjectData(new Object(), null, null));
+        syncObject2.addData(new SyncObjectData(new Object(), null,null,null, null));
         SyncObjectService.saveSyncObject("class#method2", syncObject2);
 
         HashSet<String> mqWhiteList = new HashSet<String>();
@@ -44,7 +44,7 @@ public class ConsumerManagerTest extends TestCase {
         ConsumerRegister register = ConsumerRegister.init().consumerExecute(TestShadowConsumerExecute::new);
 
         ConsumerManager.register(register, "class#method","class#method2");
-        Thread.sleep(10 * 1000);
+        ConsumerManager.runTask();
         List<ShadowConsumer> list = ConsumerManager.runningShadowConsumer();
         Assert.assertFalse(list.isEmpty());
         Assert.assertEquals(list.size(), 2);

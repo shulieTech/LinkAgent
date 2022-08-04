@@ -3,6 +3,8 @@ package io.shulie.instrument.module.isolation.proxy.impl;
 import com.pamirs.pradar.Pradar;
 import io.shulie.instrument.module.isolation.exception.IsolationRuntimeException;
 
+import java.lang.reflect.Method;
+
 /**
  * @author Licey
  * @date 2022/8/2
@@ -15,7 +17,7 @@ public class AddClusterRouteShadowMethodProxy extends RouteShadowMethodProxy {
     }
 
     @Override
-    public Object executeMethod(Object shadowTarget, String method, Object... args) {
+    public Object executeMethod(Object shadowTarget, Method method, Object... args) {
         if (argIndex != null) {
             for (int index : argIndex) {
                 if (index > args.length) {

@@ -28,6 +28,7 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -63,8 +64,8 @@ public class KafkaExecute implements ShadowConsumerExecute {
     }
 
     @Override
-    public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
-        return new KafkaShadowConsumerServer(createShadowConsumer((KafkaShadowConsumerConfig) config));
+    public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> configList) {
+        return new KafkaShadowConsumerServer(createShadowConsumer((KafkaShadowConsumerConfig) configList.get(0).getConsumerConfig()));
     }
 
     /**

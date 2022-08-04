@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,15 +14,22 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
+import com.pamirs.attach.plugin.apache.kafka.util.AopTargetUtil;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -48,6 +55,8 @@ public class ConsumerHolder {
             new HashSet<Consumer<?, ?>>());
 
     private static final Map<Integer, ConsumerProxy> PROXY_MAPPING = new HashMap<Integer, ConsumerProxy>();
+
+    private static final AtomicBoolean spring_kafka_consumer_init_flag = new AtomicBoolean();
     /**
      * key topic+groupid
      * value 业务消费组consumer对象的hashcode
@@ -72,10 +81,11 @@ public class ConsumerHolder {
     }
 
     public static void addWorkWithSpring(Consumer<?, ?> consumer) {
-        ConsumerHolder.WORK_WITH_SPRING.add((Consumer<?, ?>) consumer);
+        ConsumerHolder.WORK_WITH_SPRING.add(consumer);
     }
 
     public static boolean isWorkWithOtherFramework(Consumer<?, ?> consumer) {
+        extractSpringKafkaConsumersFromSpringContext();
         return WORK_WITH_SPRING.contains(consumer) && !ConsumerHolder.isZTO;
     }
 
@@ -97,9 +107,9 @@ public class ConsumerHolder {
         return consumerMetaData;
     }
 
-    private static String getConsumerMetaDataKey(ConsumerMetaData consumerMetaData){
-        StringBuilder s= new StringBuilder();
-        for (Object key : consumerMetaData.getTopics().toArray()){
+    private static String getConsumerMetaDataKey(ConsumerMetaData consumerMetaData) {
+        StringBuilder s = new StringBuilder();
+        for (Object key : consumerMetaData.getTopics().toArray()) {
             s.append(key).append("#");
         }
         s.append(consumerMetaData.getGroupId());
@@ -155,5 +165,66 @@ public class ConsumerHolder {
             }
         }
         return maxLagMillSecond;
+    }
+
+    private static void extractSpringKafkaConsumersFromSpringContext() {
+        if (spring_kafka_consumer_init_flag.get()) {
+            return;
+        }
+        Object factory = PradarSpringUtil.getBeanFactory();
+        if (factory == null) {
+            return;
+        }
+        Object containsBean = Reflect.on(factory).call("containsBean", "org.springframework.kafka.config.internalKafkaListenerEndpointRegistry").get();
+        if (Boolean.FALSE.equals(containsBean)) {
+            spring_kafka_consumer_init_flag.set(true);
+            return;
+        }
+        Object endpointRegistry = Reflect.on(factory).call("getBean", "org.springframework.kafka.config.internalKafkaListenerEndpointRegistry").get();
+        Map<String, Object> listenerContainers = Reflect.on(endpointRegistry).get("listenerContainers");
+        if (listenerContainers.isEmpty()) {
+            spring_kafka_consumer_init_flag.set(true);
+            return;
+        }
+        for (Object container : listenerContainers.values()) {
+            if ("ConcurrentMessageListenerContainer".equals(container.getClass().getSimpleName())) {
+                List containers = Reflect.on(container).get("containers");
+                // 说明某些container还没初始化完全
+                if (containers.isEmpty()) {
+                    return;
+                }
+                for (Object innerContainer : containers) {
+                    Consumer consumer = extractKafkaConsumer(innerContainer);
+                    if (consumer == null) {
+                        return;
+                    }
+                    WORK_WITH_SPRING.add(consumer);
+                }
+            } else if ("KafkaMessageListenerContainer".equals(container.getClass().getSimpleName())) {
+                Consumer consumer = extractKafkaConsumer(container);
+                if (consumer == null) {
+                    return;
+                }
+                WORK_WITH_SPRING.add(consumer);
+            }
+        }
+        spring_kafka_consumer_init_flag.set(true);
+    }
+
+    private static Consumer extractKafkaConsumer(Object KafkaMessageListenerContainer) {
+        Object listenerConsumer = Reflect.on(KafkaMessageListenerContainer).get("listenerConsumer");
+        // container没初始化好
+        if (listenerConsumer == null) {
+            return null;
+        }
+        Consumer consumer = Reflect.on(listenerConsumer).get("consumer");
+        if (AopTargetUtil.isAopProxy(consumer)) {
+            try {
+                return (Consumer) AopTargetUtil.getTarget(consumer);
+            } catch (Exception e) {
+                logger.error("extract kafka consumer from spring-kafka-container occur exception", e);
+            }
+        }
+        return consumer;
     }
 }

@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
  * @author Licey
  * @date 2022/8/2
  */
-public class AddClusterRouteShadowMethodProxy extends RouteShadowMethodProxy {
+public class AddClusterRouteShadowMethodProxy extends ModifyParamShadowMethodProxy {
     private int[] argIndex;
 
     public AddClusterRouteShadowMethodProxy(int... argIndex) {
@@ -17,7 +17,7 @@ public class AddClusterRouteShadowMethodProxy extends RouteShadowMethodProxy {
     }
 
     @Override
-    public Object executeMethod(Object shadowTarget, Method method, Object... args) {
+    public Object[] fetchParam(Object shadowTarget, Method method, Object... args) {
         if (argIndex != null) {
             for (int index : argIndex) {
                 if (index > args.length) {
@@ -30,6 +30,6 @@ public class AddClusterRouteShadowMethodProxy extends RouteShadowMethodProxy {
                 }
             }
         }
-        return super.executeMethod(shadowTarget, method, args);
+        return args;
     }
 }

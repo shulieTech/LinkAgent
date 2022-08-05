@@ -121,15 +121,24 @@ public class ShadowProxy {
             String methodKey = key + keyTemp;
             Method m = methodMap.get(methodKey);
             if (m == null) {
-                for (final Method temp : ptTarget.getClass().getDeclaredMethods()) {
-                    methodMap.put(key + keyOfMethod(temp.getName(), new BehaviorDescriptor(temp).getDescriptor()), temp);
-                }
+                prepareMethodMap(key, ptTarget.getClass());
                 m = methodMap.get(methodKey);
             }
             if (m == null) {
                 throw new IsolationRuntimeException("[isolation]can not found method {}" + methodKey + " in " + ptTarget);
             }
             return m;
+        }
+
+        private void prepareMethodMap(String key, Class c) {
+            if (c == null) {
+                return;
+            }
+            for (final Method temp : c.getDeclaredMethods()) {
+                temp.setAccessible(true);
+                methodMap.put(key + keyOfMethod(temp.getName(), new BehaviorDescriptor(temp).getDescriptor()), temp);
+            }
+            prepareMethodMap(key, c.getSuperclass());
         }
 
         private String keyOfMethod(String method, String methodDesc){

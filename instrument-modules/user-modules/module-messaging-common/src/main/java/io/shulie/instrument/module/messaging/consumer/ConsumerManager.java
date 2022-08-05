@@ -107,14 +107,14 @@ public class ConsumerManager {
                                 if (!isValidConfig(consumerConfig)) {
                                     continue;
                                 }
-                                String key = consumerConfig.keyOfServer();
-                                if (StringUtils.isEmpty(key)) {
-                                    logger.error("[messaging-common] {} consumerConfig keyOfServer is null:{}", consumerConfig, JSON.toJSONString(consumerConfig));
-                                    continue;
-                                }
+//                                String key = consumerConfig.keyOfServer();
+//                                if (StringUtils.isEmpty(key)) {
+//                                    logger.error("[messaging-common] {} consumerConfig keyOfServer is null:{}", consumerConfig, JSON.toJSONString(consumerConfig));
+//                                    continue;
+//                                }
                                 //把target也作为key， 防止 ShadowConsumerExecute new 出来的对象有问题
                                 String keyOfObj = objectData.getTarget().getClass() + "#" + Objects.hashCode(objectData.getTarget());
-                                addShadowServerModule(keyOfObj + ":" + key, consumerConfig, shadowConsumerExecute, objectData.getTarget());
+                                addShadowServerModule(keyOfObj, consumerConfig, shadowConsumerExecute, objectData.getTarget());
                             }
                         }
                     } catch (Throwable e) {

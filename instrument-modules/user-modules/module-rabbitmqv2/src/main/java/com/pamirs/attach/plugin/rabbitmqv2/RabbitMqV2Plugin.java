@@ -19,7 +19,6 @@ import com.pamirs.attach.plugin.rabbitmqv2.consumer.RabbitMqV2Execute;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
-import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import io.shulie.instrument.module.messaging.common.ResourceInit;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
@@ -27,8 +26,6 @@ import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Resource;
 
 /**
  * @Description
@@ -40,16 +37,13 @@ import javax.annotation.Resource;
 public class RabbitMqV2Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static final Logger logger = LoggerFactory.getLogger(RabbitMqV2Plugin.class);
 
-    @Resource
-    private SimulatorConfig simulatorConfig;
-
     @Override
     public boolean onActive() throws Throwable {
         ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
             @Override
             public ShadowConsumerExecute init() {
                 try {
-                    return new RabbitMqV2Execute(simulatorConfig);
+                    return new RabbitMqV2Execute();
                 } catch (Exception e) {
                     logger.error("[RabbitMQ] init Rabbitmq execute error", e);
                     return null;

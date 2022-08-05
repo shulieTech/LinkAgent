@@ -16,13 +16,11 @@ package com.pamirs.attach.plugin.rabbitmqv2.consumer.common;
 
 import com.pamirs.attach.plugin.rabbitmqv2.consumer.model.AdminAccessInfo;
 import com.pamirs.attach.plugin.rabbitmqv2.utils.RabbitMqUtils;
-import com.pamirs.pradar.Pradar;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.impl.AMQConnection;
 import com.rabbitmq.client.impl.ChannelManager;
-import com.rabbitmq.client.impl.ChannelN;
 import com.rabbitmq.client.impl.ConsumerWorkService;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
@@ -31,8 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -45,245 +41,8 @@ import java.util.concurrent.*;
 public class ChannelHolder {
     private final static Logger LOGGER = LoggerFactory.getLogger(ChannelHolder.class);
     private final static boolean isInfoEnabled = LOGGER.isInfoEnabled();
-    public static final Object NULL_OBJECT = new Object();
-    private static ConcurrentHashMap<Integer, ConcurrentMap<String, Object>> consumerTags
-            = new ConcurrentHashMap<Integer, ConcurrentMap<String, Object>>();
-    private static ConcurrentHashMap<String, String> queueTags = new ConcurrentHashMap<String, String>();
-    /**
-     * 影子channel和业务consumerMeta的映射
-     */
-    public static ConcurrentHashMap<Channel, ConfigCache.ConsumerMetaDataCacheKey> shadowChannelWithBizMetaCache
-            = new ConcurrentHashMap();
-    /**
-     * queue和channel应该是一对多
-     */
-    private static ConcurrentHashMap<String, List<Channel>> queueChannel = new ConcurrentHashMap<String, List<Channel>>();
-    private static ConcurrentHashMap<Integer, Channel> channelCache = new ConcurrentHashMap<Integer, Channel>();
+
     private static ConcurrentHashMap<Integer, Connection> connectionCache = new ConcurrentHashMap<Integer, Connection>();
-    private static ConcurrentHashMap<Integer, Integer> channelConnectionKeyCache = new ConcurrentHashMap<Integer, Integer>();
-    /**
-     * 业务 consumerTag -> 影子 consumerTag
-     */
-    private static ConcurrentHashMap<String, String> shadowTags = new ConcurrentHashMap<String, String>();
-
-    public static void clearOneShadowChannel(Channel shadowChannel, String busQueue) {
-        int key = System.identityHashCode(shadowChannel);
-        consumerTags.remove(key);
-        String ptQueue = null;
-        if (Pradar.isClusterTestPrefix(busQueue)) {
-            ptQueue = busQueue;
-        } else {
-            ptQueue = Pradar.addClusterTestPrefix(busQueue);
-        }
-        queueChannel.remove(ptQueue);
-        String ptConsumerTag = null;
-        for (Map.Entry<String, String> entry : queueTags.entrySet()) {
-            if (entry.getValue().equals(ptQueue)) {
-                queueTags.remove(entry.getKey());
-                ptConsumerTag = entry.getKey();
-                break;
-            }
-        }
-        Integer busConnectionKey = channelConnectionKeyCache.get(key);
-        if (busConnectionKey != null) {
-            try {
-                if (connectionCache.get(busConnectionKey) != null) {
-                    connectionCache.get(busConnectionKey).close();
-                    connectionCache.remove(busConnectionKey);
-                }
-            } catch (IOException e) {
-                LOGGER.error("ptConnection close error {}", e);
-            }
-        }
-
-        channelConnectionKeyCache.remove(key);
-        for (Map.Entry<Integer, Channel> entry : channelCache.entrySet()) {
-            if (entry.getValue().equals(shadowChannel)) {
-                channelCache.remove(entry.getKey());
-                break;
-            }
-        }
-        for (Map.Entry<String, String> entry : shadowTags.entrySet()) {
-            if (entry.getValue().equals(ptConsumerTag)) {
-                shadowTags.remove(entry.getKey());
-                break;
-            }
-        }
-    }
-
-    public static void release() {
-        consumerTags.clear();
-        queueTags.clear();
-        for (Map.Entry<Integer, Channel> entry : channelCache.entrySet()) {
-            if (entry.getValue() != null && entry.getValue().isOpen()) {
-                try {
-                    entry.getValue().close();
-                } catch (Throwable e) {
-                    LOGGER.error("rabbitmq close shadow channel error.", e);
-                }
-            }
-        }
-        channelCache.clear();
-        connectionCache.clear();
-        queueChannel.clear();
-    }
-
-    public static String getQueueByTag(String consumerTag) {
-        return queueTags.get(consumerTag);
-    }
-
-    /**
-     * 向当前连接绑定一个 consumerTag
-     *
-     * @param target
-     * @param businessConsumerTag 业务的 consumerTag
-     * @param shadowConsumerTag   影子 consumerTag
-     * @param queue               业务 queue 名称
-     */
-    public static void addConsumerTag(Channel target, String businessConsumerTag, String shadowConsumerTag, String queue) {
-        int identityCode = System.identityHashCode(target);
-        Channel shadowChannel = channelCache.get(identityCode);
-        if (shadowChannel == null) {
-            return;
-        }
-        int key = System.identityHashCode(shadowChannel);
-        ConcurrentMap<String, Object> tags = consumerTags.get(key);
-        if (tags == null) {
-            tags = new ConcurrentHashMap<String, Object>();
-            ConcurrentMap<String, Object> oldTags = consumerTags.putIfAbsent(key, tags);
-            if (oldTags != null) {
-                tags = oldTags;
-            }
-        }
-        tags.put(shadowConsumerTag, NULL_OBJECT);
-        /**
-         * 防止并发情况，有其他的 在移除 ConsumerTag 可能导致该 Set 从 consumerTags 里面被移除
-         */
-        consumerTags.put(key, tags);
-        queueTags.put(shadowConsumerTag, queue);
-        shadowTags.put(businessConsumerTag, shadowConsumerTag);
-        cacheQueuewithShadowChannel(queue, shadowChannel);
-        /**
-         * 影子channel和consumerMeta的映射
-         */
-        shadowChannelWithBizMetaCache.put(shadowChannel,
-                new ConfigCache.ConsumerMetaDataCacheKey(System.identityHashCode(target), businessConsumerTag));
-    }
-
-    private static void cacheQueuewithShadowChannel(String queue, Channel channel) {
-        List value = queueChannel.get(queue);
-        if (value == null) {
-            value = new ArrayList();
-            value.add(channel);
-        } else {
-            value.add(channel);
-        }
-        queueChannel.put(queue, value);
-    }
-
-    /**
-     * 取消影子 consumer 的订阅，取消后会移除 consumerTag 的缓存
-     *
-     * @param target      业务 channel
-     * @param consumerTag consumerTag
-     */
-    public static void cancelShadowConsumerTag(Channel target, String consumerTag) {
-        Channel shadowChannel = getOrShadowChannel(target);
-        if (shadowChannel == null || !shadowChannel.isOpen()) {
-            LOGGER.warn("rabbitmq basicCancel failed. cause by shadow channel is not found or closed. consumerTag={}",
-                    consumerTag);
-            return;
-        }
-        try {
-            shadowChannel.basicCancel(consumerTag);
-        } catch (IOException e) {
-            LOGGER.error("rabbitmq basicCancel shadow consumer error. consumerTag={}", consumerTag, e);
-        }
-        removeConsumerTag(target, consumerTag);
-    }
-
-    /**
-     * 移除 ChannelN对应的 ConsumerTag
-     *
-     * @param target
-     * @param consumerTag
-     */
-    public static void removeConsumerTag(Channel target, String consumerTag) {
-        int identityCode = System.identityHashCode(target);
-        Channel shadowChannel = channelCache.get(identityCode);
-        if (shadowChannel == null) {
-            return;
-        }
-        int key = System.identityHashCode(shadowChannel);
-        ConcurrentMap<String, Object> tags = consumerTags.get(key);
-        if (tags == null) {
-            return;
-        }
-        tags.remove(consumerTag);
-        if (tags.isEmpty()) {
-            consumerTags.remove(key);
-        }
-    }
-
-    /**
-     * 判断当前连接有没有此 consumerTag
-     *
-     * @param target
-     * @param consumerTag
-     * @return
-     */
-    public static boolean isExistsConsumerTag(ChannelN target, String consumerTag) {
-        int identityCode = System.identityHashCode(target);
-        Channel shadowChannel = channelCache.get(identityCode);
-        if (shadowChannel == null) {
-            return false;
-        }
-        int key = System.identityHashCode(shadowChannel);
-        ConcurrentMap<String, Object> tags = consumerTags.get(key);
-        if (tags == null) {
-            return false;
-        }
-        return tags.containsKey(consumerTag);
-    }
-
-    /**
-     * 检测 queue 是否存在，与业务 Channel 隔离开来
-     * 如果获取Channel 失败，则直接返回 false
-     *
-     * @param target 业务 Channel
-     * @param queue  检测的 Queue
-     * @return 返回 queue 是否存在
-     */
-    public static boolean isQueueExists(Channel target, String queue) {
-        Channel channel = getOrShadowChannel(target);
-        if (channel == null) {
-            return false;
-        }
-        try {
-            channel.queueDeclarePassive(queue);
-            return true;
-        } catch (Throwable e) {
-            return false;
-        }
-    }
-
-    /**
-     * 根据业务的 consumerTag 判断该 consumer 是否已经存在影子消费者
-     *
-     * @param consumerTag 业务 consumerTag
-     * @return 返回是否已经存在影子 Consumer
-     */
-    public static boolean existsConsumer(String consumerTag) {
-        return shadowTags.containsKey(consumerTag);
-    }
-
-    public static boolean isShadowChannel(Channel channel) {
-        return channelCache.containsValue(channel);
-    }
-
-    public static boolean isShadowConnection(Connection connection) {
-        return connectionCache.containsValue(connection);
-    }
 
     /**
      * 获取影子 Channel
@@ -295,36 +54,16 @@ public class ChannelHolder {
         if (target == null || !target.isOpen()) {
             return null;
         }
-        int key = System.identityHashCode(target);
-        Channel shadowChannel = channelCache.get(key);
-        if (shadowChannel == null || !shadowChannel.isOpen()) {
-            Channel channel;
-            try {
-                Connection ptConnect = getPtConnect(target.getConnection());
-                channel = ptConnect.createChannel();
-            } catch (Exception e) {
-                LOGGER.warn("[RabbitMQ] can't create shadow channel from biz channel", e);
-                return null;
-            }
-            Channel old = channelCache.put(key, channel);
-            if (old != null && old.isOpen()) {
-                try {
-                    old.close();
-                    LOGGER.warn("[RabbitMQ] has old shadow channel close!");
-                } catch (Throwable e) {
-                }
-            }
-            return channel;
-        }
-        return shadowChannel;
-    }
 
-    public static Channel getShadowChannel(Channel target) {
-        if (target == null || !target.isOpen()) {
+        Channel channel;
+        try {
+            Connection ptConnect = getPtConnect(target.getConnection());
+            channel = ptConnect.createChannel();
+        } catch (Exception e) {
+            LOGGER.warn("[RabbitMQ] can't create shadow channel from biz channel", e);
             return null;
         }
-        int key = System.identityHashCode(target);
-        return channelCache.get(key);
+        return channel;
     }
 
     private static Connection getPtConnect(Connection connection) throws IOException, TimeoutException {
@@ -473,9 +212,4 @@ public class ChannelHolder {
         LOGGER.warn("unknown BlockingQueue : {} will use unbound queue", queue.getClass().getName());
         return Integer.MAX_VALUE;
     }
-
-    public static ConcurrentHashMap<String, List<Channel>> getQueueChannel() {
-        return queueChannel;
-    }
-
 }

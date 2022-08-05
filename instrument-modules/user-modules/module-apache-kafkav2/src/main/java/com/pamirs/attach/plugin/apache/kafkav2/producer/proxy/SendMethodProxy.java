@@ -18,7 +18,7 @@ public class SendMethodProxy implements ShadowMethodProxy {
     private static final Logger logger = LoggerFactory.getLogger(SendMethodProxy.class);
 
     @Override
-    public Object executeMethod(Object shadowTarget, Method method, Object... args) {
+    public Object executeMethod(Object shadowTarget, Method method, Object... args) throws Exception {
         if (args != null && args.length > 0) {
             KafkaProducer kafkaProducer = (KafkaProducer) shadowTarget;
             ProducerRecord bizRecord = (ProducerRecord) args[0];

@@ -15,8 +15,6 @@
 
 package com.pamirs.attach.plugin.rabbitmqv2.consumer.server;
 
-import com.pamirs.attach.plugin.rabbitmqv2.consumer.model.ConsumerDetail;
-import com.pamirs.attach.plugin.rabbitmqv2.consumer.model.ConsumerMetaData;
 import com.rabbitmq.client.Channel;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import org.slf4j.Logger;
@@ -32,14 +30,10 @@ public class RabbitMqShadowServer implements ShadowServer {
     private static final Logger logger = LoggerFactory.getLogger(RabbitMqShadowServer.class);
 
     private final String ptConsumerTag;
-    private final ConsumerDetail consumerDetail;
-    private final ConsumerMetaData consumerMetaData;
     private final Channel channel;
 
-    public RabbitMqShadowServer(String ptConsumerTag, ConsumerDetail consumerDetail, ConsumerMetaData consumerMetaData, Channel channel) {
+    public RabbitMqShadowServer(String ptConsumerTag, Channel channel) {
         this.ptConsumerTag = ptConsumerTag;
-        this.consumerDetail = consumerDetail;
-        this.consumerMetaData = consumerMetaData;
         this.channel = channel;
     }
 
@@ -63,14 +57,6 @@ public class RabbitMqShadowServer implements ShadowServer {
 
     public String getPtConsumerTag() {
         return ptConsumerTag;
-    }
-
-    public ConsumerDetail getConsumerDetail() {
-        return consumerDetail;
-    }
-
-    public ConsumerMetaData getConsumerMetaData() {
-        return consumerMetaData;
     }
 
     public Channel getChannel() {

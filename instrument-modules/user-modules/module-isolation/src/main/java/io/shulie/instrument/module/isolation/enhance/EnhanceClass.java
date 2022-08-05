@@ -53,7 +53,7 @@ public class EnhanceClass {
         return this;
     }
 
-    public EnhanceClass addEnhanceMethods(ResourceInit<ShadowMethodProxy> methodProxy,String... method) {
+    public EnhanceClass addEnhanceMethods(ResourceInit<ShadowMethodProxy> methodProxy, String... method) {
         if (method != null) {
             for (String s : method) {
                 addEnhanceMethod(s, methodProxy, (String[]) null);

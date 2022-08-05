@@ -15,7 +15,6 @@
 
 package com.pamirs.attach.plugin.apache.kafkav2;
 
-import com.pamirs.attach.plugin.apache.kafkav2.consumer.KafkaExecute;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.factory.ApacheKafkaProducerFactory;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendMethodProxy;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendOffsetsToTransactionMethodProxy;
@@ -23,14 +22,9 @@ import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import io.shulie.instrument.module.isolation.IsolationManager;
-import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
-import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 import io.shulie.instrument.module.isolation.proxy.impl.AddClusterRouteShadowMethodProxy;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
-import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
-import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
-import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

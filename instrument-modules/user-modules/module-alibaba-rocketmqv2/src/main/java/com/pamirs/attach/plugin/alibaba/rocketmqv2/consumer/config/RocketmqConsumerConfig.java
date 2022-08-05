@@ -41,7 +41,7 @@ public class RocketmqConsumerConfig extends ConsumerConfig {
 
     @Override
     public String keyOfServer() {
-        return "";
+        return businessConsumer.getNamesrvAddr();
     }
 
     public DefaultMQPushConsumer getBusinessConsumer() {

@@ -27,7 +27,7 @@
     <artifactId>module-spring-rabbitmq</artifactId>
 
     <properties>
-        <module-name>rabbitmq</module-name>
+        <module-name>spring-rabbitmq</module-name>
     </properties>
     <version>2.0.0.0</version>
 
@@ -123,11 +123,18 @@
                 <configuration>
                     <tasks>
                         <echo>Removing dummy classes</echo>
-                        <delete dir="target/classes/com/rabbitmq/" />
+                        <delete dir="target/classes/com/rabbitmq/"/>
                     </tasks>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-
 </project>

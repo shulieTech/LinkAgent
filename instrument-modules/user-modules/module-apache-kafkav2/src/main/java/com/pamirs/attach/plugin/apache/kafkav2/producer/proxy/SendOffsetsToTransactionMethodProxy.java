@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class SendOffsetsToTransactionMethodProxy implements ShadowMethodProxy {
     @Override
-    public Object executeMethod(Object shadowTarget, Method method, Object... args) {
+    public Object executeMethod(Object shadowTarget, Method method, Object... args) throws Exception {
         if (args.length > 0) {
             Map<TopicPartition, OffsetAndMetadata> offsets = (Map<TopicPartition, OffsetAndMetadata>) args[0];
             for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : offsets.entrySet()) {

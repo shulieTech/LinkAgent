@@ -16,9 +16,14 @@
 package com.pamirs.attach.plugin.apache.rocketmqv2;
 
 import com.pamirs.attach.plugin.apache.rocketmqv2.consumer.RocketmqShadowConsumerExecute;
+import com.pamirs.attach.plugin.apache.rocketmqv2.producer.factory.DefaultMqProducerFactory;
+import com.pamirs.attach.plugin.apache.rocketmqv2.producer.proxy.SendProxy;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import io.shulie.instrument.module.isolation.IsolationManager;
+import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
+import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
@@ -31,12 +36,23 @@ import org.slf4j.LoggerFactory;
  * @Date 2022/7/29 15:46
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = "apache-rocketmqv2", version = "1.0.0", author = "wanglinglong@shulie.io", description = "apache-rocketmq新版插件")
+@ModuleInfo(id = RocketMqv2Plugin.MODULE_NAME, version = "1.0.0", author = "wanglinglong@shulie.io", description = "apache-rocketmq新版插件")
 public class RocketMqv2Plugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static final Logger logger = LoggerFactory.getLogger(RocketMqv2Plugin.class);
 
+    public static final String MODULE_NAME = "apache-rocketmqv2";
+
     @Override
     public boolean onActive() throws Throwable {
+        ShadowProxyConfig defaultMqProducerProxyConfig = new ShadowProxyConfig(MODULE_NAME);
+        defaultMqProducerProxyConfig
+                .addEnhance(new EnhanceClass("org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl")
+                        .setFactoryResourceInit(DefaultMqProducerFactory::new)
+                        .addEnhanceMethods(SendProxy::new, "sendKernelImpl", "sendMessageInTransaction")
+                );
+
+        IsolationManager.register(defaultMqProducerProxyConfig);
+
         ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(RocketmqShadowConsumerExecute::new);
         ConsumerManager.register(consumerRegister, "org.apache.rocketmq.client.consumer.DefaultMQPushConsumer#start");
         return true;

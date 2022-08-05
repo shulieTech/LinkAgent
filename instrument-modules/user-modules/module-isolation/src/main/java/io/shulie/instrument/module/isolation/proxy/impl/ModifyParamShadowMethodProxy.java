@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
 public abstract class ModifyParamShadowMethodProxy extends RouteShadowMethodProxy {
 
     @Override
-    public Object executeMethod(Object shadowTarget, Method method, Object... args) {
+    public Object executeMethod(Object shadowTarget, Method method, Object... args) throws Exception {
         return super.executeMethod(shadowTarget, method, fetchParam(shadowTarget, method, args));
     }
 

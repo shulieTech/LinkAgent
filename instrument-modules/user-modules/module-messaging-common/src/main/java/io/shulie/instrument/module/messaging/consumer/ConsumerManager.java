@@ -11,7 +11,6 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExec
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.*;
 import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
-import org.apache.commons.lang.StringUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;

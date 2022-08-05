@@ -19,6 +19,7 @@ import com.pamirs.pradar.bean.SyncObjectData;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import org.apache.kafka.streams.KafkaStreams;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class KafkaShadowStreamMapExecute extends AbstractKafkaStreamExecute impl
     }
 
     @Override
-    public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
+    public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> configList) {
         return null;
     }
 }

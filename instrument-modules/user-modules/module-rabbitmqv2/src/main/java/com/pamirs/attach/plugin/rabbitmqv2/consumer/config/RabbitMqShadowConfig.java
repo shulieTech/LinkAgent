@@ -18,6 +18,8 @@ package com.pamirs.attach.plugin.rabbitmqv2.consumer.config;
 import com.rabbitmq.client.impl.ChannelN;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 
+import java.util.Arrays;
+
 /**
  * @Description
  * @Author ocean_wll
@@ -29,10 +31,15 @@ public class RabbitMqShadowConfig extends ConsumerConfig {
 
     private final ChannelN channelN;
 
+    private final Class[] paramTypes;
 
-    public RabbitMqShadowConfig(String queue, ChannelN channelN) {
+    private final Object[] args;
+
+    public RabbitMqShadowConfig(String queue, ChannelN channelN, Class[] paramTypes, Object[] args) {
         this.queue = queue;
         this.channelN = channelN;
+        this.paramTypes = paramTypes;
+        this.args = args;
     }
 
     @Override
@@ -51,5 +58,23 @@ public class RabbitMqShadowConfig extends ConsumerConfig {
 
     public ChannelN getChannelN() {
         return channelN;
+    }
+
+    public Class[] getParamTypes() {
+        return paramTypes;
+    }
+
+    public Object[] getArgs() {
+        return args;
+    }
+
+    @Override
+    public String toString() {
+        return "RabbitMqShadowConfig{" +
+                "queue='" + queue + '\'' +
+                ", channelN=" + channelN +
+                ", paramTypes=" + Arrays.toString(paramTypes) +
+                ", args=" + Arrays.toString(args) +
+                '}';
     }
 }

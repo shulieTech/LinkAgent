@@ -64,5 +64,11 @@
             <version>${module.messaging.common.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>module-isolation</artifactId>
+            <version>${module.isolation.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

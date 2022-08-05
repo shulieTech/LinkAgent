@@ -45,7 +45,7 @@ public class KafkaShadowStreamConfig extends ConsumerConfig {
 
     @Override
     public String keyOfServer() {
-        return "";
+        return String.valueOf(System.identityHashCode(topologyBuilder));
     }
 
     public Properties getProperties() {

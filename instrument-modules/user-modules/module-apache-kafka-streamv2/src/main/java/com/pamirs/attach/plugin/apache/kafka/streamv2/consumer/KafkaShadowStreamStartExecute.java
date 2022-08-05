@@ -23,6 +23,7 @@ import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @Description
@@ -95,12 +97,13 @@ public class KafkaShadowStreamStartExecute implements ShadowConsumerExecute {
     }
 
     @Override
-    public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
+    public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> configList) {
+        List<String> needRegisterTopic = configList.stream().map(item -> ((KafkaShadowStreamConfig) item.getConsumerConfig()).getTopic()).collect(Collectors.toList());
         KafkaStreams shadowStream;
         if (isHighLevel()) {
-            shadowStream = createHighLevelStream((KafkaShadowStreamConfig) config);
+            shadowStream = createHighLevelStream((KafkaShadowStreamConfig) configList.get(0).getConsumerConfig(), needRegisterTopic);
         } else {
-            shadowStream = createLowLevelStream((KafkaShadowStreamConfig) config);
+            shadowStream = createLowLevelStream((KafkaShadowStreamConfig) configList.get(0).getConsumerConfig(), needRegisterTopic);
         }
 
         return new KafkaShadowStreamServer(shadowStream);
@@ -109,12 +112,14 @@ public class KafkaShadowStreamStartExecute implements ShadowConsumerExecute {
     /**
      * 创建2.0版本的 kafka-stream
      *
-     * @param config 配置属性
+     * @param config                配置属性
+     * @param needRegisterTopicList 需要注册的topic
      * @return KafkaStreams
      */
-    private KafkaStreams createHighLevelStream(KafkaShadowStreamConfig config) {
+    private KafkaStreams createHighLevelStream(KafkaShadowStreamConfig config, List<String> needRegisterTopicList) {
         final StreamsBuilder builder = new StreamsBuilder();
-        builder.stream(Pradar.addClusterTestPrefix(config.getTopic()));
+        needRegisterTopicList = needRegisterTopicList.stream().map(Pradar::addClusterTestPrefix).collect(Collectors.toList());
+        builder.stream(needRegisterTopicList);
         InternalTopologyBuilder internalTopologyBuilder = Reflect.on(builder).get("internalTopologyBuilder");
         copyNodeFactories(config.getTopologyBuilder(), internalTopologyBuilder);
 
@@ -130,12 +135,14 @@ public class KafkaShadowStreamStartExecute implements ShadowConsumerExecute {
     /**
      * 创建0.11版本的 kafka-stream
      *
-     * @param config 配置属性
+     * @param config                配置属性
+     * @param needRegisterTopicList 需要注册的topic
      * @return KafkaStreams
      */
-    private KafkaStreams createLowLevelStream(KafkaShadowStreamConfig config) {
+    private KafkaStreams createLowLevelStream(KafkaShadowStreamConfig config, List<String> needRegisterTopicList) {
         final KStreamBuilder builder = new KStreamBuilder();
-        builder.stream(Pradar.addClusterTestPrefix(config.getTopic()));
+        needRegisterTopicList = needRegisterTopicList.stream().map(Pradar::addClusterTestPrefix).collect(Collectors.toList());
+        builder.stream(needRegisterTopicList.toArray(new String[0]));
         copyNodeFactories(config.getTopologyBuilder(), builder);
 
         Object kafkaStreams = null;

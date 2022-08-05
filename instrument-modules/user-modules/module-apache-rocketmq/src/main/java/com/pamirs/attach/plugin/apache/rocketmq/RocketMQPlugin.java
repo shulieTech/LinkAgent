@@ -80,14 +80,14 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         shutdownMethod.addInterceptor(Listeners.of(DefaultPushConsumerShutdownInterceptor.class));
                     }
                 });
-
-        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
-                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
-            }
-        });
+//
+//        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
+//            @Override
+//            public void doEnhance(InstrumentClass target) {
+//                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
+//                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
+//            }
+//        });
 
         this.enhanceTemplate.enhance(this,
                 "org.apache.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl", new EnhanceCallback() {

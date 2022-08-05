@@ -25,6 +25,7 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
@@ -35,6 +36,7 @@ import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Description
@@ -50,7 +52,7 @@ public class SpringRabbitmqShadowConsumerExecute implements ShadowConsumerExecut
         AbstractMessageListenerContainer abstractMessageListenerContainer
                 = (AbstractMessageListenerContainer) syncObjectData.getTarget();
         String[] queueNames = abstractMessageListenerContainer.getQueueNames();
-        List<ConsumerConfig> configList = new ArrayList<ConsumerConfig>();
+        List<ConsumerConfig> configList = new ArrayList<>();
         for (String queue : queueNames) {
             configList.add(new SpringRabbitmqShadowConfig(queue, abstractMessageListenerContainer));
         }
@@ -58,11 +60,14 @@ public class SpringRabbitmqShadowConsumerExecute implements ShadowConsumerExecut
     }
 
     @Override
-    public ShadowServer fetchShadowServer(ConsumerConfig config, String shadowConfig) {
+    public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> configList) {
         AbstractMessageListenerContainer shadowContainer;
 
+        SpringRabbitmqShadowConfig config = (SpringRabbitmqShadowConfig) configList.get(0).getConsumerConfig();
+        List<String> needRegisterQueue = configList.stream().map(item -> ((SpringRabbitmqShadowConfig) item.getConsumerConfig()).getQueue()).collect(Collectors.toList());
+
         try {
-            shadowContainer = createShadowContainer((SpringRabbitmqShadowConfig) config);
+            shadowContainer = createShadowContainer(config, needRegisterQueue);
         } catch (Exception e) {
             logger.error("[RabbitMQ] createShadowContainer error", e);
             throw new PressureMeasureError(e);
@@ -74,10 +79,11 @@ public class SpringRabbitmqShadowConsumerExecute implements ShadowConsumerExecut
     /**
      * 创建影子container
      *
-     * @param config 业务配置
+     * @param config            业务配置
+     * @param needRegisterQueue 需要注册的queue
      * @return 影子AbstractMessageListenerContainer
      */
-    private AbstractMessageListenerContainer createShadowContainer(SpringRabbitmqShadowConfig config) throws Exception {
+    private AbstractMessageListenerContainer createShadowContainer(SpringRabbitmqShadowConfig config, List<String> needRegisterQueue) throws Exception {
         final AbstractMessageListenerContainer busContainer = config.getAbstractMessageListenerContainer();
         String listenerId = busContainer.getListenerId();
         if (StringUtil.isEmpty(listenerId)) {
@@ -85,7 +91,8 @@ public class SpringRabbitmqShadowConsumerExecute implements ShadowConsumerExecut
         }
         final String beanName = Reflect.on(busContainer).get("beanName");
         final AbstractMessageListenerContainer ptContainer = busContainer.getClass().newInstance();
-        ptContainer.setQueueNames(Pradar.addClusterTestPrefix(config.getQueue()));
+        String[] ptQueueNames = needRegisterQueue.stream().map(Pradar::addClusterTestPrefix).toArray(String[]::new);
+        ptContainer.setQueueNames(ptQueueNames);
         ptContainer.setListenerId(Pradar.addClusterTestPrefix(listenerId));
         if (!StringUtil.isEmpty(beanName)) {
             ptContainer.setBeanName(Pradar.addClusterTestPrefix(beanName));
@@ -140,7 +147,7 @@ public class SpringRabbitmqShadowConsumerExecute implements ShadowConsumerExecut
         }
         ptContainer.afterPropertiesSet();
         logger.info(
-                String.format("[RabbitMQ] shadow consumer create successfully.ptQueueNames: %s", Pradar.addClusterTestPrefix(config.getQueue())));
+                String.format("[RabbitMQ] shadow consumer create successfully.ptQueueNames: %s", ptQueueNames));
         return ptContainer;
     }
 

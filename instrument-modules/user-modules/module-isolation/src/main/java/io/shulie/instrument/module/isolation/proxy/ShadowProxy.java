@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.isolation.proxy;
 
+import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.util.BehaviorDescriptor;
 import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
@@ -12,8 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -55,7 +56,11 @@ public class ShadowProxy {
         if (o == null) {
             o = fetchShadowTarget(bizTarget);
         }
-        return methodProxy.executeMethod(o.shadowResourceLifecycle.getTarget(), o.fetchMethod(method,methodDesc), args);
+        try {
+            return methodProxy.executeMethod(o.shadowResourceLifecycle.getTarget(), o.fetchMethod(method, methodDesc), args);
+        } catch (Exception e) {
+            throw new PressureMeasureError("can not execute target method! target: " + bizTarget + ", methodDesc:" + methodDesc + ", args:" + Arrays.toString(args), e);
+        }
     }
 
     private synchronized ShadowResourceLifecycleModule fetchShadowTarget(Object bizTarget) {
@@ -69,7 +74,7 @@ public class ShadowProxy {
                 if (shadowResource.isRunning()) {
                     lifecycleModule = new ShadowResourceLifecycleModule(shadowResource);
                     shadowTargetMap.put(bizTarget, lifecycleModule);
-                }else {
+                } else {
                     throw new IsolationRuntimeException("can not start shadowResource with class:" + enhanceClass.getClassName() + " method:" + enhanceMethod.getMethod());
                 }
             }

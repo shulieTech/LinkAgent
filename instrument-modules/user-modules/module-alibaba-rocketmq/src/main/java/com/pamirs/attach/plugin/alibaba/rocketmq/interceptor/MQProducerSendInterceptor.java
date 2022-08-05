@@ -15,23 +15,11 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
-import com.alibaba.rocketmq.client.producer.DefaultMQProducer;
-import java.util.Map;
-
-import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
-import com.alibaba.rocketmq.client.producer.SendCallback;
-import com.alibaba.rocketmq.client.producer.SendResult;
-import com.alibaba.rocketmq.common.message.Message;
-
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.SendMessageHookImpl;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarService;
-import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class MQProducerSendInterceptor extends AroundInterceptor {
@@ -53,47 +41,47 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
             }
         }
 
-        Object[] args = advice.getParameterArray();
-        Message msg = (Message) args[0];
-        if (PradarSwitcher.isClusterTestEnabled()) {
-            if (Pradar.isClusterTest()) {
-                String topic = msg.getTopic();
-                if (topic != null
-                    && !Pradar.isClusterTestPrefix(topic)) {
-                    msg.setTopic(Pradar.addClusterTestPrefix(topic));
-                }
-                msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
-            }
-        }
-
-        for (int i = 0, len = args.length; i < len; i++) {
-            if (!(args[i] instanceof SendCallback)) {
-                continue;
-            }
-            final SendCallback sendCallback = (SendCallback) args[i];
-            final Map<String, String> context = PradarService.getInvokeContext();
-            advice.changeParameter(i, new SendCallback() {
-                @Override
-                public void onSuccess(SendResult sendResult) {
-                    try {
-                        Pradar.setInvokeContext(context);
-                        sendCallback.onSuccess(sendResult);
-                    } finally {
-                        Pradar.clearInvokeContext();
-                    }
-                }
-
-                @Override
-                public void onException(Throwable e) {
-                    try {
-                        Pradar.setInvokeContext(context);
-                        sendCallback.onException(e);
-                    } finally {
-                        Pradar.clearInvokeContext();
-                    }
-                }
-            });
-        }
+//        Object[] args = advice.getParameterArray();
+//        Message msg = (Message) args[0];
+//        if (PradarSwitcher.isClusterTestEnabled()) {
+//            if (Pradar.isClusterTest()) {
+//                String topic = msg.getTopic();
+//                if (topic != null
+//                    && !Pradar.isClusterTestPrefix(topic)) {
+//                    msg.setTopic(Pradar.addClusterTestPrefix(topic));
+//                }
+//                msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
+//            }
+//        }
+//
+//        for (int i = 0, len = args.length; i < len; i++) {
+//            if (!(args[i] instanceof SendCallback)) {
+//                continue;
+//            }
+//            final SendCallback sendCallback = (SendCallback) args[i];
+//            final Map<String, String> context = PradarService.getInvokeContext();
+//            advice.changeParameter(i, new SendCallback() {
+//                @Override
+//                public void onSuccess(SendResult sendResult) {
+//                    try {
+//                        Pradar.setInvokeContext(context);
+//                        sendCallback.onSuccess(sendResult);
+//                    } finally {
+//                        Pradar.clearInvokeContext();
+//                    }
+//                }
+//
+//                @Override
+//                public void onException(Throwable e) {
+//                    try {
+//                        Pradar.setInvokeContext(context);
+//                        sendCallback.onException(e);
+//                    } finally {
+//                        Pradar.clearInvokeContext();
+//                    }
+//                }
+//            });
+//        }
 
     }
 }

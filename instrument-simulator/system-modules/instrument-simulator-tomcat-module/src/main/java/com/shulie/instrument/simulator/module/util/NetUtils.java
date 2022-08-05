@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,14 +14,17 @@
  */
 package com.shulie.instrument.simulator.module.util;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson2.util.IOUtils;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 
 /**
  * @author ralf0131 on 2015-11-11 15:39.
@@ -44,7 +47,7 @@ public class NetUtils {
         InputStream in = null;
         try {
             URL url = new URL(urlString);
-            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection = (HttpURLConnection)url.openConnection();
             // prefer json to text
             urlConnection.setRequestProperty("Accept", "application/json,text/plain;q=0.2");
             in = urlConnection.getInputStream();
@@ -67,7 +70,12 @@ public class NetUtils {
         } catch (IOException e) {
             return new Response(e.getMessage(), false);
         } finally {
-            IOUtils.close(in);
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignore) {
+                }
+            }
             if (urlConnection != null) {
                 urlConnection.disconnect();
             }
@@ -84,7 +92,7 @@ public class NetUtils {
         BufferedReader br = null;
         try {
             URL obj = new URL(url);
-            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+            HttpURLConnection con = (HttpURLConnection)obj.openConnection();
             con.setRequestProperty("Accept", "application/json");
             int responseCode = con.getResponseCode();
 
@@ -195,7 +203,6 @@ public class NetUtils {
         }
     }
 
-
     /**
      * Test if a port is open on the give host
      */
@@ -216,6 +223,5 @@ public class NetUtils {
             }
         }
     }
-
 
 }

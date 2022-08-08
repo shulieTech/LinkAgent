@@ -23,6 +23,7 @@ import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import io.shulie.instrument.module.isolation.IsolationManager;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
+import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxyUtils;
 import io.shulie.instrument.module.isolation.proxy.impl.AddClusterRouteShadowMethodProxy;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
 import org.kohsuke.MetaInfServices;
@@ -47,7 +48,7 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
                 .setFactoryResourceInit(ApacheKafkaProducerFactory::new)
                 .addEnhanceMethod("send", SendMethodProxy::new, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
                 .addEnhanceMethod("sendOffsetsToTransaction", SendOffsetsToTransactionMethodProxy::new)
-                .addEnhanceMethod("partitionsFor", () -> new AddClusterRouteShadowMethodProxy(0))
+                .addEnhanceMethod("partitionsFor", ShadowMethodProxyUtils.addClusterRoute(0))
                 .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"));
 
         IsolationManager.register(proxyConfig);

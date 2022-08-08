@@ -39,7 +39,7 @@ public class RabbitMqV2Plugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
+        ConsumerRegister consumerRegister = new ConsumerRegister("rabbitmqv2").consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
             @Override
             public ShadowConsumerExecute init() {
                 try {

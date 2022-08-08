@@ -37,7 +37,7 @@ public class SpringRabbitmqPlugin extends ModuleLifecycleAdapter implements Exte
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(SpringRabbitmqShadowConsumerExecute::new);
+        ConsumerRegister consumerRegister = new ConsumerRegister("spring-rabbitmq").consumerExecute(SpringRabbitmqShadowConsumerExecute::new);
         ConsumerManager.register(consumerRegister, "org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer#start");
         return true;
     }

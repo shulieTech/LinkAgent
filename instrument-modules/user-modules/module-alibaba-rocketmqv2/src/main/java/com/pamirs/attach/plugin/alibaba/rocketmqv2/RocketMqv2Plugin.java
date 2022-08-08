@@ -57,7 +57,7 @@ public class RocketMqv2Plugin extends ModuleLifecycleAdapter implements Extensio
 
         IsolationManager.register(defaultMqProducerProxyConfig);
 
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(RocketmqShadowConsumerExecute::new);
+        ConsumerRegister consumerRegister = new ConsumerRegister(MODULE_NAME).consumerExecute(RocketmqShadowConsumerExecute::new);
         ConsumerManager.register(consumerRegister, "com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer#start");
         return true;
     }

@@ -15,6 +15,41 @@ public class ConsumerRegisterModule {
     private final Map<String, SyncObject> syncObjectMap = new ConcurrentHashMap<String, SyncObject>();
     private final Map<SyncObjectData,ShadowConsumerExecute> syncObjectDataMap = new ConcurrentHashMap<>();
     private ConsumerRegister consumerRegister;
+    private ConsumerIsolationRegister isolationRegister;
+
+    private boolean isEnhanced;
+
+    private String name;
+
+    public ConsumerIsolationRegister getIsolationRegister() {
+        return isolationRegister;
+    }
+
+    public ConsumerRegisterModule(ConsumerRegister consumerRegister) {
+        this.consumerRegister = consumerRegister;
+        name = consumerRegister.getName();
+    }
+
+    public ConsumerRegisterModule(ConsumerRegister consumerRegister, ConsumerIsolationRegister isolationRegister) {
+        this(consumerRegister);
+        this.isolationRegister = isolationRegister;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean isEnhanced() {
+        return isEnhanced;
+    }
+
+    public void setEnhanced(boolean enhanced) {
+        isEnhanced = enhanced;
+    }
 
     public Map<String, SyncObject> getSyncObjectMap() {
         return syncObjectMap;
@@ -22,10 +57,6 @@ public class ConsumerRegisterModule {
 
     public Map<SyncObjectData, ShadowConsumerExecute> getSyncObjectDataMap() {
         return syncObjectDataMap;
-    }
-
-    public ConsumerRegisterModule(ConsumerRegister consumerRegister) {
-        this.consumerRegister = consumerRegister;
     }
 
     public ConsumerRegister getConsumerRegister() {

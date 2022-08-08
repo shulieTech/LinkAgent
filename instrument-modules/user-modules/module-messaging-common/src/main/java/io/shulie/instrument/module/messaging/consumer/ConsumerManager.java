@@ -6,10 +6,20 @@ import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.sun.tools.internal.xjc.model.nav.EagerNClass;
+import io.shulie.instrument.module.isolation.IsolationManager;
+import io.shulie.instrument.module.isolation.common.ResourceInit;
+import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
+import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
+import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import io.shulie.instrument.module.messaging.annoation.NotNull;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
+import io.shulie.instrument.module.messaging.consumer.isolation.ConsumerIsolationCache;
+import io.shulie.instrument.module.messaging.consumer.isolation.ConsumerIsolationLifecycle;
+import io.shulie.instrument.module.messaging.consumer.isolation.ConsumerIsolationProxyFactory;
 import io.shulie.instrument.module.messaging.consumer.module.*;
+import io.shulie.instrument.module.messaging.consumer.module.isolation.ConsumerClass;
 import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
 
 import java.lang.reflect.Field;
@@ -50,9 +60,13 @@ public class ConsumerManager {
     }
 
     public static void register(ConsumerRegister register, String... syncClassMethods) {
+        register(register, null, syncClassMethods);
+    }
+
+    public static void register(ConsumerRegister register,ConsumerIsolationRegister isolationRegister, String... syncClassMethods) {
         checkRegister(register);
 
-        ConsumerRegisterModule consumerRegisterModule = new ConsumerRegisterModule(register);
+        ConsumerRegisterModule consumerRegisterModule = new ConsumerRegisterModule(register, isolationRegister);
         if (syncClassMethods != null) {
             for (String syncClassMethod : syncClassMethods) {
                 consumerRegisterModule.getSyncObjectMap().put(syncClassMethod, EMPTY_SYNC_OBJECT);
@@ -112,8 +126,10 @@ public class ConsumerManager {
 //                                    continue;
 //                                }
                                 //把target也作为key， 防止 ShadowConsumerExecute new 出来的对象有问题
-                                String keyOfObj = objectData.getTarget().getClass() + "#" + Objects.hashCode(objectData.getTarget());
-                                addShadowServerModule(keyOfObj, consumerConfig, shadowConsumerExecute, objectData.getTarget());
+                                Object bizTarget = objectData.getTarget();
+                                String keyOfObj = bizTarget.getClass() + "#" + Objects.hashCode(bizTarget);
+                                enhanceIsolationBytecode(consumerRegisterModule, bizTarget);
+                                addShadowServerModule(keyOfObj, consumerConfig, shadowConsumerExecute, bizTarget);
                             }
                         }
                     } catch (Throwable e) {
@@ -167,9 +183,32 @@ public class ConsumerManager {
 
     static void runTask() {
         for (ConsumerRegisterModule consumerRegisterModule : registerList) {
-            refreshSyncObj(consumerRegisterModule);
+                refreshSyncObj(consumerRegisterModule);
         }
         tryToStartConsumer();
+    }
+
+    private static void enhanceIsolationBytecode(ConsumerRegisterModule consumerRegisterModule,Object bizTarget) {
+        if (consumerRegisterModule.isEnhanced() || consumerRegisterModule.getIsolationRegister() == null) {
+            return;
+        }
+        List<ConsumerClass> consumerClassList = consumerRegisterModule.getIsolationRegister().getConsumerClassList();
+        ShadowProxyConfig shadowProxyConfig = new ShadowProxyConfig("messaging-common_" + consumerRegisterModule.getName());
+        //初始化好套壳的 lifecycle, 后续初始化好 shadowTarget 的时候进行替换.
+        ConsumerIsolationLifecycle lifecycle = ConsumerIsolationCache.put(bizTarget, null);
+
+        for (ConsumerClass consumerClass : consumerClassList) {
+            shadowProxyConfig.addEnhance(toEnhanceClass(consumerClass, new ConsumerIsolationProxyFactory(lifecycle)));
+        }
+        IsolationManager.register(shadowProxyConfig);
+        consumerRegisterModule.setEnhanced(true);
+    }
+
+    private static EnhanceClass toEnhanceClass(ConsumerClass consumerClass, ConsumerIsolationProxyFactory proxyFactory) {
+        EnhanceClass enhanceClass = new EnhanceClass(consumerClass.getClassName());
+        enhanceClass.setConvertImpl(consumerClass.isConvertImpl());
+        enhanceClass.setFactoryResourceInit(() -> proxyFactory);
+        return enhanceClass;
     }
 
     private static void refreshSyncObj(ConsumerRegisterModule consumerRegisterModule) {
@@ -260,6 +299,7 @@ public class ConsumerManager {
         try {
             ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(shadowConsumer.getConfigSet().stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
             shadowConsumer.setShadowServer(shadowServer);
+            ConsumerIsolationCache.put(shadowConsumer.getBizTarget(), shadowServer);
         } catch (Exception e) {
             logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getConfigSet()), e);
         }

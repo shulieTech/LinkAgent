@@ -10,16 +10,29 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
  * @date 2022/7/27
  */
 public class ConsumerRegister {
+    private String name;
     @NotNull
     private ResourceInit<ShadowConsumerExecute> consumerExecuteResourceInit;
 
-    public static ConsumerRegister init(){
-        return new ConsumerRegister();
+    public static ConsumerRegister init(String name){
+        return new ConsumerRegister(name);
+    }
+
+    public ConsumerRegister(String name) {
+        this.name = name;
     }
 
     public ConsumerRegister consumerExecute(ResourceInit<ShadowConsumerExecute> consumerExecuteResourceInit){
         this.consumerExecuteResourceInit = consumerExecuteResourceInit;
         return this;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public ResourceInit<ShadowConsumerExecute> getConsumerExecuteResourceInit() {

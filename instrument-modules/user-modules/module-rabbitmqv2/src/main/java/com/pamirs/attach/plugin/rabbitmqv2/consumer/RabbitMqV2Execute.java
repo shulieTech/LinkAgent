@@ -15,6 +15,7 @@
 
 package com.pamirs.attach.plugin.rabbitmqv2.consumer;
 
+import com.pamirs.attach.plugin.rabbitmqv2.constant.RabbitMqConstant;
 import com.pamirs.attach.plugin.rabbitmqv2.consumer.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmqv2.consumer.config.RabbitMqShadowConfig;
 import com.pamirs.attach.plugin.rabbitmqv2.consumer.server.RabbitMqShadowServer;
@@ -45,9 +46,21 @@ public class RabbitMqV2Execute implements ShadowConsumerExecute {
 
     @Override
     public List<ConsumerConfig> prepareConfig(SyncObjectData syncObjectData) {
+        List<ConsumerConfig> configList = new ArrayList<ConsumerConfig>();
+        if (!verifyParam(syncObjectData.getParamTypes())) {
+            return configList;
+        }
+        // 对于Spring-rabbitMq不需要走这个逻辑
+        Object consumer = syncObjectData.getArgs()[6];
+        if (consumer != null
+                && ("org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$InternalConsumer".equals(consumer.getClass().getName())
+                || "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$ConsumerDecorator".equals(consumer.getClass().getName()))) {
+            RabbitMqConstant.SPRING_RABBIT = true;
+            return configList;
+        }
+
         ChannelN channelN = (ChannelN) syncObjectData.getTarget();
         String queue = (String) syncObjectData.getArgs()[0];
-        List<ConsumerConfig> configList = new ArrayList<ConsumerConfig>();
         configList.add(new RabbitMqShadowConfig(queue, channelN, syncObjectData.getParamTypes(), syncObjectData.getArgs()));
         return configList;
     }
@@ -68,5 +81,26 @@ public class RabbitMqV2Execute implements ShadowConsumerExecute {
             logger.error("[RabbitMq] shadow Channel basicConsume error, config:" + config, e);
             return null;
         }
+    }
+
+    /**
+     * 只需要切com.rabbitmq.client.impl.ChannelN#basicConsume(java.lang.String, boolean, java.lang.String, boolean, boolean, java.util.Map<java.lang.String,java.lang.Object>, com.rabbitmq.client.Consumer)
+     * 就可以了
+     *
+     * @param paramTypes 参数类型集合
+     * @return true 参数合法、false 参数不合法
+     */
+    private boolean verifyParam(Class[] paramTypes) {
+        if (paramTypes.length != 7) {
+            return false;
+        }
+        boolean first = "java.lang.String".equals(paramTypes[0].getName());
+        boolean second = "boolean".equals(paramTypes[1].getName());
+        boolean third = "java.lang.String".equals(paramTypes[2].getName());
+        boolean fourth = "boolean".equals(paramTypes[3].getName());
+        boolean fifth = "boolean".equals(paramTypes[4].getName());
+        boolean sixth = "java.util.Map".equals(paramTypes[5].getName());
+        boolean seventh = "com.rabbitmq.client.Consumer".equals(paramTypes[6].getName());
+        return first && second && third && fourth && fifth && sixth && seventh;
     }
 }

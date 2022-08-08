@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.apache.kafkav2;
 
 import com.pamirs.attach.plugin.apache.kafkav2.producer.factory.ApacheKafkaProducerFactory;
+import com.pamirs.attach.plugin.apache.kafkav2.producer.factory.KafkaProducerFactory;
+import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.JavaApiProducerSendProxy;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendMethodProxy;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendOffsetsToTransactionMethodProxy;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -43,14 +45,23 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
     @Override
     public boolean onActive() throws Throwable {
         ShadowProxyConfig proxyConfig = new ShadowProxyConfig(moduleName);
-        proxyConfig.addEnhance(new EnhanceClass("org.apache.kafka.clients.producer.KafkaProducer")
-                .setFactoryResourceInit(ApacheKafkaProducerFactory::new)
-                .addEnhanceMethod("send", SendMethodProxy::new, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
-                .addEnhanceMethod("sendOffsetsToTransaction", SendOffsetsToTransactionMethodProxy::new)
-                .addEnhanceMethod("partitionsFor", () -> new AddClusterRouteShadowMethodProxy(0))
-                .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"));
+        proxyConfig
+                .addEnhance(new EnhanceClass("org.apache.kafka.clients.producer.KafkaProducer")
+                        .setFactoryResourceInit(ApacheKafkaProducerFactory::new)
+                        .addEnhanceMethod("send", SendMethodProxy::new, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
+                        .addEnhanceMethod("sendOffsetsToTransaction", SendOffsetsToTransactionMethodProxy::new)
+                        .addEnhanceMethod("partitionsFor", () -> new AddClusterRouteShadowMethodProxy(0))
+                        .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"))
+                .addEnhance(new EnhanceClass("kafka.javaapi.producer.Producer")
+                        .setFactoryResourceInit(KafkaProducerFactory::new)
+                        .addEnhanceMethods(JavaApiProducerSendProxy::new,"send")
+                );
 
         IsolationManager.register(proxyConfig);
+
+        if (simulatorConfig.getBooleanProperty("kafka.use.other.plugin", false)) {
+            return true;
+        }
 
 //        ConsumerRegister streamMapRegister = new ConsumerRegister().consumerExecute(KafkaExecute.class);
 //        ConsumerManager.register(streamMapRegister, "org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");

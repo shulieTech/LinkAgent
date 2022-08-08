@@ -67,7 +67,7 @@ public class RabbitMqV2Plugin extends ModuleLifecycleAdapter implements Extensio
         IsolationManager.register(proxyConfig);
 
 
-        ConsumerRegister consumerRegister = new ConsumerRegister().consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
+        ConsumerRegister consumerRegister = new ConsumerRegister(MODULE_NAME).consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
             @Override
             public ShadowConsumerExecute init() {
                 try {

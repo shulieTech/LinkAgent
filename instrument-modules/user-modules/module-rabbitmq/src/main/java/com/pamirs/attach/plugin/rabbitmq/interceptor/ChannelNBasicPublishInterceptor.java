@@ -14,21 +14,13 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
-import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
-import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -36,7 +28,11 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
-import org.apache.commons.lang.StringUtils;
+
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @Author: guohz
@@ -76,32 +72,32 @@ public class ChannelNBasicPublishInterceptor extends TraceInterceptorAdaptor {
         }
     }
 
-    @Override
-    public void beforeFirst(Advice advice) {
-        ClusterTestUtils.validateClusterTest();
-        Object[] args = advice.getParameterArray();
-        if (Pradar.isClusterTest()) {
-            String exchange = (String)args[0];
-            String routingKey = (String)args[1];
-            if (!StringUtils.isBlank(exchange)) {
-                if (!Pradar.isClusterTestPrefix(exchange)) {
-                    exchange = Pradar.addClusterTestPrefix(exchange);
-                    args[0] = exchange;
-                }
-            }
-
-            if (PradarSwitcher.isRabbitmqRoutingkeyEnabled()
-                && !StringUtils.isEmpty(routingKey)) {
-                if (!Pradar.isClusterTestPrefix(routingKey)) {
-                    routingKey = Pradar.addClusterTestPrefix(routingKey);
-                    args[1] = routingKey;
-                }
-            }
-            if (StringUtils.isEmpty(exchange) && StringUtils.isEmpty(routingKey)) {
-                throw new PressureMeasureError("RabbitMQ发送压测流量exchange和routingKey值传递同时为空或者空字符串，Pradar拒绝推送");
-            }
-        }
-    }
+//    @Override
+//    public void beforeFirst(Advice advice) {
+//        ClusterTestUtils.validateClusterTest();
+//        Object[] args = advice.getParameterArray();
+//        if (Pradar.isClusterTest()) {
+//            String exchange = (String)args[0];
+//            String routingKey = (String)args[1];
+//            if (!StringUtils.isBlank(exchange)) {
+//                if (!Pradar.isClusterTestPrefix(exchange)) {
+//                    exchange = Pradar.addClusterTestPrefix(exchange);
+//                    args[0] = exchange;
+//                }
+//            }
+//
+//            if (PradarSwitcher.isRabbitmqRoutingkeyEnabled()
+//                && !StringUtils.isEmpty(routingKey)) {
+//                if (!Pradar.isClusterTestPrefix(routingKey)) {
+//                    routingKey = Pradar.addClusterTestPrefix(routingKey);
+//                    args[1] = routingKey;
+//                }
+//            }
+//            if (StringUtils.isEmpty(exchange) && StringUtils.isEmpty(routingKey)) {
+//                throw new PressureMeasureError("RabbitMQ发送压测流量exchange和routingKey值传递同时为空或者空字符串，Pradar拒绝推送");
+//            }
+//        }
+//    }
 
     @Override
     protected ContextTransfer getContextTransfer(Advice advice) {

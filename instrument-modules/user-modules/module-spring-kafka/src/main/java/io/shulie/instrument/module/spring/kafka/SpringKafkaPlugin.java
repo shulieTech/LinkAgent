@@ -3,16 +3,7 @@ package io.shulie.instrument.module.spring.kafka;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
-import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
-import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
-import com.shulie.instrument.simulator.api.listener.Listeners;
-import io.shulie.instrument.module.isolation.IsolationManager;
-import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
-import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
-import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
-import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
-import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import io.shulie.instrument.module.spring.kafka.consumer.SpringKafkaConsumerExecute;
 import org.kohsuke.MetaInfServices;
@@ -31,6 +22,9 @@ public class SpringKafkaPlugin extends ModuleLifecycleAdapter implements Extensi
 
     @Override
     public boolean onActive() throws Throwable {
+        if (simulatorConfig.getBooleanProperty("kafka.use.other.plugin", false)) {
+            return true;
+        }
         //spring-kafka 的发送使用原生kafka 代码
         ConsumerRegister consumerRegister = new ConsumerRegister(moduleName).consumerExecute(SpringKafkaConsumerExecute::new);
         ConsumerManager.register(consumerRegister, "org.springframework.kafka.listener.KafkaMessageListenerContainer#doStart");

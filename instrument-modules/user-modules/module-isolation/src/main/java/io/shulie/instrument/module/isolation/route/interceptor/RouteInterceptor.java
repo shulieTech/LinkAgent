@@ -33,8 +33,7 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
         //todo@langyi 如果进入的是影子对象，需要检查
-        if (Pradar.isClusterTest()) {
-            //todo@langyi 如果进入的是影子对象，不能进行路由
+        if (Pradar.isClusterTest() && shadowProxy.needRoute(advice.getTarget())) {
             try {
                 Object[] parameterArray = advice.getParameterArray();
                 Object res = shadowProxy.executeMethod(
@@ -43,9 +42,9 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
                         , advice.getBehaviorNameDesc()
                         , parameterArray == null ? null : Arrays.copyOf(parameterArray, parameterArray.length));
                 return CutOffResult.cutoff(res);
-            } catch (Throwable e) {
-                logger.error("execute shadow proxy fail: {}", JSON.toJSONString(this.shadowProxy), e);
-                throw new PressureMeasureError("execute shadow proxy fail", e);
+            } catch (Throwable t) {
+                logger.error("execute shadow proxy fail: {}", JSON.toJSONString(this.shadowProxy), t);
+                throw new PressureMeasureError("execute shadow proxy fail", t);
             }
         }
         return CutOffResult.passed();

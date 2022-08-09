@@ -1,12 +1,9 @@
 package io.shulie.instrument.module.isolation.register;
 
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
-import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author Licey
@@ -15,6 +12,7 @@ import java.util.Map;
 public class ShadowProxyConfig {
     private List<EnhanceClass> enhanceClassList;
     private String moduleName;
+    private String scope;
 
     public ShadowProxyConfig(String moduleName) {
         this.moduleName = moduleName;
@@ -40,5 +38,13 @@ public class ShadowProxyConfig {
 
     public void setModuleName(String moduleName) {
         this.moduleName = moduleName;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 }

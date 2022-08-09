@@ -17,7 +17,7 @@ public class ConsumerIsolationLifecycle implements ShadowResourceLifecycle {
 
     @Override
     public Object getTarget() {
-        return shadowServer;
+        return shadowServer.getShadowTarget();
     }
 
     @Override

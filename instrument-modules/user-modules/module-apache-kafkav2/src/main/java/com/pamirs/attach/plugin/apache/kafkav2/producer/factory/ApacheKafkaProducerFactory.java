@@ -14,6 +14,7 @@ import java.util.Map;
  * @date 2022/8/2
  */
 public class ApacheKafkaProducerFactory implements ShadowResourceProxyFactory {
+
     @Override
     public ShadowResourceLifecycle createShadowResource(Object bizTarget) {
         if (!(bizTarget instanceof KafkaProducer)) {
@@ -30,5 +31,10 @@ public class ApacheKafkaProducerFactory implements ShadowResourceProxyFactory {
         KafkaProducer producer = new KafkaProducer(originals, keySerializer, valueSerializer);
         resource.setKafkaProducer(producer);
         return resource;
+    }
+
+    @Override
+    public boolean needRoute(Object target) {
+        return true;
     }
 }

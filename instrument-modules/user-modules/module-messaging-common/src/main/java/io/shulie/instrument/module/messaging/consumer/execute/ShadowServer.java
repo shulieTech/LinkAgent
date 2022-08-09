@@ -6,6 +6,8 @@ package io.shulie.instrument.module.messaging.consumer.execute;
  */
 public interface ShadowServer {
 
+    Object getShadowTarget();
+
     void start();
 
     boolean isRunning();

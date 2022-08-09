@@ -38,6 +38,11 @@ public class RabbitMqShadowServer implements ShadowServer {
     }
 
     @Override
+    public Object getShadowTarget() {
+        return this.channel;
+    }
+
+    @Override
     public void start() {
     }
 

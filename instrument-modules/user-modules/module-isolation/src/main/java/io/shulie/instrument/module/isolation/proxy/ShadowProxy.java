@@ -48,7 +48,16 @@ public class ShadowProxy {
         this.enhanceMethod = enhanceMethod;
         this.methodProxy = enhanceMethod.getMethodProxyInit().init();
         this.resourceProxyFactory = enhanceClass.getFactoryResourceInit().init();
+    }
 
+    /**
+     * 判断是否需要路由
+     *
+     * @param obj 对象
+     * @return true需要路由，false不需要路由
+     */
+    public boolean needRoute(Object obj) {
+        return resourceProxyFactory.needRoute(obj);
     }
 
     public Object executeMethod(Object bizTarget, String method, String methodDesc, Object... args) {
@@ -146,7 +155,7 @@ public class ShadowProxy {
             prepareMethodMap(key, c.getSuperclass());
         }
 
-        private String keyOfMethod(String method, String methodDesc){
+        private String keyOfMethod(String method, String methodDesc) {
             return ":" + method + methodDesc;
         }
 

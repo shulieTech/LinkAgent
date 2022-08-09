@@ -36,6 +36,11 @@ public class SpringRabbitmqShadowServer implements ShadowServer {
     }
 
     @Override
+    public Object getShadowTarget() {
+        return this.shadowContainer;
+    }
+
+    @Override
     public void start() {
         shadowContainer.start();
         started.set(true);

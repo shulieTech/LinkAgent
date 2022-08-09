@@ -36,6 +36,11 @@ public class KafkaShadowConsumerServer implements ShadowServer {
     }
 
     @Override
+    public Object getShadowTarget() {
+        return this.shadowConsumer;
+    }
+
+    @Override
     public void start() {
         started.set(true);
     }

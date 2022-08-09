@@ -33,4 +33,9 @@ public class ChannelNFactory implements ShadowResourceProxyFactory {
         }
         return null;
     }
+
+    @Override
+    public boolean needRoute(Object target) {
+        return true;
+    }
 }

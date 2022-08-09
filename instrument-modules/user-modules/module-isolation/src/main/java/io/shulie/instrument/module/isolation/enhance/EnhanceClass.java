@@ -19,11 +19,19 @@ public class EnhanceClass {
 
     private ResourceInit<ShadowResourceProxyFactory> factoryResourceInit;
 
+    /**
+     * 是否重写所有子类的方法
+     */
     private boolean isConvertImpl;
 
     public EnhanceClass(String className) {
         this.className = className;
         methodList = new ArrayList<EnhanceMethod>();
+    }
+
+    public EnhanceClass(String className, List<EnhanceMethod> methodList) {
+        this.className = className;
+        this.methodList = methodList;
     }
 
     public EnhanceClass addEnhanceMethod(String method, ResourceInit<ShadowMethodProxy> methodProxyInit, String... args) {

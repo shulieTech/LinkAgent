@@ -42,6 +42,11 @@ public class RocketmqShadowServer implements ShadowServer {
     }
 
     @Override
+    public Object getShadowTarget() {
+        return this.shadowConsumer;
+    }
+
+    @Override
     public void start() {
         try {
             shadowConsumer.start();

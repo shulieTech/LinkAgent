@@ -12,15 +12,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConsumerIsolationCache {
     private static final Map<Object, ConsumerIsolationLifecycle> cache = new ConcurrentHashMap<>();
 
-
     public static ConsumerIsolationLifecycle put(Object bizTarget, ShadowServer shadowTarget) {
         ConsumerIsolationLifecycle lifecycle = cache.get(bizTarget);
         if (lifecycle == null) {
             synchronized (bizTarget) {
-                lifecycle = new ConsumerIsolationLifecycle(shadowTarget);
-                cache.put(bizTarget, lifecycle);
+                lifecycle = cache.get(bizTarget);
+                if (lifecycle == null) {
+                    lifecycle = new ConsumerIsolationLifecycle(shadowTarget);
+                    cache.put(bizTarget, lifecycle);
+                }
             }
-        }else{
+        } else {
             lifecycle.setShadowServer(shadowTarget);
         }
         return lifecycle;

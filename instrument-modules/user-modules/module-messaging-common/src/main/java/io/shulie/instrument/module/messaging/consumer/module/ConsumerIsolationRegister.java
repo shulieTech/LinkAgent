@@ -1,6 +1,5 @@
 package io.shulie.instrument.module.messaging.consumer.module;
 
-import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.messaging.consumer.module.isolation.ConsumerClass;
 
 import java.util.ArrayList;

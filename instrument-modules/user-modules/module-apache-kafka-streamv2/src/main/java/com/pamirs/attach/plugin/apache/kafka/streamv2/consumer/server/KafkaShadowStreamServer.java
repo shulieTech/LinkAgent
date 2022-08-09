@@ -36,6 +36,11 @@ public class KafkaShadowStreamServer implements ShadowServer {
     }
 
     @Override
+    public Object getShadowTarget() {
+        return this.shadowStream;
+    }
+
+    @Override
     public void start() {
         started.set(true);
         if (shadowStream == null) {

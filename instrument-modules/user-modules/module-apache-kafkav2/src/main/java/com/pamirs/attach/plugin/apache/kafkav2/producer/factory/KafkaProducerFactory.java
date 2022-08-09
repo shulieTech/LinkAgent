@@ -33,4 +33,9 @@ public class KafkaProducerFactory implements ShadowResourceProxyFactory {
         }
         return null;
     }
+
+    @Override
+    public boolean needRoute(Object target) {
+        return true;
+    }
 }

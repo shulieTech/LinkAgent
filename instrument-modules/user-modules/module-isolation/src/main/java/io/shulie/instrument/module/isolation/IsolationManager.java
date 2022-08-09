@@ -8,19 +8,21 @@ import com.shulie.instrument.simulator.api.listener.ext.IBehaviorMatchBuilder;
 import com.shulie.instrument.simulator.api.listener.ext.IClassMatchBuilder;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.enhance.EnhanceMethod;
 import io.shulie.instrument.module.isolation.exception.IsolationRuntimeException;
 import io.shulie.instrument.module.isolation.proxy.ShadowProxy;
-import io.shulie.instrument.module.isolation.proxy.impl.RouteShadowMethodProxy;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
 import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import io.shulie.instrument.module.isolation.route.interceptor.RouteInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,11 +31,13 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class IsolationManager {
     private static final Logger logger = LoggerFactory.getLogger(IsolationManager.class);
+    private final static String dependencyPrefix = "com.shulie.instrument.simulator.dependencies.";
+
     private static ModuleEventWatcher moduleEventWatcher;
 
     private static final Map<String, List<EventWatcher>> moduleWatcherMap = new ConcurrentHashMap<String, List<EventWatcher>>();
 
-    public static void init(ModuleEventWatcher moduleEventWatcher){
+    public static void init(ModuleEventWatcher moduleEventWatcher) {
         IsolationManager.moduleEventWatcher = moduleEventWatcher;
     }
 
@@ -59,7 +63,14 @@ public class IsolationManager {
     public static EventWatcher enhanceClassMethod(String module, EnhanceClass enhanceClass) {
         logger.info("[isolation]pre enhance class:{}", enhanceClass.getClassName());
 
-        IClassMatchBuilder buildingForClass = new EventWatchBuilder(moduleEventWatcher).onClass(enhanceClass.getClassName());
+        IClassMatchBuilder buildingForClass;
+
+        if (enhanceClass.isConvertImpl()) {
+            buildingForClass = new EventWatchBuilder(moduleEventWatcher)
+                    .onAnyClass().withSuperClass(dealClassName(enhanceClass.getClassName()));
+        } else {
+            buildingForClass = new EventWatchBuilder(moduleEventWatcher).onClass(dealClassName(enhanceClass.getClassName()));
+        }
 
         for (EnhanceMethod enhanceMethod : enhanceClass.getMethodList()) {
             if (enhanceMethod.getMethodProxyInit() == null) {
@@ -69,25 +80,21 @@ public class IsolationManager {
             if (enhanceMethod.getArgTypes() != null && enhanceMethod.getArgTypes().length > 0) {
                 buildingForBehavior.withParameterTypes(enhanceMethod.getArgTypes());
             }
-            buildingForBehavior.onListener(Listeners.of(RouteInterceptor.class, keyOfScope(enhanceClass,enhanceMethod), ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[]{new ShadowProxy(module, enhanceClass, enhanceMethod)}));
+            String scope = StringUtil.isEmpty(enhanceMethod.getScope()) ? keyOfScope(enhanceClass, enhanceMethod) : enhanceMethod.getScope();
+            buildingForBehavior.onListener(Listeners.of(RouteInterceptor.class, scope, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[]{new ShadowProxy(module, enhanceClass, enhanceMethod)}));
         }
         return buildingForClass.onWatch();
     }
 
     private static String keyOfScope(EnhanceClass enhanceClass, EnhanceMethod enhanceMethod) {
-        StringBuilder args = new StringBuilder();
-        //去掉参数， 这里不需要参数，如果是会重复调用的，本来就应该只拦截一次就够了
-//        args.append("(");
-//        if (enhanceMethod.getArgTypes() != null) {
-//            for (String argType : enhanceMethod.getArgTypes()) {
-//                if (args.length() != 1) {
-//                    args.append(",");
-//                }
-//                args.append(argType);
-//            }
-//        }
-//        args.append(")");
-        return enhanceClass.getClassName() + "#" + enhanceMethod.getMethod() + args.toString() + "-routeInterceptor";
+        return enhanceClass.getClassName() + "#" + enhanceMethod.getMethod() + "-routeInterceptor";
+    }
+
+    private static String dealClassName(String className) {
+        if (className.startsWith(dependencyPrefix)) {
+            className = className.substring(dependencyPrefix.length());
+        }
+        return className;
     }
 
 }

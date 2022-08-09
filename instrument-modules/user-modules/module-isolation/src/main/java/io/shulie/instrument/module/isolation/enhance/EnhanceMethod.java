@@ -10,8 +10,16 @@ import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 public class EnhanceMethod {
     private String method;
     private String[] argTypes;
-
     private ResourceInit<ShadowMethodProxy> methodProxyInit;
+    private String scope;
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
 
     public String getMethod() {
         return method;

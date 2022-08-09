@@ -45,6 +45,11 @@ public class TestShadowConsumerExecute implements ShadowConsumerExecute {
     public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> dataList) {
         return new ShadowServer() {
             @Override
+            public Object getShadowTarget() {
+                return null;
+            }
+
+            @Override
             public void start() {
                 System.out.println("start");
             }

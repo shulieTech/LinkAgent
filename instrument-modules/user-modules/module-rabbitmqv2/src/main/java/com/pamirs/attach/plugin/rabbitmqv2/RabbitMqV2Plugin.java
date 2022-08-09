@@ -24,12 +24,15 @@ import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import io.shulie.instrument.module.isolation.IsolationManager;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
+import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxyUtils;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
 import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import io.shulie.instrument.module.messaging.common.ResourceInit;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
+import io.shulie.instrument.module.messaging.consumer.module.ConsumerIsolationRegister;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
+import io.shulie.instrument.module.messaging.consumer.module.isolation.ConsumerClass;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +48,8 @@ public class RabbitMqV2Plugin extends ModuleLifecycleAdapter implements Extensio
     private static final Logger logger = LoggerFactory.getLogger(RabbitMqV2Plugin.class);
 
     public final static String MODULE_NAME = "rabbitmqv2";
+
+    private final static String METHOD_SCOPE = "rabbitMqv2";
 
     @Override
     public boolean onActive() throws Throwable {
@@ -78,7 +83,25 @@ public class RabbitMqV2Plugin extends ModuleLifecycleAdapter implements Extensio
                 }
             }
         });
-        ConsumerManager.register(consumerRegister, "com.rabbitmq.client.impl.ChannelN#basicConsume");
+
+        ConsumerIsolationRegister consumerIsolationRegister = new ConsumerIsolationRegister()
+                .addConsumerClass(new ConsumerClass("com.rabbitmq.client.impl.ChannelN")
+//                        .setConvertImpl(true)
+                        .addEnhanceMethod("basicCancel", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "java.lang.String")
+                        .addEnhanceMethod("basicAck", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean")
+                        .addEnhanceMethod("basicAck", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean", "boolean")
+                        .addEnhanceMethod("basicNack", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean")
+                        .addEnhanceMethod("basicNack", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean", "boolean")
+                        .addEnhanceMethod("basicReject", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean"))
+                .addConsumerClass(new ConsumerClass("com.rabbitmq.client.impl.recovery.RecoveryAwareChannelN")
+                        .addEnhanceMethod("basicAck", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean")
+                        .addEnhanceMethod("basicAck", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean", "boolean")
+                        .addEnhanceMethod("basicNack", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean")
+                        .addEnhanceMethod("basicNack", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean", "boolean")
+                        .addEnhanceMethod("basicReject", METHOD_SCOPE, ShadowMethodProxyUtils.defaultRoute(), "long", "boolean"));
+
+        ConsumerManager.register(consumerRegister, consumerIsolationRegister, "com.rabbitmq.client.impl.ChannelN#basicConsume");
         return true;
     }
+
 }

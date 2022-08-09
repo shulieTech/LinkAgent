@@ -23,11 +23,13 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.impl.ChannelN;
+import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
+import io.shulie.instrument.module.messaging.handler.ConsumerRouteHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +57,8 @@ public class RabbitMqV2Execute implements ShadowConsumerExecute {
         if (consumer != null
                 && ("org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$InternalConsumer".equals(consumer.getClass().getName())
                 || "org.springframework.amqp.rabbit.listener.BlockingQueueConsumer$ConsumerDecorator".equals(consumer.getClass().getName()))) {
+            // spring-rabbitmq的channelN不需要路由
+            ConsumerRouteHandler.addNotRouteObj(syncObjectData.getTarget());
             RabbitMqConstant.SPRING_RABBIT = true;
             return configList;
         }
@@ -70,6 +74,10 @@ public class RabbitMqV2Execute implements ShadowConsumerExecute {
         //因为prepareConfig肯定只返回一个Config对象，所以这里去下标为0的就好了
         RabbitMqShadowConfig config = (RabbitMqShadowConfig) configList.get(0).getConsumerConfig();
         Channel shadowChannel = ChannelHolder.getOrShadowChannel(config.getChannelN());
+
+        if (shadowChannel instanceof AutorecoveringChannel) {
+            ConsumerRouteHandler.addNotRouteObj(((AutorecoveringChannel) shadowChannel).getDelegate());
+        }
 
         try {
             Method basicConsume = Reflect.on(shadowChannel).exactMethod("basicConsume", config.getParamTypes());

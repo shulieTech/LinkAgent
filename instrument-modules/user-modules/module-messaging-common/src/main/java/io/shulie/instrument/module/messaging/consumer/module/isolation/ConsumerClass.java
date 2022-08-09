@@ -1,10 +1,8 @@
 package io.shulie.instrument.module.messaging.consumer.module.isolation;
 
 import io.shulie.instrument.module.isolation.common.ResourceInit;
-import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.enhance.EnhanceMethod;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
-import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +16,9 @@ public class ConsumerClass {
 
     private List<EnhanceMethod> methodList;
 
+    /**
+     * 是否重写所有子类的方法
+     */
     private boolean isConvertImpl;
 
     public ConsumerClass(String className) {
@@ -30,6 +31,16 @@ public class ConsumerClass {
         enhanceMethod.setMethod(method);
         enhanceMethod.setArgTypes(args);
         enhanceMethod.setMethodProxyInit(methodProxyInit);
+        methodList.add(enhanceMethod);
+        return this;
+    }
+
+    public ConsumerClass addEnhanceMethod(String method, String scope, ResourceInit<ShadowMethodProxy> methodProxyInit, String... args) {
+        EnhanceMethod enhanceMethod = new EnhanceMethod();
+        enhanceMethod.setMethod(method);
+        enhanceMethod.setArgTypes(args);
+        enhanceMethod.setMethodProxyInit(methodProxyInit);
+        enhanceMethod.setScope(scope);
         methodList.add(enhanceMethod);
         return this;
     }
@@ -54,7 +65,8 @@ public class ConsumerClass {
         return isConvertImpl;
     }
 
-    public void setConvertImpl(boolean convertImpl) {
+    public ConsumerClass setConvertImpl(boolean convertImpl) {
         isConvertImpl = convertImpl;
+        return this;
     }
 }

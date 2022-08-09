@@ -15,6 +15,11 @@ public class SpringKafkaShadowServer implements ShadowServer {
     }
 
     @Override
+    public Object getShadowTarget() {
+        return this.listenerContainer;
+    }
+
+    @Override
     public void start() {
         listenerContainer.start();
     }

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.objectweb.asm.ClassReader.EXPAND_FRAMES;
-import static org.objectweb.asm.Opcodes.ASM7;
+import static org.objectweb.asm.Opcodes.ASM9;
 
 public class EventEnhancer implements Enhancer {
     private final static int CLASS_VERSION_15 = 49;
@@ -60,7 +60,7 @@ public class EventEnhancer implements Enhancer {
         final ClassWriter cw = createClassWriter(targetClassLoader, cr, byteCodeArray);
         cr.accept(
                 new AsmCodeEnhancer(
-                        ASM7, cw,
+                        ASM9, cw,
                         cr.getClassName(),
                         signCodes
                 ),

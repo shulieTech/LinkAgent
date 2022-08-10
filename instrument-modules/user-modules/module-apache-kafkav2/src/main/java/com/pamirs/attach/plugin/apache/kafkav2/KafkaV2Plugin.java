@@ -24,10 +24,12 @@ import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import io.shulie.instrument.module.isolation.IsolationManager;
+import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
-import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxyUtils;
+import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 import io.shulie.instrument.module.isolation.proxy.impl.AddClusterRouteShadowMethodProxy;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
+import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,14 +50,44 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
         ShadowProxyConfig proxyConfig = new ShadowProxyConfig(moduleName);
         proxyConfig
                 .addEnhance(new EnhanceClass("org.apache.kafka.clients.producer.KafkaProducer")
-                        .setFactoryResourceInit(ApacheKafkaProducerFactory::new)
-                        .addEnhanceMethod("send", SendMethodProxy::new, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
-                        .addEnhanceMethod("sendOffsetsToTransaction", SendOffsetsToTransactionMethodProxy::new)
-                        .addEnhanceMethod("partitionsFor", () -> new AddClusterRouteShadowMethodProxy(0))
+                        .setFactoryResourceInit(new ResourceInit<ShadowResourceProxyFactory>() {
+                            @Override
+                            public ShadowResourceProxyFactory init() {
+                                return new ApacheKafkaProducerFactory();
+                            }
+                        })
+                        .addEnhanceMethod("send", new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new SendMethodProxy();
+                            }
+                        }, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
+                        .addEnhanceMethod("sendOffsetsToTransaction", new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new SendOffsetsToTransactionMethodProxy();
+                            }
+                        })
+                        .addEnhanceMethod("partitionsFor", new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new AddClusterRouteShadowMethodProxy(0);
+                            }
+                        })
                         .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"))
                 .addEnhance(new EnhanceClass("kafka.javaapi.producer.Producer")
-                        .setFactoryResourceInit(KafkaProducerFactory::new)
-                        .addEnhanceMethods(JavaApiProducerSendProxy::new,"send")
+                        .setFactoryResourceInit(new ResourceInit<ShadowResourceProxyFactory>() {
+                            @Override
+                            public ShadowResourceProxyFactory init() {
+                                return new KafkaProducerFactory();
+                            }
+                        })
+                        .addEnhanceMethods(new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new JavaApiProducerSendProxy();
+                            }
+                        }, "send")
                 );
 
         IsolationManager.register(proxyConfig);

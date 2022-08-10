@@ -19,7 +19,9 @@ import com.pamirs.attach.plugin.apache.kafka.streamv2.consumer.KafkaShadowStream
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import io.shulie.instrument.module.messaging.common.ResourceInit;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
+import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -43,7 +45,12 @@ public class KafkaStreamV2plugin extends ModuleLifecycleAdapter implements Exten
 //        ConsumerRegister streamPeekRegister = new ConsumerRegister().consumerExecute(new KafkaShadowStreamPeekExecute());
 //        ConsumerManager.register(streamPeekRegister, "org.apache.kafka.streams.kstream.internals.KStreamPeek$KStreamPeekProcessor#process");
 
-        ConsumerRegister streamMapRegister = new ConsumerRegister("kafka-streamv2").consumerExecute(KafkaShadowStreamStartExecute::new);
+        ConsumerRegister streamMapRegister = new ConsumerRegister("kafka-streamv2").consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
+            @Override
+            public ShadowConsumerExecute init() {
+                return new KafkaShadowStreamStartExecute();
+            }
+        });
         ConsumerManager.register(streamMapRegister, "org.apache.kafka.streams.KafkaStreams#start");
         return true;
     }

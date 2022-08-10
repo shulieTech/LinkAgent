@@ -19,7 +19,9 @@ import com.pamirs.attach.plugin.spring.rabbitmq.consumer.SpringRabbitmqShadowCon
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import io.shulie.instrument.module.messaging.common.ResourceInit;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
+import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -37,7 +39,12 @@ public class SpringRabbitmqPlugin extends ModuleLifecycleAdapter implements Exte
 
     @Override
     public boolean onActive() throws Throwable {
-        ConsumerRegister consumerRegister = new ConsumerRegister("spring-rabbitmq").consumerExecute(SpringRabbitmqShadowConsumerExecute::new);
+        ConsumerRegister consumerRegister = new ConsumerRegister("spring-rabbitmq").consumerExecute(new ResourceInit<ShadowConsumerExecute>() {
+            @Override
+            public ShadowConsumerExecute init() {
+                return new SpringRabbitmqShadowConsumerExecute();
+            }
+        });
         ConsumerManager.register(consumerRegister, "org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer#start");
         return true;
     }

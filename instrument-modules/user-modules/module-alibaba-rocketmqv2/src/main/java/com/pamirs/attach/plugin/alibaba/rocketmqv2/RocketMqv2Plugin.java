@@ -22,9 +22,13 @@ import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import io.shulie.instrument.module.isolation.IsolationManager;
+import io.shulie.instrument.module.isolation.common.ResourceInit;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
+import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
+import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import io.shulie.instrument.module.messaging.consumer.ConsumerManager;
+import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -44,20 +48,52 @@ public class RocketMqv2Plugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
+
+        // 注意：这里不要用lambda表达式会出现classLoad问题
         ShadowProxyConfig defaultMqProducerProxyConfig = new ShadowProxyConfig(MODULE_NAME);
         defaultMqProducerProxyConfig
                 .addEnhance(new EnhanceClass("com.alibaba.rocketmq.client.producer.DefaultMQProducer")
-                        .setFactoryResourceInit(DefaultMqProducerFactory::new)
-                        .addEnhanceMethods(SendProxy::new, "send")
-                        .addEnhanceMethods(SendProxy::new, "sendOneway"))
+                        .setFactoryResourceInit(new ResourceInit<ShadowResourceProxyFactory>() {
+                            @Override
+                            public ShadowResourceProxyFactory init() {
+                                return new DefaultMqProducerFactory();
+                            }
+                        })
+                        .addEnhanceMethods(new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new SendProxy();
+                            }
+                        }, "send")
+                        .addEnhanceMethods(new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new SendProxy();
+                            }
+                        }, "sendOneway"))
                 .addEnhance(new EnhanceClass("com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl")
-                        .setFactoryResourceInit(DefaultMqProducerFactory::new)
-                        .addEnhanceMethods(SendProxy::new, "sendDefaultImpl", "sendMessageInTransaction")
+                        .setFactoryResourceInit(new ResourceInit<ShadowResourceProxyFactory>() {
+                            @Override
+                            public ShadowResourceProxyFactory init() {
+                                return new DefaultMqProducerFactory();
+                            }
+                        })
+                        .addEnhanceMethods(new ResourceInit<ShadowMethodProxy>() {
+                            @Override
+                            public ShadowMethodProxy init() {
+                                return new SendProxy();
+                            }
+                        }, "sendDefaultImpl", "sendMessageInTransaction")
                 );
 
         IsolationManager.register(defaultMqProducerProxyConfig);
 
-        ConsumerRegister consumerRegister = new ConsumerRegister(MODULE_NAME).consumerExecute(RocketmqShadowConsumerExecute::new);
+        ConsumerRegister consumerRegister = new ConsumerRegister(MODULE_NAME).consumerExecute(new io.shulie.instrument.module.messaging.common.ResourceInit<ShadowConsumerExecute>() {
+            @Override
+            public ShadowConsumerExecute init() {
+                return new RocketmqShadowConsumerExecute();
+            }
+        });
         ConsumerManager.register(consumerRegister, "com.alibaba.rocketmq.client.consumer.DefaultMQPushConsumer#start");
         return true;
     }

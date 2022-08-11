@@ -253,7 +253,7 @@ public class ConsumerManager {
                 }
                 if (isConfigDiff(enableConfigSet, shadowConsumer.getEnableConfigSet())) {
                     stopAndClearShadowServer(shadowConsumer);
-                    fetchShadowServer(shadowConsumer, configs);
+                    fetchShadowServer(shadowConsumer, configs, enableConfigSet);
                     logger.info("[messaging-common]success fetch shadowServer with config:{}", configs);
                     doStartShadowServer(shadowConsumer);
                     logger.info("[messaging-common]success start shadowServer with config:{}", configs);
@@ -288,15 +288,15 @@ public class ConsumerManager {
         return false;
     }
 
-    private static void fetchShadowServer(ShadowConsumer shadowConsumer, String config) {
+    private static void fetchShadowServer(ShadowConsumer shadowConsumer, String config, Set<ConsumerConfig> enableConfigSet) {
         try {
             BizClassLoaderService.setBizClassLoader(shadowConsumer.getBizTarget().getClass().getClassLoader());
-            ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(shadowConsumer.getConfigSet().stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
+            ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(enableConfigSet.stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
             shadowConsumer.setShadowServer(shadowServer);
             ConsumerRouteHandler.addNotRouteObj(shadowServer.getShadowTarget());
             ConsumerIsolationCache.put(shadowConsumer.getBizTarget(), shadowServer);
         } catch (Exception e) {
-            logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getConfigSet()), e);
+            logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getEnableConfigSet()), e);
         } finally {
             BizClassLoaderService.clearBizClassLoader();
         }

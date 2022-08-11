@@ -159,6 +159,16 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     }
                 });
 
+        //--for orderly
+        this.enhanceTemplate.enhanceWithInterface(this,
+                "com.alibaba.rocketmq.client.consumer.listener.MessageListenerOrderly", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("consumeMessage");
+                        enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
+                    }
+                });
+
         this.enhanceTemplate.enhance(this,
                 "com.alibaba.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {
                     @Override

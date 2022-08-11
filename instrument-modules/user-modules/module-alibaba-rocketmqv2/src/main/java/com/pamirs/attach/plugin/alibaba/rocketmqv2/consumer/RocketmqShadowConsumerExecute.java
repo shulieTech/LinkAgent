@@ -50,6 +50,16 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
 
     private static final Logger logger = LoggerFactory.getLogger(RocketmqShadowConsumerExecute.class);
 
+    /**
+     * 重试topic前缀
+     */
+    private static final String RETRY_PREFIX = "%RETRY%";
+
+    /**
+     * 死信topic前缀
+     */
+    private static final String DLQ_PREFIX = "%DLQ%";
+
     @Override
     public List<ConsumerConfig> prepareConfig(SyncObjectData syncObjectData) {
         DefaultMQPushConsumer businessConsumer = (DefaultMQPushConsumer) syncObjectData.getTarget();
@@ -67,6 +77,9 @@ public class RocketmqShadowConsumerExecute implements ShadowConsumerExecute {
         List<ConsumerConfig> consumerList = new ArrayList<>();
         if (map != null) {
             for (String topic : map.keySet()) {
+                if (topic.startsWith(RETRY_PREFIX) || topic.startsWith(DLQ_PREFIX)) {
+                    continue;
+                }
                 RocketmqConsumerConfig consumerConfig = new RocketmqConsumerConfig(businessConsumer, topic);
                 consumerList.add(consumerConfig);
             }

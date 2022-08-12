@@ -254,7 +254,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor beforeLast exec err, class:" +  this.getClass().getName(), t);
+                if (!(t instanceof ProcessControlException)) {
+                    LOGGER.error("TraceInterceptor beforeLast exec err, class:" +  this.getClass().getName(), t);
+                }
                 throwable = t;
             }
         }
@@ -599,7 +601,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable t) {
-            LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), t);
+            if (!(t instanceof ProcessControlException)) {
+                LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), t);
+            }
             throwable = t;
         }
         boolean clusterTest = Pradar.isClusterTest();
@@ -634,7 +638,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 LOGGER.error("TraceInterceptor afterLast exec err:{}", this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor afterLast exec err:{}", this.getClass().getName(), t);
+                if (!(t instanceof ProcessControlException)) {
+                    LOGGER.error("TraceInterceptor afterLast exec err:{}", this.getClass().getName(), t);
+                }
                 throwable = t;
             }
         }
@@ -658,7 +664,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable t) {
-            LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), t);
+            if (!(t instanceof ProcessControlException)) {
+                LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), t);
+            }
             throwable = t;
         }
         boolean clusterTest = Pradar.isClusterTest();
@@ -693,7 +701,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 LOGGER.error("TraceInterceptor exceptionLast exec err:{}", this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor exceptionLast exec err:{}", this.getClass().getName(), t);
+                if (!(t instanceof ProcessControlException)) {
+                    LOGGER.error("TraceInterceptor exceptionLast exec err:{}", this.getClass().getName(), t);
+                }
                 throwable = t;
             }
         }

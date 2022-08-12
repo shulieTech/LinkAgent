@@ -15,16 +15,14 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.util.AopTargetUtil;
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import io.shulie.instrument.module.messaging.kafka.ApacheKafkaHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.aop.support.AopUtils;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,8 +49,7 @@ public class ConsumerHolder {
         }
     }
 
-    private static final Set<Consumer<?, ?>> WORK_WITH_SPRING = Collections.synchronizedSet(
-            new HashSet<Consumer<?, ?>>());
+    private static final Map<Consumer<?, ?>, String> WORK_WITH_SPRING = new ConcurrentHashMap<>();
 
     private static final Map<Integer, ConsumerProxy> PROXY_MAPPING = new HashMap<Integer, ConsumerProxy>();
 
@@ -81,12 +78,12 @@ public class ConsumerHolder {
     }
 
     public static void addWorkWithSpring(Consumer<?, ?> consumer) {
-        ConsumerHolder.WORK_WITH_SPRING.add(consumer);
+        ConsumerHolder.WORK_WITH_SPRING.put(consumer, "");
     }
 
     public static boolean isWorkWithOtherFramework(Consumer<?, ?> consumer) {
         extractSpringKafkaConsumersFromSpringContext();
-        return WORK_WITH_SPRING.contains(consumer) && !ConsumerHolder.isZTO;
+        return (WORK_WITH_SPRING.get(consumer) != null || ApacheKafkaHandler.isWorkWithOther(consumer)) && !ConsumerHolder.isZTO;
     }
 
     public static ConsumerProxy getProxy(Object target) {
@@ -198,14 +195,14 @@ public class ConsumerHolder {
                     if (consumer == null) {
                         return;
                     }
-                    WORK_WITH_SPRING.add(consumer);
+                    WORK_WITH_SPRING.put(consumer, "");
                 }
             } else if ("KafkaMessageListenerContainer".equals(container.getClass().getSimpleName())) {
                 Consumer consumer = extractKafkaConsumer(container);
                 if (consumer == null) {
                     return;
                 }
-                WORK_WITH_SPRING.add(consumer);
+                WORK_WITH_SPRING.put(consumer, "");
             }
         }
         spring_kafka_consumer_init_flag.set(true);

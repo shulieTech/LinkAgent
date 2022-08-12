@@ -261,8 +261,6 @@ public class ConsumerManager {
                 }
             } catch (Throwable e) {
                 logger.error("[messaging-common]try to start consumer server fail with key:{}", configs, e);
-            } finally {
-
             }
         }
     }
@@ -292,9 +290,11 @@ public class ConsumerManager {
         try {
             BizClassLoaderService.setBizClassLoader(shadowConsumer.getBizTarget().getClass().getClassLoader());
             ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(enableConfigSet.stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
-            shadowConsumer.setShadowServer(shadowServer);
-            ConsumerRouteHandler.addNotRouteObj(shadowServer.getShadowTarget());
-            ConsumerIsolationCache.put(shadowConsumer.getBizTarget(), shadowServer);
+            if (shadowServer != null) {
+                shadowConsumer.setShadowServer(shadowServer);
+                ConsumerRouteHandler.addNotRouteObj(shadowServer.getShadowTarget());
+                ConsumerIsolationCache.put(shadowConsumer.getBizTarget(), shadowServer);
+            }
         } catch (Exception e) {
             logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getEnableConfigSet()), e);
         } finally {

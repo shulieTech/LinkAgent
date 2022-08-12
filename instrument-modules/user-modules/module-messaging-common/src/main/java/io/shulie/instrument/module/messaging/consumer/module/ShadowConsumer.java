@@ -3,9 +3,7 @@ package io.shulie.instrument.module.messaging.consumer.module;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,7 +17,7 @@ public class ShadowConsumer {
     private Object bizTarget;
     private Set<ConsumerConfig> enableConfigSet;
 
-    public ShadowConsumer(ShadowConsumerExecute consumerExecute,Object bizTarget) {
+    public ShadowConsumer(ShadowConsumerExecute consumerExecute, Object bizTarget) {
         this.configSet = new HashSet<>();
         this.enableConfigSet = new HashSet<>();
         this.consumerExecute = consumerExecute;
@@ -67,7 +65,7 @@ public class ShadowConsumer {
     }
 
     public boolean isStarted() {
-        return shadowServer != null && shadowServer.isRunning();
+        return shadowServer == null || shadowServer.isRunning();
     }
 
 }

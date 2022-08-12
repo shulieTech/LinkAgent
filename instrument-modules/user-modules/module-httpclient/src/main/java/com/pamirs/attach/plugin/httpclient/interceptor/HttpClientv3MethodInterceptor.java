@@ -77,9 +77,6 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             if (params instanceof MatchConfig) {
                 try {
                     MatchConfig config = (MatchConfig)params;
-                    if (config.getScriptContent().contains("return")) {
-                        return null;
-                    }
                     HttpMethod method = (HttpMethod)config.getArgs().get("extraMethod");
                     byte[] bytes = config.getScriptContent().getBytes();
                     Reflect.on(method).set("responseBody", bytes);

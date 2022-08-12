@@ -85,9 +85,6 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
             if (params instanceof MatchConfig) {
                 try {
                     MatchConfig config = (MatchConfig) params;
-                    if (config.getScriptContent().contains("return")) {
-                        return null;
-                    }
                     StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
 
                     HttpEntity entity = null;

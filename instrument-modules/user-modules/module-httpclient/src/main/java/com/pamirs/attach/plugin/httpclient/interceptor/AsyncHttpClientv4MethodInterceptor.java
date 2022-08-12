@@ -71,12 +71,9 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
         @Override
         public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
 
-            MatchConfig config = (MatchConfig)params;
-            if (config.getScriptContent().contains("return")) {
-                return null;
-            }
+            MatchConfig config = (MatchConfig) params;
             if (null == config.getArgs().get("futureCallback")) {
-                return null;
+                return new ProcessControlException(ProcessControlException.THROWS_IMMEDIATELY, "json mock script args must contains param 'futureCallback'");
             }
             //现在先暂时注释掉因为只有jdk8以上才能用
             FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get(

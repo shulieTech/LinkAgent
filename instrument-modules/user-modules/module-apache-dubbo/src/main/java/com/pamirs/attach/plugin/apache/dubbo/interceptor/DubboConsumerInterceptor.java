@@ -92,9 +92,6 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                 public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
 
                     MatchConfig config = (MatchConfig) params;
-                    if (config.getScriptContent().contains("return")) {
-                        return null;
-                    }
                     RpcInvocation invocation = (RpcInvocation) config.getArgs().get("invocation");
                     try {
                         //for 2.8.4

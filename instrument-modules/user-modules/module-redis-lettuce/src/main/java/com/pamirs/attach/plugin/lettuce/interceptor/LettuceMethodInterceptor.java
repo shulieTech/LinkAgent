@@ -14,8 +14,8 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
-import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
@@ -29,7 +29,6 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.lettuce.core.AbstractRedisAsyncCommands;
-import io.lettuce.core.RedisChannelWriter;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.masterslave.MasterSlaveConnectionProvider;
 import io.lettuce.core.protocol.DefaultEndpoint;
@@ -40,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.sql.Ref;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -178,10 +176,8 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
 
     protected void appendEndPoint(Object target, final SpanRecord spanRecord) {
         try {
-            final Object connection = Reflect.on(target).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_CONNECTION, target));
-
-            final Object t = Reflect.on(connection).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER, connection));
-            ;
+            final Object connection =  ReflectionUtils.get(target, LettuceConstants.REFLECT_FIELD_CONNECTION);
+            final Object t = ReflectionUtils.get(connection, LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
             DefaultEndpoint endpoint = null;
             if ("io.lettuce.core.masterslave.MasterSlaveChannelWriter".equals(t.getClass().getName())) {
                 try {

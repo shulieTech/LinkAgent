@@ -645,14 +645,13 @@ public class AgentLauncher {
         final String simulatorHome = getSimulatorHome(featureMap);
         final StringBuilder builder = new StringBuilder(
             format(
-                ";app_name=%s;agentId=%s;config=%s;system_module=%s;mode=%s;simulator_home=%s;user_module=%s;"
+                ";app_name=%s;agentId=%s;system_module=%s;mode=%s;simulator_home=%s;user_module=%s;"
                     + "classloader_jars=%s;provider=%s;module_repository_mode=%s;"
                     + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
                     + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
                     + ".id=%s;tro.web.url=%s;pradar.env.code=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
-                getSimulatorConfigPath(simulatorHome),
                 // SIMULATOR_CONFIG_PATH,
                 getSimulatorModulePath(simulatorHome),
                 // SIMULATOR_MODULE_PATH,

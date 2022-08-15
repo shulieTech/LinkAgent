@@ -1,5 +1,8 @@
 package com.pamirs.attach.plugin.dynamic.reflect;
 
+import com.pamirs.attach.plugin.dynamic.utils.Assert;
+import com.pamirs.attach.plugin.dynamic.utils.ConcurrentReferenceHashMap;
+
 import java.lang.reflect.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -92,14 +95,6 @@ public abstract class ReflectionUtils {
             handleReflectionException(ex);
             throw new IllegalStateException(
                     "Unexpected reflection exception - " + ex.getClass().getName() + ": " + ex.getMessage());
-        }
-    }
-
-    private static Class<?> forName(String name, ClassLoader classLoader) throws ReflectException {
-        try {
-            return Class.forName(name, true, classLoader);
-        } catch (Throwable e) {
-            throw new ReflectException(e);
         }
     }
 

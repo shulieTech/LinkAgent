@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.dynamic.reflect;
+package com.pamirs.attach.plugin.dynamic.utils;
 
 import com.shulie.instrument.simulator.api.util.StringUtil;
 

@@ -95,6 +95,14 @@ public abstract class ReflectionUtils {
         }
     }
 
+    private static Class<?> forName(String name, ClassLoader classLoader) throws ReflectException {
+        try {
+            return Class.forName(name, true, classLoader);
+        } catch (Throwable e) {
+            throw new ReflectException(e);
+        }
+    }
+
     public static <T> T getField(Field field, Object target) {
         try {
             return (T) field.get(target);

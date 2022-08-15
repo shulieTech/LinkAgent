@@ -48,7 +48,7 @@ public class KafkaConsumerMetaData {
     }
 
     public static KafkaConsumerMetaData build(KafkaConsumer consumer) {
-        Set<String> topics = consumer.subscription();
+        Set<String> topics = KafkaUtil.getTopics(consumer);
         try {
             Object coordinator = Reflect.on(consumer).get(REFLECT_FIELD_COORDINATOR);
             Object groupId = ReflectUtil.reflectSlience(consumer, REFLECT_FIELD_GROUP_ID);

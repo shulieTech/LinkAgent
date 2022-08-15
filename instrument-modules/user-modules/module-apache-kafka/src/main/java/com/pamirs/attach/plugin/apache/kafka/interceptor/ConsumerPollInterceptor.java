@@ -17,11 +17,14 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
-import com.pamirs.pradar.*;
+import com.pamirs.pradar.ErrorTypeEnum;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.BytesUtils;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -44,16 +47,16 @@ import java.util.Iterator;
  */
 @Destroyable(KafkaDestroy.class)
 @SuppressWarnings("rawtypes")
-public class ConsumerPollInterceptor extends CutoffInterceptorAdaptor {
+public class ConsumerPollInterceptor extends AroundInterceptor {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ConsumerPollInterceptor.class.getName());
 
     private static long LAST_REPORT_TIME = System.currentTimeMillis();
 
     @Override
-    public CutOffResult cutoff0(Advice advice) throws Throwable {
+    public void doAfter(Advice advice) throws Throwable {
         if (!PradarSwitcher.isClusterTestEnabled()) {
-            return CutOffResult.passed();
+            return;
         }
         KafkaConsumer consumer = (KafkaConsumer) advice.getTarget();
         // poll方法需要定制化适配上层调用逻辑，
@@ -64,7 +67,6 @@ public class ConsumerPollInterceptor extends CutoffInterceptorAdaptor {
         } else {
             reportInfo(consumer);
         }
-        return CutOffResult.passed();
     }
 
     /**

@@ -86,6 +86,11 @@ public class ConsumerHolder {
         return (WORK_WITH_SPRING.get(consumer) != null || ApacheKafkaHandler.isWorkWithOther(consumer)) && !ConsumerHolder.isZTO;
     }
 
+    public static boolean isWorkWithSpring(Consumer<?, ?> consumer) {
+        extractSpringKafkaConsumersFromSpringContext();
+        return WORK_WITH_SPRING.get(consumer) != null && !ConsumerHolder.isZTO;
+    }
+
     public static ConsumerProxy getProxy(Object target) {
         return PROXY_MAPPING.get(System.identityHashCode(target));
     }

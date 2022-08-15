@@ -4,20 +4,15 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
-
-import java.util.Iterator;
-import java.util.Map;
-
-import javax.annotation.Resource;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
@@ -26,20 +21,21 @@ import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ReversedTraceInterceptorAdaptor;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
-import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+
+import javax.annotation.Resource;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -72,7 +68,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         Object result = advice.getReturnObj();
         KafkaConsumer kafkaConsumer = (KafkaConsumer) advice.getTarget();
-        if (ConsumerHolder.isWorkWithOtherFramework(kafkaConsumer)) {
+        if (ConsumerHolder.isWorkWithSpring(kafkaConsumer)) {
             return null;
         }
         ConsumerMetaData consumerMetaData = ConsumerHolder.getConsumerMetaData(kafkaConsumer);
@@ -82,7 +78,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
             return null;
         }
         Iterator iterator = consumerRecords.iterator();
-        if(!iterator.hasNext()){
+        if (!iterator.hasNext()) {
             return null;
         }
         Object next = iterator.next();
@@ -110,7 +106,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        if (ConsumerHolder.isWorkWithOtherFramework((Consumer) advice.getTarget())) {
+        if (ConsumerHolder.isWorkWithSpring((Consumer) advice.getTarget())) {
             return null;
         }
         Boolean lastPollHasRecords = lastPollHasRecordsThreadLocal.get();
@@ -126,7 +122,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
-        if (ConsumerHolder.isWorkWithOtherFramework((Consumer) advice.getTarget())) {
+        if (ConsumerHolder.isWorkWithSpring((Consumer) advice.getTarget())) {
             return null;
         }
         Throwable throwable = advice.getThrowable();

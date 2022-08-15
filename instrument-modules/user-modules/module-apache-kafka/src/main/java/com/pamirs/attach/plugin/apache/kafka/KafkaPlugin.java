@@ -96,6 +96,13 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 InstrumentMethod pollMethod = target.getDeclaredMethods("poll");
                 pollMethod.addInterceptor(Listeners.of(ConsumerPollInterceptor.class, "kafkaScope", ExecutionPolicy.BOUNDARY,
                         Interceptors.SCOPE_CALLBACK));
+                pollMethod.addInterceptor(
+                        Listeners.of(ConsumerTraceInterceptor.class, "kafkaTraceScope", ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod acquireMethod = target.getDeclaredMethods("acquire");
+                acquireMethod.addInterceptor(Listeners.of(ConsumerAcquireMethodInterceptor.class, "kafkaAcquire", ExecutionPolicy.BOUNDARY,
+                        Interceptors.SCOPE_CALLBACK));
             }
         });
 

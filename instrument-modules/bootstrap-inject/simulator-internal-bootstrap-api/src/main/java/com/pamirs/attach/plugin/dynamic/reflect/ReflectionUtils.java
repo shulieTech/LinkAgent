@@ -10,6 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 替代{@link Reflect} 工具
+ */
 public abstract class ReflectionUtils {
 
     private static final String CGLIB_RENAMED_METHOD_PREFIX = "CGLIB$";

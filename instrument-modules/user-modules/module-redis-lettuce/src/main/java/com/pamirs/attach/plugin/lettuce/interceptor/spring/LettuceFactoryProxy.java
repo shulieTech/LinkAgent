@@ -15,9 +15,9 @@
 package com.pamirs.attach.plugin.lettuce.interceptor.spring;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerMatchStrategy;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisNode;
@@ -221,7 +221,7 @@ class FactoryInitializer extends MatchStrategy {
     private void extraProperties(LettuceConnectionFactory biz, LettuceConnectionFactory pressure) {
         pressure.setTimeout(biz.getTimeout());
         pressure.setShareNativeConnection(biz.getShareNativeConnection());
-        Reflect.on(pressure).set("clientConfiguration", biz.getClientConfiguration());
+        ReflectionUtils.set(pressure, "clientConfiguration", biz.getClientConfiguration());
     }
 }
 

@@ -19,14 +19,12 @@ import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
-import com.pamirs.attach.plugin.lettuce.utils.ReflectFieldCache;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.lettuce.core.AbstractRedisAsyncCommands;
 import io.lettuce.core.RedisURI;
@@ -89,8 +87,8 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         if(redisUris != null && !redisUris.isEmpty()){
             final List<String> remoteIps = new ArrayList<String>();
             for (Object redisUri : redisUris) {
-                final String host = Reflect.on(redisUri).get("host");
-                final Integer port = Reflect.on(redisUri).get("port");
+                final String host = ReflectionUtils.get(redisUri,"host");
+                final Integer port = ReflectionUtils.get(redisUri,"port");
                 remoteIps.add(host + ":" + port);
             }
             spanRecord.setRemoteIp(StringUtils.join(remoteIps,","));
@@ -184,8 +182,8 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                     /**
                      * 这是主从的
                      */
-                    MasterSlaveConnectionProvider provider = Reflect.on(t).get(ReflectFieldCache.get("masterSlaveConnectionProvider", t));
-                    RedisURI redisUri = Reflect.on(provider).get(ReflectFieldCache.get("initialRedisUri", provider));
+                    MasterSlaveConnectionProvider provider = ReflectionUtils.get(t,"masterSlaveConnectionProvider");
+                    RedisURI redisUri = ReflectionUtils.get(provider, "initialRedisUri");
                     spanRecord.setRemoteIp(redisUri.getHost());
                     spanRecord.setPort(redisUri.getPort());
                 } catch (Throwable thx) {
@@ -197,8 +195,8 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                  */
             } else if ("io.lettuce.core.masterslave.SentinelConnector$1".equals(t.getClass().getName())) {
                 try {
-                    Object sentinelConnector = Reflect.on(t).get(ReflectFieldCache.get("this$0", t));
-                    RedisURI redisURI = Reflect.on(sentinelConnector).get(ReflectFieldCache.get("redisURI", sentinelConnector));
+                    Object sentinelConnector = ReflectionUtils.get(t,"this$0");
+                    RedisURI redisURI = ReflectionUtils.get(sentinelConnector, "redisURI");
                     List<RedisURI> sentinels = redisURI.getSentinels();
                     RedisURI current = sentinels.get(0);
                     spanRecord.setRemoteIp(current.getHost());
@@ -212,16 +210,16 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                 endpoint = (DefaultEndpoint) t;
             } else {
                 try {
-                    endpoint = Reflect.on(t).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_DEFAULT_WRITER, t));
+                    endpoint = ReflectionUtils.get(t, LettuceConstants.REFLECT_FIELD_DEFAULT_WRITER);
                 } catch (Throwable w) {
-                    endpoint = Reflect.on(t).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_WRITER, t));
+                    endpoint = ReflectionUtils.get(t, LettuceConstants.REFLECT_FIELD_WRITER);
                 }
             }
             if (endpoint == null) {
                 spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
                 return;
             }
-            Channel channel = Reflect.on(endpoint).get(ReflectFieldCache.get(LettuceConstants.REFLECT_FIELD_CHANNEL, endpoint));
+            Channel channel = ReflectionUtils.get(endpoint, LettuceConstants.REFLECT_FIELD_CHANNEL);
             if (channel == null) {
                 spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
                 return;

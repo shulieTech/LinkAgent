@@ -29,9 +29,9 @@ public abstract class ReflectionUtils {
     private static final Map<Class<?>, Field[]> declaredFieldsCache =
             new ConcurrentReferenceHashMap<Class<?>, Field[]>(256);
 
-    public static Object invoke(Object target, String methodName){
+    public static <T> T invoke(Object target, String methodName){
         Method method = findMethod(target.getClass(), methodName);
-        return invokeMethod(method, target);
+        return (T) invokeMethod(method, target);
     }
 
     public static <T> T invoke(Object target, String methodName, Object... args) {
@@ -136,9 +136,9 @@ public abstract class ReflectionUtils {
      * @param target the target object from which to get the field
      * @return the field's current value
      */
-    public static Object getField(Field field, Object target) {
+    public static <T> T getField(Field field, Object target) {
         try {
-            return field.get(target);
+            return (T) field.get(target);
         } catch (IllegalAccessException ex) {
             handleReflectionException(ex);
             throw new IllegalStateException(
@@ -198,8 +198,8 @@ public abstract class ReflectionUtils {
      * @return the invocation result, if any
      * @see #invokeMethod(java.lang.reflect.Method, Object, Object[])
      */
-    public static Object invokeMethod(Method method, Object target) {
-        return invokeMethod(method, target, new Object[0]);
+    public static <T> T invokeMethod(Method method, Object target) {
+        return (T) invokeMethod(method, target, new Object[0]);
     }
 
     /**

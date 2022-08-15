@@ -3,6 +3,7 @@ package io.shulie.instrument.module.messaging.consumer;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.BizClassLoaderService;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
@@ -174,6 +175,10 @@ public class ConsumerManager {
     }
 
     static void runTask() {
+        if (!PradarSwitcher.isClusterTestReady()) {
+            return;
+        }
+
         for (ConsumerRegisterModule consumerRegisterModule : registerList) {
             refreshSyncObj(consumerRegisterModule);
         }

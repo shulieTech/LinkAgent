@@ -462,6 +462,8 @@ public class AgentLauncher {
             } finally {
                 if(config != null){
                     System.setProperty("config",config);
+                }else{
+                    System.clearProperty("config");
                 }
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }

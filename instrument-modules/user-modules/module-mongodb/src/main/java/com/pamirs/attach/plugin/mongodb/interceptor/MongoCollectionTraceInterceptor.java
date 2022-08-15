@@ -19,12 +19,12 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import com.mongodb.client.MongoCollection;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.mongodb.MongodbConstants;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,9 +51,7 @@ public class MongoCollectionTraceInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         Object target = advice.getTarget();
         if (executor == null) {
-            final Field executor = ReflectionUtils.getDeclaredField(target, "executor");
-            executor.setAccessible(true);
-            this.executor = executor;
+            this.executor = ReflectionUtils.findField(target.getClass(),"executor");
         }
         MongoCollection mongoCollection = (MongoCollection)target;
         SpanRecord record = new SpanRecord();
@@ -63,7 +61,7 @@ public class MongoCollectionTraceInterceptor extends TraceInterceptorAdaptor {
         try {
             Object mongo = executor.get(target);
             if (getAllAddressMethod == null) {
-                getAllAddressMethod = ReflectionUtils.getDeclaredMethod(mongo,"getAllAddress",null);
+                getAllAddressMethod = ReflectionUtils.findMethod(mongo.getClass(),"getAllAddress",null);
             }
             if(getAllAddressMethod == null){
                 if(mongo$2 == null) {
@@ -72,7 +70,7 @@ public class MongoCollectionTraceInterceptor extends TraceInterceptorAdaptor {
                     mongo$2 = this$0;
                 }
                 mongo = mongo$2.get(mongo);
-                getAllAddressMethod = ReflectionUtils.getDeclaredMethod(mongo,"getAllAddress",null);
+                getAllAddressMethod = ReflectionUtils.findMethod(mongo.getClass(),"getAllAddress",null);
             }
             if("com.mongodb.Mongo$2".equals(mongo.getClass().getName())){
                 mongo = mongo$2.get(mongo);

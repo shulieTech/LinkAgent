@@ -56,6 +56,13 @@ public abstract class ReflectionUtils {
         setField(field, target, value);
     }
 
+    public static Object getFieldValues(Object object, String... filedNames){
+        for (String filedName : filedNames) {
+            object = get(object, filedName);
+        }
+        return object;
+    }
+
     public static Field findField(Class<?> clazz, String name) {
         return findField(clazz, name, null);
     }

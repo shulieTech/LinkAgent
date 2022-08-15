@@ -16,7 +16,7 @@ package com.pamirs.attach.plugin.mongodb.utils;
 
 import com.mongodb.MongoNamespace;
 import com.mongodb.operation.*;
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +67,7 @@ public class OperationAccessorFactory {
             operationNumMap.put(AggregateOperation.class, new ReflectOperationAccessorAdaptor(true) {
                 @Override
                 public MongoNamespace getMongoNamespace(Object operation) {
-                    return Reflect.on(operation).call("getNamespace").get();
+                    return ReflectionUtils.invoke(operation, "getNamespace");
                 }
             });
 

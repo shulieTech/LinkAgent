@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.lettuce.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.RedisClusterClient;
@@ -41,13 +41,13 @@ public class LettuceNodesStrategy implements RedisServerNodesStrategy {
         List<String> nodes = new ArrayList<String>();
         try {
             if (obj instanceof RedisClient) {
-                RedisURI redisURI = Reflect.on(obj).get("redisURI");
+                RedisURI redisURI = ReflectionUtils.get(obj, "redisURI");
                 if (null != redisURI && null != redisURI.getHost()) {
                     nodes.add(getKey(redisURI));
                     return nodes;
                 }
             } else if (obj instanceof RedisClusterClient) {
-                iterable = Reflect.on(obj).call("getInitialUris").get();
+                iterable = ReflectionUtils.invoke(obj, "getInitialUris");
                 Iterator<RedisURI> iterator = iterable.iterator();
                 iterator(iterator, nodes);
             }

@@ -26,6 +26,7 @@ import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -38,7 +39,6 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -92,7 +92,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
         Object consumer = args[2];
         if (consumer instanceof Consumer && consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {
-            consumer = Reflect.on(consumer).get("delegate");
+            consumer = ReflectionUtils.get(consumer, "delegate");
         }
 
         String group = consumerGroupIdMappings.get(consumer);
@@ -114,11 +114,11 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             }
         }
         if (remoteAddress == null) {
-            Object metadata = Reflect.on(consumer).get("metadata");
+            Object metadata = ReflectionUtils.get(consumer, "metadata");
             Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
             Iterable<Node> nodes = null;
             if (cluster != null) {
-                nodes = Reflect.on(cluster).get("nodes");
+                nodes = ReflectionUtils.get(cluster, "nodes");
             } else {
                 Object cache = ReflectUtil.reflectSlience(metadata, "cache");
                 if (cache != null) {
@@ -128,7 +128,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             StringBuilder sb = new StringBuilder();
             if (nodes != null) {
                 for (Node node : nodes) {
-                    sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
+                    sb.append(ReflectionUtils.get(node, "host").toString()).append(":").append(ReflectionUtils.get(node, "port")
                             .toString()).append(",");
                 }
                 remoteAddress = sb.toString();
@@ -164,7 +164,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                 group = groupId.get(obj);
             } catch (Throwable e) {
                 try {
-                    Object coordinator = Reflect.on(obj).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
+                    Object coordinator = ReflectionUtils.get(obj, KafkaConstants.REFLECT_FIELD_COORDINATOR);
                     group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
                 } catch (Exception exp) {
 
@@ -177,14 +177,14 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
 
         try {
             Consumer consumer = (Consumer) obj;
-            Object proxy = Reflect.on(consumer).get("h");
-            Object advised = Reflect.on(proxy).get("advised");
-            Object targetSource = Reflect.on(advised).get("targetSource");
-            Object kafkaConsumer = Reflect.on(targetSource).get("target");
+            Object proxy = ReflectionUtils.get(consumer, "h");
+            Object advised = ReflectionUtils.get(proxy, "advised");
+            Object targetSource = ReflectionUtils.get(advised, "targetSource");
+            Object kafkaConsumer = ReflectionUtils.get(targetSource, "target");
             proxyConsumerMappings.put(obj, (Consumer) kafkaConsumer);
-            group = Reflect.on(kafkaConsumer).get("groupId");
+            group = ReflectionUtils.get(kafkaConsumer, "groupId");
             if (group.getClass().getName().equals("java.util.Optional")) {
-                group = Reflect.on(group).call("get").get();
+                group = ReflectionUtils.invoke(group, "get");
             }
             return (String) group;
         } catch (Exception e) {

@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.spring.cloud.gateway.tracer;
 
 import com.pamirs.attach.plugin.common.web.RequestTracer;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -69,7 +69,7 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
                 httpHeaders.put(entry.getKey(),entry.getValue());
             }
             httpHeaders.add(key,value.toString());
-            Reflect.on(request).set(getHeaders(request),httpHeaders);
+            ReflectionUtils.setField(getHeaders(request), request, httpHeaders);
         }
     }
 
@@ -120,7 +120,7 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
                 httpHeaders.put(entry.getKey(),entry.getValue());
             }
             httpHeaders.add(key,String.valueOf(value));
-            Reflect.on(httpResponseInfo).set(getHeaders(httpResponseInfo),httpHeaders);
+            ReflectionUtils.setField(getHeaders(httpResponseInfo),httpResponseInfo, httpHeaders );
         }
     }
 
@@ -135,7 +135,7 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
         if(field != null){
             return field;
         }
-        field = Reflect.on(target).field0("headers");
+        field = ReflectionUtils.findField(target.getClass(), "headers");
         headersMap.put(target.getClass(),field);
         return field;
     }

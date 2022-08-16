@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
@@ -75,32 +75,32 @@ public class RedissonNodesStrategy implements RedisServerNodesStrategy {
 
         SingleServerConfig singleServerConfig = null;
         try {
-            singleServerConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
+            singleServerConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
         } catch (ReflectException e) {
         }
         ClusterServersConfig clusterServersConfig = null;
         try {
-            clusterServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
+            clusterServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
         } catch (ReflectException e) {
         }
         SentinelServersConfig sentinelServersConfig = null;
         try {
-            sentinelServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
+            sentinelServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
         } catch (ReflectException e) {
         }
         ReplicatedServersConfig replicatedServersConfig = null;
         try {
-            replicatedServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
+            replicatedServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
         } catch (ReflectException e) {
         }
         MasterSlaveServersConfig masterSlaveServersConfig = null;
         try {
-            masterSlaveServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
+            masterSlaveServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
         } catch (ReflectException e) {
         }
         if (singleServerConfig != null) {
             //在这里返回的address在不同版本可能返回String，可能返回URI在这里做处理
-            Object address=Reflect.on(singleServerConfig).get("address");
+            Object address=ReflectionUtils.get(singleServerConfig,"address");
             String addressConvert=null;
             if(address instanceof URI){
                 URI uriConvert=(URI)address;

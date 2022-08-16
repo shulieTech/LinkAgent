@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -29,7 +30,6 @@ import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -165,7 +165,7 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
 
             if (client instanceof RedisClusterClient) {
                 RedisClusterClient redisClient = (RedisClusterClient)client;
-                Iterable<RedisURI> redisURIS = Reflect.on(redisClient).call("getInitialUris").get();
+                Iterable<RedisURI> redisURIS = ReflectionUtils.invoke(redisClient, "getInitialUris");
                 Iterable<RedisURI> performanceRedisUris = performanceRedisUris(redisURIS, shadowRedisConfig);
                 // redisURIS需要修改ip:port等信息
                 RedisClusterClient performanceRedisClient = RedisClusterClient.create(redisClient.getResources(),
@@ -174,7 +174,7 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
 
             } else if (client instanceof RedisClient) {
                 RedisClient redisClient = (RedisClient)client;
-                RedisURI redisURI = Reflect.on(redisClient).get("redisURI");
+                RedisURI redisURI = ReflectionUtils.get(redisClient, "redisURI");
 
                 String password = new String(redisURI.getPassword());
 
@@ -207,7 +207,7 @@ public class LettuceFactory extends AbstractRedisServerFactory<AbstractRedisClie
         try {
             synchronized (monitLock) {
                 for (Object lettucePool : lettucePools) {
-                    Reflect.on(lettucePool).call("closeAll");
+                    ReflectionUtils.invoke(lettucePool, "closeAll");
                 }
                 clear();
             }

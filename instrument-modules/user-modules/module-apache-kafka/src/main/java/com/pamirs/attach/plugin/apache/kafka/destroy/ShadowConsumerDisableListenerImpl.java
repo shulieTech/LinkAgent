@@ -20,6 +20,7 @@ import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
@@ -31,7 +32,6 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.listener.ShadowConsumerDisableListener;
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,7 +130,7 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
                         try {
                             ((org.springframework.context.Lifecycle) bean).stop();
                         } catch (Throwable t) {
-                            Reflect.on(bean).call(KafkaConstants.REFLECT_METHOD_STOP);
+                            ReflectionUtils.invoke(bean, KafkaConstants.REFLECT_METHOD_STOP);
                         }
                     }
                 } catch (ReflectException e) {

@@ -18,7 +18,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.operation.*;
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -212,7 +212,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
                 break;
             case AGGREGATE_OPERATION:
                 objectFieldMapAdd(AggregateOperation.class);
-                busMongoNamespace = Reflect.on(args[0]).get("namespace");
+                busMongoNamespace = ReflectionUtils.get(args[0], "namespace");
                 setReadPtMongoNamespace(AggregateOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             default:

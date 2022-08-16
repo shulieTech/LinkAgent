@@ -24,6 +24,7 @@ import java.util.Set;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.RedissonVersion;
 import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
@@ -32,7 +33,6 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.redisson.Redisson;
@@ -181,11 +181,11 @@ public class RedissonFactory extends AbstractRedisServerFactory {
     }
 
     public List<String> getAddr(Config config) {
-        SingleServerConfig singleServerConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
-        ClusterServersConfig clusterServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
-        SentinelServersConfig sentinelServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
-        ReplicatedServersConfig replicatedServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
-        MasterSlaveServersConfig masterSlaveServersConfig = Reflect.on(config).get(RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
+        SingleServerConfig singleServerConfig = ReflectionUtils.get(config, RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
+        ClusterServersConfig clusterServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
+        SentinelServersConfig sentinelServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
+        ReplicatedServersConfig replicatedServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
+        MasterSlaveServersConfig masterSlaveServersConfig = ReflectionUtils.get(config,RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
         if (singleServerConfig != null) {
             return RedissonUtils.removePre(singleServerConfig.getAddress());
         } else if (clusterServersConfig != null) {
@@ -225,11 +225,11 @@ public class RedissonFactory extends AbstractRedisServerFactory {
         //        && !"null".equals(shadowRedisConfig.getPassword()) ? shadowRedisConfig.getPassword() : null;
 
         Config newConfig = initBaseConfig(oldConfig);
-        SingleServerConfig singleServerConfig = Reflect.on(oldConfig).get(RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
-        ClusterServersConfig clusterServersConfig = Reflect.on(oldConfig).get(RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
-        SentinelServersConfig sentinelServersConfig = Reflect.on(oldConfig).get(RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
-        ReplicatedServersConfig replicatedServersConfig = Reflect.on(oldConfig).get(RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
-        MasterSlaveServersConfig masterSlaveServersConfig = Reflect.on(oldConfig).get(RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
+        SingleServerConfig singleServerConfig = ReflectionUtils.get(oldConfig,RedissonConstants.DYNAMIC_FIELD_SINGLE_SERVER_CONFIG);
+        ClusterServersConfig clusterServersConfig = ReflectionUtils.get(oldConfig,RedissonConstants.DYNAMIC_FIELD_CLUSTER_SERVERS_CONFIG);
+        SentinelServersConfig sentinelServersConfig = ReflectionUtils.get(oldConfig,RedissonConstants.DYNAMIC_FIELD_SENTINEL_SERVERS_CONFIG);
+        ReplicatedServersConfig replicatedServersConfig = ReflectionUtils.get(oldConfig,RedissonConstants.DYNAMIC_FIELD_REPLICATED_SERVERS_CONFIG);
+        MasterSlaveServersConfig masterSlaveServersConfig = ReflectionUtils.get(oldConfig,RedissonConstants.DYNAMIC_FIELD_MASTER_SLAVE_SERVERS_CONFIG);
         if (singleServerConfig != null) {
             newConfig.useSingleServer()
                     .setAddress(nodes.get(0))

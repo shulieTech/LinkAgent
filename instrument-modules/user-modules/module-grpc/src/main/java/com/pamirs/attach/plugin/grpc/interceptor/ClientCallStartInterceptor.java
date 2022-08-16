@@ -14,7 +14,7 @@
  */
 package com.pamirs.attach.plugin.grpc.interceptor;
 
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.grpc.GrpcConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -212,9 +212,9 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
             return remoteAddress;
         }
         try {
-            Object clientStreamProvider = Reflect.on(target).get("clientStreamProvider");
-            Object channel = Reflect.on(clientStreamProvider).get("this$0");
-            String endPoint = Reflect.on(channel).get("target");
+            Object clientStreamProvider = ReflectionUtils.get(target, "clientStreamProvider");
+            Object channel = ReflectionUtils.get(clientStreamProvider, "this$0");
+            String endPoint = ReflectionUtils.get(channel, "target");
             if (endPoint != null) {
                 manager.setDynamicField(target, GrpcConstants.DYNAMIC_FIELD_REMOTE_ADDRESS, endPoint);
                 return endPoint;
@@ -232,7 +232,7 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         if (methodName != null) {
             return methodName;
         }
-        MethodDescriptor descriptor = Reflect.on(target).get("method");
+        MethodDescriptor descriptor = ReflectionUtils.get(target, "method");
         if (descriptor != null) {
             manager.setDynamicField(target, GrpcConstants.DYNAMIC_FIELD_METHOD_NAME, descriptor.getFullMethodName());
             return descriptor.getFullMethodName();

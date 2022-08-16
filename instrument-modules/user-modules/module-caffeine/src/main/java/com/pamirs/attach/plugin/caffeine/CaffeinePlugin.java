@@ -14,20 +14,13 @@
  */
 package com.pamirs.attach.plugin.caffeine;
 
-import com.pamirs.attach.plugin.caffeine.interceptor.ComputeIfAbsentInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.ComputeInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.EntrySetInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.FirstKeyInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.FirstKeyWithBiFunctionInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.GetAllInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.IsEmptyInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.KeySetInterceptor;
-import com.pamirs.attach.plugin.caffeine.interceptor.PutAllInterceptor;
+import com.pamirs.attach.plugin.caffeine.interceptor.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
+import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
 
@@ -112,6 +105,14 @@ public class CaffeinePlugin extends ModuleLifecycleAdapter implements ExtensionM
                 }
             },
             "com.github.benmanes.caffeine.cache.BoundedLocalCache");
+
+        enhanceTemplate.enhance(this, "com.github.benmanes.caffeine.cache.CacheLoader", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod asyncReload = target.getDeclaredMethod("asyncReload", "java.lang.Object", "java.lang.Object", "java.util.concurrent.Executor");
+                asyncReload.addInterceptor(Listeners.of(CacheLoaderInterceptor.class));
+            }
+        });
 
         return true;
     }

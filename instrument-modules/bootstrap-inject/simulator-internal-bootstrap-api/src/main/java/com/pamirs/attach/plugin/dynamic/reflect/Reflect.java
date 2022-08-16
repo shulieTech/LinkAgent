@@ -23,7 +23,7 @@ import java.util.Map;
 /**
  * 使用 {@link ReflectionUtils} 替代
  */
-class Reflect {
+public class Reflect {
 
     public static Reflect on(String name) throws ReflectException {
         return on(forName(name));

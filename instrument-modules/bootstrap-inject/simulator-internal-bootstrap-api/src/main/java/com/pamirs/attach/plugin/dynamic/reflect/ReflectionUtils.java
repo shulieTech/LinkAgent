@@ -2,6 +2,7 @@ package com.pamirs.attach.plugin.dynamic.reflect;
 
 import com.pamirs.attach.plugin.dynamic.utils.Assert;
 import com.pamirs.attach.plugin.dynamic.utils.ConcurrentReferenceHashMap;
+import com.shulie.instrument.simulator.api.reflect.ReflectException;
 
 import java.lang.reflect.*;
 import java.sql.SQLException;
@@ -62,6 +63,21 @@ public abstract class ReflectionUtils {
         setField(field, target, value);
     }
 
+    public static <T> T newInstance(String className, Object... args){
+        Class[] paramTypes = new Class[args.length];
+        for (int i = 0; i < args.length; i++) {
+            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
+            paramTypes[i] = args[i].getClass();
+        }
+        try {
+            Class<?> clazz = Class.forName(className);
+            Constructor<?> constructor = clazz.getConstructor(paramTypes);
+            return (T) constructor.newInstance(args);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     public static Object getFieldValues(Object object, String... filedNames){
         for (String filedName : filedNames) {
             object = get(object, filedName);
@@ -109,6 +125,19 @@ public abstract class ReflectionUtils {
             throw new IllegalStateException(
                     "Unexpected reflection exception - " + ex.getClass().getName() + ": " + ex.getMessage());
         }
+    }
+
+    public static boolean existsMethod(Class<?> clazz, String methodName){
+        return existsMethod(clazz, methodName, new Object[0]);
+    }
+
+    public static boolean existsMethod(Class<?> clazz, String methodName, Object... args){
+        Class[] paramTypes = new Class[args.length];
+        for (int i = 0; i < args.length; i++) {
+            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
+            paramTypes[i] = args[i].getClass();
+        }
+        return findMethod(clazz, methodName, paramTypes) != null;
     }
 
 

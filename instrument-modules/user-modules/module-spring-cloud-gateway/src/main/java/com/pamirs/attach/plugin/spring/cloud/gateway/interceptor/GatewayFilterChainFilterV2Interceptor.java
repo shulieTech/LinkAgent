@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.spring.cloud.gateway.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.spring.cloud.gateway.filter.RequestHttpHeadersFilter;
 import com.pamirs.attach.plugin.spring.cloud.gateway.filter.ResponseHttpHeadersFilter;
 import com.pamirs.pradar.MiddlewareType;
@@ -21,7 +22,6 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.BeforeTraceInterceptorAdapter;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.cloud.gateway.filter.NettyRoutingFilter;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -81,7 +81,7 @@ public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceIntercepto
         if(result != null){
             return result;
         }
-        result = Reflect.on(target).existsMethod(method);
+        result = ReflectionUtils.existsMethod(target.getClass(), method);
         methodCheckCache.put(target.getClass().toString()+"_"+method,result);
         return result;
     }
@@ -95,7 +95,7 @@ public class GatewayFilterChainFilterV2Interceptor extends BeforeTraceIntercepto
         if(field != null){
             return field;
         }
-        field = Reflect.on(target).field0("headersFilters");
+        field = ReflectionUtils.findField(target.getClass(), "headersFilters");
         fieldMap.put(target.getClass(),field);
         return field;
     }

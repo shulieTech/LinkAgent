@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.shadowjob.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadowjob.ShadowJobConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
@@ -21,7 +22,6 @@ import com.pamirs.pradar.internal.config.ShadowJob;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.springframework.scheduling.annotation.ScheduledAnnotationBeanPostProcessor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -149,9 +149,9 @@ public class ScheduledMethodRunnableRunInterceptor extends ParametersWrapperInte
             LOGGER.error("影子任务必须参数不存在, cron, fixedRate, fixedDelay 三者需至少配置一个");
             return false;
         }
-        List<Task> cronTasks = Reflect.on(scheduledTaskRegistrar).get(ShadowJobConstants.DYNAMIC_FIELD_SPRING_CRON_TASKS);
-        List<Task> fixedRateTasks = Reflect.on(scheduledTaskRegistrar).get(ShadowJobConstants.DYNAMIC_FIELD_SPRING_FIX_RATE_TASKS);
-        List<Task> fixedDelayTasks = Reflect.on(scheduledTaskRegistrar).get(ShadowJobConstants.DYNAMIC_FIELD_SPRING_FIX_DELAY_TASKS);
+        List<Task> cronTasks = ReflectionUtils.get(scheduledTaskRegistrar,ShadowJobConstants.DYNAMIC_FIELD_SPRING_CRON_TASKS);
+        List<Task> fixedRateTasks = ReflectionUtils.get(scheduledTaskRegistrar,ShadowJobConstants.DYNAMIC_FIELD_SPRING_FIX_RATE_TASKS);
+        List<Task> fixedDelayTasks = ReflectionUtils.get(scheduledTaskRegistrar,ShadowJobConstants.DYNAMIC_FIELD_SPRING_FIX_DELAY_TASKS);
         return registerTaskWithAllType(shadowJob, key, cronTasks, fixedRateTasks, fixedDelayTasks);
     }
 

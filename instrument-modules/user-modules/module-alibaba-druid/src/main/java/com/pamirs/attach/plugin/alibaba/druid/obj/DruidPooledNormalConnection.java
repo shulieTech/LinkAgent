@@ -25,12 +25,12 @@ import com.pamirs.attach.plugin.common.datasource.normal.NormalStatment;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceCallableStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTracePreparedStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceStatement;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.util.SqlMetaData;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
 
@@ -519,8 +519,8 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
     @Override
     public void transactionRecord(String sql) throws SQLException {
         try {
-            Reflect.on(target).call("transactionRecord", sql).get();
-        } catch (ReflectException e) {
+            ReflectionUtils.invoke(target, "transactionRecord", sql);
+        } catch (Exception e) {
             throw new SQLException(e);
         }
     }

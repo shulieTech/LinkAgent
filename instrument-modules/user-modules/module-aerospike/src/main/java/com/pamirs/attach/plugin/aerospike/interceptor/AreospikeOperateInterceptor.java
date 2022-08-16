@@ -23,13 +23,13 @@ import com.aerospike.client.cluster.Cluster;
 import com.aerospike.client.cluster.Node;
 import com.aerospike.client.query.Statement;
 import com.pamirs.attach.plugin.aerospike.AerospikeConstants;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
@@ -187,7 +187,7 @@ public class AreospikeOperateInterceptor extends TraceInterceptorAdaptor {
                 String setName = key.setName;
                 if (!Pradar.isClusterTestPrefix(setName)) {
                     setName = Pradar.addClusterTestPrefix(setName);
-                    Reflect.on(advice.getTarget()).set("setName", setName);
+                    ReflectionUtils.set(advice.getTarget(),"setName", setName );
                 }
             } else if (arg instanceof Key[]) {
                 Key[] keys = (Key[]) arg;
@@ -202,7 +202,7 @@ public class AreospikeOperateInterceptor extends TraceInterceptorAdaptor {
                     String setName = key.setName;
                     if (!Pradar.isClusterTestPrefix(setName)) {
                         setName = Pradar.addClusterTestPrefix(setName);
-                        Reflect.on(advice.getTarget()).set("setName", setName);
+                        ReflectionUtils.set(advice.getTarget(), "setName", setName);
                     }
                 }
             } else if (arg instanceof List) {
@@ -226,7 +226,7 @@ public class AreospikeOperateInterceptor extends TraceInterceptorAdaptor {
                     String setName = key.setName;
                     if (!Pradar.isClusterTestPrefix(setName)) {
                         setName = Pradar.addClusterTestPrefix(setName);
-                        Reflect.on(advice.getTarget()).set("setName", setName);
+                        ReflectionUtils.set(advice.getTarget(), "setName", setName);
                     }
                 }
             } else if (arg instanceof Statement) {
@@ -245,7 +245,7 @@ public class AreospikeOperateInterceptor extends TraceInterceptorAdaptor {
 
     private String getRemoteIp(Object target) {
         if (target instanceof AerospikeClient) {
-            Cluster cluster = Reflect.on(target).get("cluster");
+            Cluster cluster = ReflectionUtils.get(target, "cluster");
             Node[] nodes = cluster.getNodes();
             if (nodes == null || nodes.length == 0) {
                 return "";
@@ -261,7 +261,7 @@ public class AreospikeOperateInterceptor extends TraceInterceptorAdaptor {
         }
 
         if (target instanceof AsyncClient) {
-            AsyncCluster cluster = Reflect.on(target).get("cluster");
+            AsyncCluster cluster = ReflectionUtils.get(target, "cluster");
             Node[] nodes = cluster.getNodes();
             if (nodes == null || nodes.length == 0) {
                 return "";

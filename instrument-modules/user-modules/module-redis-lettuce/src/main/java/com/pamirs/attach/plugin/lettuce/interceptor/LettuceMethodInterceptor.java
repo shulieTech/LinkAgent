@@ -79,7 +79,7 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
         SpanRecord spanRecord = new SpanRecord();
-        appendEndPoint(target, spanRecord);
+//        appendEndPoint(target, spanRecord);
         spanRecord.setService(methodName);
         spanRecord.setMethod(getMethodNameExt(args));
         spanRecord.setRequest(toArgs(args));

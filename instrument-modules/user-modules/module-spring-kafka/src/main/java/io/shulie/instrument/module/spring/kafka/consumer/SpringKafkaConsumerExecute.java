@@ -18,7 +18,6 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import org.springframework.kafka.support.TopicPartitionOffset;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -96,10 +95,16 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
         if (containerProperties.getAckTime() > 0) {
             containerProperties.setAckTime(bizContainerProperties.getAckTime());
         }
-        Boolean subBatchPerPartition = bizContainerProperties.getSubBatchPerPartition();
-        if (subBatchPerPartition != null) {
-            containerProperties.setSubBatchPerPartition(subBatchPerPartition);
+        // spring-kafka 2.2.12.release没有getSubBatchPerPartition方法
+        try {
+            Boolean subBatchPerPartition = bizContainerProperties.getSubBatchPerPartition();
+            if (subBatchPerPartition != null) {
+                containerProperties.setSubBatchPerPartition(subBatchPerPartition);
+            }
+        } catch (Throwable t) {
+            //
         }
+
         if (containerProperties.getConsumerRebalanceListener() != null) {
             //自定义了listener， 就保留
             ConsumerRebalanceListener listener = containerProperties.getConsumerRebalanceListener();

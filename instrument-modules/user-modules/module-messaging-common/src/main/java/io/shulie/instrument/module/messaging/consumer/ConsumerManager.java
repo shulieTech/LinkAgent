@@ -126,7 +126,7 @@ public class ConsumerManager {
                             }
                         }
                     } catch (Throwable e) {
-                        logger.error("prepare Config fail:" + JSON.toJSONString(consumerRegisterModule.getConsumerRegister()), e);
+                        logger.error("[messaging-common]prepare Config fail:" + JSON.toJSONString(consumerRegisterModule.getConsumerRegister()), e);
                     } finally {
                         BizClassLoaderService.clearBizClassLoader();
                     }

@@ -8,6 +8,7 @@ import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import io.shulie.instrument.module.isolation.IsolationManager;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.register.ShadowProxyConfig;
@@ -23,10 +24,7 @@ import io.shulie.instrument.module.messaging.handler.ConsumerRouteHandler;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -332,12 +330,30 @@ public class ConsumerManager {
 
     private synchronized static void initTask() {
         if (taskService == null) {
-            taskService = Executors.newScheduledThreadPool(1);
+            taskService = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "messaging-common-thread");
+                    t.setDaemon(true);
+                    t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                        @Override
+                        public void uncaughtException(Thread t, Throwable e) {
+                            logger.error("Thread {} caught a Unknown exception with UncaughtExceptionHandler", t.getName(), e);
+                        }
+                    });
+                    return t;
+                }
+            });
             taskService.scheduleWithFixedDelay(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        runTask();
+                        SimulatorGuard.getInstance().doGuard(new Runnable() {
+                            @Override
+                            public void run() {
+                                runTask();
+                            }
+                        });
                     } catch (Throwable e) {
                         logger.error("run messaging task fail!", e);
                     }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -20,7 +20,7 @@ import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 
 /**
  * 业务类加载器持有者
@@ -43,7 +43,7 @@ public class BizClassLoaderHolder {
      * 如果classLoader为空，则设置当前线程类加载器，因为不是所有的class.getClassLoader()都是非null
      * 否则会导致同一个类的同一个方法的before 和 and 执行的时候类加载器不一致，导致interceptor不是同一个实例
      * 最终导致opStack不成对，Event强转失败
-     *
+     * <p>
      * see class.getClassLoader()
      * Returns the class loader for the class.
      * Some implementations may use null to represent the bootstrap class loader.
@@ -111,12 +111,12 @@ public class BizClassLoaderHolder {
      * 对应每一个调用层级为一个节点
      */
     static class ClassLoaderNode {
-        WeakReference<ClassLoader> classLoader;
+        SoftReference<ClassLoader> classLoader;
         ClassLoaderNode parent;
 
         ClassLoaderNode(ClassLoader classLoader, ClassLoaderNode parent) {
             if (classLoader != null) {
-                this.classLoader = new WeakReference<ClassLoader>(classLoader);
+                this.classLoader = new SoftReference<ClassLoader>(classLoader);
             }
             this.parent = parent;
         }

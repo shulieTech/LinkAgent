@@ -257,15 +257,22 @@ public class ConsumerManager {
                     }
                 }
                 if (isConfigDiff(enableConfigSet, shadowConsumer.getEnableConfigSet())) {
-                    stopAndClearShadowServer(shadowConsumer);
-                    fetchShadowServer(shadowConsumer, configs, enableConfigSet);
-                    logger.info("[messaging-common]success fetch shadowServer with config:{}", configs);
-                    doStartShadowServer(shadowConsumer);
-                    logger.info("[messaging-common]success start shadowServer with config:{}", configs);
-                    shadowConsumer.setEnableConfigSet(enableConfigSet);
+                    try {
+                        BizClassLoaderService.setBizClassLoader(shadowConsumer.getBizTarget().getClass().getClassLoader());
+                        logger.info("[messaging-common]threadName: {}, bizClassLoad: {}", Thread.currentThread().getName(), shadowConsumer.getBizTarget().getClass().getClassLoader().toString());
+                        stopAndClearShadowServer(shadowConsumer);
+                        fetchShadowServer(shadowConsumer, configs, enableConfigSet);
+                        logger.info("[messaging-common]success fetch shadowServer with config:{}", configs);
+                        doStartShadowServer(shadowConsumer);
+                        logger.info("[messaging-common]success start shadowServer with config:{}", configs);
+                        shadowConsumer.setEnableConfigSet(enableConfigSet);
+                    } finally {
+                        BizClassLoaderService.clearBizClassLoader();
+                    }
+
                 }
             } catch (Throwable e) {
-                logger.error("[messaging-common]try to start consumer server fail with key:{}", configs, e);
+                logger.error("[messaging-common]try to start consumer server fail with key:" + configs, e);
             }
         }
     }
@@ -293,7 +300,6 @@ public class ConsumerManager {
 
     private static void fetchShadowServer(ShadowConsumer shadowConsumer, String config, Set<ConsumerConfig> enableConfigSet) {
         try {
-            BizClassLoaderService.setBizClassLoader(shadowConsumer.getBizTarget().getClass().getClassLoader());
             ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(enableConfigSet.stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
             if (shadowServer != null) {
                 shadowConsumer.setShadowServer(shadowServer);
@@ -302,8 +308,6 @@ public class ConsumerManager {
             }
         } catch (Exception e) {
             logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getEnableConfigSet()), e);
-        } finally {
-            BizClassLoaderService.clearBizClassLoader();
         }
     }
 
@@ -315,7 +319,8 @@ public class ConsumerManager {
                 logger.info("shadowConsumer {} is started, will not try to start!", JSON.toJSONString(shadowConsumer));
             }
         } catch (Throwable e) {
-            logger.error("start shadow consumer fail:{}", JSON.toJSON(shadowConsumer.getConfigSet()), e);
+            logger.error("start shadow consumer fail:" + JSON.toJSON(shadowConsumer.getConfigSet()), e);
+            throw e;
         }
     }
 

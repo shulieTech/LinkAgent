@@ -1,7 +1,6 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 

@@ -20,7 +20,6 @@ import org.springframework.kafka.support.TopicPartitionOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * @author Licey
@@ -42,19 +41,20 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
             return null;
         }
 
+        ConsumerFactory consumerFactory = SpringKafkaUtil.readConsumerFactory(bizContainer);
+        if (consumerFactory == null) {
+            logger.error("spring kafka not support! can not read consumerFactory!");
+            return null;
+        }
+
         List<ConsumerConfig> list = new ArrayList<ConsumerConfig>();
 
         for (String topic : topics) {
             SpringKafkaConsumerConfig config = new SpringKafkaConsumerConfig();
-            ConsumerFactory consumerFactory = SpringKafkaUtil.readConsumerFactory(bizContainer);
-            if (consumerFactory == null) {
-                logger.error("spring kafka not support! can not read consumerFactory!");
-                return null;
-            }
             config.setConsumerFactory(consumerFactory);
             config.setContainerProperties(containerProperties);
             config.setBizTopic(topic);
-            config.setBizGroupId(containerProperties.getGroupId());
+            config.setBizGroupId(bizContainer.getGroupId());
             list.add(config);
         }
         return list;
@@ -64,10 +64,12 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
     public ShadowServer fetchShadowServer(List<ConsumerConfigWithData> dataList) {
         SpringKafkaConsumerConfig springKafkaConsumerConfig = (SpringKafkaConsumerConfig) dataList.get(0).getConsumerConfig();
 
+        String[] bizTopics = new String[dataList.size()];
+        for (int i = 0; i < dataList.size(); i++) {
+            bizTopics[i] = ((SpringKafkaConsumerConfig) dataList.get(i).getConsumerConfig()).getBizTopic();
+        }
         ContainerProperties properties = prepareContainerProperties(
-                springKafkaConsumerConfig.getContainerProperties()
-                , dataList.stream().map((d) -> ((SpringKafkaConsumerConfig) d.getConsumerConfig()).getBizTopic()).collect(Collectors.toList()).toArray(new String[dataList.size()])
-                , springKafkaConsumerConfig.getBizGroupId());
+                springKafkaConsumerConfig.getContainerProperties(), bizTopics, springKafkaConsumerConfig.getBizGroupId());
         KafkaMessageListenerContainer container = new KafkaMessageListenerContainer(springKafkaConsumerConfig.getConsumerFactory(), properties);
         return new SpringKafkaShadowServer(container);
     }

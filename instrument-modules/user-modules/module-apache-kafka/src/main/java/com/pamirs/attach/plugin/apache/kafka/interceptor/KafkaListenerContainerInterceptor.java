@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -238,6 +239,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             }
         });
         PradarSpringUtil.getBeanFactory().getBean(beanName);
+        ConsumerHolder.addShadowContainerBeanName(beanName);
         ConfigCache.setInited(advice.getTarget());
         if (logger.isInfoEnabled()) {
             logger.info("SIMULATOR: kafka consumer register successful!. groupId : {}, topic : {}",

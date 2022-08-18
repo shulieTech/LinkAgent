@@ -38,7 +38,9 @@ import org.apache.kafka.common.header.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -81,16 +83,21 @@ public class ConsumerPollInterceptor extends AroundInterceptor {
         } catch (Error e) {
             LOGGER.error("【Kafka】 getConsumerMetaData error", e);
         }
-
-        if (needReport()) {
-            StringBuilder reportInfo = new StringBuilder("【Apache-Kafka】 method 【poll】 Not support. ");
-            if (consumerMetaData != null) {
-                reportInfo.append("【topics】: ").append(consumerMetaData.getTopics());
-                reportInfo.append(" 【group】: ").append(consumerMetaData.getGroupId());
-            } else {
-                reportInfo.append("【topics】: UNKNOWN");
-                reportInfo.append(" 【group】: UNKNOWN");
+        if (consumerMetaData == null) {
+            return;
+        }
+        List<String> needReportTopic = new ArrayList<String>(consumerMetaData.getTopics());
+        // 判断是否配置了白名单
+        for (String topic : consumerMetaData.getTopics()) {
+            if (GlobalConfig.getInstance().getMqWhiteList().contains(topic + "#" + consumerMetaData.getGroupId())) {
+                needReportTopic.add(topic);
             }
+        }
+
+        if (needReport() && !needReportTopic.isEmpty()) {
+            StringBuilder reportInfo = new StringBuilder("【Apache-Kafka】 method 【poll】 Not support. ");
+            reportInfo.append("【topics】: ").append(needReportTopic);
+            reportInfo.append(" 【group】: ").append(consumerMetaData.getGroupId());
 
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.MQ)

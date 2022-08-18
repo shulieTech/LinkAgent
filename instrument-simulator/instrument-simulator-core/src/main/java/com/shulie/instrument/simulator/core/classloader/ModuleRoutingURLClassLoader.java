@@ -135,6 +135,22 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         return EmptyEnumeration.emptyEnumeration();
     }
 
+    protected URL getBusinessResourceOuter(String name) {
+        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoaderOuter();
+        if (bizClassLoader != null) {
+            return bizClassLoader.getResource(name);
+        }
+        return null;
+    }
+
+    protected Enumeration<URL> getBusinessResourcesOuter(String name) throws IOException {
+        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoaderOuter();
+        if (bizClassLoader == null) {
+            return bizClassLoader.getResources(name);
+        }
+        return EmptyEnumeration.emptyEnumeration();
+    }
+
     /**
      * Real logic to get resource
      *
@@ -163,6 +179,11 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         // 5. find business classloader resource
         if (url == null) {
             url = getBusinessResource(name);
+        }
+
+        // 6. find outer business classloader resource
+        if (url == null) {
+            url = getBusinessResourceOuter(name);
         }
 
         return url;
@@ -215,6 +236,9 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
 
         // 4. find business classloader resources
         enumerationList.add(getBusinessResources(name));
+
+        // 5. find outer business classloader resources
+        enumerationList.add(getBusinessResourcesOuter(name));
 
 
         return new CompoundEnumeration<URL>(
@@ -315,6 +339,11 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
             clazz = resolveBusinessClassLoader(name);
         }
 
+        // 4.1 load class from out business classloader
+        if (clazz == null) {
+            clazz = resolveBusinessClassLoaderOuter(name);
+        }
+
         // 5. load class from super
         if (clazz == null) {
             clazz = resolveSystemClass(name, resolve);
@@ -339,6 +368,19 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     protected Class resolveBusinessClassLoader(String name) {
         try {
             final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+            if (bizClassLoader == null) {
+                return null;
+            }
+            return bizClassLoader.loadClass(name);
+        } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
+        return null;
+    }
+
+    protected Class resolveBusinessClassLoaderOuter(String name) {
+        try {
+            final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoaderOuter();
             if (bizClassLoader == null) {
                 return null;
             }

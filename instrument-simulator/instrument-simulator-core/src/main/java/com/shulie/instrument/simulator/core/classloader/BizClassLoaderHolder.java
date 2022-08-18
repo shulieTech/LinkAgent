@@ -35,6 +35,7 @@ public class BizClassLoaderHolder {
     private static final Logger LOGGER = LoggerFactory.getLogger(BizClassLoaderHolder.class);
 
     private static final ThreadLocal<ClassLoaderNode> holder = new ThreadLocal<ClassLoaderNode>();
+    private static final ThreadLocal<ClassLoaderNode> holderOuter = new ThreadLocal<ClassLoaderNode>();
 
     /**
      * 设置业务类加载器
@@ -53,16 +54,17 @@ public class BizClassLoaderHolder {
      * @param classLoader 业务类加载器
      */
     public static void setBizClassLoader(ClassLoader classLoader) {
-        if (null == classLoader) {
-            classLoader = Thread.currentThread().getContextClassLoader();
-            if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
-                LOGGER.warn("setBizClassLoader classLoader is isSimulatorClassLoader!", new Exception("setBizClassLoader classLoader is isSimulatorClassLoader!"));
-                return;
-            }
-        }
-        ClassLoaderNode classLoaderNode = holder.get();
+        setBizClassLoader(classLoader, holder);
+    }
+
+    public static void setBizClassLoaderOuter(ClassLoader classLoader) {
+        setBizClassLoader(classLoader, holderOuter);
+    }
+
+    private static void setBizClassLoader(ClassLoader classLoader,ThreadLocal<ClassLoaderNode> local) {
+        ClassLoaderNode classLoaderNode = local.get();
         ClassLoaderNode child = new ClassLoaderNode(classLoader, classLoaderNode);
-        holder.set(child);
+        local.set(child);
     }
 
     /**
@@ -71,15 +73,23 @@ public class BizClassLoaderHolder {
      * 当前业务类加载器是非顶点时，则设置当前类加载器顶点为父级
      */
     public static void clearBizClassLoader() {
-        ClassLoaderNode stack = holder.get();
+        clearBizClassLoader(holder);
+    }
+
+    public static void clearBizClassLoaderOuter() {
+        clearBizClassLoader(holderOuter);
+    }
+
+    private static void clearBizClassLoader(ThreadLocal<ClassLoaderNode> local) {
+        ClassLoaderNode stack = local.get();
         if (stack == null) {
             return;
         }
         ClassLoaderNode parent = stack.parent;
         if (parent == null) {
-            holder.remove();
+            local.remove();
         } else {
-            holder.set(parent);
+            local.set(parent);
         }
     }
 
@@ -90,20 +100,25 @@ public class BizClassLoaderHolder {
      * @return 业务类加载器
      */
     public static ClassLoader getBizClassLoader() {
-        ClassLoaderNode stack = holder.get();
-        if (stack == null) {
-            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
-                return null;
-            }
-            return classLoader;
+        return getBizClassLoader(holder);
+    }
+
+    public static ClassLoader getBizClassLoaderOuter() {
+        return getBizClassLoader(holderOuter);
+    }
+
+    private static ClassLoader getBizClassLoader(ThreadLocal<ClassLoaderNode> local) {
+        ClassLoaderNode stack = local.get();
+        ClassLoader classLoader = null;
+        if (stack != null) {
+            classLoader = stack.getClassLoader();
         }
-        ClassLoader classLoader = stack.getClassLoader();
+        //防止不在我们的插件范围内去执行的时候， 比如业务代码（注册filter等方式），拿不到业务类加载器的情况
         ClassLoader bizClassLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
         if (SimulatorClassUtils.isSimulatorClassLoader(bizClassLoader)) {
             return null;
         }
-        return bizClassLoader;
+        return classLoader;
     }
 
     /**
@@ -130,12 +145,12 @@ public class BizClassLoaderHolder {
         BizClassLoaderService.register(new IBizClassLoaderService() {
             @Override
             public void setBizClassLoader(ClassLoader classLoader) {
-                BizClassLoaderHolder.setBizClassLoader(classLoader);
+                BizClassLoaderHolder.setBizClassLoaderOuter(classLoader);
             }
 
             @Override
             public void clearBizClassLoader() {
-                BizClassLoaderHolder.clearBizClassLoader();
+                BizClassLoaderHolder.clearBizClassLoaderOuter();
             }
         });
     }

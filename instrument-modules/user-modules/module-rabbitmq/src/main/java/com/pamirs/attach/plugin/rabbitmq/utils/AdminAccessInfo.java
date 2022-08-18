@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -18,12 +18,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.util.Base64;
 
 import com.pamirs.pradar.exception.PradarException;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.impl.CredentialsProvider;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
-import sun.misc.BASE64Encoder;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -50,9 +50,9 @@ public class AdminAccessInfo {
     }
 
     public String credentialsEncode() {
-        BASE64Encoder encoder = new BASE64Encoder();
         String authString = username + ":" + password;
-        return "Basic " + encoder.encode(authString.getBytes(Charset.forName("UTF-8")));
+        byte[] bytes = Base64.getEncoder().encode(authString.getBytes(Charset.forName("UTF-8")));
+        return "Basic " + new String(bytes, Charset.forName("UTF-8"));
     }
 
     public String getVirtualHostEncode() {
@@ -90,7 +90,7 @@ public class AdminAccessInfo {
         int port;
         Object object = Reflect.on(connection).getSilence("credentialsProvider");
         if (object != null) {//低版本
-            CredentialsProvider credentialsProvider = (CredentialsProvider)object;
+            CredentialsProvider credentialsProvider = (CredentialsProvider) object;
             username = credentialsProvider.getUsername();
             password = credentialsProvider.getPassword();
         } else {

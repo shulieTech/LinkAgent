@@ -176,7 +176,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                 return (String) group;
             }
             if(group.getClass().getName().equals("java.util.Optional")){
-                group = Reflect.on(group).call("get").get();
+                group = ReflectionUtils.invoke(group, "get");
                 return (String) group;
             }
             return null;

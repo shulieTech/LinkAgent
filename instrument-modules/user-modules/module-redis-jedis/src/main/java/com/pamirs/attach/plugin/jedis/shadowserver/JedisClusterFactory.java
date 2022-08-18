@@ -16,11 +16,11 @@ package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.util.Model;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.HostAndPort;
@@ -73,13 +73,13 @@ public class JedisClusterFactory extends AbstractRedisServerFactory<JedisSlotBas
         model.cachePressureNode(shadowConfig);
         RedisClientMediator<JedisSlotBasedConnectionHandler> mediator = null;
         if (connection instanceof JedisSlotBasedConnectionHandler) {
-            Reflect reflect = Reflect.on(Reflect.on(connection).get("cache"));
+            Object cache = ReflectionUtils.get(connection, "cache");
 
-            GenericObjectPoolConfig poolConfig = reflect.get("poolConfig");
-            int connectionTimeout = reflect.get("connectionTimeout");
-            int soTimeout = reflect.get("soTimeout");
+            GenericObjectPoolConfig poolConfig = ReflectionUtils.get(cache, "poolConfig");
+            int connectionTimeout = ReflectionUtils.get(cache, "connectionTimeout");
+            int soTimeout = ReflectionUtils.get(cache, "soTimeout");
             // 原业务密码
-            String password = reflect.get("password");
+            String password = ReflectionUtils.get(cache, "password");
             JedisSlotBasedConnectionHandler pressureJedisPool;
             String shadowPassword = shadowConfig.getPassword(password);
             if (!StringUtil.isEmpty(shadowPassword)) {

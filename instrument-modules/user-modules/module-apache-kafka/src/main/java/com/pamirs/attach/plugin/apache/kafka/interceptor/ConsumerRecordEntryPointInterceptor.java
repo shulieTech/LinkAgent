@@ -27,6 +27,7 @@ import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -93,7 +94,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         ConsumerRecord consumerRecord = (ConsumerRecord) args[0];
         Object consumer = args[2];
         if (consumer instanceof Consumer && consumer.getClass().getName().equals("brave.kafka.clients.TracingConsumer")) {
-            consumer = Reflect.on(consumer).get("delegate");
+            consumer = ReflectionUtils.get(consumer, "delegate");
         }
 
         String group = consumerGroupIdMappings.get(consumer);
@@ -115,11 +116,11 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             }
         }
         if (remoteAddress == null) {
-            Object metadata = Reflect.on(consumer).get("metadata");
+            Object metadata = ReflectionUtils.get(consumer, "metadata");
             Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
             Iterable<Node> nodes = null;
             if (cluster != null) {
-                nodes = Reflect.on(cluster).get("nodes");
+                nodes = ReflectionUtils.get(cluster, "nodes");
             } else {
                 Object cache = ReflectUtil.reflectSlience(metadata, "cache");
                 if (cache != null) {
@@ -129,7 +130,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             StringBuilder sb = new StringBuilder();
             if (nodes != null) {
                 for (Node node : nodes) {
-                    sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
+                    sb.append(ReflectionUtils.get(node, "host").toString()).append(":").append(ReflectionUtils.get(node, "port")
                             .toString()).append(",");
                 }
                 remoteAddress = sb.toString();

@@ -21,9 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -288,8 +288,8 @@ public final class RedisUtils {
                     Long ex = null;
                     Long px = null;
                     try {
-                        ex = (Long)ReflectionUtils.getFieldValue(args[2], "ex");
-                        px = (Long)ReflectionUtils.getFieldValue(args[2], "px");
+                        ex = ReflectionUtils.get(args[2], "ex");
+                        px = ReflectionUtils.get(args[2], "px");
                     } catch (Throwable e) {
                         LOGGER.error("get redis set params error", e);
                         return;

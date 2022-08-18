@@ -24,9 +24,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -400,7 +400,7 @@ public final class RedisUtils {
                         "redis.clients.jedis.params.SetParams")) {
                     Map<String, Object> params;
                     try {
-                        params = (Map<String, Object>) ReflectionUtils.getFieldValue(args[2], "params");
+                        params = ReflectionUtils.get(args[2], "params");
                     } catch (Exception e) {
                         LOGGER.error("get redis set params error", e);
                         return;

@@ -1,7 +1,7 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettucePlugin;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
@@ -78,15 +78,13 @@ public class LettuceCommandDispatchClusterTestInterceptor extends ParametersWrap
         if (!SupportMethods.contains(method)) {
             return args;
         }
-
-        List singularArguments = Reflect.on(args[2]).get("singularArguments");
+        List singularArguments = ReflectionUtils.get(args[2],"singularArguments");
         Object keyArgument = singularArguments.get(0);
-
-        byte[] bytes = Reflect.on(keyArgument).get("key");
+        byte[] bytes = ReflectionUtils.get(keyArgument,"key");
         String rawKey = new String(bytes);
         String processedKey = processKey(rawKey);
         if (!rawKey.equals(processedKey)) {
-            Reflect.on(keyArgument).set("key",processedKey.getBytes());
+            ReflectionUtils.set(keyArgument, "key", processedKey.getBytes());
         }
         return args;
     }

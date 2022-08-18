@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -24,8 +24,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.connection.ClusterSettings;
-import com.mongodb.operation.AggregateOperation;
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -35,7 +34,6 @@ import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -106,7 +104,7 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
             }
 
         }
-        ClusterSettings clusterSettings = (ClusterSettings)ReflectionUtils.getFieldValue(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"),"settings");
+        ClusterSettings clusterSettings = ReflectionUtils.get(ReflectionUtils.get(mongoClientDelegate, "cluster"), "settings");
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         ShadowDatabaseConfig shadowDatabaseConfig = null;
         for (ServerAddress serverAddress : serverAddresses) {
@@ -117,21 +115,21 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
         }
 
         final Field field = objectFieldMap.get(args[0].getClass());
-        if(field == null){
+        if (field == null) {
             final Field namespace;
-            if(isAggregateOperationInstance(args[0])){
-                namespace = Reflect.on(args[0]).get("wrapped").getClass().getDeclaredField("namespace");
-            }else{
-                namespace = ReflectionUtils.getDeclaredField(args[0], "namespace");
+            if (isAggregateOperationInstance(args[0])) {
+                namespace = ReflectionUtils.findField(ReflectionUtils.get(args[0], "wrapped").getClass(), "namespace");
+            } else {
+                namespace = ReflectionUtils.findField(args[0].getClass(),"namespace");
             }
             namespace.setAccessible(Boolean.TRUE);
             objectFieldMap.put(args[0].getClass(), namespace);
         }
 
         MongoNamespace busMongoNamespace;
-        if(isAggregateOperationInstance(args[0])){
-            busMongoNamespace = Reflect.on(args[0]).call("getNamespace").get();
-        }else{
+        if (isAggregateOperationInstance(args[0])) {
+            busMongoNamespace = ReflectionUtils.invoke(args[0], "getNamespace");
+        } else {
             busMongoNamespace = (MongoNamespace) objectFieldMap.get(args[0].getClass()).get(args[0]);
         }
         switch (operationNum) {
@@ -149,7 +147,7 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
         return advice.getParameterArray();
     }
 
-    private boolean isAggregateOperationInstance(Object obj){
+    private boolean isAggregateOperationInstance(Object obj) {
         return obj.getClass().getSimpleName().equals("AggregateOperation");
     }
 
@@ -212,8 +210,8 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
             nameSpaceField.setAccessible(true);
             objectFieldMap.put(operationClass, nameSpaceField);
         }
-        if(isAggregateOperationInstance(target)){
-            target = Reflect.on(target).get("wrapped");
+        if (isAggregateOperationInstance(target)) {
+            target = ReflectionUtils.get(target, "wrapped");
         }
         objectFieldMap.get(operationClass).set(target, ptMongoNamespace);
     }

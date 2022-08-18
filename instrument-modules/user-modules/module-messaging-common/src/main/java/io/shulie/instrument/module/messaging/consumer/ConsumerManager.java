@@ -21,6 +21,8 @@ import io.shulie.instrument.module.messaging.consumer.module.*;
 import io.shulie.instrument.module.messaging.consumer.module.isolation.ConsumerClass;
 import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
 import io.shulie.instrument.module.messaging.handler.ConsumerRouteHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -32,7 +34,7 @@ import java.util.stream.Collectors;
  * @date 2022/7/26
  */
 public class ConsumerManager {
-    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ConsumerManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConsumerManager.class);
     private static final Set<Field> notNullList = new HashSet<Field>();
 
     //所有注册上来的消费者拉起信息
@@ -72,6 +74,34 @@ public class ConsumerManager {
         registerList.add(consumerRegisterModule);
 
         startTask();
+    }
+
+    /**
+     * 释放所有的影子消费者
+     */
+    public static void releaseAll() {
+        for (Map.Entry<String, ShadowConsumer> entry : shadowConsumerMap.entrySet()) {
+            releaseShadowConsumer(entry.getValue());
+        }
+        shadowConsumerMap.clear();
+    }
+
+    /**
+     * 释放影子消费者资源
+     *
+     * @param shadowConsumer 影子消费者对象
+     */
+    private static void releaseShadowConsumer(ShadowConsumer shadowConsumer) {
+        try {
+            BizClassLoaderService.setBizClassLoader(shadowConsumer.getBizTarget().getClass().getClassLoader());
+            if (shadowConsumer.getShadowServer() != null) {
+                shadowConsumer.getShadowServer().stop();
+            }
+        } catch (Throwable t) {
+            logger.error("[messaging-common] release shadow consumer error, obj:{}", JSON.toJSONString(shadowConsumer), t);
+        } finally {
+            BizClassLoaderService.clearBizClassLoader();
+        }
     }
 
     private static void checkRegister(ConsumerRegister register) {
@@ -177,9 +207,11 @@ public class ConsumerManager {
             return;
         }
 
-        for (ConsumerRegisterModule consumerRegisterModule : registerList) {
+        // 避免出现 ConcurrentModificationException
+        for (ConsumerRegisterModule consumerRegisterModule : new Vector<>(registerList)) {
             refreshSyncObj(consumerRegisterModule);
         }
+
         tryToStartConsumer();
     }
 

@@ -10,10 +10,7 @@ import io.shulie.instrument.module.isolation.proxy.ShadowProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Licey
@@ -22,9 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RouteInterceptor extends CutoffInterceptorAdaptor {
     private static final Logger logger = LoggerFactory.getLogger(RouteInterceptor.class);
 
-    private Map<String, Method> methodMap = new ConcurrentHashMap<String, Method>();
-
-    private ShadowProxy shadowProxy;
+    private final ShadowProxy shadowProxy;
 
     public RouteInterceptor(ShadowProxy shadowProxy) {
         this.shadowProxy = shadowProxy;
@@ -32,7 +27,6 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
-        //todo@langyi 如果进入的是影子对象，需要检查
         if (Pradar.isClusterTest() && shadowProxy.needRoute(advice.getTarget())) {
             try {
                 Object[] parameterArray = advice.getParameterArray();

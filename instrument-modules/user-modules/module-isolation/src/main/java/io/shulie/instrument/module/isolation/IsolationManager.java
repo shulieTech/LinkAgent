@@ -10,6 +10,7 @@ import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import io.shulie.instrument.module.isolation.common.ResourceInit;
+import io.shulie.instrument.module.isolation.common.ShadowTargetCache;
 import io.shulie.instrument.module.isolation.enhance.EnhanceClass;
 import io.shulie.instrument.module.isolation.enhance.EnhanceMethod;
 import io.shulie.instrument.module.isolation.exception.IsolationRuntimeException;
@@ -40,7 +41,6 @@ public class IsolationManager {
     public static void init(ModuleEventWatcher moduleEventWatcher) {
         IsolationManager.moduleEventWatcher = moduleEventWatcher;
     }
-
 
     public static void register(ShadowProxyConfig proxyConfig) {
         String moduleName = proxyConfig.getModuleName();
@@ -84,6 +84,10 @@ public class IsolationManager {
             buildingForBehavior.onListener(Listeners.of(RouteInterceptor.class, scope, ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[]{new ShadowProxy(module, enhanceClass, enhanceMethod)}));
         }
         return buildingForClass.onWatch();
+    }
+
+    public static void release() {
+        ShadowTargetCache.release();
     }
 
     private static String keyOfScope(EnhanceClass enhanceClass, EnhanceMethod enhanceMethod) {

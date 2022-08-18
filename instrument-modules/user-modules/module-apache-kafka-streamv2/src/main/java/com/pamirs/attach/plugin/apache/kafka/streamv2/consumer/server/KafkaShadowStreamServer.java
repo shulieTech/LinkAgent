@@ -56,10 +56,10 @@ public class KafkaShadowStreamServer implements ShadowServer {
 
     @Override
     public void stop() {
-        started.set(false);
         if (shadowStream == null) {
             return;
         }
         shadowStream.close();
+        started.set(false);
     }
 }

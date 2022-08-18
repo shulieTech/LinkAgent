@@ -83,7 +83,7 @@ public class ConsumerHolder {
             container.stop();
         }
         SHADOW_CONTAINER_BEAN_NAMES.clear();
-        for (Consumer<?, ?> consumer : WORK_WITH_SPRING) {
+        for (Consumer<?, ?> consumer : WORK_WITH_SPRING.keySet()) {
             consumer.close();
         }
         WORK_WITH_SPRING.clear();
@@ -242,7 +242,7 @@ public class ConsumerHolder {
         return consumer;
     }
 
-    public static void addShadowContainerBeanName(String name){
+    public static void addShadowContainerBeanName(String name) {
         SHADOW_CONTAINER_BEAN_NAMES.add(name);
     }
 }

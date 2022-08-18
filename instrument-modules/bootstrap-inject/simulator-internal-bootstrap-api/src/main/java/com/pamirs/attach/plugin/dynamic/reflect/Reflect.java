@@ -20,6 +20,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 
+/**
+ * 使用 {@link ReflectionUtils} 替代
+ */
 public class Reflect {
 
     public static Reflect on(String name) throws ReflectException {

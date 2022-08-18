@@ -356,6 +356,7 @@ public class AgentLauncher {
         final Instrumentation inst,boolean isOnlySyncModule) {
 
         final String propertiesFilePath = getPropertiesFilePath(featureMap);
+        String config = System.getProperty("config");
         final String coreFeatureString = toFeatureString(featureMap);
         final String agentConfigFilePath = getAgentConfigFilePath(featureMap);
 
@@ -459,6 +460,11 @@ public class AgentLauncher {
 
                 }
             } finally {
+                if(config != null){
+                    System.setProperty("config",config);
+                }else{
+                    System.clearProperty("config");
+                }
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
 

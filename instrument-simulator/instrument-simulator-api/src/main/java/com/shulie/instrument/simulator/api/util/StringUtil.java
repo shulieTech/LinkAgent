@@ -205,6 +205,10 @@ public class StringUtil {
         }
     }
 
+    public static boolean hasLength(String str) {
+        return (str != null && !str.isEmpty());
+    }
+
     public static Set<String> strToSet(String str, String delimiter) {
         return new LinkedHashSet<String>(strToList(str, delimiter));
     }

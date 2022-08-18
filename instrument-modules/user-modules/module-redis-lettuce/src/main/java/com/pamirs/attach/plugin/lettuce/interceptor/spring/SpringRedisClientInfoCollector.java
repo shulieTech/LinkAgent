@@ -16,12 +16,12 @@ package com.pamirs.attach.plugin.lettuce.interceptor.spring;
 
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.lettuce.core.AbstractRedisClient;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -110,8 +110,8 @@ public class SpringRedisClientInfoCollector extends ResultInterceptorAdaptor {
                 String nodes = builder.deleteCharAt(builder.length() - 1).toString();
                 List<String> sentinelRemoteAddress = new ArrayList<String>();
                 try {
-                    AbstractRedisClient client = Reflect.on(biz).get("client");
-                    ChannelGroup channelGroup = Reflect.on(client).get("channels");
+                    AbstractRedisClient client = ReflectionUtils.get(biz, "client");
+                    ChannelGroup channelGroup = ReflectionUtils.get(client, "channels");
                     Iterator iterator = channelGroup.iterator();
                     while (iterator.hasNext()) {
                         Object o = iterator.next();

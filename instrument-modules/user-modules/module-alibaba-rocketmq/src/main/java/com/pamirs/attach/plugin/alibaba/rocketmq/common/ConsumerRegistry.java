@@ -30,6 +30,7 @@ import com.alibaba.rocketmq.client.exception.MQClientException;
 import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.protocol.heartbeat.SubscriptionData;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -44,7 +45,6 @@ import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisable
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.message.ConcurrentWeakHashMap;
 import com.shulie.instrument.simulator.message.DestroyHook;
@@ -207,7 +207,7 @@ public class ConsumerRegistry {
             map = businessConsumer.getDefaultMQPushConsumerImpl().getSubscriptionInner();
         } catch (NoSuchMethodError e) {
             try {
-                map = Reflect.on(businessConsumer.getDefaultMQPushConsumerImpl()).call("getSubscriptionInner").get();
+                map = ReflectionUtils.invoke(businessConsumer.getDefaultMQPushConsumerImpl(), "getSubscriptionInner");
             } catch (ReflectException t) {
                 logger.error("buildMQPushConsumer getSubscriptionInner error.", e);
                 return null;

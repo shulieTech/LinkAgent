@@ -14,13 +14,12 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor.spring;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.utils.Version;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -80,8 +79,7 @@ public class SpringRedisClientPerformanceInterceptor extends SpringRedisClientIn
         LettuceConnectionFactory factory
                 = (LettuceConnectionFactory) connectionSupplier.get(advice.getTarget());
         try {
-
-            return Reflect.on(factory).call(advice.getBehavior().getName()).get();
+            return ReflectionUtils.invoke(factory, advice.getBehavior().getName());
         } catch (PressureMeasureError e) {
             LOGGER.error("lettuce getConnection error,{}", e);
             ;

@@ -18,6 +18,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.internal.connection.Cluster;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessor;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
@@ -27,7 +28,6 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.List;
@@ -72,7 +72,7 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
                 }
                 spanRecord.setRemoteIp(remoteIp);
             } else {
-                String addressesStr = StringUtils.join(((Cluster) (ReflectionUtils.getFieldValue(mongoClientDelegate, "cluster"))).getSettings().getHosts(), ",");
+                String addressesStr = StringUtils.join(((Cluster) (ReflectionUtils.get(mongoClientDelegate, "cluster"))).getSettings().getHosts(), ",");
                 spanRecord.setRemoteIp(addressesStr);
             }
 
@@ -127,7 +127,7 @@ public class DelegateOperationExecutorTraceInterceptor extends TraceInterceptorA
     }
 
     private ShadowDatabaseConfig getShadowDatabaseConfig(Object mongoClientDelegate) {
-        ClusterSettings clusterSettings = ((Cluster) (ReflectionUtils.getFieldValue(mongoClientDelegate, "cluster"))).getSettings();
+        ClusterSettings clusterSettings = ((Cluster) (ReflectionUtils.get(mongoClientDelegate, "cluster"))).getSettings();
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         ShadowDatabaseConfig shadowDatabaseConfig = null;
         for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {

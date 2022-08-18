@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,6 +49,8 @@ public class ConsumerHolder {
         }
     }
 
+    private static final Set<String> SHADOW_CONTAINER_BEAN_NAMES = new HashSet<String>();
+
     private static final Set<Consumer<?, ?>> WORK_WITH_SPRING = Collections.synchronizedSet(
             new HashSet<Consumer<?, ?>>());
 
@@ -63,7 +66,6 @@ public class ConsumerHolder {
     private final static Map<Integer, ConsumerMetaData> cache = new ConcurrentHashMap();
 
     public static void release() {
-        WORK_WITH_SPRING.clear();
         cache.clear();
         Iterator<Map.Entry<Integer, ConsumerProxy>> it = PROXY_MAPPING.entrySet().iterator();
         while (it.hasNext()) {
@@ -75,6 +77,16 @@ public class ConsumerHolder {
             }
         }
         PROXY_MAPPING.clear();
+
+        for (String beanName : SHADOW_CONTAINER_BEAN_NAMES) {
+            ConcurrentMessageListenerContainer container = PradarSpringUtil.getBeanFactory().getBean(beanName, ConcurrentMessageListenerContainer.class);
+            container.stop();
+        }
+        SHADOW_CONTAINER_BEAN_NAMES.clear();
+        for (Consumer<?, ?> consumer : WORK_WITH_SPRING) {
+            consumer.close();
+        }
+        WORK_WITH_SPRING.clear();
     }
 
     public static void addWorkWithSpring(Consumer<?, ?> consumer) {
@@ -223,5 +235,9 @@ public class ConsumerHolder {
             }
         }
         return consumer;
+    }
+
+    public static void addShadowContainerBeanName(String name){
+        SHADOW_CONTAINER_BEAN_NAMES.add(name);
     }
 }

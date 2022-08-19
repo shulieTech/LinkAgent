@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.apache.dubbo.interceptor;
 
 import com.pamirs.attach.plugin.apache.dubbo.DubboConstants;
+import com.pamirs.attach.plugin.apache.dubbo.adpater.DubboAttachmentCleanerWrapper;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.ResultCode;
@@ -83,6 +84,7 @@ public class DubboProviderInterceptor extends TraceInterceptorAdaptor {
             if (value != null) {
                 ctx.put(traceKey, value);
             }
+            DubboAttachmentCleanerWrapper.removeAttachment(traceKey, invocation);
         }
         record.setContext(ctx);
 

@@ -90,6 +90,15 @@
         <module>module-netty-time-wheel</module>
         <module>module-spring-web</module>
         <module>module-sync-fetch-obj</module>
+        <module>module-isolation</module>
+        <module>module-messaging-common</module>
+        <module>module-spring-kafka</module>
+        <module>module-alibaba-rocketmqv2</module>
+        <module>module-apache-rocketmqv2</module>
+        <module>module-apache-kafka-streamv2</module>
+        <module>module-apache-kafkav2</module>
+        <module>module-spring-rabbitmq</module>
+        <module>module-rabbitmqv2</module>
     </modules>
 
     <build>

@@ -2,7 +2,6 @@ package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.consumer.listener.ConsumeOrderlyStatus;
 import com.alibaba.rocketmq.client.hook.ConsumeMessageContext;
-
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.OrderlyTraceContexts;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
@@ -23,13 +22,13 @@ public class OrderlyTraceAfterInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {
         try {
-            ConsumeOrderlyStatus status = (ConsumeOrderlyStatus)advice.getParameterArray()[1];
+            ConsumeOrderlyStatus status = (ConsumeOrderlyStatus) advice.getParameterArray()[1];
             ConsumeMessageContext consumeMessageContext = OrderlyTraceContexts.get();
             if (consumeMessageContext == null || consumeMessageContext.getMsgList() == null) {
                 return;
             }
             consumeMessageContext.setSuccess(ConsumeOrderlyStatus.SUCCESS == status
-                || ConsumeOrderlyStatus.COMMIT == status);
+                    || ConsumeOrderlyStatus.COMMIT == status);
             consumeMessageContext.setStatus(status.name());
             hook.consumeMessageAfter(consumeMessageContext);
         } catch (Throwable e) {

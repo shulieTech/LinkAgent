@@ -25,13 +25,13 @@ public class OrderlyTraceAfterInterceptor extends AroundInterceptor {
     @Override
     public void doAfter(Advice advice) throws Throwable {
         try {
-            ConsumeOrderlyStatus status = (ConsumeOrderlyStatus)advice.getParameterArray()[1];
+            ConsumeOrderlyStatus status = (ConsumeOrderlyStatus) advice.getParameterArray()[1];
             ConsumeMessageContext consumeMessageContext = OrderlyTraceContexts.get();
             if (consumeMessageContext == null || consumeMessageContext.getMsgList() == null) {
                 return;
             }
             consumeMessageContext.setSuccess(ConsumeOrderlyStatus.SUCCESS == status
-                || ConsumeOrderlyStatus.COMMIT == status);
+                    || ConsumeOrderlyStatus.COMMIT == status);
             consumeMessageContext.setStatus(status.name());
             hook.consumeMessageAfter(consumeMessageContext);
         } catch (PradarException e) {

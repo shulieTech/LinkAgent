@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,19 +15,12 @@
 package com.pamirs.attach.plugin.apache.rocketmq.interceptor;
 
 import com.pamirs.attach.plugin.apache.rocketmq.hook.SendMessageHookImpl;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarService;
-import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
-import org.apache.rocketmq.client.producer.SendCallback;
-import org.apache.rocketmq.client.producer.SendResult;
-import org.apache.rocketmq.common.message.Message;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class MQProducerSendInterceptor extends AroundInterceptor {
@@ -38,64 +31,62 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
     public void doBefore(Advice advice) {
         DefaultMQProducerImpl defaultMQProducerImpl = null;
         if (advice.getTarget() instanceof DefaultMQProducer) {
-            defaultMQProducerImpl = ((DefaultMQProducer)advice.getTarget()).getDefaultMQProducerImpl();
+            defaultMQProducerImpl = ((DefaultMQProducer) advice.getTarget()).getDefaultMQProducerImpl();
         }
         if (advice.getTarget() instanceof DefaultMQProducerImpl) {
-            defaultMQProducerImpl = (DefaultMQProducerImpl)advice.getTarget();
+            defaultMQProducerImpl = (DefaultMQProducerImpl) advice.getTarget();
         }
         if (defaultMQProducerImpl != null) {
             if (!registerHookSet.contains(defaultMQProducerImpl)) {
                 synchronized (this) {
                     if (!registerHookSet.contains(defaultMQProducerImpl)) {
-                        ((DefaultMQProducerImpl)defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
+                        ((DefaultMQProducerImpl) defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
                         registerHookSet.add(defaultMQProducerImpl);
                         LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
                     }
                 }
             }
         }
-
-        Object[] args = advice.getParameterArray();
-        Message msg = (Message) args[0];
-        if (PradarSwitcher.isClusterTestEnabled()) {
-            if (Pradar.isClusterTest()) {
-                String topic = msg.getTopic();
-                if (topic != null
-                        && !Pradar.isClusterTestPrefix(topic)) {
-                    msg.setTopic(Pradar.addClusterTestPrefix(topic));
-                }
-                msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
-            }
-        }
-
-        for (int i = 0, len = args.length; i < len; i++) {
-            if (!(args[i] instanceof SendCallback)) {
-                continue;
-            }
-            final SendCallback sendCallback = (SendCallback) args[i];
-            final Map<String, String> context = PradarService.getInvokeContext();
-            advice.changeParameter(i, new SendCallback() {
-                @Override
-                public void onSuccess(SendResult sendResult) {
-                    try {
-                        Pradar.setInvokeContext(context);
-                        sendCallback.onSuccess(sendResult);
-                    } finally {
-                        Pradar.clearInvokeContext();
-                    }
-                }
-
-                @Override
-                public void onException(Throwable e) {
-                    try {
-                        Pradar.setInvokeContext(context);
-                        sendCallback.onException(e);
-                    } finally {
-                        Pradar.clearInvokeContext();
-                    }
-                }
-            });
-        }
-
+//        Object[] args = advice.getParameterArray();
+//        Message msg = (Message) args[0];
+//        if (PradarSwitcher.isClusterTestEnabled()) {
+//            if (Pradar.isClusterTest()) {
+//                String topic = msg.getTopic();
+//                if (topic != null
+//                        && !Pradar.isClusterTestPrefix(topic)) {
+//                    msg.setTopic(Pradar.addClusterTestPrefix(topic));
+//                }
+//                msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
+//            }
+//        }
+//
+//        for (int i = 0, len = args.length; i < len; i++) {
+//            if (!(args[i] instanceof SendCallback)) {
+//                continue;
+//            }
+//            final SendCallback sendCallback = (SendCallback) args[i];
+//            final Map<String, String> context = PradarService.getInvokeContext();
+//            advice.changeParameter(i, new SendCallback() {
+//                @Override
+//                public void onSuccess(SendResult sendResult) {
+//                    try {
+//                        Pradar.setInvokeContext(context);
+//                        sendCallback.onSuccess(sendResult);
+//                    } finally {
+//                        Pradar.clearInvokeContext();
+//                    }
+//                }
+//
+//                @Override
+//                public void onException(Throwable e) {
+//                    try {
+//                        Pradar.setInvokeContext(context);
+//                        sendCallback.onException(e);
+//                    } finally {
+//                        Pradar.clearInvokeContext();
+//                    }
+//                }
+//            });
+//        }
     }
 }

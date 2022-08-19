@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -46,9 +46,9 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     public ModuleRoutingURLClassLoader(final String moduleId,
-        final ClassLoaderService classLoaderService,
-        final URL[] urls,
-        final Routing... routingArray) {
+                                       final ClassLoaderService classLoaderService,
+                                       final URL[] urls,
+                                       final Routing... routingArray) {
         super(urls);
         this.moduleId = moduleId;
         this.classLoaderService = classLoaderService;
@@ -56,10 +56,10 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     public ModuleRoutingURLClassLoader(final String moduleId,
-        final ClassLoaderService classLoaderService,
-        final URL[] urls,
-        final ClassLoader parent,
-        final Routing... routingArray) {
+                                       final ClassLoaderService classLoaderService,
+                                       final URL[] urls,
+                                       final ClassLoader parent,
+                                       final Routing... routingArray) {
         super(urls, parent);
         this.moduleId = moduleId;
         this.classLoaderService = classLoaderService;
@@ -76,7 +76,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         if (shouldFindExportedResource(resourceName)) {
             URL url;
             List<ClassLoaderFactory> exportResourceClassLoadersInOrder = classLoaderService
-                .findExportResourceClassLoadersInOrder(resourceName);
+                    .findExportResourceClassLoadersInOrder(resourceName);
             if (exportResourceClassLoadersInOrder != null) {
                 for (ClassLoaderFactory exportResourceClassLoaderFactory : exportResourceClassLoadersInOrder) {
                     ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
@@ -135,6 +135,22 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         return EmptyEnumeration.emptyEnumeration();
     }
 
+    protected URL getBusinessResourceOuter(String name) {
+        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoaderOuter();
+        if (bizClassLoader != null) {
+            return bizClassLoader.getResource(name);
+        }
+        return null;
+    }
+
+    protected Enumeration<URL> getBusinessResourcesOuter(String name) throws IOException {
+        final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoaderOuter();
+        if (bizClassLoader == null) {
+            return bizClassLoader.getResources(name);
+        }
+        return EmptyEnumeration.emptyEnumeration();
+    }
+
     /**
      * Real logic to get resource
      *
@@ -165,6 +181,11 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
             url = getBusinessResource(name);
         }
 
+        // 6. find outer business classloader resource
+        if (url == null) {
+            url = getBusinessResourceOuter(name);
+        }
+
         return url;
     }
 
@@ -179,16 +200,16 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     protected Enumeration<URL> getExportResources(String resourceName) throws IOException {
         if (shouldFindExportedResource(resourceName)) {
             List<ClassLoaderFactory> exportResourceClassLoadersInOrder = classLoaderService
-                .findExportResourceClassLoadersInOrder(resourceName);
+                    .findExportResourceClassLoadersInOrder(resourceName);
             if (exportResourceClassLoadersInOrder != null) {
                 List<Enumeration<URL>> enumerationList = new ArrayList<Enumeration<URL>>();
                 for (ClassLoaderFactory exportResourceClassLoaderFactory : exportResourceClassLoadersInOrder) {
                     ClassLoader classLoader = exportResourceClassLoaderFactory.getClassLoader(BizClassLoaderHolder.getBizClassLoader());
                     enumerationList.add(((ModuleRoutingURLClassLoader) classLoader)
-                        .getLocalResources(resourceName));
+                            .getLocalResources(resourceName));
                 }
                 return new CompoundEnumeration<URL>(
-                    enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
+                        enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
             }
         }
         return EmptyEnumeration.emptyEnumeration();
@@ -216,9 +237,12 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         // 4. find business classloader resources
         enumerationList.add(getBusinessResources(name));
 
+        // 5. find outer business classloader resources
+        enumerationList.add(getBusinessResourcesOuter(name));
+
 
         return new CompoundEnumeration<URL>(
-            enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
+                enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
     }
 
     /**
@@ -283,7 +307,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                     if (isDebugEnabled) {
                         // log debug message
                         logger.debug(
-                            "SIMULATOR: Fail to load export class " + name, e);
+                                "SIMULATOR: Fail to load export class " + name, e);
                     }
                 }
             }
@@ -292,7 +316,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     }
 
     protected Class<?> internalLoadClass(String name, boolean resolve)
-        throws ClassNotFoundException {
+            throws ClassNotFoundException {
         Class<?> clazz = null;
 
         // 1. find routing
@@ -313,6 +337,11 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
         // 4. load class from business classloader
         if (clazz == null) {
             clazz = resolveBusinessClassLoader(name);
+        }
+
+        // 4.1 load class from out business classloader
+        if (clazz == null) {
+            clazz = resolveBusinessClassLoaderOuter(name);
         }
 
         // 5. load class from super
@@ -339,6 +368,19 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
     protected Class resolveBusinessClassLoader(String name) {
         try {
             final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoader();
+            if (bizClassLoader == null) {
+                return null;
+            }
+            return bizClassLoader.loadClass(name);
+        } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
+        return null;
+    }
+
+    protected Class resolveBusinessClassLoaderOuter(String name) {
+        try {
+            final ClassLoader bizClassLoader = BizClassLoaderHolder.getBizClassLoaderOuter();
             if (bizClassLoader == null) {
                 return null;
             }
@@ -384,17 +426,17 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
                     StringBuilder pen = new StringBuilder(packageName.length() + 10);
                     StringBuilder cen = new StringBuilder(className.length() + 10);
                     String packageEntryName = pen.append(packageName.replace('.', '/')).append("/")
-                        .toString();
+                            .toString();
                     String classEntryName = cen.append(className.replace('.', '/'))
-                        .append(".class").toString();
+                            .append(".class").toString();
                     for (URL url : getURLs()) {
                         try {
                             URLConnection connection = url.openConnection();
                             if (connection instanceof JarURLConnection) {
                                 JarFile jarFile = ((JarURLConnection) connection).getJarFile();
                                 if (jarFile.getEntry(classEntryName) != null
-                                    && jarFile.getEntry(packageEntryName) != null
-                                    && jarFile.getManifest() != null) {
+                                        && jarFile.getEntry(packageEntryName) != null
+                                        && jarFile.getManifest() != null) {
                                     definePackage(packageName, jarFile.getManifest(), url);
                                     return null;
                                 }

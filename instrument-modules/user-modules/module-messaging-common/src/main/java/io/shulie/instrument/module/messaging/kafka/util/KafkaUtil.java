@@ -220,16 +220,16 @@ public class KafkaUtil {
         }
 
         Object interceptors = ReflectUtil.reflectSlience(bizConsumer, "interceptors");
-        if (interceptors != null) {
-            List list = ReflectUtil.reflectSlience(interceptors, "interceptors");
-            if (list != null && list.size() > 0) {
-                List classList = new ArrayList();
-                for (Object o : list) {
-                    classList.add(o.getClass());
-                }
-                putSlience(config, ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, classList);
-            }
-        }
+//        if (interceptors != null) {
+//            List list = ReflectUtil.reflectSlience(interceptors, "interceptors");
+//            if (list != null && list.size() > 0) {
+//                List classList = new ArrayList();
+//                for (Object o : list) {
+//                    classList.add(o.getClass());
+//                }
+//                putSlience(config, ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, classList);
+//            }
+//        }
 
         putSlience(config, ConsumerConfig.METADATA_MAX_AGE_CONFIG, metadata, "metadataExpireMs");
 
@@ -243,7 +243,7 @@ public class KafkaUtil {
         if (subscriptions != null) {
             Object defaultResetStrategy = ReflectUtil.reflectSlience(subscriptions, "defaultResetStrategy");
             if (defaultResetStrategy != null) {
-                putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
+                putSlience(config, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
                         defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
             }
         }
@@ -265,8 +265,7 @@ public class KafkaUtil {
 
         KafkaConsumer kafkaConsumer;
         try {
-            kafkaConsumer = new KafkaConsumer(config, (Deserializer) keyDeserializer,
-                    (Deserializer) valueDeserializer);
+            kafkaConsumer = new KafkaConsumer(config, (Deserializer) keyDeserializer, (Deserializer) valueDeserializer);
         } catch (Exception e) {
             kafkaConsumer = new KafkaConsumer(config);
         }
@@ -283,7 +282,6 @@ public class KafkaUtil {
 
         ApacheKafkaHandler.addKafkaConsumerWorkWithOther(bizConsumer, false);
         ApacheKafkaHandler.addKafkaConsumerWorkWithOther(kafkaConsumer, true);
-
         return kafkaConsumer;
     }
 

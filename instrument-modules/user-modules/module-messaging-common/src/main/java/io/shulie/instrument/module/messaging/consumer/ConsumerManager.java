@@ -209,6 +209,7 @@ public class ConsumerManager {
 
         // 避免出现 ConcurrentModificationException
         for (ConsumerRegisterModule consumerRegisterModule : new Vector<>(registerList)) {
+            Thread.currentThread().setContextClassLoader(consumerRegisterModule.getConsumerRegister().getClass().getClassLoader());
             refreshSyncObj(consumerRegisterModule);
         }
 
@@ -269,6 +270,7 @@ public class ConsumerManager {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         for (Map.Entry<String, ShadowConsumer> entry : shadowConsumerMap.entrySet()) {
             ShadowConsumer shadowConsumer = entry.getValue();
+            Thread.currentThread().setContextClassLoader(shadowConsumer.getConsumerExecute().getClass().getClassLoader());
             String configs = null;
             try {
                 configs = shadowConsumer.getConfigSet().stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(","));
@@ -329,28 +331,19 @@ public class ConsumerManager {
     }
 
     private static void fetchShadowServer(ShadowConsumer shadowConsumer, String config, Set<ConsumerConfig> enableConfigSet) {
-        try {
-            ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(enableConfigSet.stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
-            if (shadowServer != null) {
-                shadowConsumer.setShadowServer(shadowServer);
-                ConsumerRouteHandler.addNotRouteObj(shadowServer.getShadowTarget());
-                ConsumerIsolationCache.put(shadowConsumer.getBizTarget(), shadowServer);
-            }
-        } catch (Exception e) {
-            logger.error("init shadow server fail:{}", JSON.toJSONString(shadowConsumer.getEnableConfigSet()), e);
+        ShadowServer shadowServer = shadowConsumer.getConsumerExecute().fetchShadowServer(enableConfigSet.stream().map(ConsumerConfigWithData::new).collect(Collectors.toList()));
+        if (shadowServer != null) {
+            shadowConsumer.setShadowServer(shadowServer);
+            ConsumerRouteHandler.addNotRouteObj(shadowServer.getShadowTarget());
+            ConsumerIsolationCache.put(shadowConsumer.getBizTarget(), shadowServer);
         }
     }
 
     private static void doStartShadowServer(ShadowConsumer shadowConsumer) {
-        try {
-            if (!shadowConsumer.isStarted()) {
-                shadowConsumer.getShadowServer().start();
-            } else {
-                logger.info("shadowConsumer {} is started, will not try to start!", JSON.toJSONString(shadowConsumer));
-            }
-        } catch (Throwable e) {
-            logger.error("start shadow consumer fail:" + JSON.toJSON(shadowConsumer.getConfigSet()), e);
-            throw e;
+        if (!shadowConsumer.isStarted()) {
+            shadowConsumer.getShadowServer().start();
+        } else {
+            logger.info("shadowConsumer {} is started, will not try to start!", JSON.toJSONString(shadowConsumer));
         }
     }
 

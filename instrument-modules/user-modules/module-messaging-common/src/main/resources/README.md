@@ -1,4 +1,1 @@
-注意！！！！！
-每次更新插件请都更新内容到以下内容，
-hystrix中间件支持模块，
-新增模块版本信息，初始版本为1.0.0，README.md为模块更新内容描述文件，
+新版mq公共模块，参考文档：https://shulietech.feishu.cn/wiki/wikcn3PINdOtynYENE3gYFgtabe?useNewLarklet=1

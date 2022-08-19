@@ -25,7 +25,14 @@ public class SpringKafkaShadowServer implements ShadowServer {
 
     @Override
     public void start() {
-        listenerContainer.start();
+        // 有classLoad问题，所以这里制定业务的classLoad
+        ClassLoader currentClassLoad = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(listenerContainer.getClass().getClassLoader());
+            listenerContainer.start();
+        } finally {
+            Thread.currentThread().setContextClassLoader(currentClassLoad);
+        }
     }
 
     @Override

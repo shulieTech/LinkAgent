@@ -57,8 +57,7 @@ public class SpringConsumerMetaDataBuilder implements ConsumerMetaDataBuilder {
             try {
                 return lowVersion(consumer, consumerTag);
             } catch (Throwable ie) {
-                logger.warn("[RabbitMQ] create ConsumerMetaData failed");
-                return null;
+                throw new PradarException("spring rabbitmq 版本不支持！", ie);
             }
         }
     }

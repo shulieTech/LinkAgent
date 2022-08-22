@@ -130,6 +130,9 @@ public final class PradarService {
      */
     static public final String PRADAR_NODE_ID_KEY = "nid";
 
+    public static final String PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX = "PerfomanceTest";
+
+
     /**
      * 压测环境是否已经准备好
      */

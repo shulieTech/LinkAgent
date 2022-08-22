@@ -15,9 +15,14 @@
 
 package com.pamirs.attach.plugin.cluster.test.check;
 
+import com.pamirs.attach.plugin.cluster.test.check.interceptor.web.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
+import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
+import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
+import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +40,54 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
     @Override
     public boolean onActive() throws Throwable {
         logger.info("start enhance cluster-test-check module");
+
+        // 处理web类型
+        enhanceWeb();
+
         return true;
+    }
+
+    private void enhanceWeb() {
+        this.enhanceTemplate.enhanceWithInterface(this, "javax.servlet.Servlet", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("service", "javax.servlet.ServletRequest",
+                        "javax.servlet.ServletResponse");
+                method.addInterceptor(Listeners.of(ServletInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhanceWithInterface(this, "io.undertow.server.HttpHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("handleRequest", "io.undertow.server.HttpServerExchange");
+                method.addInterceptor(Listeners.of(UndertowHttpHandlerInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhanceWithInterface(this, "org.springframework.http.server.reactive.HttpHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("handle", "org.springframework.http.server.reactive.ServerHttpRequest",
+                        "org.springframework.http.server.reactive.ServerHttpResponse");
+                method.addInterceptor(Listeners.of(SpringHttpHandlerInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhanceWithInterface(this, "org.springframework.web.server.WebHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("handle", "org.springframework.web.server.ServerWebExchange");
+                method.addInterceptor(Listeners.of(SpringWebHandlerInterceptor.class));
+            }
+        });
+
+        this.enhanceTemplate.enhanceWithInterface(this, "io.netty.channel.ChannelInboundHandler", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("channelRead", "io.netty.channel.ChannelHandlerContext", "java.lang.Object");
+                method.addInterceptor(Listeners.of(ChannelInboundHandlerInterceptor.class));
+            }
+        });
     }
 }

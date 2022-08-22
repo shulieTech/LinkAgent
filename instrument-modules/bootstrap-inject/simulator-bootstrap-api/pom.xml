@@ -12,5 +12,7 @@
     <artifactId>simulator-bootstrap-api</artifactId>
     <packaging>jar</packaging>
 
+    <version>${simulator.bootstrap.api.version}</version>
+
 
 </project>

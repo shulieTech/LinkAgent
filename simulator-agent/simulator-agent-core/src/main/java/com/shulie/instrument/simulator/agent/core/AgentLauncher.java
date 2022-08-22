@@ -85,6 +85,7 @@ public class AgentLauncher {
     private final ClassLoader parent;
     private final boolean usePremain;
     private final boolean useAgentmain;
+    private final boolean syncEnable;
 
     private int startMode = START_MODE_ATTACH;
 
@@ -107,6 +108,7 @@ public class AgentLauncher {
         }
         this.usePremain = agentConfig.getBooleanProperty("simulator.use.premain", true);
         this.useAgentmain = agentConfig.getBooleanProperty("simulator.use.agentmain", false);
+        this.syncEnable = "true".equals(agentConfig.getProperty("agent.sync.module.enable", "false"));
     }
 
     /**
@@ -142,47 +144,24 @@ public class AgentLauncher {
                     agentJarPath, config);
         }
 
+        boolean premainStart;
+        if (syncEnable) {
+            premainStart = true;
+        } else {
+            premainStart = !useAgentmain && (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName()));
+        }
         //默认不是用agentMain，判断可以不用premain，则使用agentMain
-        if (!useAgentmain) {
-            //针对docker pid小于等于5的使用premain方式
-            //如果是 main 方法执行， 强制使用 premain 模式
-            if (usePremain || PidUtils.getPid() <= 5 || "main".equals(Thread.currentThread().getName())) {
-                startWithPremain(agentJarPath, config);
-                startMode = START_MODE_PREMAIN;
-                logger.info("AGENT: simulator with premain mode start successful.");
-                return;
-            }
+        //针对docker pid小于等于5的使用premain方式
+        //如果是 main 方法执行， 强制使用 premain 模式
+        if (premainStart) {
+            startWithPremain(agentJarPath, config);
+            startMode = START_MODE_PREMAIN;
+            logger.info("AGENT: simulator with premain mode start successful.");
+            return;
         }
 
-
         try {
-            VirtualMachineDescriptor virtualMachineDescriptor = null;
-            String targetJvmPid = descriptor;
-
-            if (isDigits(descriptor)) {
-                for (VirtualMachineDescriptor vmDescriptor : VirtualMachine.list()) {
-                    if (vmDescriptor.id().equals(descriptor)) {
-                        virtualMachineDescriptor = vmDescriptor;
-                        break;
-                    }
-                }
-            }
-
-            if (virtualMachineDescriptor == null) {
-                for (VirtualMachineDescriptor vmDescriptor : VirtualMachine.list()) {
-                    if (vmDescriptor.displayName().contains(descriptor)) {
-                        virtualMachineDescriptor = vmDescriptor;
-                        break;
-                    }
-                }
-            }
-
-            if (virtualMachineDescriptor != null) {
-                // 加载agent
-                attachAgent(virtualMachineDescriptor, targetJvmPid, agentJarPath, config);
-            } else {
-                logger.warn("AGENT: can't found attach target: {}", descriptor);
-            }
+            startWithAttach(agentJarPath, config);
             startMode = START_MODE_ATTACH;
             logger.info("AGENT: simulator with attach mode start successful.");
         } catch (UnsatisfiedLinkError e) {
@@ -271,7 +250,7 @@ public class AgentLauncher {
                         String userKey = (String) context.get(HeartCommandConstants.USER_KEY);
                         String url = (String) context.get(HeartCommandConstants.URL_KEy);
                         String container = (String) context.get(HeartCommandConstants.CONTAINER_KEY);
-                        logger.info("swift-oss config: userKey:{}, ak:{}, url:{}, uname:{}, account:{},  container:{}", userKey, ak, url, uname,account, container);
+                        logger.info("swift-oss config: userKey:{}, ak:{}, url:{}, uname:{}, account:{},  container:{}", userKey, ak, url, uname, account, container);
                         SwiftOperationClient.download(uname, account, userKey, ak, url, container, upgradeBatch);
                 }
                 //解压
@@ -350,6 +329,7 @@ public class AgentLauncher {
             throw throwable;
         }
     }
+
     public void startupSyncModule() throws Throwable {
         AgentStatus.installing();
         try {
@@ -381,7 +361,7 @@ public class AgentLauncher {
         }
     }
 
-    private String fetchConfig(){
+    private String fetchConfig() {
         StringBuilder builder = new StringBuilder();
         if (StringUtils.isNotBlank(this.agentConfig.getAppName())) {
             builder.append(";app.name=").append(encodeArg(this.agentConfig.getAppName()));
@@ -819,6 +799,17 @@ public class AgentLauncher {
         premainMethod.invoke(null, config, instrumentation);
     }
 
+    /**
+     * 同步模块premain模式启动探针
+     *
+     * @param agentJarPath
+     * @param config
+     * @throws MalformedURLException
+     * @throws ClassNotFoundException
+     * @throws NoSuchMethodException
+     * @throws IllegalAccessException
+     * @throws InvocationTargetException
+     */
     private void startSyncModuleWithPremain(String agentJarPath, String config)
             throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException,
             InvocationTargetException {
@@ -828,6 +819,43 @@ public class AgentLauncher {
         Method premainMethod = classOfAgentLauncher.getDeclaredMethod("syncModulePremain", String.class, Instrumentation.class);
         premainMethod.setAccessible(true);
         premainMethod.invoke(null, config, instrumentation);
+    }
+
+    /**
+     * 以attach模式启动探针
+     *
+     * @param agentJarPath
+     * @param config
+     * @throws Throwable
+     */
+    private void startWithAttach(String agentJarPath, String config) throws Throwable {
+        VirtualMachineDescriptor virtualMachineDescriptor = null;
+        String targetJvmPid = descriptor;
+
+        if (isDigits(descriptor)) {
+            for (VirtualMachineDescriptor vmDescriptor : VirtualMachine.list()) {
+                if (vmDescriptor.id().equals(descriptor)) {
+                    virtualMachineDescriptor = vmDescriptor;
+                    break;
+                }
+            }
+        }
+
+        if (virtualMachineDescriptor == null) {
+            for (VirtualMachineDescriptor vmDescriptor : VirtualMachine.list()) {
+                if (vmDescriptor.displayName().contains(descriptor)) {
+                    virtualMachineDescriptor = vmDescriptor;
+                    break;
+                }
+            }
+        }
+
+        if (virtualMachineDescriptor != null) {
+            // 加载agent
+            attachAgent(virtualMachineDescriptor, targetJvmPid, agentJarPath, config);
+        } else {
+            logger.warn("AGENT: can't found attach target: {}", descriptor);
+        }
     }
 
     private void initFrameworkClassLoader(String agentJarPath) throws MalformedURLException {

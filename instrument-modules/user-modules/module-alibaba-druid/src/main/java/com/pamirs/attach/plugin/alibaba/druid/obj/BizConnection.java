@@ -161,6 +161,17 @@ public class BizConnection extends DruidPooledConnection implements Connection {
     }
 
     @Override
+    public boolean isClosed() throws SQLException {
+        return target.isClosed();
+    }
+
+    @Override
+    public void close() throws SQLException {
+        super.close();
+        target.close();
+    }
+
+    @Override
     public Thread getOwnerThread() {
         return target.getOwnerThread();
     }

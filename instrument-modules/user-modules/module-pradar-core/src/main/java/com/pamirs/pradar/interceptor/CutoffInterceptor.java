@@ -32,7 +32,7 @@ abstract class CutoffInterceptor extends BaseInterceptor {
     @Override
     public final void before(Advice advice) throws Throwable {
         CutOffResult cutOffResult = cutoff(advice);
-        if (cutOffResult.isCutoff()) {
+        if (cutOffResult != null && cutOffResult.isCutoff()) {
             advice.returnImmediately(cutOffResult.getResult());
         }
     }

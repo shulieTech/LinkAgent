@@ -21,6 +21,8 @@
         <module.servlet.common.version>2.0.0.0</module.servlet.common.version>
         <module.log.data.pusher>2.0.1.0</module.log.data.pusher>
         <module.pradar.config.fetcher>2.0.1.0</module.pradar.config.fetcher>
+        <module.messaging.common.version>1.0.0</module.messaging.common.version>
+        <module.isolation.version>1.0.0</module.isolation.version>
     </properties>
 
     <profiles>

@@ -36,10 +36,6 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
 
         MatchConfig config = ClusterTestUtils.httpClusterTest(fullPath);
         ExecutionStrategy strategy = config.getStrategy();
-        // 仅mock在getInputStream里执行
-        if (!(strategy instanceof JsonMockStrategy) && !(strategy instanceof MockStrategy)) {
-            return;
-        }
 
         config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, whiteList);
         // 白名单需要的信息

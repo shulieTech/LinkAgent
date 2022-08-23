@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
@@ -39,6 +40,7 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -150,52 +152,57 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
     }
 
     private String extractGroup(Object[] args, Object obj) {
-        Object group = null;
-        if (args.length >= 3) {
-            group = manager.removeField(args[2], KafkaConstants.DYNAMIC_FIELD_GROUP);
-        }
-        if (group != null) {
-            return (String) group;
-        }
+        try {
+            Object group = null;
+            if (args.length >= 3) {
+                group = manager.removeField(args[2], KafkaConstants.DYNAMIC_FIELD_GROUP);
+            }
+            if (group != null) {
+                return (String) group;
+            }
 
-        if (group == null) {
-            try {
-                Field groupId = ReflectUtil.getField(obj, "groupId");
-                group = groupId.get(obj);
-            } catch (Throwable e) {
+            if (group == null) {
                 try {
-                    Object coordinator = ReflectionUtils.get(obj, KafkaConstants.REFLECT_FIELD_COORDINATOR);
-                    group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-                } catch (Exception exp) {
+                    Field groupId = ReflectUtil.getField(obj, "groupId");
+                    group = groupId.get(obj);
+                } catch (Throwable e) {
+                    try {
+                        Object coordinator = Reflect.on(obj).get(KafkaConstants.REFLECT_FIELD_COORDINATOR);
+                        group = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+                    } catch (Exception exp) {
 
+                    }
                 }
             }
-        }
-        if (group != null) {
-            if(group instanceof String){
-                return (String) group;
+            if (group != null) {
+                if (group instanceof String) {
+                    return (String) group;
+                } else if (group instanceof Optional) {
+                    return ((Optional) group).get().toString();
+                } else {
+                    return group.toString();
+                }
             }
-            if(group.getClass().getName().equals("java.util.Optional")){
-                group = ReflectionUtils.invoke(group, "get");
-                return (String) group;
-            }
-            return null;
-        }
 
-        try {
-            Consumer consumer = (Consumer) obj;
-            Object proxy = ReflectionUtils.get(consumer, "h");
-            Object advised = ReflectionUtils.get(proxy, "advised");
-            Object targetSource = ReflectionUtils.get(advised, "targetSource");
-            Object kafkaConsumer = ReflectionUtils.get(targetSource, "target");
-            proxyConsumerMappings.put(obj, (Consumer) kafkaConsumer);
-            group = ReflectionUtils.get(kafkaConsumer, "groupId");
-            if (group.getClass().getName().equals("java.util.Optional")) {
-                group = ReflectionUtils.invoke(group, "get");
+            try {
+                Consumer consumer = (Consumer) obj;
+                Object proxy = Reflect.on(consumer).get("h");
+                Object advised = Reflect.on(proxy).get("advised");
+                Object targetSource = Reflect.on(advised).get("targetSource");
+                Object kafkaConsumer = Reflect.on(targetSource).get("target");
+                proxyConsumerMappings.put(obj, (Consumer) kafkaConsumer);
+                group = Reflect.on(kafkaConsumer).get("groupId");
+                if (group.getClass().getName().equals("java.util.Optional")) {
+                    group = Reflect.on(group).call("get").get();
+                }
+                return (String) group;
+            } catch (Exception e) {
+                LOGGER.error("extract groupId from Spring-Kafka occur exception, using global group!", e);
+                return null;
             }
-            return (String) group;
-        } catch (Exception e) {
-            LOGGER.error("extract groupId from Spring-Kafka occur exception, using global group!", e);
+
+        } catch (Throwable throwable) {
+            LOGGER.warn("read group fail!", throwable);
             return null;
         }
     }

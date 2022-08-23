@@ -14,52 +14,24 @@
  */
 package com.pamirs.attach.plugin.rabbitmq.interceptor;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.pamirs.attach.plugin.rabbitmq.RabbitmqConstants;
 import com.pamirs.attach.plugin.rabbitmq.common.ChannelHolder;
 import com.pamirs.attach.plugin.rabbitmq.common.ConfigCache;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
 import com.pamirs.attach.plugin.rabbitmq.common.ShadowConsumerProxy;
-import com.pamirs.attach.plugin.rabbitmq.consumer.AdminApiConsumerMetaDataBuilder;
-import com.pamirs.attach.plugin.rabbitmq.consumer.AutorecoveringChannelConsumerMetaDataBuilder;
-import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaData;
-import com.pamirs.attach.plugin.rabbitmq.consumer.ConsumerMetaDataBuilder;
-import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerDecoratorMetaDataBuilder;
-import com.pamirs.attach.plugin.rabbitmq.consumer.SpringConsumerMetaDataBuilder;
+import com.pamirs.attach.plugin.rabbitmq.consumer.*;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupportFactory;
 import com.pamirs.attach.plugin.rabbitmq.destroy.RabbitmqDestroy;
 import com.pamirs.attach.plugin.rabbitmq.utils.AddressUtils;
-import com.pamirs.attach.plugin.rabbitmq.utils.OnceExecutor;
 import com.pamirs.attach.plugin.rabbitmq.utils.RabbitMqUtils;
-import com.pamirs.pradar.ErrorTypeEnum;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarService;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.BasicProperties;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Command;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.Consumer;
+import com.rabbitmq.client.*;
 import com.rabbitmq.client.impl.AMQConnection;
 import com.rabbitmq.client.impl.AMQImpl.Basic.Deliver;
 import com.rabbitmq.client.impl.ChannelManager;
@@ -67,7 +39,6 @@ import com.rabbitmq.client.impl.ChannelN;
 import com.rabbitmq.client.impl.SocketFrameHandler;
 import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
 import com.rabbitmq.client.impl.recovery.AutorecoveringConnection;
-import com.shulie.instrument.module.pradar.core.handler.DefaultExceptionHandler;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -77,6 +48,14 @@ import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @Author: mubai<chengjiacai @ shulie.io>
@@ -225,28 +204,28 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
         }
     }
 
-    @Override
-    public void afterLast(final Advice advice) {
-        Channel channel = (Channel)advice.getTarget();
-        Connection connection = channel.getConnection();
-        Object[] args = advice.getParameterArray();
-        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
-        String consumerTag = m.getConsumerTag();
-        if (Pradar.isClusterTestPrefix(consumerTag) ||
-            ChannelHolder.existsConsumer(consumerTag)) {
-            return;
-        }
-        //每个connection只进来一次，一次流量带所有的影子消费者，如果失败异步任务会自动重试
-        OnceExecutor.execute(connection, new OnceExecutor.Consumer<Connection>() {
-            @Override
-            public void accept(Connection connection) {
-                List<ConsumerDetail> consumerDetails = getAllConsumersFromConnection(connection);
-                for (ConsumerDetail consumerDetail : consumerDetails) {
-                    THREAD_POOL_EXECUTOR.execute(new ShadowConsumerRegisterRunnable(consumerDetail));
-                }
-            }
-        });
-    }
+//    @Override
+//    public void afterLast(final Advice advice) {
+//        Channel channel = (Channel)advice.getTarget();
+//        Connection connection = channel.getConnection();
+//        Object[] args = advice.getParameterArray();
+//        AMQP.Basic.Deliver m = (AMQP.Basic.Deliver)args[1];
+//        String consumerTag = m.getConsumerTag();
+//        if (Pradar.isClusterTestPrefix(consumerTag) ||
+//            ChannelHolder.existsConsumer(consumerTag)) {
+//            return;
+//        }
+//        //每个connection只进来一次，一次流量带所有的影子消费者，如果失败异步任务会自动重试
+//        OnceExecutor.execute(connection, new OnceExecutor.Consumer<Connection>() {
+//            @Override
+//            public void accept(Connection connection) {
+//                List<ConsumerDetail> consumerDetails = getAllConsumersFromConnection(connection);
+//                for (ConsumerDetail consumerDetail : consumerDetails) {
+//                    THREAD_POOL_EXECUTOR.execute(new ShadowConsumerRegisterRunnable(consumerDetail));
+//                }
+//            }
+//        });
+//    }
 
     private List<ConsumerDetail> getAllConsumersFromConnection(Connection connection) {
         List<ConsumerDetail> consumerDetails = new ArrayList<ConsumerDetail>();

@@ -98,7 +98,6 @@ public class AbstractRefererCallInterceptor extends TraceInterceptorAdaptor {
         final Request request = (Request) args[0];
         String interfaceName = getInterfaceName(request);
         ClusterTestUtils.validateRpcClusterTest(interfaceName, request.getMethodName());
-
     }
 
     private String getInterfaceName(Request request) {

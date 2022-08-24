@@ -15,6 +15,9 @@
 
 package com.pamirs.attach.plugin.cluster.test.check;
 
+import com.pamirs.attach.plugin.cluster.test.check.interceptor.rpc.DubboInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.interceptor.rpc.GrpcInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.interceptor.rpc.MotanInterceptor;
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.web.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -43,6 +46,9 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
         // 处理web类型
         enhanceWeb();
+
+        // 处理rpc类型
+        enhanceRPC();
 
         return true;
     }
@@ -87,6 +93,57 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethod("channelRead", "io.netty.channel.ChannelHandlerContext", "java.lang.Object");
                 method.addInterceptor(Listeners.of(ChannelInboundHandlerInterceptor.class));
+            }
+        });
+    }
+
+    private void enhanceRPC() {
+        this.enhanceTemplate.enhance(this, "org.apache.dubbo.rpc.proxy.AbstractProxyInvoker", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                final InstrumentMethod invokeMethod = target.getDeclaredMethod("invoke", "org.apache.dubbo.rpc.Invocation");
+                if (invokeMethod != null) {
+                    invokeMethod.addInterceptor(Listeners.of(DubboInterceptor.class));
+                }
+            }
+        });
+
+        this.enhanceTemplate.enhance(this, "com.alibaba.dubbo.rpc.proxy.AbstractProxyInvoker", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                final InstrumentMethod invokeMethod = target.getDeclaredMethod("invoke", "com.alibaba.dubbo.rpc.Invocation");
+                if (invokeMethod != null) {
+                    invokeMethod.addInterceptor(Listeners.of(DubboInterceptor.class));
+                }
+            }
+        });
+
+        enhanceTemplate.enhance(this, "io.grpc.internal.ServerImpl$ServerTransportListenerImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("startCall",
+                        "io.grpc.internal.ServerStream", "java.lang.String",
+                        "io.grpc.ServerMethodDefinition", "io.grpc.Metadata", "io.grpc.Context$CancellableContext",
+                        "io.grpc.internal.StatsTraceContext");
+                streamCreatedMethod.addInterceptor(Listeners.of(GrpcInterceptor.class));
+            }
+        });
+        enhanceTemplate.enhance(this, "io.grpc.internal.ServerImpl$ServerTransportListenerImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("startCall",
+                        "io.grpc.internal.ServerStream", "java.lang.String",
+                        "io.grpc.ServerMethodDefinition", "io.grpc.Metadata", "io.grpc.Context$CancellableContext",
+                        "io.grpc.internal.StatsTraceContext", "io.perfmark.Tag");
+                streamCreatedMethod.addInterceptor(Listeners.of(GrpcInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "com.weibo.api.motan.transport.ProviderMessageRouter", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod method = target.getDeclaredMethod("handle", "com.weibo.api.motan.transport.Channel", "java.lang.Object");
+                method.addInterceptor(Listeners.of(MotanInterceptor.class));
             }
         });
     }

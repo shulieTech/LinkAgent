@@ -102,6 +102,9 @@ public class CaffeinePlugin extends ModuleLifecycleAdapter implements ExtensionM
                         "boolean", "boolean")
                         .addInterceptor(Listeners.of(ComputeInterceptor.class));
 
+                    target.getDeclaredMethods("tryExpireAfterRead","expireAfterRead", "expireAfterUpdate", "expireAfterCreate")
+                                    .addInterceptor(Listeners.of(CacheLoaderInterceptor.class));
+
                 }
             },
             "com.github.benmanes.caffeine.cache.BoundedLocalCache");

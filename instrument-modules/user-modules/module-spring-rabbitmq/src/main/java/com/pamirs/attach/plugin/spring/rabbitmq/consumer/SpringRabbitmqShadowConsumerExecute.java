@@ -146,8 +146,7 @@ public class SpringRabbitmqShadowConsumerExecute implements ShadowConsumerExecut
                     "consumerTagStrategy", "idleEventInterval", "applicationEventPublisher");
         }
         ptContainer.afterPropertiesSet();
-        logger.info(
-                String.format("[RabbitMQ] shadow consumer create successfully.ptQueueNames: %s", ptQueueNames));
+        logger.info("[RabbitMQ] shadow consumer create successfully.ptQueueNames: {}", Arrays.toString(ptQueueNames));
         return ptContainer;
     }
 

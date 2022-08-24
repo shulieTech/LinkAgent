@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.cluster.test.check.interceptor.rpc;
 
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import io.grpc.Metadata;
 
@@ -24,12 +26,13 @@ import io.grpc.Metadata;
  * @Author ocean_wll
  * @Date 2022/8/24 10:44
  */
+@Interrupted
 public class GrpcInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
         Object param = advice.getParameterArray()[3];
-        if (param instanceof Metadata) {
+        if (ClassUtil.instanceOf(param, "io.grpc.Metadata")) {
             Metadata headers = (Metadata) param;
             return headers.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
         }

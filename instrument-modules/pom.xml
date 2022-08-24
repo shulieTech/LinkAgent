@@ -281,6 +281,5 @@
         <module>bootstrap-inject</module>
         <module>user-modules</module>
         <module>biz-classloader-inject</module>
-        <module>module-start-clusterTest-check</module>
     </modules>
 </project>

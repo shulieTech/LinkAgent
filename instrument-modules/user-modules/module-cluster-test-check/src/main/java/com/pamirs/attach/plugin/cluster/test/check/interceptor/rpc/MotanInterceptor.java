@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.cluster.test.check.interceptor.rpc;
 
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.weibo.api.motan.rpc.Request;
 
@@ -24,12 +26,13 @@ import com.weibo.api.motan.rpc.Request;
  * @Author ocean_wll
  * @Date 2022/8/24 10:52
  */
+@Interrupted
 public class MotanInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
         Object param = advice.getParameterArray()[1];
-        if (param instanceof Request) {
+        if (ClassUtil.instanceOf(param, "com.weibo.api.motan.rpc.Request")) {
             Request request = (Request) param;
             return request.getAttachments().get(key);
         }

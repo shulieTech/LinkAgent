@@ -50,6 +50,7 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         // 处理rpc类型
         enhanceRPC();
 
+        logger.info("end enhance cluster-test-check module");
         return true;
     }
 

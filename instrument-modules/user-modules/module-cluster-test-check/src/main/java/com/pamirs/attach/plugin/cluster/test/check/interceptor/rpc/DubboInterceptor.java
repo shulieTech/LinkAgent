@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.cluster.test.check.interceptor.rpc;
 
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.dubbo.rpc.RpcInvocation;
 
@@ -24,18 +26,19 @@ import org.apache.dubbo.rpc.RpcInvocation;
  * @Author ocean_wll
  * @Date 2022/8/24 10:33
  */
+@Interrupted
 public class DubboInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
         Object param = advice.getParameterArray()[0];
-        if (param instanceof RpcInvocation) {
+        if (ClassUtil.instanceOf(param, "org.apache.dubbo.rpc.RpcInvocation")) {
             RpcInvocation invocation = (RpcInvocation) param;
-            return invocation.getAttributes().get(key);
+            return invocation.getAttachments().get(key);
         }
-        if (param instanceof com.alibaba.dubbo.rpc.RpcInvocation) {
+        if (ClassUtil.instanceOf(param, "com.alibaba.dubbo.rpc.RpcInvocation")) {
             com.alibaba.dubbo.rpc.RpcInvocation invocation = (com.alibaba.dubbo.rpc.RpcInvocation) param;
-            return invocation.getAttributes().get(key);
+            return invocation.getAttachments().get(key);
         }
         return null;
     }

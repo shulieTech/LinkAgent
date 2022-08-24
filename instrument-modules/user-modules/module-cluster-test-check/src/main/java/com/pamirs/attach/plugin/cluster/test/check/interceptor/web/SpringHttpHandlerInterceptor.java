@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.cluster.test.check.interceptor.web;
 
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 
@@ -24,11 +26,12 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
  * @Author ocean_wll
  * @Date 2022/8/22 17:52
  */
+@Interrupted
 public class SpringHttpHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (advice.getParameterArray()[0] instanceof ServerHttpRequest) {
+        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "org.springframework.http.server.reactive.ServerHttpRequest")) {
             ServerHttpRequest serverHttpRequest = (ServerHttpRequest) advice.getParameterArray()[0];
             return serverHttpRequest.getHeaders().getFirst(key);
         }

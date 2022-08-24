@@ -17,6 +17,8 @@ package com.pamirs.attach.plugin.cluster.test.check.interceptor.web;
 
 import com.netflix.zuul.message.http.HttpRequestMessage;
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import io.netty.handler.codec.http.HttpMessage;
 
@@ -25,16 +27,17 @@ import io.netty.handler.codec.http.HttpMessage;
  * @Author ocean_wll
  * @Date 2022/8/22 18:07
  */
+@Interrupted
 public class ChannelInboundHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
         Object request = advice.getParameterArray()[1];
-        if (request instanceof HttpMessage) {
+        if (ClassUtil.instanceOf(request, "io.netty.handler.codec.http.HttpMessage")) {
             HttpMessage httpMessage = (HttpMessage) request;
             return httpMessage.headers().get(key);
         }
-        if (request instanceof HttpRequestMessage) {
+        if (ClassUtil.instanceOf(request, "com.netflix.zuul.message.http.HttpRequestMessage")) {
             HttpRequestMessage requestMessage = (HttpRequestMessage) request;
             return requestMessage.getHeaders().getFirst(key);
         }

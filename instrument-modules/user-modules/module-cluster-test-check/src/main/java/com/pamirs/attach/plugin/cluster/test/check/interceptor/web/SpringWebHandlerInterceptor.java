@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.cluster.test.check.interceptor.web;
 
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -24,11 +26,12 @@ import org.springframework.web.server.ServerWebExchange;
  * @Author ocean_wll
  * @Date 2022/8/22 18:02
  */
+@Interrupted
 public class SpringWebHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (advice.getParameterArray()[0] instanceof ServerWebExchange) {
+        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "org.springframework.web.server.ServerWebExchange")) {
             ServerWebExchange serverWebExchange = (ServerWebExchange) advice.getParameterArray()[0];
             return serverWebExchange.getRequest().getHeaders().getFirst(key);
         }

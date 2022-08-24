@@ -16,6 +16,8 @@
 package com.pamirs.attach.plugin.cluster.test.check.interceptor.web;
 
 import com.pamirs.attach.plugin.cluster.test.check.interceptor.AbstractCheckInterceptor;
+import com.pamirs.attach.plugin.cluster.test.check.utils.ClassUtil;
+import com.shulie.instrument.simulator.api.annotation.Interrupted;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import io.undertow.server.HttpServerExchange;
 
@@ -24,11 +26,12 @@ import io.undertow.server.HttpServerExchange;
  * @Author ocean_wll
  * @Date 2022/8/22 17:44
  */
+@Interrupted
 public class UndertowHttpHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (advice.getParameterArray()[0] instanceof HttpServerExchange) {
+        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "io.undertow.server.HttpServerExchange")) {
             HttpServerExchange serverExchange = (HttpServerExchange) advice.getParameterArray()[0];
             return serverExchange.getRequestHeaders().getFirst(key);
         }

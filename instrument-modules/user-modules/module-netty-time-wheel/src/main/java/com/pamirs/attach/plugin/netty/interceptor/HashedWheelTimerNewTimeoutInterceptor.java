@@ -20,10 +20,6 @@ public class HashedWheelTimerNewTimeoutInterceptor extends ParametersWrapperInte
             return args;
         }
         TimerTask bizTimerTask = (TimerTask)args[0];
-        if(bizTimerTask instanceof TraceTimerTask){
-            ((TraceTimerTask)bizTimerTask).setRpcContext(Pradar.getInvokeContextMap());
-            return args;
-        }
         TraceTimerTask ptTimerTask = new TraceTimerTask(bizTimerTask, Pradar.getInvokeContextMap());
         args[0] = ptTimerTask;
         return args;

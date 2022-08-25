@@ -40,12 +40,8 @@ public class TraceTimerTask implements TimerTask {
         this.rpcContext = rpcContext;
     }
 
-    public void setBusTimerTask(TimerTask busTimerTask) {
-        this.busTimerTask = busTimerTask;
-    }
-
-    public void setRpcContext(Map<String, String> rpcContext) {
-        this.rpcContext = rpcContext;
+    public TimerTask getBusTimerTask() {
+        return busTimerTask;
     }
 }
 

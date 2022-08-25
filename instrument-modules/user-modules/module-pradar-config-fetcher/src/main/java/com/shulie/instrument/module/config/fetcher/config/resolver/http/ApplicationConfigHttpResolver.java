@@ -1378,7 +1378,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 Map<String, Object> blackMap = (Map<String, Object>) blackList.get(i);
                 if (AppNameUtils.appName().equals(blackMap.get(APP_NAME))) {
                     Object keyObj = blackMap.get(REDIS_KEY_NEW);
-                    redisKeyWhiteList.addAll(((JSONArray) keyObj).toJavaList(String.class));
+                    for (Object o : ((JSONArray) keyObj)) {
+                        redisKeyWhiteList.add(String.valueOf(o));
+                    }
                 }
             }
         }

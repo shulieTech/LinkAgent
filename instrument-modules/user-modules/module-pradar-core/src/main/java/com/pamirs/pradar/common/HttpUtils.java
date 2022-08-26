@@ -215,7 +215,7 @@ public abstract class HttpUtils {
     }
 
     public static InputStream wrapperInput(Map<String, List<String>> headers, InputStream input) {
-        List<String> transferEncodings = headers.get("Transfer-Encoding");
+        List<String> transferEncodings = headers.get("transfer-encoding");
         if (transferEncodings != null && !transferEncodings.isEmpty()) {
             String encodings = transferEncodings.get(0);
             String[] elements = StringUtils.split(encodings, ';');
@@ -225,7 +225,7 @@ public abstract class HttpUtils {
             }
             return input;
         }
-        List<String> contentLengths = headers.get("Content-Length");
+        List<String> contentLengths = headers.get("content-length");
         if (contentLengths != null && !contentLengths.isEmpty()) {
             long length = -1;
             for (String contentLength : contentLengths) {
@@ -249,7 +249,7 @@ public abstract class HttpUtils {
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
             String[] headerPair = StringUtils.split(line, ':');
-            String name = headerPair[0].trim();
+            String name = headerPair[0].trim().toLowerCase();
             String value = headerPair[1].trim();
             List<String> values = headers.get(name);
             if (values == null) {

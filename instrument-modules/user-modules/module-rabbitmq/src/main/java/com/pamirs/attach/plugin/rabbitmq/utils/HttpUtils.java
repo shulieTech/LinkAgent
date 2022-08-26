@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -131,7 +131,7 @@ public abstract class HttpUtils {
     }
 
     public static InputStream wrapperInput(Map<String, List<String>> headers, InputStream input) {
-        List<String> transferEncodings = headers.get("Transfer-Encoding");
+        List<String> transferEncodings = headers.get("transfer-encoding");
         if (transferEncodings != null && !transferEncodings.isEmpty()) {
             String encodings = transferEncodings.get(0);
             String[] elements = StringUtils.split(encodings, ';');
@@ -142,7 +142,7 @@ public abstract class HttpUtils {
             }
             return input;
         }
-        List<String> contentLengths = headers.get("Content-Length");
+        List<String> contentLengths = headers.get("content-length");
         if (contentLengths != null && !contentLengths.isEmpty()) {
             long length = -1;
             for (String contentLength : contentLengths) {
@@ -166,7 +166,7 @@ public abstract class HttpUtils {
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
             String[] headerPair = StringUtils.split(line, ':');
-            String name = headerPair[0].trim();
+            String name = headerPair[0].trim().toLowerCase();
             String value = headerPair[1].trim();
             List<String> values = headers.get(name);
             if (values == null) {

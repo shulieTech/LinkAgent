@@ -294,6 +294,7 @@ public final class RedisUtils {
 
         IGNORE_NAME.add("mqserverinfos");
         IGNORE_NAME.add("scriptLoad");
+        IGNORE_NAME.add("unwatch");
 
     }
 

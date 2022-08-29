@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.core.extension;
 
 import com.shulie.instrument.simulator.api.extension.AdviceListenerWrap;
-import com.shulie.instrument.simulator.api.extension.AdviceListenerWrapBuilder;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
 
@@ -55,35 +54,35 @@ public class ExtensionAdviceWrapContainer extends AdviceListenerWrap {
 
     @Override
     public void beforeCall(Advice advice, int callLineNum, boolean isInterface, String callJavaClassName,
-        String callJavaMethodName, String callJavaMethodDesc) {
+                           String callJavaMethodName, String callJavaMethodDesc) {
         AdviceListener adviceListener = wrapAdviceListener();
         adviceListener.beforeCall(advice, callLineNum, isInterface, callJavaClassName, callJavaMethodName,
-            callJavaMethodDesc);
+                callJavaMethodDesc);
     }
 
     @Override
     public void afterCallReturning(Advice advice, int callLineNum, boolean isInterface, String callJavaClassName,
-        String callJavaMethodName, String callJavaMethodDesc) {
+                                   String callJavaMethodName, String callJavaMethodDesc) {
         AdviceListener adviceListener = wrapAdviceListener();
         adviceListener.afterCallReturning(advice, callLineNum, isInterface, callJavaClassName, callJavaMethodName,
-            callJavaMethodDesc);
+                callJavaMethodDesc);
     }
 
     @Override
     public void afterCallThrowing(Advice advice, int callLineNum, boolean isInterface, String callJavaClassName,
-        String callJavaMethodName, String callJavaMethodDesc, Throwable callThrowable) {
+                                  String callJavaMethodName, String callJavaMethodDesc, Throwable callThrowable) {
         AdviceListener adviceListener = wrapAdviceListener();
         adviceListener.afterCallThrowing(advice, callLineNum, isInterface, callJavaClassName, callJavaMethodName,
-            callJavaMethodDesc,
-            callThrowable);
+                callJavaMethodDesc,
+                callThrowable);
     }
 
     @Override
     public void afterCall(Advice advice, int callLineNum, String callJavaClassName, String callJavaMethodName,
-        String callJavaMethodDesc, Throwable callThrowable) {
+                          String callJavaMethodDesc, Throwable callThrowable) {
         AdviceListener adviceListener = wrapAdviceListener();
         adviceListener.afterCall(advice, callLineNum, callJavaClassName, callJavaMethodName, callJavaMethodDesc,
-            callThrowable);
+                callThrowable);
     }
 
     @Override
@@ -93,12 +92,6 @@ public class ExtensionAdviceWrapContainer extends AdviceListenerWrap {
     }
 
     private AdviceListener wrapAdviceListener() {
-        AdviceListener adviceListener = this.adviceListener;
-//        for (AdviceListenerWrapBuilder adviceListenerWrapBuilder : GlobalAdviceWrapBuilders.getAdviceListenerWrapBuilders()) {
-/*
-             adviceListener = adviceListenerWrapBuilder.build(adviceListener);
-*/
-//        }
-        return adviceListener;
+        return this.adviceListener;
     }
 }

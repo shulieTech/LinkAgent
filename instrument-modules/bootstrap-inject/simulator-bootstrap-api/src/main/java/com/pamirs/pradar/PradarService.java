@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,9 @@ package com.pamirs.pradar;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Pradar 向外暴露的服务，在使用服务时需要确认当前压测服务是否可用
@@ -25,6 +28,9 @@ import java.util.Map;
  * @since 2020/11/11 2:08 下午
  */
 public final class PradarService {
+
+    public static ConcurrentMap<String, Boolean> configSwitchers = new ConcurrentHashMap<String, Boolean>();
+
     /**
      * pradar 的 header 头前缀
      */
@@ -124,8 +130,30 @@ public final class PradarService {
      */
     static public final String PRADAR_NODE_ID_KEY = "nid";
 
+    public static final String PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX = "PerfomanceTest";
+
+
+    /**
+     * 压测环境是否已经准备好
+     */
+    public static volatile boolean isClusterTestReady = false;
+
+    /**
+     * 压测开关 -- 控制台
+     */
+    public static AtomicBoolean clusterTestSwitch = new AtomicBoolean(true);
+
     private static IPradarService service;
 
+    /**
+     * 是否支持压测
+     */
+    public static boolean isClusterTestEnabled = getPressEnabled();
+
+    /**
+     * 是否有效期内
+     */
+    public static boolean isValid = true;
 
     /**
      * 获取 pradar header 头前缀
@@ -241,27 +269,47 @@ public final class PradarService {
         return service == null ? null : service.isSaveBusinessTrace();
     }
 
-    public static boolean isSilence(){
+    public static boolean isSilence() {
         return service != null && service.isSilence();
     }
 
-    /**
-     * 返回当前压测是否可用
-     *
-     * @return true|false
-     */
-    public static boolean isClusterTestEnabled() {
+
+    public static boolean setClusterTest() {
         if (service == null) {
             return false;
         }
-        return service.isClusterTestEnabled();
+        return service.setClusterTest();
     }
 
+    /**
+     * 压测是否可用
+     * 前提条件为压测环境已经准备好,并且压测开关是打开的
+     * 并且压测开关是打开的并且在有效期内或者体验模式开启
+     *
+     * @return
+     */
+    public static boolean isClusterTestEnabled() {
+        return PradarService.isClusterTestReady && clusterTestSwitch.get() && (isClusterTestEnabled && isValid) && isAllConfigValid();
+    }
 
-    public static boolean setClusterTest(){
-        if (service == null){
-            return false;
+    private static boolean isAllConfigValid() {
+        for (Map.Entry<String, Boolean> entry : configSwitchers.entrySet()) {
+            if (!entry.getValue()) {
+                return false;
+            }
         }
-        return service.setClusterTest();
+        return true;
+    }
+
+    private static String getSystemProperty(String key, String defau) {
+        try {
+            return System.getProperty(key, defau);
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    private static Boolean getPressEnabled() {
+        return Boolean.valueOf(getSystemProperty("pradar.switcher.press", "true"));
     }
 }

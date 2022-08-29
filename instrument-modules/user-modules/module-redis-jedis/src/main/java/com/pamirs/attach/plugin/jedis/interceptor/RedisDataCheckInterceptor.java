@@ -14,13 +14,6 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.RedisUtils;
@@ -34,6 +27,9 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.UnsupportedEncodingException;
+import java.util.*;
 
 /**
  * @author ranghai
@@ -131,7 +127,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
         if (nullNum == args.length) {
             return null;
         }
-        throw new PressureMeasureError("Jedis not support key deserialize !");
+        throw new PressureMeasureError("Jedis not support key deserialize !, redisDataCheck");
     }
 
     private String toKeyString(Object key) {

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -27,7 +27,6 @@ import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
-import redis.clients.jedis.commands.ProtocolCommand;
 
 import java.util.*;
 
@@ -89,7 +88,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
         Collection<String> whiteList = GlobalConfig.getInstance().getCacheKeyWhiteList();
         boolean canMatchWhiteList = false;
-        if (readMethod.contains(methodName)){
+        if (readMethod.contains(methodName)) {
             canMatchWhiteList = true;
         }
 
@@ -115,7 +114,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return processXReadGroup(args, whiteList);
         }
 
-        if ("mset".equals(advice.getBehaviorName())||"msetnx".equals(advice.getBehaviorName())) {
+        if ("mset".equals(advice.getBehaviorName()) || "msetnx".equals(advice.getBehaviorName())) {
             return processMset(args, whiteList, canMatchWhiteList);
         }
 
@@ -126,7 +125,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         Object params = args[0];
         if (params instanceof String[]) {
             String[] data = (String[]) params;
-            for (int i = 0; i < data.length; i=i+2) {
+            for (int i = 0; i < data.length; i = i + 2) {
                 data[i] = fetchKeyString(data[i], whiteList, canMatchWhiteList);
             }
             return args;
@@ -244,7 +243,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             }
         }
 
-        throw new PressureMeasureError("Jedis not support key deserialize !");
+        throw new PressureMeasureError("Jedis not support key deserialize !, mjedisInterceptor");
     }
 
     private Object[] processIndex(Object[] args, Collection<String> whiteList, int keyIndex, boolean canMatchWhiteList) {
@@ -357,7 +356,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         continue;
                     }
                     boolean contains = false;
-                    if (canMatchWhiteList){
+                    if (canMatchWhiteList) {
                         for (String white : whiteList) {
                             if (key.startsWith(white)) {
                                 contains = true;
@@ -395,7 +394,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         continue;
                     }
                     boolean contains = false;
-                    if (canMatchWhiteList){
+                    if (canMatchWhiteList) {
                         for (String white : whiteList) {
                             if (key.startsWith(white)) {
                                 contains = true;

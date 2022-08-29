@@ -37,8 +37,8 @@ public abstract class AbstractCheckInterceptor extends AdviceListener {
 
     @Override
     public void before(Advice advice) throws Throwable {
-        Object uaValue;
-        Object clusterTestValue;
+        Object uaValue = null;
+        Object clusterTestValue = null;
         try {
             uaValue = getParam(advice, PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY);
             clusterTestValue = getParam(advice, PradarService.PRADAR_CLUSTER_TEST_KEY);
@@ -48,7 +48,7 @@ public abstract class AbstractCheckInterceptor extends AdviceListener {
                     advice.getBehaviorName(),
                     Arrays.toString(advice.getBehavior().getParameterTypes()),
                     t);
-            throw new ClusterTestNotReadyException("【LinkAgent】get request header error", t);
+//            throw new ClusterTestNotReadyException("【LinkAgent】get request header error", t);
         }
 
         boolean isClusterTest = PradarService.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX.equals(uaValue)

@@ -15,12 +15,16 @@
 package com.pamirs.pradar;
 
 import com.alibaba.fastjson.JSON;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.datasource.TableParserResult;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.text.StrBuilder;
@@ -32,6 +36,8 @@ import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.pamirs.pradar.AppNameUtils.appName;
@@ -2499,6 +2505,14 @@ public final class Pradar {
         PradarLogDaemon.flushAndWait();
     }
 
+
+    private static LoadingCache<String, Optional<String>> cachePropertiesBuilder = CacheBuilder.newBuilder()
+            .maximumSize(300).expireAfterAccess(3 * 60, TimeUnit.SECONDS).build(new CacheLoader<String, Optional<String>>() {
+                @Override
+                public Optional<String> load(String key) throws Exception {
+                    return Optional.ofNullable(getPropertyInner(key));
+                }
+            });
     /**
      * 获取服务配置
      *
@@ -2517,12 +2531,19 @@ public final class Pradar {
      * @return 返回配置值
      */
     public static String getProperty(String key, String defaultValue) {
+        String value = null;
+        try {
+            value = cachePropertiesBuilder.get(key).orElse(defaultValue);
+        } catch (ExecutionException e) {
+            LOGGER.warn("read value fail!", e);
+        }
+        return value;
+    }
+
+    private static String getPropertyInner(String key) {
         String value = System.getProperty(key);
         if (value == null) {
             value = System.getenv(key);
-        }
-        if (value == null) {
-            return defaultValue;
         }
         return value;
     }

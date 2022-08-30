@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -45,7 +45,6 @@ import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Description
@@ -56,14 +55,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Destroyable(DbcpDestroy.class)
 public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorAdaptor {
     private final static Logger logger = LoggerFactory.getLogger(DataSourceGetConnectionCutoffInterceptor.class.getName());
-    private static AtomicBoolean isInited = new AtomicBoolean(false);
 
     public DataSourceGetConnectionCutoffInterceptor() {
         addListener();
     }
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
+    public CutOffResult cutoff0(Advice advice) throws SQLException {
         DataSourceWrapUtil.attachment(advice);
         Object target = advice.getTarget();
         BasicDataSource dataSource = (BasicDataSource) target;
@@ -84,7 +82,11 @@ public class DataSourceGetConnectionCutoffInterceptor extends CutoffInterceptorA
                 try {
                     connection = mediatorDataSource.getConnection();
                 } catch (SQLException e) {
-                    throw new PressureMeasureError(e);
+                    if (Pradar.isClusterTest()) {
+                        throw new PressureMeasureError(e);
+                    } else {
+                        throw e;
+                    }
                 }
             } else {
                 if (!Pradar.isClusterTest()) {

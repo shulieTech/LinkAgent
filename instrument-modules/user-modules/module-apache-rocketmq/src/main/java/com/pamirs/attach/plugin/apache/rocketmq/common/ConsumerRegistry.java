@@ -441,7 +441,7 @@ public class ConsumerRegistry {
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
         String key = topic + "#" + businessConsumer.getConsumerGroup();
         if (PradarSwitcher.whiteListSwitchOn() && !mqWhiteList.contains(key) && !mqWhiteList.contains(topic)) {
-            logger.warn("[RockemtMQ] {} not in WhiteList:{}", key, Arrays.toString(mqWhiteList.toArray()));
+//            logger.warn("[RockemtMQ] {} not in WhiteList:{}", key, Arrays.toString(mqWhiteList.toArray()));
             return false;
         }
         return true;
@@ -459,7 +459,6 @@ public class ConsumerRegistry {
 
     private static void addListener(final DefaultMQPushConsumer businessConsumer) {
         final RebalanceImpl rebalance = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl();
-        final Set<String> topics = rebalance.getSubscriptionInner().keySet();
         final PradarEventListener listener = new PradarEventListener() {
             @Override
             public EventResult onEvent(IEvent event) {
@@ -480,6 +479,7 @@ public class ConsumerRegistry {
                     return shutdownShadowConsumer(businessConsumer);
                 } else if (event instanceof ShadowConsumerDisableEvent) {
                     String group = businessConsumer.getConsumerGroup();
+                    Set<String> topics = rebalance.getSubscriptionInner().keySet();
                     for (String topic : topics) {
                         List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent)event).getTarget();
                         for (ShadowConsumerDisableInfo disableInfo : disableInfos) {

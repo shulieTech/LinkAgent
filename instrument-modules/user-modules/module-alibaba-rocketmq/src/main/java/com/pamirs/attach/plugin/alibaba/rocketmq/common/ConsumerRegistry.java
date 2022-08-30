@@ -223,10 +223,6 @@ public class ConsumerRegistry {
             for (Map.Entry<String, SubscriptionData> entry : map.entrySet()) {
                 String topic = entry.getKey();
                 if (!isPermitInitConsumer(businessConsumer, topic)) {
-                    if (passTime > 5000) {
-                        logger.warn("Alibaba-RocketMQ topic : {} is not in whitelist!", topic);
-                        lastWhitelistWarnTimes.put(businessConsumer, now);
-                    }
                     continue;
                 }
                 topicsInWhiteList.put(entry.getKey(), entry.getValue());

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -57,63 +57,63 @@ public class SqlParser {
     private final static Logger LOGGER = LoggerFactory.getLogger(SqlParser.class);
     public static String lowerCase;
     private static LoadingCache<String, TableParserResult> cacheSqlTablesBuilder = CacheBuilder.newBuilder()
-        .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
-            new CacheLoader<String, TableParserResult>() {
-                @Override
-                public TableParserResult load(String name) throws Exception {
-                    try {
-                        String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
-                        String sql = args[0];
-                        String dbType = args[1];
-                        if("null".equals(dbType)){
-                            dbType = null;
+                    new CacheLoader<String, TableParserResult>() {
+                        @Override
+                        public TableParserResult load(String name) throws Exception {
+                            try {
+                                String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
+                                String sql = args[0];
+                                String dbType = args[1];
+                                if ("null".equals(dbType)) {
+                                    dbType = null;
+                                }
+                                return parseTables(sql, dbType);
+                            } catch (SQLException e) {
+                                return TableParserResult.EMPTY;
+                            }
                         }
-                        return parseTables(sql, dbType);
-                    } catch (SQLException e) {
-                        return TableParserResult.EMPTY;
                     }
-                }
-            }
 
-        );
+            );
     private static LoadingCache<String, String> cacheTableModeBuilder = CacheBuilder.newBuilder()
-        .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
-            new CacheLoader<String, String>() {
-                @Override
-                public String load(String name) throws Exception {
-                    String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
-                    String sql = args[0];
-                    String key = args[1];
-                    String dbType = args[2];
-                    if("null".equals(dbType)){
-                        dbType = null;
+                    new CacheLoader<String, String>() {
+                        @Override
+                        public String load(String name) throws Exception {
+                            String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
+                            String sql = args[0];
+                            String key = args[1];
+                            String dbType = args[2];
+                            if ("null".equals(dbType)) {
+                                dbType = null;
+                            }
+                            String midType = args[3];
+                            return parseAndReplaceTableNames(sql, key, dbType, midType);
+                        }
                     }
-                    String midType = args[3];
-                    return parseAndReplaceTableNames(sql, key, dbType, midType);
-                }
-            }
 
-        );
+            );
     private static LoadingCache<String, String> cacheSchemaModeBuilder = CacheBuilder.newBuilder()
-        .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
-            new CacheLoader<String, String>() {
-                @Override
-                public String load(String name) throws Exception {
-                    String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
-                    String sql = args[0];
-                    String key = args[1];
-                    String dbType = args[2];
-                    if("null".equals(dbType)){
-                        dbType = null;
+                    new CacheLoader<String, String>() {
+                        @Override
+                        public String load(String name) throws Exception {
+                            String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
+                            String sql = args[0];
+                            String key = args[1];
+                            String dbType = args[2];
+                            if ("null".equals(dbType)) {
+                                dbType = null;
+                            }
+                            return parseAndReplaceSchema(sql, key, dbType);
+                        }
                     }
-                    return parseAndReplaceSchema(sql, key, dbType);
-                }
-            }
 
-        );
+            );
 
     public static void clear() {
         cacheSchemaModeBuilder.invalidateAll();
@@ -145,7 +145,7 @@ public class SqlParser {
         if (parser == null) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring("dbType not support dbType" + dbTypeName + " sql" + sql, 0, 1995));
+                        StringUtils.substring("dbType not support dbType" + dbTypeName + " sql" + sql, 0, 1995));
             }
             throw new SQLException("dbType not support dbType" + dbTypeName + " sql" + sql);
         }
@@ -184,7 +184,7 @@ public class SqlParser {
         } catch (Throwable e) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
+                        StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
             }
             throw new SQLException("Wrong sql:" + sql, e);
         }
@@ -202,15 +202,15 @@ public class SqlParser {
             return cacheTableModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype + "$$$$" + midType);
         } catch (Throwable e) {
             LOGGER.error("replace table to shadow table error. sql={}, key={}, dbType={}", sql, dbConnectionKey, dbType,
-                e);
+                    e);
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
             }
             SQLException exception = null;
             if (e instanceof SQLException) {
-                exception = (SQLException)e;
+                exception = (SQLException) e;
             } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
-                exception = (SQLException)e.getCause();
+                exception = (SQLException) e.getCause();
             } else {
                 exception = new SQLException(e);
             }
@@ -230,7 +230,7 @@ public class SqlParser {
             return cacheSchemaModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype);
         } catch (Throwable e) {
             LOGGER.error("replace schema to shadow schema error. sql={}, key={}, dbType={}", sql, dbConnectionKey,
-                dbType, e);
+                    dbType, e);
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
             }
@@ -269,7 +269,7 @@ public class SqlParser {
             return2log = returnObj;
         }
         String content = String.format(pattern, method, SqlParser.class, SqlParser.class.getClassLoader().toString(),
-            parameterArray, return2log);
+                parameterArray, return2log);
         DebugHelper.addDebugInfo(level, content);
     }
 
@@ -362,7 +362,7 @@ public class SqlParser {
      * @throws SQLException
      */
     public static String parseAndReplaceSchema(String sql, String key, String dbTypeName) throws SQLException {
-        sql = sql.replaceAll("<  >","<>");
+        sql = sql.replaceAll("<  >", "<>");
         ShadowDatabaseConfig config = GlobalConfig.getInstance().getShadowDatabaseConfig(key);
         if (config == null) {
             return sql;
@@ -373,7 +373,7 @@ public class SqlParser {
         if (parser == null) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
+                        StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
             }
             throw new SQLException("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql);
         }
@@ -421,7 +421,7 @@ public class SqlParser {
         } catch (Throwable e) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
+                        StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
             }
             throw new SQLException("Wrong sql:" + sql, e);
         }
@@ -437,26 +437,73 @@ public class SqlParser {
         shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
         shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");
         shadowDatabaseConfig.getBusinessShadowTables().put("user2", "pt_user2");
+        shadowDatabaseConfig.getBusinessShadowTables().put("task", "pt_task");
         GlobalConfig.getInstance().getShadowDatasourceConfigs().put("jdbc:mysql://127.0.0.1:3306/testdb|root",
-            shadowDatabaseConfig);
-        System.out.println(parseAndReplaceTableNames(
-            " select `testdb`.`user`.`id`, `testdb`.`user`.`name`, `testdb`.`user`.`password`, `testdb`.`user`"
-                + ".`createTime`, `testdb`.`user`.`updateTime` from `testdb`.`user` limit ? ",
-            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
+                shadowDatabaseConfig);
 
-        System.out.println(parseAndReplaceTableNames(
-            "SELECT r.*, c.org_name, c.org_code, (SELECT org_name FROM t_city WHERE org_code = c.parent_code) "
-                + "provinceName FROM t_route_rule r LEFT JOIN t_city c ON c.sys_tenant_id = 'CLOVER_T3' AND r"
-                + ".city_uuid = c.uuid WHERE r.sys_tenant_id = 'CLOVER_T3' AND r.status != -1 AND r.uuid = ? AND r"
-                + ".status = ? AND r.rule_name LIKE CONCAT('%', ?, '%') AND r.rule_type = ? AND r.type_time = ? AND r"
-                + ".business_type = ? AND r.car_level = ? AND c.org_code = ? AND r.city_uuid = ? AND r.area_type = ? "
-                + "AND r.city_uuid IN (?) AND content->'$.examineYear' = ? AND r.type_trip = ? AND r.extend_biz_type "
-                + "= ? ORDER BY r.status DESC, r.effective_time DESC, r.version_number DESC, r.update_time DESC",
-            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "other"));
+        String sql = "SELECT DISTINCT\n" +
+                "            t.task_no as conflictTaskNo,\n" +
+                "            td.task_name as conflictTaskName,\n" +
+                "            JSON_UNQUOTE(json_extract(t.srns,JSON_UNQUOTE(JSON_SEARCH(t.srns,'one', b.srn)))) as conflictSrn,\n" +
+                "            JSON_UNQUOTE(json_extract(td.displayName,concat('$.', json_extract(t.srns,JSON_UNQUOTE(JSON_SEARCH(t.srns,'one', b.srn)))))) as conflictEntity,\n" +
+                "            DATE_FORMAT(t.plan_start_time,'%Y-%m-%d %H:%i') as conflictStartWindow,\n" +
+                "            DATE_FORMAT(t.plan_end_time,'%Y-%m-%d %H:%i') as conflictEndWindow,\n" +
+                "            concat(t.create_by_name,'(',t.create_by_no,')') as createUser,\n" +
+                "            b.system_code as affectSystemCode\n" +
+                "        FROM\n" +
+                "            task t\n" +
+                "                JOIN (\n" +
+                "                SELECT DISTINCT\n" +
+                "                    t.task_no,\n" +
+                "                    a.srn AS srn,\n" +
+                "                    t.plan_start_time,\n" +
+                "                    t.plan_end_time,\n" +
+                "                    c.system_code\n" +
+                "                FROM\n" +
+                "                    task t,\n" +
+                "                    task_detail td,\n" +
+                "                    json_table (\n" +
+                "                            t.srns,\n" +
+                "                            '$[*]' COLUMNS (srn text PATH '$')\n" +
+                "                        ) AS a,\n" +
+                "                    json_table (\n" +
+                "                            td.affect_system_code,\n" +
+                "                            '$[*]' COLUMNS (system_code text PATH '$')\n" +
+                "                        ) AS c\n" +
+                "                WHERE t.task_no = #{taskNo}\n" +
+                "                  AND t.task_no = td.task_no\n" +
+                "            ) b ON t.plan_start_time = b.plan_start_time\n" +
+                "                AND t.plan_end_time = b.plan_end_time\n" +
+                "                AND JSON_contains(t.srns, json_array(b.srn))\n" +
+                "                AND t.task_no != b.task_no\n" +
+                "                AND current_status in ('productAudit','centreAudit','pending','running')\n" +
+                "                join task_detail td on t.task_no=td.task_no";
+        System.out.println(sql);
+        System.out.println("================");
+        System.out.println(parseAndReplaceSchema(sql, "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql"));
+
+        System.out.println("================");
+
+        System.out.println(parseAndReplaceTableNames(sql, "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
+
+//        System.out.println(parseAndReplaceTableNames(
+//            " select `testdb`.`user`.`id`, `testdb`.`user`.`name`, `testdb`.`user`.`password`, `testdb`.`user`"
+//                + ".`createTime`, `testdb`.`user`.`updateTime` from `testdb`.`user` limit ? ",
+//            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
+//
+//        System.out.println(parseAndReplaceTableNames(
+//            "SELECT r.*, c.org_name, c.org_code, (SELECT org_name FROM t_city WHERE org_code = c.parent_code) "
+//                + "provinceName FROM t_route_rule r LEFT JOIN t_city c ON c.sys_tenant_id = 'CLOVER_T3' AND r"
+//                + ".city_uuid = c.uuid WHERE r.sys_tenant_id = 'CLOVER_T3' AND r.status != -1 AND r.uuid = ? AND r"
+//                + ".status = ? AND r.rule_name LIKE CONCAT('%', ?, '%') AND r.rule_type = ? AND r.type_time = ? AND r"
+//                + ".business_type = ? AND r.car_level = ? AND c.org_code = ? AND r.city_uuid = ? AND r.area_type = ? "
+//                + "AND r.city_uuid IN (?) AND content->'$.examineYear' = ? AND r.type_trip = ? AND r.extend_biz_type "
+//                + "= ? ORDER BY r.status DESC, r.effective_time DESC, r.version_number DESC, r.update_time DESC",
+//            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "other"));
     }
 
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName, String midType) throws SQLException {
-        sql = sql.replaceAll("<  >","<>");
+        sql = sql.replaceAll("<  >", "<>");
         DbType dbType = DbType.of(dbTypeName);
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {
@@ -475,7 +522,7 @@ public class SqlParser {
         if (parser == null) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
+                        StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
             }
             throw new SQLException("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql);
         }
@@ -549,23 +596,23 @@ public class SqlParser {
         } catch (Throwable e) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
+                        StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
             }
             throw new SQLException("Wrong sql:" + sql, e);
         }
 
         SQLStatementParser parser2 = SQLParserUtils
-            .createSQLStatementParser(val.toString(), dbTypeName);
+                .createSQLStatementParser(val.toString(), dbTypeName);
         final List<SQLStatement> sqlStatements2 = parser2.parseStatementList();
 
         for (final SQLStatement sqlStatement : sqlStatements2) {
             if (sqlStatement instanceof SQLInsertStatement
-                || sqlStatement instanceof SQLUpdateStatement
-                || sqlStatement instanceof SQLDeleteStatement
-                || sqlStatement instanceof SQLAlterTableStatement
-                || sqlStatement instanceof SQLDropTableStatement
-                || sqlStatement instanceof SQLCreateTableStatement
-                || sqlStatement instanceof MySqlRenameTableStatement) {
+                    || sqlStatement instanceof SQLUpdateStatement
+                    || sqlStatement instanceof SQLDeleteStatement
+                    || sqlStatement instanceof SQLAlterTableStatement
+                    || sqlStatement instanceof SQLDropTableStatement
+                    || sqlStatement instanceof SQLCreateTableStatement
+                    || sqlStatement instanceof MySqlRenameTableStatement) {
                 SchemaStatVisitor visitor = SQLUtils.createSchemaStatVisitor(dbType);
                 sqlStatement.accept(visitor);
 
@@ -597,27 +644,27 @@ public class SqlParser {
                         }
 
                         int idx = key.lastIndexOf('|');
-                        String userName = idx > 0 ? key.substring(idx+1) : "未知";
+                        String userName = idx > 0 ? key.substring(idx + 1) : "未知";
 
                         ErrorReporter.buildError()
-                            .setErrorType(ErrorTypeEnum.DataSource)
-                            .setErrorCode("datasource-0004")
-                            .setMessage(String
-                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s, userName:%s, 中间件类型:%s", url,
-                                    name.getName(),
-                                    getDriverClassName(url), dbType, userName, midType))
-                            .setDetail(
-                                String.format(
-                                    "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
-                                        + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
-                                    name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql,
-                                    val))
-                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                            .report();
+                                .setErrorType(ErrorTypeEnum.DataSource)
+                                .setErrorCode("datasource-0004")
+                                .setMessage(String
+                                        .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s, userName:%s, 中间件类型:%s", url,
+                                                name.getName(),
+                                                getDriverClassName(url), dbType, userName, midType))
+                                .setDetail(
+                                        String.format(
+                                                "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
+                                                        + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
+                                                name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql,
+                                                val))
+                                .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                                .report();
                         throw new SQLException(String.format(
-                            "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
-                                + "driverClassName:%s, dbType:%s, username:%s, 中间件类型:%s, [sql] %s [new sql] %s",
-                            name.getName(), url, name.getName(), getDriverClassName(url), dbType, userName, midType, sql, val));
+                                "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
+                                        + "driverClassName:%s, dbType:%s, username:%s, 中间件类型:%s, [sql] %s [new sql] %s",
+                                name.getName(), url, name.getName(), getDriverClassName(url), dbType, userName, midType, sql, val));
                     }
                 }
             }

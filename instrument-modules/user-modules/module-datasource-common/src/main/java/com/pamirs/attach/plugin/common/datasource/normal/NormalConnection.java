@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -19,6 +19,7 @@ import com.pamirs.attach.plugin.common.datasource.check.NormalCheckStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceCallableStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTracePreparedStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceStatement;
+import com.pamirs.attach.plugin.common.datasource.utils.ProxyFlag;
 import com.pamirs.attach.plugin.common.datasource.utils.SqlUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -80,7 +81,7 @@ public class NormalConnection implements Connection {
 
 
     public NormalConnection(DataSource dataSource, Connection connection, String dbConnectionKey, String url,
-        String username, String dbType, String midType) {
+                            String username, String dbType, String midType) {
         this.dataSource = dataSource;
         this.connection = connection;
         this.dbConnectionKey = dbConnectionKey;
@@ -129,6 +130,7 @@ public class NormalConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public void abort(Executor arg0) throws SQLException {
         try {
             connection.abort(arg0);
@@ -245,7 +247,7 @@ public class NormalConnection implements Connection {
     @Override
     public Statement createStatement() throws SQLException {
         return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+                midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -258,7 +260,7 @@ public class NormalConnection implements Connection {
     @Override
     public Statement createStatement(int arg0, int arg1) throws SQLException {
         return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+                midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -272,7 +274,7 @@ public class NormalConnection implements Connection {
     public Statement createStatement(int arg0, int arg1, int arg2)
             throws SQLException {
         return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(connection.createStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+                midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     /**
@@ -366,6 +368,7 @@ public class NormalConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public int getNetworkTimeout() throws SQLException {
         try {
             return connection.getNetworkTimeout();
@@ -395,6 +398,7 @@ public class NormalConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public String getSchema() throws SQLException {
         try {
             return connection.getSchema();
@@ -492,10 +496,15 @@ public class NormalConnection implements Connection {
      */
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType, this.midType);
-        SqlUtils.checkNormalConnectionAccessValid(dbType, sql);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(sql), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType, this.midType);
+            SqlUtils.checkNormalConnectionAccessValid(dbType, sql);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(sql), dbType), this.connection, this.dbConnectionKey, this.dbType,
+                    midType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -508,10 +517,15 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -524,10 +538,15 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -540,10 +559,15 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, String[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1), dbType), this.connection, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -556,10 +580,15 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2), dbType), this.connection, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -572,10 +601,15 @@ public class NormalConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2,
                                               int arg3) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2, arg3), dbType), this.connection, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            SqlUtils.checkNormalConnectionAccessValid(dbType, arg0);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(connection.prepareStatement(arg0, arg1, arg2, arg3), dbType), this.connection, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -585,6 +619,7 @@ public class NormalConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public void setSchema(String arg0) throws SQLException {
         arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
         try {
@@ -758,6 +793,7 @@ public class NormalConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public void setNetworkTimeout(Executor arg0, int arg1) throws SQLException {
 
         try {

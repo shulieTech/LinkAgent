@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -35,10 +35,10 @@ public class CheckedTraceCallableStatement extends CheckedTracePreparedStatement
     protected CallableStatement targetStatement;
 
     public CheckedTraceCallableStatement(CallableStatement callableStatement, String sql, String url, String username, String dbType, boolean isPressureConnection, SqlMetaData sqlMetaData) {
-        this(callableStatement,sql,url,username,dbType,isPressureConnection,true,sqlMetaData);
+        this(callableStatement, sql, url, username, dbType, isPressureConnection, true, sqlMetaData);
     }
 
-    public CheckedTraceCallableStatement(CallableStatement callableStatement, String sql, String url, String username, String dbType,boolean isPressureConnection,boolean isChecked,SqlMetaData sqlMetaData) {
+    public CheckedTraceCallableStatement(CallableStatement callableStatement, String sql, String url, String username, String dbType, boolean isPressureConnection, boolean isChecked, SqlMetaData sqlMetaData) {
         super(callableStatement, sql, url, username, dbType, isPressureConnection, isChecked, sqlMetaData);
         this.targetStatement = callableStatement;
         if (this.sqlMetaData != null) {
@@ -602,6 +602,7 @@ public class CheckedTraceCallableStatement extends CheckedTracePreparedStatement
         targetStatement.setNClob(parameterName, reader);
     }
 
+    @Override
     public <T> T getObject(int parameterIndex, Class<T> type) throws SQLException {
         try {
             return targetStatement.getObject(parameterIndex, type);
@@ -611,6 +612,7 @@ public class CheckedTraceCallableStatement extends CheckedTracePreparedStatement
         return null;
     }
 
+    @Override
     public <T> T getObject(String parameterName, Class<T> type) throws SQLException {
         try {
             return targetStatement.getObject(parameterName, type);
@@ -1329,6 +1331,7 @@ public class CheckedTraceCallableStatement extends CheckedTracePreparedStatement
         }
     }
 
+    @Override
     public void closeOnCompletion() throws SQLException {
         try {
             this.targetStatement.closeOnCompletion();
@@ -1337,6 +1340,7 @@ public class CheckedTraceCallableStatement extends CheckedTracePreparedStatement
         }
     }
 
+    @Override
     public boolean isCloseOnCompletion() throws SQLException {
         try {
             return this.targetStatement.isCloseOnCompletion();

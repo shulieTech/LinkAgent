@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.hikariCP.interceptor;
 
 import com.pamirs.attach.plugin.dynamic.Attachment;
-import com.pamirs.attach.plugin.dynamic.Converter;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
 import com.pamirs.attach.plugin.dynamic.Type;
 import com.pamirs.attach.plugin.dynamic.template.HikariTemplate;
@@ -92,7 +91,7 @@ public class DataSourceConnectionInterceptor extends CutoffInterceptorAdaptor {
     }
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
+    public CutOffResult cutoff0(Advice advice) throws SQLException {
         Object target = advice.getTarget();
         addListener();
         attachment(advice);
@@ -113,7 +112,10 @@ public class DataSourceConnectionInterceptor extends CutoffInterceptorAdaptor {
             try {
                 connection = mediatorDataSource.getConnection();
             } catch (SQLException e) {
-                throw new PressureMeasureError(e);
+                if (Pradar.isClusterTest()) {
+                    throw new PressureMeasureError(e);
+                }
+                throw e;
             }
             return CutOffResult.cutoff(connection);
         } else {

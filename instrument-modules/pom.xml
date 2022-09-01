@@ -14,7 +14,7 @@
         <simulator.version>5.3.4</simulator.version>
         <pradar.core.version>2.0.1.0</pradar.core.version>
         <pradar.register.version>2.0.0.1</pradar.register.version>
-        <simulator.bootstrap.api.version>1.0.0</simulator.bootstrap.api.version>
+        <simulator.bootstrap.api.version>1.0.1</simulator.bootstrap.api.version>
         <simulator.internal.bootstrap.api.version>1.0.0</simulator.internal.bootstrap.api.version>
         <biz.classloader.inject.shadow.job.version>1.0.0</biz.classloader.inject.shadow.job.version>
         <module.datasource.common.version>2.0.0.0</module.datasource.common.version>

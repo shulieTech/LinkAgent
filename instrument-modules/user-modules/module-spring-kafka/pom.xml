@@ -19,7 +19,7 @@
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
-            <version>1.0.0</version>
+            <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

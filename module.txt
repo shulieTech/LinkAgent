@@ -67,3 +67,4 @@ module-netty-time-wheel
 module-proxool
 module-shadow-job
 module-spring-cloud-gateway
+module-cluster-test-check

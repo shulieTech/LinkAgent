@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -26,6 +26,10 @@ import com.shulie.instrument.simulator.message.ExecutionTagSupplier;
 public class DefaultExecutionTagSupplier implements ExecutionTagSupplier {
     @Override
     public int getExecutionTag(int listenerTag) {
+        // 当压测已经就绪，并且当前interceptor是在压测未就绪时运行的则直接忽略
+        if (PradarSwitcher.isClusterTestEnabled() && ListenersUtil.isExecuteWithClusterTestDisable(listenerTag)) {
+            return ExecutionTagSupplier.EXECUTION_IGNORE;
+        }
         if (PradarSwitcher.silenceSwitchOn() && !ListenersUtil.isNoSilence(listenerTag)) {
             return ExecutionTagSupplier.EXECUTION_IGNORE;
         }

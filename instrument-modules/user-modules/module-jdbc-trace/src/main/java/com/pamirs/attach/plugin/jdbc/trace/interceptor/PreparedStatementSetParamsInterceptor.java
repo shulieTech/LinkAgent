@@ -59,7 +59,7 @@ public class PreparedStatementSetParamsInterceptor extends AroundInterceptor {
             return;
         }
         Object[] methodArgs = advice.getParameterArray();
-        if (methodArgs.length < 2 && !int.class.isInstance(methodArgs[0])) {
+        if (methodArgs.length < 2 || !int.class.isInstance(methodArgs[0])) {
             return;
         }
         Map<Integer, Object> params = dynamicFieldManager.getDynamicField(advice.getTarget(), JdbcTraceConstants.params);

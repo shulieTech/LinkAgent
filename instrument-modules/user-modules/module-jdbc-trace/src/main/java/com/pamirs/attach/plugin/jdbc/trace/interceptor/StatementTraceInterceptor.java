@@ -53,7 +53,9 @@ public class StatementTraceInterceptor extends AroundInterceptor {
         }
         String sql = null;
         if (advice.getParameterArray().length > 0) {
-            sql = (String) advice.getParameterArray()[0];
+            if (advice.getParameterArray()[0] instanceof String) {
+                sql = (String) advice.getParameterArray()[0];
+            }
         }
 
         boolean isStartSuccess = false;
@@ -70,7 +72,7 @@ public class StatementTraceInterceptor extends AroundInterceptor {
 
     @Override
     public void doAfter(Advice advice) throws Throwable {
-        if (ProxyFlag.inProxy() ||isCheckedTraceStatement(advice) || isPreparedStatement(advice)) {
+        if (ProxyFlag.inProxy() || isCheckedTraceStatement(advice) || isPreparedStatement(advice)) {
             return;
         }
         JdbcTraceBean traceBean = advice.attachment();
@@ -94,7 +96,7 @@ public class StatementTraceInterceptor extends AroundInterceptor {
 
     @Override
     public void doException(Advice advice) throws Throwable {
-        if (ProxyFlag.inProxy() ||isCheckedTraceStatement(advice) || isPreparedStatement(advice)) {
+        if (ProxyFlag.inProxy() || isCheckedTraceStatement(advice) || isPreparedStatement(advice)) {
             return;
         }
         JdbcTraceBean traceBean = advice.attachment();

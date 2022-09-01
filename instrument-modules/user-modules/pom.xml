@@ -99,6 +99,7 @@
         <module>module-apache-kafkav2</module>
         <module>module-spring-rabbitmq</module>
         <module>module-rabbitmqv2</module>
+        <module>module-shadow-preparation</module>
     </modules>
 
     <build>

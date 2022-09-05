@@ -6,59 +6,38 @@ import com.pamirs.attach.plugin.shadow.preparation.utils.JdbcConnectionUtils;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 public enum JdbcTypeEnum {
 
-    MYSQL(){
+    MYSQL() {
         @Override
-        List<JdbcTableColumnInfos> fetchColumnINfo(Connection connection, String table) throws Exception {
-            return JdbcConnectionUtils.fetchColumnInfos(connection, table);
-        }
-
-        @Override
-        String showCreateTableSql(Connection connection, String table) throws SQLException {
-            return JdbcConnectionUtils.showCreateTableSql(connection, table);
+        Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
+            return JdbcConnectionUtils.fetchTablesStructures(connection, tables);
         }
     },
 
-    ORACLE(){
+    ORACLE() {
         @Override
-        List<JdbcTableColumnInfos> fetchColumnINfo(Connection connection, String table) throws Exception{
-            return null;
-        }
-
-        @Override
-        String showCreateTableSql(Connection connection, String table) {
+        Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
             return null;
         }
     },
 
-    SQLSERVER(){
+    SQLSERVER() {
         @Override
-        List<JdbcTableColumnInfos> fetchColumnINfo(Connection connection, String table) throws Exception{
-            return null;
-        }
-
-        @Override
-        String showCreateTableSql(Connection connection, String table) {
+        Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
             return null;
         }
     },
 
-    GBASE(){
+    GBASE() {
         @Override
-        List<JdbcTableColumnInfos> fetchColumnINfo(Connection connection, String table) throws Exception{
-            return JdbcConnectionUtils.fetchColumnInfos(connection, table);
-        }
-
-        @Override
-        String showCreateTableSql(Connection connection, String table) throws SQLException {
-            return JdbcConnectionUtils.showCreateTableSql(connection, table);
+        Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
+            return JdbcConnectionUtils.fetchTablesStructures(connection, tables);
         }
     };
 
-    abstract List<JdbcTableColumnInfos> fetchColumnINfo(Connection connection, String table) throws Exception;
-
-    abstract String showCreateTableSql(Connection connection, String table) throws SQLException;
+    abstract Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception;
 
 }

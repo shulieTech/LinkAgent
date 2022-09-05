@@ -897,7 +897,7 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarTenantKey() {
+    public static final String getPradarTenantKey() {
         return getSystemProperty(Pradar.TENANT_APP_KEY);
     }
 
@@ -906,7 +906,7 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarUserId() {
+    public static final String getPradarUserId() {
         return getSystemProperty("pradar.user.id");
     }
 
@@ -915,7 +915,7 @@ public final class Pradar {
      *
      * @return 当前环境变量
      */
-    static final String getEnvCode() {
+    public static final String getEnvCode() {
         return getSystemProperty(Pradar.ENV_CODE);
     }
 

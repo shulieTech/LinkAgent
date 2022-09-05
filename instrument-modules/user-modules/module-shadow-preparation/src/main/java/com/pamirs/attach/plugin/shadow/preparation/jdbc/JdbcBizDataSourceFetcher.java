@@ -10,11 +10,14 @@ import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 
+import javax.sql.DataSource;
 import java.util.*;
 
 public class JdbcBizDataSourceFetcher {
 
-    private static Set<JdbcDataSourceEntity> bizDataSources = new HashSet<JdbcDataSourceEntity>();
+    private static WeakHashMap<DataSource, String> bizDataSources = new WeakHashMap<DataSource, String>();
+    private static WeakHashMap<DataSource, String> shadowDataSources = new WeakHashMap<DataSource, String>();
+
 
     private static Map<String, String[]> datasourcePropertiesMappings = new HashMap<String, String[]>();
 
@@ -25,19 +28,25 @@ public class JdbcBizDataSourceFetcher {
         datasourcePropertiesMappings.put(ShadowPreparationConstants.hikaricp_datasource_sync_key, new String[]{"driverClassName", "jdbcUrl", "username", "password", "hikaricp"});
     }
 
-    public static void fetchBizDataSource() {
+    public static void refreshDataSources() {
+
         for (Map.Entry<String, String[]> entry : datasourcePropertiesMappings.entrySet()) {
             SyncObject syncObject = SyncObjectService.getSyncObject(entry.getKey());
             if (syncObject != null) {
                 String[] properties = entry.getValue();
-                buildBizDataSource(syncObject.getDatas(), properties[0], properties[1], properties[2], properties[3], properties[4]);
+                fetchDataSource(syncObject.getDatas(), properties[0], properties[1], properties[2], properties[3], properties[4]);
             }
         }
-        buildBizDataSourceForC3p0(SyncObjectService.getSyncObject(ShadowPreparationConstants.c3p0_datasource_sync_key));
+        for (String key : datasourcePropertiesMappings.keySet()) {
+            SyncObjectService.removeSyncObject(key);
+        }
+
+        fetchDataSourceForC3p0(SyncObjectService.getSyncObject(ShadowPreparationConstants.c3p0_datasource_sync_key));
+        SyncObjectService.removeSyncObject(ShadowPreparationConstants.c3p0_datasource_sync_key);
     }
 
-    private static void buildBizDataSource(List<SyncObjectData> dataSources, String driver, String url, String userName, String password, String connectionPool) {
-        Set<String> shadowKeys = buildShadowConfigKeys();
+    private static void fetchDataSource(List<SyncObjectData> dataSources, String driver, String url, String userName, String password, String connectionPool) {
+        Set<String> shadowKeys = buildDataSourceKeys().keySet();
         for (SyncObjectData sync : dataSources) {
             Object target = sync.getTarget();
             JdbcDataSourceEntity entity = new JdbcDataSourceEntity();
@@ -48,17 +57,19 @@ public class JdbcBizDataSourceFetcher {
             entity.setConnectionPool(connectionPool);
             // 剔除影子数据源
             String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
-            if (!shadowKeys.contains(key)) {
-                bizDataSources.add(entity);
+            if (shadowKeys.contains(key)) {
+                shadowDataSources.put((DataSource) target, key);
+            } else {
+                bizDataSources.put((DataSource) target, key);
             }
         }
     }
 
-    private static void buildBizDataSourceForC3p0(SyncObject syncObject) {
+    private static void fetchDataSourceForC3p0(SyncObject syncObject) {
         if (syncObject == null) {
             return;
         }
-        Set<String> shadowKeys = buildShadowConfigKeys();
+        Set<String> shadowKeys = buildDataSourceKeys().keySet();
         for (SyncObjectData sync : syncObject.getDatas()) {
             Object target = sync.getTarget();
             JdbcDataSourceEntity entity = new JdbcDataSourceEntity();
@@ -71,19 +82,49 @@ public class JdbcBizDataSourceFetcher {
             entity.setConnectionPool("c3p0");
             // 剔除影子数据源
             String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
-            if (!shadowKeys.contains(key)) {
-                bizDataSources.add(entity);
+            if (shadowKeys.contains(key)) {
+                shadowDataSources.put((DataSource) target, key);
+            } else {
+                bizDataSources.put((DataSource) target, key);
             }
         }
     }
 
-    private static Set<String> buildShadowConfigKeys() {
-        Set<String> shadowKeys = new HashSet<String>();
+    /**
+     * 构建数据源key集合
+     *
+     * @return
+     */
+    private static Map<String,String> buildDataSourceKeys() {
+        Map<String, String> datasourceKeys = new HashMap<String, String>();
         for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {
-            shadowKeys.add(DbUrlUtils.getKey(config.getShadowUrl(), config.getShadowUsername()));
+            datasourceKeys.put(DbUrlUtils.getKey(config.getShadowUrl(), config.getShadowUsername()), DbUrlUtils.getKey(config.getUrl(), config.getUsername()));
         }
-        return shadowKeys;
+        return datasourceKeys;
     }
 
+    private static ShadowDatabaseConfig buildConfigFromDataSource(DataSource dataSource) {
+        ShadowDatabaseConfig config = new ShadowDatabaseConfig();
+        String className = dataSource.getClass().getName();
+        String userName, url;
+        if (ShadowPreparationConstants.dbcp_datasource_sync_key.equals(className)) {
+            url = "url";
+            userName = "username";
+        } else if (ShadowPreparationConstants.dbcp2_datasource_sync_key.equals(className)) {
+            url = "url";
+            userName = "userName";
+        } else if (ShadowPreparationConstants.druid_datasource_sync_key.equals(className) || ShadowPreparationConstants.hikaricp_datasource_sync_key.equals(className)) {
+            url = "jdbcUrl";
+            userName = "username";
+        } else {
+            Properties properties = ReflectionUtils.getFieldValues(dataSource, "dmds", "properties");
+            config.setUsername(properties.getProperty("user"));
+            config.setUrl((String) ReflectionUtils.getFieldValues(dataSource, "dmds", "jdbcUrl"));
+            return config;
+        }
+        config.setUsername(ReflectionUtils.<String>get(dataSource, userName));
+        config.setUsername(ReflectionUtils.<String>get(dataSource, url));
+        return config;
+    }
 
 }

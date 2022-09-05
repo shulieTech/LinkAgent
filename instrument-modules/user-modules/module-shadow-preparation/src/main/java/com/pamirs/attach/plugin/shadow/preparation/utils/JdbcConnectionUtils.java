@@ -14,6 +14,26 @@ public class JdbcConnectionUtils {
     private static final Logger logger = LoggerFactory.getLogger(JdbcConnectionUtils.class);
 
     /**
+     * 获取多张表结构
+     *
+     * @param connection
+     * @param tables
+     * @return
+     * @throws Exception
+     */
+    public static Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
+        if (tables == null || tables.isEmpty()) {
+            tables = fetchAllTables(connection);
+        }
+
+        Map<String, List<JdbcTableColumnInfos>> structures = new HashMap<String, List<JdbcTableColumnInfos>>();
+        for (String table : tables) {
+            structures.put(table, fetchColumnInfos(connection, table));
+        }
+        return structures;
+    }
+
+    /**
      * 获取表字段信息
      *
      * @param connection
@@ -41,13 +61,21 @@ public class JdbcConnectionUtils {
         return columns;
     }
 
-    public static void populateTableInfo(Connection connection, String table, JdbcTableInfos tableInfos) throws SQLException {
-        ResultSet tables = connection.getMetaData().getColumns(null, null, table, null);
-        while (tables.next()) {
-            tableInfos.setTableCategory(tables.getString("TABLE_CAT"));
-            tableInfos.setTableSchema(tables.getString("TABLE_SCHEM"));
-            return;
+    public static List<String> fetchAllTables(Connection connection) throws SQLException {
+        List<String> tables = new ArrayList<String>();
+        Statement statement = null;
+        try {
+            statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(String.format("show tables;"));
+            while (resultSet.next()) {
+                tables.add(resultSet.getString(1));
+            }
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
         }
+        return tables;
     }
 
     /**
@@ -105,44 +133,6 @@ public class JdbcConnectionUtils {
         } catch (SQLException e) {
             logger.error("[shadow-preparation] close connection/statement failed, url:{}, username:{}", url, username, e);
         }
-    }
-
-    public static String buildCreateTableSql(String table, List<JdbcTableColumnInfos> columnInfos) {
-        if (!Pradar.isClusterTestPrefix(table)) {
-            table = Pradar.addClusterTestPrefix(table);
-        }
-        StringBuilder sb = new StringBuilder(String.format("CREATE TABLE `%s` (", table));
-        for (int i = 0; i < columnInfos.size(); i++) {
-            JdbcTableColumnInfos column = columnInfos.get(i);
-            sb.append(String.format("'%s' %s(%s)", column.getColumnName(), column.getTypeName(), column.getColumnSize()));
-            String nullable = column.getNullable();
-            sb.append("YES".equalsIgnoreCase(nullable) ? " NULL" : " NOT NULL");
-            if (i < columnInfos.size() - 1) {
-                sb.append(",");
-            }
-        }
-        sb.append(")");
-        return sb.toString();
-    }
-
-    public static String showCreateTableSql(Connection connection, String table) throws SQLException {
-        String sql = null;
-        Statement statement = null;
-        try {
-            statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(String.format("show create table %s;", table));
-            while (resultSet.next()) {
-                sql = resultSet.getString(2);
-                break;
-            }
-            String ptTable = Pradar.addClusterTestPrefix(table);
-            sql = sql.replaceFirst(table, ptTable);
-        } finally {
-            if (statement != null) {
-                statement.close();
-            }
-        }
-        return sql;
     }
 
 }

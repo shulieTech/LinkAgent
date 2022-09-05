@@ -15,19 +15,20 @@ import java.util.Map;
 
 public class NormalTest1 {
 
-    //    private static String table = "m_user";
-    private static String table = "user";
-    //    private static String url ="jdbc:oracle:thin:@192.168.1.208:1521:ORCL";
-    private static String url = "jdbc:gbase://192.168.1.223:5258/atester";
-    //    private static String url ="jdbc:informix-sqli://192.168.1.223:5258/atester";
-    private static String userName = "root";
-    private static String password = "gbase";
-    //    private static String driverClassName ="oracle.jdbc.driver.OracleDriver";
-    private static String driverClassName = "com.gbase.jdbc.Driver";
+    private static String table = "m_user";
+    private static String userName = "c##ws_test";
+    private static String password = "oracle";
+    private static String driverClassName = "oracle.jdbc.driver.OracleDriver";
+    private static String url = "jdbc:oracle:thin:@192.168.1.208:1521:ORCL";
+    //    private static String table = "user";
+    //    private static String url = "jdbc:gbase://192.168.1.223:5258/atester";
+    //    private static String userName = "root";
+    //    private static String password = "gbase";
+//    private static String driverClassName = "com.gbase.jdbc.Driver";
 //    private static String driverClassName = "com.informix.jdbc.IfxDriver";
 
     public static void main(String[] args) throws Exception {
-        checkShadowTablesAvailable();
+        printJdbcTableInfos();
     }
 
 
@@ -65,7 +66,6 @@ public class NormalTest1 {
 
         uploadInfo.setTableInfos(Arrays.asList(buildTableInfos(table)));
 
-        System.out.println(JdbcConnectionUtils.buildCreateTableSql(table, uploadInfo.getTableInfos().get(0).getColumns()));
 
         System.out.println(JSON.toJSONString(uploadInfo));
     }
@@ -79,8 +79,7 @@ public class NormalTest1 {
             tableInfos.setTableName(table);
             tableInfos.setColumns(JdbcConnectionUtils.fetchColumnInfos(connection, table));
 //        tableInfos.setCreateTableSql(JdbcConnectionUtils.buildCreateTableSql(table, tableInfos.getColumns()));
-            tableInfos.setCreateTableSql(JdbcConnectionUtils.showCreateTableSql(connection, table));
-            JdbcConnectionUtils.populateTableInfo(connection, table, tableInfos);
+            JdbcConnectionUtils.fetchAllTables(connection);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         } finally {

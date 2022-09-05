@@ -23,4 +23,8 @@ public class SyncObjectService {
     public static SyncObject getSyncObject(String key) {
         return syncObjectMap.get(key);
     }
+
+    public static Object removeSyncObject(String key){
+        return syncObjectMap.remove(key);
+    }
 }

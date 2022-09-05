@@ -429,82 +429,14 @@ public class SqlParser {
         return val.toString();
     }
 
-    public static void main(String[] args) throws SQLException {
-        //        String sql = "insert into \"C##PYT_TEST\".M_USER(id,name,age) values(?,?,?)";
-        //        System.out.println(parseAndReplaceSchema(sql, "aaa", "oracle"));
-        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>(), false);
-        ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
-        shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
-        shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");
-        shadowDatabaseConfig.getBusinessShadowTables().put("user2", "pt_user2");
-        shadowDatabaseConfig.getBusinessShadowTables().put("task", "pt_task");
-        GlobalConfig.getInstance().getShadowDatasourceConfigs().put("jdbc:mysql://127.0.0.1:3306/testdb|root",
-                shadowDatabaseConfig);
-
-        String sql = "SELECT DISTINCT\n" +
-                "            t.task_no as conflictTaskNo,\n" +
-                "            td.task_name as conflictTaskName,\n" +
-                "            JSON_UNQUOTE(json_extract(t.srns,JSON_UNQUOTE(JSON_SEARCH(t.srns,'one', b.srn)))) as conflictSrn,\n" +
-                "            JSON_UNQUOTE(json_extract(td.displayName,concat('$.', json_extract(t.srns,JSON_UNQUOTE(JSON_SEARCH(t.srns,'one', b.srn)))))) as conflictEntity,\n" +
-                "            DATE_FORMAT(t.plan_start_time,'%Y-%m-%d %H:%i') as conflictStartWindow,\n" +
-                "            DATE_FORMAT(t.plan_end_time,'%Y-%m-%d %H:%i') as conflictEndWindow,\n" +
-                "            concat(t.create_by_name,'(',t.create_by_no,')') as createUser,\n" +
-                "            b.system_code as affectSystemCode\n" +
-                "        FROM\n" +
-                "            task t\n" +
-                "                JOIN (\n" +
-                "                SELECT DISTINCT\n" +
-                "                    t.task_no,\n" +
-                "                    a.srn AS srn,\n" +
-                "                    t.plan_start_time,\n" +
-                "                    t.plan_end_time,\n" +
-                "                    c.system_code\n" +
-                "                FROM\n" +
-                "                    task t,\n" +
-                "                    task_detail td,\n" +
-                "                    json_table (\n" +
-                "                            t.srns,\n" +
-                "                            '$[*]' COLUMNS (srn text PATH '$')\n" +
-                "                        ) AS a,\n" +
-                "                    json_table (\n" +
-                "                            td.affect_system_code,\n" +
-                "                            '$[*]' COLUMNS (system_code text PATH '$')\n" +
-                "                        ) AS c\n" +
-                "                WHERE t.task_no = #{taskNo}\n" +
-                "                  AND t.task_no = td.task_no\n" +
-                "            ) b ON t.plan_start_time = b.plan_start_time\n" +
-                "                AND t.plan_end_time = b.plan_end_time\n" +
-                "                AND JSON_contains(t.srns, json_array(b.srn))\n" +
-                "                AND t.task_no != b.task_no\n" +
-                "                AND current_status in ('productAudit','centreAudit','pending','running')\n" +
-                "                join task_detail td on t.task_no=td.task_no";
-        System.out.println(sql);
-        System.out.println("================");
-        System.out.println(parseAndReplaceSchema(sql, "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql"));
-
-        System.out.println("================");
-
-        System.out.println(parseAndReplaceTableNames(sql, "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
-
-//        System.out.println(parseAndReplaceTableNames(
-//            " select `testdb`.`user`.`id`, `testdb`.`user`.`name`, `testdb`.`user`.`password`, `testdb`.`user`"
-//                + ".`createTime`, `testdb`.`user`.`updateTime` from `testdb`.`user` limit ? ",
-//            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
-//
-//        System.out.println(parseAndReplaceTableNames(
-//            "SELECT r.*, c.org_name, c.org_code, (SELECT org_name FROM t_city WHERE org_code = c.parent_code) "
-//                + "provinceName FROM t_route_rule r LEFT JOIN t_city c ON c.sys_tenant_id = 'CLOVER_T3' AND r"
-//                + ".city_uuid = c.uuid WHERE r.sys_tenant_id = 'CLOVER_T3' AND r.status != -1 AND r.uuid = ? AND r"
-//                + ".status = ? AND r.rule_name LIKE CONCAT('%', ?, '%') AND r.rule_type = ? AND r.type_time = ? AND r"
-//                + ".business_type = ? AND r.car_level = ? AND c.org_code = ? AND r.city_uuid = ? AND r.area_type = ? "
-//                + "AND r.city_uuid IN (?) AND content->'$.examineYear' = ? AND r.type_trip = ? AND r.extend_biz_type "
-//                + "= ? ORDER BY r.status DESC, r.effective_time DESC, r.version_number DESC, r.update_time DESC",
-//            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "other"));
-    }
-
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName, String midType) throws SQLException {
+
         sql = sql.replaceAll("<  >", "<>");
         DbType dbType = DbType.of(dbTypeName);
+        // gbase8t 类型的sql如果 sql里又 from dual则直接return
+        if (dbType == DbType.gbase8t && sql.toUpperCase().contains("FROM DUAL")) {
+            return sql;
+        }
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {
             Map<String, String> mappingTableLower = new ConcurrentHashMap<String, String>();
@@ -576,7 +508,11 @@ public class SqlParser {
                         if (StringUtils.equalsIgnoreCase(nameTemp, mappingName)) {
                             String value = mappingTable.get(mappingName);
                             if (StringUtils.isNotBlank(schema)) {
-                                additionalTableNames.put(schema + "." + nameTemp, schema + "." + value);
+                                if (dbType.equals(DbType.gbase8t)) {
+                                    additionalTableNames.put(schema + "." + nameTemp, schema + ":" + value);
+                                } else {
+                                    additionalTableNames.put(schema + "." + nameTemp, schema + "." + value);
+                                }
                             } else {
                                 additionalTableNames.put(nameTemp, value);
                             }
@@ -678,5 +614,37 @@ public class SqlParser {
         } catch (SQLException e) {
             return "unknow";
         }
+    }
+
+    public static void main(String[] args) throws SQLException {
+        String mysqlKey = "jdbc:mysql://127.0.0.1:3306/testdb|root";
+        String gbase8tKey = "jdbc:gbasedbt-sqli:/db_card:XXXXXXXXX|gbasedbt";
+
+        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>(), false);
+        ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
+        shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
+        shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");
+        shadowDatabaseConfig.getBusinessShadowTables().put("user2", "pt_user2");
+        shadowDatabaseConfig.getBusinessShadowTables().put("task", "pt_task");
+        shadowDatabaseConfig.getBusinessShadowTables().put("ZHXX", "pt_ZHXX");
+        GlobalConfig.getInstance().getShadowDatasourceConfigs().put(mysqlKey, shadowDatabaseConfig);
+        GlobalConfig.getInstance().getShadowDatasourceConfigs().put(gbase8tKey, shadowDatabaseConfig);
+
+
+//        String sql = "select id,name from app_service:ZHXX";
+        String sql = "select * from ZHXX a where a.name='xt'";
+//        String sql = "select app_service:ZHXX.nextval from dual";
+//        String sql = "select lpad(app_service:ZHXX.nextval,32,'@') from dual";
+//        String sql = "insert into app_service:ZHXX(id) values (123)";
+//        String sql = "update chn_data:ZHXX set TMXX_SX = 111 where TMXX_SX = 222";
+//        String sql = "delete from app_service:ZHXX where rywybs = 11";
+
+//        System.out.println(sql);
+//        System.out.println("================");
+//        System.out.println(parseAndReplaceSchema(sql, mysqlKey, "mysql"));
+//
+//        System.out.println("================");
+
+        System.out.println(parseAndReplaceTableNames(sql, gbase8tKey, "gbase8t", "druid"));
     }
 }

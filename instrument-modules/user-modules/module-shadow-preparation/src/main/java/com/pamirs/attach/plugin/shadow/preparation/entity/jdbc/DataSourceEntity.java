@@ -1,13 +1,12 @@
-package com.pamirs.attach.plugin.shadow.preparation.entity;
+package com.pamirs.attach.plugin.shadow.preparation.entity.jdbc;
 
-public class JdbcDataSourceEntity {
+public class DataSourceEntity {
 
     private String url;
     private String userName;
     private String password;
     private String driverClassName;
     private String connectionPool;
-    private String host;
 
     public String getUrl() {
         return url;
@@ -47,13 +46,5 @@ public class JdbcDataSourceEntity {
 
     public void setConnectionPool(String connectionPool) {
         this.connectionPool = connectionPool;
-    }
-
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
     }
 }

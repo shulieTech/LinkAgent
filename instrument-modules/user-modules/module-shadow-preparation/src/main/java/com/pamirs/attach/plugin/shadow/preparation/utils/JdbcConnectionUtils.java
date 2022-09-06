@@ -1,8 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation.utils;
 
-import com.pamirs.attach.plugin.shadow.preparation.entity.JdbcTableColumnInfos;
-import com.pamirs.attach.plugin.shadow.preparation.entity.JdbcTableInfos;
-import com.pamirs.pradar.Pradar;
+import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.JdbcTableColumnInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

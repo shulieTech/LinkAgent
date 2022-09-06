@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.shadow.preparation.entity;
+package com.pamirs.attach.plugin.shadow.preparation.entity.jdbc;
 
 public class JdbcTableColumnInfos {
 

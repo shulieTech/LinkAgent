@@ -632,10 +632,10 @@ public class SqlParser {
 
 
 //        String sql = "select id,name from app_service:ZHXX";
-        String sql = "select * from ZHXX a where a.name='xt'";
+//        String sql = "select * from ZHXX a where a.name='xt'";
 //        String sql = "select app_service:ZHXX.nextval from dual";
 //        String sql = "select lpad(app_service:ZHXX.nextval,32,'@') from dual";
-//        String sql = "insert into app_service:ZHXX(id) values (123)";
+        String sql = "insert into app_service:ZHXX(id) values (123)";
 //        String sql = "update chn_data:ZHXX set TMXX_SX = 111 where TMXX_SX = 222";
 //        String sql = "delete from app_service:ZHXX where rywybs = 11";
 

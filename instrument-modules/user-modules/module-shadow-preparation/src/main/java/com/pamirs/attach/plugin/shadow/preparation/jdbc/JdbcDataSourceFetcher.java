@@ -124,4 +124,8 @@ public class JdbcDataSourceFetcher {
         return null;
     }
 
+    public static Set<String> getShadowKeys(){
+        return new HashSet<String>(shadowDataSources.values());
+    }
+
 }

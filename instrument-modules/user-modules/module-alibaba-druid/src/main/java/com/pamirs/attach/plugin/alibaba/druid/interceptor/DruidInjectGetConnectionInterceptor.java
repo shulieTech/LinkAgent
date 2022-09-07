@@ -17,9 +17,13 @@ package com.pamirs.attach.plugin.alibaba.druid.interceptor;
 import com.alibaba.druid.pool.DruidAbstractDataSource;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.destroy.DruidDestroy;
+import com.pamirs.attach.plugin.alibaba.druid.listener.ShadowDataSourceActiveEventListener;
+import com.pamirs.attach.plugin.alibaba.druid.listener.ShadowDataSourceDisableEventListener;
 import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
-import com.pamirs.attach.plugin.dynamic.*;
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.Type;
 import com.pamirs.attach.plugin.dynamic.template.DruidTemplate;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
@@ -125,60 +129,63 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
 
     private void addListener() {
         EventRouter.router().addListener(new PradarEventListener() {
-            @Override
-            public EventResult onEvent(IEvent event) {
-                if (!(event instanceof ClusterTestSwitchOffEvent)) {
-                    return EventResult.IGNORE;
-                }
-                //关闭压测数据源
-                DataSourceWrapUtil.destroy();
-                return EventResult.success("alibaba-druid-datasource-plugin");
-            }
-
-            @Override
-            public int order() {
-                return 8;
-            }
-        }).addListener(new PradarEventListener() {
-            @Override
-            public EventResult onEvent(IEvent event) {
-                if (!(event instanceof ShadowDataSourceConfigModifyEvent)) {
-                    return EventResult.IGNORE;
-                }
-                ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = (ShadowDataSourceConfigModifyEvent) event;
-                Set<ShadowDatabaseConfig> target = shadowDataSourceConfigModifyEvent.getTarget();
-                if (null == target || target.size() == 0) {
-                    return EventResult.IGNORE;
-                }
-                for (ShadowDatabaseConfig config : target) {
-                    Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
-                    while (it.hasNext()) {
-                        Map.Entry<DataSourceMeta, DbDruidMediatorDataSource> entry = it.next();
-                        if (StringUtils.equalsIgnoreCase(DbUrlUtils.getKey(config.getUrl(), config.getUsername()),
-                                DbUrlUtils.getKey(entry.getKey().getUrl(), entry.getKey().getUsername()))) {
-                            DbDruidMediatorDataSource value = entry.getValue();
-                            it.remove();
-                            try {
-                                value.close();
-                                if (logger.isInfoEnabled()) {
-                                    logger.info("module-alibaba-druid: destroyed shadow{} datasource success. url:{} ,username:{}", config.isShadowTable() ? " table" : "", entry.getKey().getUrl(), entry.getKey().getUsername());
-                                }
-                            } catch (Throwable e) {
-                                logger.error("module-alibaba-druid: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
-                            }
-                            break;
+                    @Override
+                    public EventResult onEvent(IEvent event) {
+                        if (!(event instanceof ClusterTestSwitchOffEvent)) {
+                            return EventResult.IGNORE;
                         }
+                        //关闭压测数据源
+                        DataSourceWrapUtil.destroy();
+                        return EventResult.success("alibaba-druid-datasource-plugin");
                     }
 
-                }
-                return EventResult.success("module-alibaba-druid: destroyed shadow table datasource success.");
-            }
+                    @Override
+                    public int order() {
+                        return 8;
+                    }
+                }).addListener(new PradarEventListener() {
+                    @Override
+                    public EventResult onEvent(IEvent event) {
+                        if (!(event instanceof ShadowDataSourceConfigModifyEvent)) {
+                            return EventResult.IGNORE;
+                        }
+                        ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = (ShadowDataSourceConfigModifyEvent) event;
+                        Set<ShadowDatabaseConfig> target = shadowDataSourceConfigModifyEvent.getTarget();
+                        if (null == target || target.size() == 0) {
+                            return EventResult.IGNORE;
+                        }
+                        for (ShadowDatabaseConfig config : target) {
+                            Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
+                            while (it.hasNext()) {
+                                Map.Entry<DataSourceMeta, DbDruidMediatorDataSource> entry = it.next();
+                                if (StringUtils.equalsIgnoreCase(DbUrlUtils.getKey(config.getUrl(), config.getUsername()),
+                                        DbUrlUtils.getKey(entry.getKey().getUrl(), entry.getKey().getUsername()))) {
+                                    DbDruidMediatorDataSource value = entry.getValue();
+                                    it.remove();
+                                    try {
+                                        value.close();
+                                        if (logger.isInfoEnabled()) {
+                                            logger.info("module-alibaba-druid: destroyed shadow{} datasource success. url:{} ,username:{}", config.isShadowTable() ? " table" : "", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                        }
+                                    } catch (Throwable e) {
+                                        logger.error("module-alibaba-druid: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
+                                    }
+                                    break;
+                                }
+                            }
 
-            @Override
-            public int order() {
-                return 2;
-            }
-        });
+                        }
+                        return EventResult.success("module-alibaba-druid: destroyed shadow table datasource success.");
+                    }
+
+                    @Override
+                    public int order() {
+                        return 2;
+                    }
+                })
+                .addListener(new ShadowDataSourceDisableEventListener())
+                .addListener(new ShadowDataSourceActiveEventListener());
     }
+
 }
 

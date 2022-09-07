@@ -24,9 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class JdbcCommandProcessor {
+public class JdbcPrecheckCommandProcessor {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(JdbcCommandProcessor.class.getName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(JdbcPrecheckCommandProcessor.class.getName());
 
     /**
      * 处理表信息读取命令
@@ -34,7 +34,7 @@ public class JdbcCommandProcessor {
      * @param command
      * @param callback
      */
-    public static void executePrecheckCommand(Command command, CommandCallback callback) {
+    public static void handlerPreCheckCommand(Command command, CommandCallback callback) {
         JdbcPrecheckCommand entity = JSON.parseObject(command.getArgs(), JdbcPrecheckCommand.class);
 
         DataSourceEntity bizDataSource = entity.getBizDataSource();

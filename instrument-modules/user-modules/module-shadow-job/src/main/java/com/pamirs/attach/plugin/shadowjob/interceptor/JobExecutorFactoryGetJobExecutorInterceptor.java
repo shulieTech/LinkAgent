@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -33,6 +33,7 @@ import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperConfiguration;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperRegistryCenter;
 import com.dangdang.elasticjob.lite.annotation.ElasticSimpleJob;
 import com.dangdang.elasticjob.lite.autoconfigure.ElasticJobAutoConfiguration;
+import com.pamirs.attach.plugin.shadowjob.cache.ElasticJobCache;
 import com.pamirs.attach.plugin.shadowjob.common.ElasticJobConfig;
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
 import com.pamirs.attach.plugin.shadowjob.common.api.JobAPIFactory;
@@ -88,29 +89,33 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 GlobalConfig.getInstance().getNeedRegisterJobs().containsKey(jobName) &&
                 GlobalConfig.getInstance().getRegisteredJobs() != null &&
                 !GlobalConfig.getInstance().getRegisteredJobs().containsKey(jobName)) {
-            boolean result = registerShadowJob(GlobalConfig.getInstance().getNeedRegisterJobs().get(jobName));
+            ShadowJob shadowJob = GlobalConfig.getInstance().getNeedRegisterJobs().get(jobName);
+            boolean result = registerShadowJob(shadowJob);
             if (result) {
                 GlobalConfig.getInstance().getNeedRegisterJobs().get(jobName).setActive(0);
                 GlobalConfig.getInstance().addRegisteredJob(GlobalConfig.getInstance().getNeedRegisterJobs().get(jobName));
                 GlobalConfig.getInstance().getNeedRegisterJobs().remove(jobName);
+                ElasticJobCache.EXECUTE_JOB.add(shadowJob);
             }
         }
         if (GlobalConfig.getInstance().getNeedStopJobs() != null &&
                 GlobalConfig.getInstance().getNeedStopJobs().containsKey(jobName) &&
                 GlobalConfig.getInstance().getRegisteredJobs().containsKey(jobName)) {
-            boolean result = disableShaDowJob(GlobalConfig.getInstance().getNeedStopJobs().get(jobName));
+            ShadowJob shadowJob = GlobalConfig.getInstance().getNeedRegisterJobs().get(jobName);
+            boolean result = disableShaDowJob(shadowJob);
             if (result) {
                 GlobalConfig.getInstance().getNeedStopJobs().remove(jobName);
                 GlobalConfig.getInstance().getRegisteredJobs().remove(jobName);
+                ElasticJobCache.EXECUTE_JOB.remove(shadowJob);
             }
         }
         return advice.getParameterArray();
 
     }
 
-    private Field zkConfigField;
+    private static Field zkConfigField;
 
-    public boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
+    public static boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
         if (null != PradarSpringUtil.getBeanFactory()) {
             ZookeeperRegistryCenter registryCenter = PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
             if (null == zkConfigField) {
@@ -119,26 +124,31 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             }
             ZookeeperConfiguration configuration = (ZookeeperConfiguration) zkConfigField.get(registryCenter);
 
-            JobOperateAPI jobOperateAPI = JobAPIFactory.createJobOperateAPI(configuration.getServerLists(), configuration.getNamespace(), configuration.getDigest());
             String className = shaDowJob.getClassName();
             int index = className.lastIndexOf(".");
+            StringBuilder serverIps = new StringBuilder(32);
             if (-1 != index) {
-                String ptClassName;
-                if (ShaDowJobConstant.SIMPLE.equals(shaDowJob.getJobDataType())) {
-                    ptClassName = PtElasticJobSimpleJob.class.getName() + shaDowJob.getClassName();
-                } else {
-                    ptClassName = PtDataflowJob.class.getName() + shaDowJob.getClassName();
-                }
-                Collection<String> removeList = jobOperateAPI.remove(ptClassName, null);
-                StringBuilder serverIps = new StringBuilder(32);
-                for (String serverIp : removeList) {
-                    Collection<String> remove = jobOperateAPI.remove(ptClassName, serverIp);
-                    if (remove.size() > 0) {
-                        serverIps.append(remove.toString());
+                try {
+                    JobOperateAPI jobOperateAPI = JobAPIFactory.createJobOperateAPI(configuration.getServerLists(), configuration.getNamespace(), configuration.getDigest());
+                    String ptClassName;
+                    if (ShaDowJobConstant.SIMPLE.equals(shaDowJob.getJobDataType())) {
+                        ptClassName = PtElasticJobSimpleJob.class.getName() + shaDowJob.getClassName();
+                    } else {
+                        ptClassName = PtDataflowJob.class.getName() + shaDowJob.getClassName();
                     }
+                    Collection<String> removeList = jobOperateAPI.remove(ptClassName, null);
+                    for (String serverIp : removeList) {
+                        Collection<String> remove = jobOperateAPI.remove(ptClassName, serverIp);
+                        if (remove.size() > 0) {
+                            serverIps.append(remove.toString());
+                        }
+                    }
+                } catch (Exception e) {
+                    //ignore
                 }
+
                 if ("".equals(serverIps.toString())) {
-                    registryCenter.remove(shaDowJob.getClassName());
+                    registryCenter.remove("/" + shaDowJob.getClassName().replaceAll("\\.", "/"));
                     return true;
                 }
                 shaDowJob.setErrorMessage(serverIps.toString());
@@ -216,7 +226,6 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 }
 
 
-
                 Field liteJobConfigField = JobScheduler.class.getDeclaredField("liteJobConfig");
                 liteJobConfigField.setAccessible(true);
                 Field regCenterField = JobScheduler.class.getDeclaredField("regCenter");
@@ -275,7 +284,8 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 // 注册bean
                 defaultListableBeanFactory.registerBeanDefinition(jobBeanName, beanDefinitionBuilder.getBeanDefinition());
 
-                JobScheduler ptSpringJobScheduler = (JobScheduler) PradarSpringUtil.getBeanFactory().getBean(jobBeanName);                Field ptElasticJobField = ptSpringJobScheduler.getClass().getDeclaredField("elasticJob");
+                JobScheduler ptSpringJobScheduler = (JobScheduler) PradarSpringUtil.getBeanFactory().getBean(jobBeanName);
+                Field ptElasticJobField = ptSpringJobScheduler.getClass().getDeclaredField("elasticJob");
                 ptElasticJobField.setAccessible(true);
                 if (originJob instanceof SimpleJob) {
                     PtElasticJobSimpleJob ptJob = (PtElasticJobSimpleJob) ptElasticJobField.get(ptSpringJobScheduler);

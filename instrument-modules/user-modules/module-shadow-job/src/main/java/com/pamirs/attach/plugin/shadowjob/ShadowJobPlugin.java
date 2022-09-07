@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.shadowjob;
 
 import com.pamirs.attach.plugin.shadowjob.adapter.XxlJobAdapter;
+import com.pamirs.attach.plugin.shadowjob.cache.ElasticJobCache;
 import com.pamirs.attach.plugin.shadowjob.interceptor.*;
 import com.pamirs.attach.plugin.shadowjob.util.ElasticJobRegisterUtil;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
@@ -113,7 +114,7 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         enhanceTemplate.enhance(this, "com.xxl.job.core.executor.XxlJobExecutor", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod declaredMethod = target.getDeclaredMethod("loadJobThread","int");
+                InstrumentMethod declaredMethod = target.getDeclaredMethod("loadJobThread", "int");
                 declaredMethod.addInterceptor(Listeners.of(XxlOptionInterceptor.class));
             }
         });
@@ -304,6 +305,11 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             // do nothing
         }
         return true;
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
+        ElasticJobCache.release();
     }
 
 }

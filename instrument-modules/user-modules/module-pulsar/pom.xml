@@ -35,5 +35,11 @@
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>simulator-internal-bootstrap-api</artifactId>
+            <version>${simulator.internal.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

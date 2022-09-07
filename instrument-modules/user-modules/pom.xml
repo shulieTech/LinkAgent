@@ -100,6 +100,7 @@
         <module>module-spring-rabbitmq</module>
         <module>module-rabbitmqv2</module>
         <module>module-cluster-test-check</module>
+        <module>module-jdbc-trace</module>
         <module>module-shadow-preparation</module>
     </modules>
 

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -63,22 +63,22 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
         try {
             DruidAbstractDataSource target = (DruidAbstractDataSource) advice.getTarget();
             ResourceManager.set(new Attachment(
-                    target.getUrl(),
-                    "alibaba-druid",
-                    Type.DataBaseType.types(),
-                    new DruidTemplate()
-                            .setUrl(target.getUrl())
-                            .setUsername(target.getUsername())
-                            .setPassword(target.getPassword())
-                            .setDriverClassName(target.getDriverClassName())
-                            .setMaxActive(target.getMaxActive())
-                            .setInitialSize(target.getInitialSize())
-                            .setRemoveAbandoned(target.isRemoveAbandoned())
-                            .setRemoveAbandonedTimeout(target.getRemoveAbandonedTimeoutMillis())
-                            .setTestWhileIdle(target.isTestWhileIdle())
-                            .setTestOnBorrow(target.isTestOnBorrow())
-                            .setTestOnReturn(target.isTestOnReturn())
-                            .setValidationQuery(defaultValidateQuery(target.getValidationQuery()))
+                            target.getUrl(),
+                            "alibaba-druid",
+                            Type.DataBaseType.types(),
+                            new DruidTemplate()
+                                    .setUrl(target.getUrl())
+                                    .setUsername(target.getUsername())
+                                    .setPassword(target.getPassword())
+                                    .setDriverClassName(target.getDriverClassName())
+                                    .setMaxActive(target.getMaxActive())
+                                    .setInitialSize(target.getInitialSize())
+                                    .setRemoveAbandoned(target.isRemoveAbandoned())
+                                    .setRemoveAbandonedTimeout(target.getRemoveAbandonedTimeoutMillis())
+                                    .setTestWhileIdle(target.isTestWhileIdle())
+                                    .setTestOnBorrow(target.isTestOnBorrow())
+                                    .setTestOnReturn(target.isTestOnReturn())
+                                    .setValidationQuery(defaultValidateQuery(target.getValidationQuery()))
                     )
             );
         } catch (Throwable t) {
@@ -91,7 +91,7 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
     }
 
     @Override
-    public CutOffResult cutoff0(Advice advice) {
+    public CutOffResult cutoff0(Advice advice) throws SQLException {
         DruidDataSource target1 = (DruidDataSource) advice.getTarget();
         addAttachment(advice);
         DataSourceMeta<DruidDataSource> dataSourceMeta = new DataSourceMeta<DruidDataSource>(target1.getUrl(), target1.getUsername(), target1);
@@ -109,7 +109,10 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
             try {
                 connection = mediatorDataSource.getConnection();
             } catch (SQLException e) {
-                throw new PressureMeasureError(e);
+                if (Pradar.isClusterTest()) {
+                    throw new PressureMeasureError(e);
+                }
+                throw e;
             }
             return CutOffResult.cutoff(connection);
         } else {

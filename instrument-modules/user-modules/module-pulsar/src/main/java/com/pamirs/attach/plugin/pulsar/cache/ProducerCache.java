@@ -17,6 +17,8 @@ package com.pamirs.attach.plugin.pulsar.cache;
 
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.impl.ProducerImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Date 2022/9/6 15:33
  */
 public class ProducerCache {
+
+    private static final Logger logger = LoggerFactory.getLogger(ProducerCache.class);
 
     private static final Map<ProducerImpl, Producer> CACHE = new ConcurrentHashMap<ProducerImpl, Producer>();
 
@@ -51,6 +55,20 @@ public class ProducerCache {
             }
         }
         return shadowProducer;
+    }
+
+    /**
+     * 释放资源
+     */
+    public static void release() {
+        for (Map.Entry<ProducerImpl, Producer> entry : CACHE.entrySet()) {
+            try {
+                entry.getValue().close();
+            } catch (Throwable t) {
+                logger.error("[pulsar] shadow producer close error", t);
+            }
+        }
+        CACHE.clear();
     }
 
     public interface Supplier {

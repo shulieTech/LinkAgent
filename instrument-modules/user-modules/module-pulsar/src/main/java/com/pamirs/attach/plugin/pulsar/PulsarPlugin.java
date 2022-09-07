@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.pulsar;
 
+import com.pamirs.attach.plugin.pulsar.cache.ProducerCache;
 import com.pamirs.attach.plugin.pulsar.interceptor.PulsarProducerInterceptor;
 import com.pamirs.attach.plugin.pulsar.interceptor.PulsarTraceConsumerInterceptor1;
 import com.pamirs.attach.plugin.pulsar.interceptor.PulsarTraceProducerInterceptor;
@@ -55,5 +56,10 @@ public class PulsarPlugin extends ModuleLifecycleAdapter implements ExtensionMod
             }
         });
         return true;
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
+        ProducerCache.release();
     }
 }

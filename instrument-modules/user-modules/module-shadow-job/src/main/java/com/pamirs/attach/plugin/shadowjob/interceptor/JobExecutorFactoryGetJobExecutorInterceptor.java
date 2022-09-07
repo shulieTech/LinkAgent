@@ -78,6 +78,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {
+        ElasticJobCache.bizClassLoad = advice.getTargetClass().getClassLoader();
         Object[] args = advice.getParameterArray();
         String jobName = ((LiteJobFacade) args[1]).getShardingContexts().getJobName();
         if (jobName.startsWith("com.pamirs.attach.plugin.shadowjob.obj.PtDataflowJob")

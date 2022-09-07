@@ -18,6 +18,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,15 +57,11 @@ public class JdbcCommandProcessor {
         Integer shadowType = entity.getShadowType();
         List<String> tables = entity.getTables();
         List<String> shadowTables = new ArrayList<String>();
-        if (shadowType > 0) {
-            for (String table : tables) {
-                shadowTables.add(Pradar.addClusterTestPrefix(table));
-            }
-        }
 
         Map<String, List<JdbcTableColumnInfos>> bizInfos = null, shadowInfos = null;
         switch (shadowType) {
             case 0:
+                // 如果表为空，执行此步骤会填充业务表名称
                 bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
                 if (bizInfos == null) {
                     return;
@@ -79,6 +76,9 @@ public class JdbcCommandProcessor {
                 if (bizInfos == null) {
                     return;
                 }
+                for (String table : tables) {
+                    shadowTables.add(Pradar.addClusterTestPrefix(table));
+                }
                 shadowInfos = fetchBizTableInfo(command, callback, bizDataSource, shadowTables);
                 if (shadowInfos == null) {
                     return;
@@ -88,6 +88,9 @@ public class JdbcCommandProcessor {
                 bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
                 if (bizInfos == null) {
                     return;
+                }
+                for (String table : tables) {
+                    shadowTables.add(Pradar.addClusterTestPrefix(table));
                 }
                 shadowInfos = fetchShadowTableInfo(command, callback, shadowDataSource, shadowTables);
                 if (shadowInfos == null) {
@@ -99,17 +102,28 @@ public class JdbcCommandProcessor {
         ack.setCommandId(command.getId());
         CommandExecuteResult result = new CommandExecuteResult();
 
+        // 校验表结构
         Map<String, String> values = compareTableStructures(shadowType, bizInfos, shadowInfos);
-        if (values.isEmpty()) {
-            result.setSuccess(true);
-        } else {
+        if (!values.isEmpty()) {
             result.setSuccess(false);
             result.setErrorMsg(JSON.toJSONString(values));
+            ack.setResponse(JSON.toJSONString(result));
+            callback.ack(ack);
+            return;
+        }
+        // 校验表操作权限
+        Map<String, String> available = checkTableOperationAvailable(shadowDataSource, shadowTables);
+        if (!available.isEmpty()) {
+            result.setSuccess(false);
+            result.setErrorMsg(JSON.toJSONString(available));
+            ack.setResponse(JSON.toJSONString(result));
+            callback.ack(ack);
+            return;
         }
 
+        result.setSuccess(true);
         ack.setResponse(JSON.toJSONString(result));
         callback.ack(ack);
-
     }
 
     private static String fetchDriverClassName(DataSourceEntity entity) {
@@ -223,6 +237,40 @@ public class JdbcCommandProcessor {
             callback.ack(ack);
         }
         return structures;
+    }
+
+    private static Map<String, String> checkTableOperationAvailable(DataSourceEntity entity, List<String> tables) {
+        String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
+        DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(key);
+        Map<String, String> result = new HashMap<String, String>();
+        Connection connection = null;
+        try {
+            if (dataSource != null) {
+                connection = dataSource.getConnection();
+            } else {
+                connection = DriverManager.getConnection(entity.getUrl(), entity.getUserName(), entity.getPassword());
+            }
+            for (String table : tables) {
+                try {
+                    Statement statement = connection.createStatement();
+                    statement.execute(String.format("select 1 from %s", table));
+                } catch (SQLException e) {
+                    LOGGER.error("[shadow-preparation] check jdbc shadow datasource available failed, table:{}", table, e);
+                    result.put(table, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, ignore table operation access check, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+
+                }
+            }
+        }
+        return result;
     }
 
     /**

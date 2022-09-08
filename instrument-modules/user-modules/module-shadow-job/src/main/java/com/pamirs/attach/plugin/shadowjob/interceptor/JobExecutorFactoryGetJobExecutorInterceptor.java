@@ -242,6 +242,9 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
                 DefaultListableBeanFactory defaultListableBeanFactory = PradarSpringUtil.getBeanFactory();
                 BeanDefinitionBuilder beanSimple = BeanDefinitionBuilder.rootBeanDefinition(ptJobClass);
+                if (defaultListableBeanFactory.containsBeanDefinition(ptJobClass.getSimpleName())) {
+                    defaultListableBeanFactory.removeBeanDefinition(ptJobClass.getSimpleName());
+                }
                 defaultListableBeanFactory.registerBeanDefinition(ptJobClass.getSimpleName(), beanSimple.getBeanDefinition());
 
                 LiteJobConfiguration jobConfiguration = null;
@@ -285,6 +288,9 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
                 String jobBeanName = Pradar.addClusterTestPrefix(originJob.getClass().getSimpleName()) + JobScheduler.class.getSimpleName();
                 // 注册bean
+                if (defaultListableBeanFactory.containsBeanDefinition(jobBeanName)) {
+                    defaultListableBeanFactory.removeBeanDefinition(jobBeanName);
+                }
                 defaultListableBeanFactory.registerBeanDefinition(jobBeanName, beanDefinitionBuilder.getBeanDefinition());
 
                 JobScheduler ptSpringJobScheduler = (JobScheduler) PradarSpringUtil.getBeanFactory().getBean(jobBeanName);
@@ -379,6 +385,9 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
             DefaultListableBeanFactory defaultListableBeanFactory = PradarSpringUtil.getBeanFactory();
             BeanDefinitionBuilder beanSimple = BeanDefinitionBuilder.rootBeanDefinition(ptJobClass);
+            if (defaultListableBeanFactory.containsBeanDefinition(ptJobClass.getSimpleName())) {
+                defaultListableBeanFactory.removeBeanDefinition(ptJobClass.getSimpleName());
+            }
             defaultListableBeanFactory.registerBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName()
                     , beanSimple.getBeanDefinition());
 

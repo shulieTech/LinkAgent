@@ -114,7 +114,12 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
     private void refreshShadowDataSource(int dsType, HikariDataSource dataSource, ShadowDatabaseConfig config, HikariMediaDataSource media) {
         HikariDataSource ptDataSource = media.getDataSourcePerformanceTest();
         // 影子表模式不修改
-        if (ptDataSource == null && dsType == 1) {
+        if (dsType == 1 ) {
+            if(ptDataSource != null){
+                media.close();
+                media.setDataSourcePerformanceTest(null);
+                LOGGER.info("[module-hikariCP] biz datasource with url:{}, username:{} change to shadow table type, close shadow datasource!", dataSource.getJdbcUrl(), dataSource.getUsername());
+            }
             return;
         }
         if (ptDataSource != null) {

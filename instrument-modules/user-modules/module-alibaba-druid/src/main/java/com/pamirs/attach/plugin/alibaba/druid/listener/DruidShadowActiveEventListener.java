@@ -115,7 +115,12 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
     private void refreshShadowDataSource(int dsType, DruidDataSource dataSource, ShadowDatabaseConfig config, DbDruidMediatorDataSource media) {
         DruidDataSource ptDataSource = media.getDataSourcePerformanceTest();
         // 影子表模式不修改
-        if (ptDataSource == null && dsType == 1) {
+        if (dsType == 1) {
+            if (ptDataSource != null) {
+                media.close();
+                media.setDataSourcePerformanceTest(null);
+                LOGGER.info("[druid] biz datasource with url:{}, username:{} change to shadow table type, close shadow datasource!", dataSource.getUrl(), dataSource.getUsername());
+            }
             return;
         }
         if (ptDataSource != null) {

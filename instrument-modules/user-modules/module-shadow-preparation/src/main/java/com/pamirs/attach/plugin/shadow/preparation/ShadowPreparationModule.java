@@ -21,7 +21,10 @@ import io.shulie.agent.management.client.AgentManagementClient;
 import io.shulie.agent.management.client.constant.CommandType;
 import io.shulie.agent.management.client.listener.CommandCallback;
 import io.shulie.agent.management.client.listener.CommandListener;
+import io.shulie.agent.management.client.listener.ConfigCallback;
+import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.Command;
+import io.shulie.agent.management.client.model.Config;
 import io.shulie.agent.management.client.model.ConfigProperties;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
@@ -86,10 +89,10 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         config.setDsType(0);
         command.setData(Arrays.asList(config));
 
-        Command cmd = new Command();
-        cmd.setId("11111");
-        cmd.setArgs(JSON.toJSONString(command));
-
+        Config cmd = new Config();
+        cmd.setType("database");
+        cmd.setVersion("1");
+        cmd.setParam(JSON.toJSONString(command));
         JdbcConfigPushCommandProcessor.processConfigPushCommand(cmd, null);
     }
 
@@ -114,9 +117,10 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
                 "        \"forwardUrl\":null\n" +
                 "    }\n" +
                 "]";
-        Command cmd = new Command();
-        cmd.setId("11111");
-        cmd.setArgs(json);
+        Config cmd = new Config();
+        cmd.setType("whitelist");
+        cmd.setVersion("1");
+        cmd.setParam(json);
         WhiteListPushCommandProcessor.handlerConfigPushCommand(cmd, null);
     }
 
@@ -131,22 +135,24 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         properties.setAgentId(System.getProperty("simulator.agent.id"));
         AgentManagementClient client = new AgentManagementClient(null, properties);
 
-        client.register(CommandType.DATABASE, new CommandListener() {
+        client.register("pressure_database", new ConfigListener() {
             @Override
-            public void receive(Command command, CommandCallback commandCallback) {
-                String id = command.getId();
-                if ("precheck".equals(id)) {
-                    JdbcPrecheckCommandProcessor.processPreCheckCommand(command, commandCallback);
-                } else if ("config".equals(id)) {
-                    JdbcConfigPushCommandProcessor.processConfigPushCommand(command, commandCallback);
-                }
+            public void receive(Config config, ConfigCallback configCallback) {
+                JdbcConfigPushCommandProcessor.processConfigPushCommand(config, configCallback);
             }
         });
 
-        client.register(CommandType.WHITELIST, new CommandListener() {
+        client.register("pressure_whitelist", new ConfigListener() {
+            @Override
+            public void receive(Config config, ConfigCallback configCallback) {
+                WhiteListPushCommandProcessor.handlerConfigPushCommand(config, configCallback);
+            }
+        });
+
+        client.register(CommandType.DATABASE, new CommandListener() {
             @Override
             public void receive(Command command, CommandCallback commandCallback) {
-                WhiteListPushCommandProcessor.handlerConfigPushCommand(command, commandCallback);
+                    JdbcPrecheckCommandProcessor.processPreCheckCommand(command, commandCallback);
             }
         });
     }

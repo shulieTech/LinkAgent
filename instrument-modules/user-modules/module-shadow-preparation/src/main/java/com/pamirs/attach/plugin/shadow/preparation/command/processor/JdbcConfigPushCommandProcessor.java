@@ -1,7 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.alibaba.fastjson.JSON;
-import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
@@ -14,9 +13,9 @@ import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
-import io.shulie.agent.management.client.listener.CommandCallback;
-import io.shulie.agent.management.client.model.Command;
-import io.shulie.agent.management.client.model.CommandAck;
+import io.shulie.agent.management.client.listener.ConfigCallback;
+import io.shulie.agent.management.client.model.Config;
+import io.shulie.agent.management.client.model.ConfigAck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,18 +30,17 @@ public class JdbcConfigPushCommandProcessor {
 
     private static Future future;
 
-    public static void processConfigPushCommand(final Command command, final CommandCallback callback) {
+    public static void processConfigPushCommand(final Config config, final ConfigCallback callback) {
         //先刷新数据源
         JdbcDataSourceFetcher.refreshDataSources();
 
-        JdbcConfigPushCommand cmd = JSON.parseObject(command.getArgs(), JdbcConfigPushCommand.class);
+        JdbcConfigPushCommand cmd = JSON.parseObject(config.getParam(), JdbcConfigPushCommand.class);
         if (CollectionUtils.isEmpty(cmd.getData())) {
-            CommandAck ack = new CommandAck();
-            ack.setCommandId(command.getId());
-            CommandExecuteResult result = new CommandExecuteResult();
-            result.setSuccess(false);
-            result.setResponse("未拉取到数据源配置");
-            ack.setResponse(JSON.toJSONString(result));
+            ConfigAck ack = new ConfigAck();
+            ack.setType(config.getType());
+            ack.setVersion(config.getVersion());
+            ack.setResultCode(500);
+            ack.setResultDesc("未拉取到数据源配置");
             callback.ack(ack);
             return;
         }
@@ -63,11 +61,11 @@ public class JdbcConfigPushCommandProcessor {
 
         if (needAdd.isEmpty()) {
             // 数据已生效
-            CommandAck ack = new CommandAck();
-            ack.setCommandId(command.getId());
-            CommandExecuteResult result = new CommandExecuteResult();
-            result.setSuccess(true);
-            ack.setResponse(JSON.toJSONString(result));
+            ConfigAck ack = new ConfigAck();
+            ack.setType(config.getType());
+            ack.setVersion(config.getVersion());
+            ack.setResultCode(200);
+            ack.setResultDesc(JSON.toJSONString("数据配置已生效"));
             callback.ack(ack);
             return;
         }
@@ -79,7 +77,7 @@ public class JdbcConfigPushCommandProcessor {
         future = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
-                validateShadowConfigActivation(command, callback, configs);
+                validateShadowConfigActivation(config, callback, configs);
             }
         }, 10, TimeUnit.SECONDS);
     }
@@ -120,12 +118,22 @@ public class JdbcConfigPushCommandProcessor {
         Set<ShadowDatabaseConfig> needAdd = new HashSet<ShadowDatabaseConfig>();
 
         for (ShadowDatabaseConfig config : data) {
+            // 影子表模式直接加，反正不用创建数据源
+            if (config.getDsType() == 1) {
+                needAdd.add(config);
+                continue;
+            }
             String shadowKey = DbUrlUtils.getKey(config.getShadowUrl(), config.getShadowUsername());
             // 当前影子数据源存在
             if (needClosed.remove(shadowKey)) {
                 continue;
             }
             needAdd.add(config);
+        }
+        // 遇到特殊情况, 多个业务数据源的影子数据源是一样的, 需要禁用其中一个
+        if (needClosed.isEmpty() && data.size() < JdbcDataSourceFetcher.getShadowDataSourceNum()) {
+            // 因为没有保存业务数据源和影子数据源的映射关系，所以清楚所有影子数据源，重新构建
+            return new Object[]{new HashSet<String>(JdbcDataSourceFetcher.getShadowKeys()), data};
         }
         return new Object[]{needClosed, needAdd};
     }
@@ -158,11 +166,10 @@ public class JdbcConfigPushCommandProcessor {
     /**
      * 校验配置是否生效
      *
-     * @param command
      * @param callback
      * @param configs
      */
-    private static void validateShadowConfigActivation(Command command, CommandCallback callback, List<ShadowDatabaseConfig> configs) {
+    private static void validateShadowConfigActivation(Config cfg, ConfigCallback callback, List<ShadowDatabaseConfig> configs) {
         JdbcDataSourceFetcher.refreshDataSources();
         Set<String> shadowKeys = JdbcDataSourceFetcher.getShadowKeys();
         StringBuilder sb = new StringBuilder();
@@ -178,16 +185,15 @@ public class JdbcConfigPushCommandProcessor {
         }
         String info = sb.toString();
 
-        CommandAck ack = new CommandAck();
-        ack.setCommandId(command.getId());
-        CommandExecuteResult result = new CommandExecuteResult();
+        ConfigAck ack = new ConfigAck();
+        ack.setType(cfg.getType());
+        ack.setVersion(cfg.getVersion());
         if (StringUtil.isEmpty(info)) {
-            result.setSuccess(true);
+            ack.setResultCode(200);
         } else {
-            result.setSuccess(false);
-            result.setResponse(info);
+            ack.setResultCode(500);
+            ack.setResultDesc(info);
         }
-        ack.setResponse(JSON.toJSONString(result));
         callback.ack(ack);
     }
 

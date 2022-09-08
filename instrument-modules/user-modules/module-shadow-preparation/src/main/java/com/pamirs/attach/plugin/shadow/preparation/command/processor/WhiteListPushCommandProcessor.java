@@ -16,8 +16,11 @@ import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import com.pamirs.pradar.utils.MD5Util;
 import io.shulie.agent.management.client.listener.CommandCallback;
+import io.shulie.agent.management.client.listener.ConfigCallback;
 import io.shulie.agent.management.client.model.Command;
 import io.shulie.agent.management.client.model.CommandAck;
+import io.shulie.agent.management.client.model.Config;
+import io.shulie.agent.management.client.model.ConfigAck;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,26 +55,24 @@ public class WhiteListPushCommandProcessor {
 
     private static String previousCommandContentMD5;
 
-    public static void handlerConfigPushCommand(final Command command, final CommandCallback callback) {
-        String whiteLists = command.getArgs();
+    public static void handlerConfigPushCommand(final Config config, final ConfigCallback callback) {
+        String whiteLists = config.getParam();
         LOGGER.info("[shadow-preparation] accept whitelist command, content:{}", whiteLists);
 
-        CommandAck ack = new CommandAck();
-        ack.setCommandId(command.getId());
-        CommandExecuteResult result = new CommandExecuteResult();
-        result.setSuccess(true);
+        ConfigAck ack = new ConfigAck();
+        ack.setType(config.getType());
+        ack.setVersion(config.getVersion());
+        ack.setResultCode(200);
 
         String md5 = MD5Util.MD5_32(whiteLists, "utf8");
         if (previousCommandContentMD5 == null || !previousCommandContentMD5.equals(md5)) {
             LOGGER.info("[shadow-preparation] whitelist config need to refresh!");
             activeWhiteListConfigs(whiteLists);
-            result.setResponse("白名单配置发生变更,主动生效");
+            ack.setResultDesc("白名单配置发生变更,主动生效");
         } else {
-            result.setResponse("白名单配置没有变动,已经生效");
+            ack.setResultDesc("白名单配置没有变动,已经生效");
         }
         previousCommandContentMD5 = md5;
-
-        ack.setResponse(JSON.toJSONString(result));
         callback.ack(ack);
     }
 

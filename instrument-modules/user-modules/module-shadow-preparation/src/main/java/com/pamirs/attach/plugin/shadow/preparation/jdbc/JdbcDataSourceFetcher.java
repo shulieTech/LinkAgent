@@ -124,15 +124,19 @@ public class JdbcDataSourceFetcher {
         return null;
     }
 
-    public static Set<String> getShadowKeys(){
+    public static Set<String> getShadowKeys() {
         return new HashSet<String>(shadowDataSources.values());
     }
 
-    public static void removeShadowDataSources(Collection<String> keys){
+   public static int getShadowDataSourceNum(){
+        return shadowDataSources.size();
+   }
+
+    public static void removeShadowDataSources(Collection<String> keys) {
         Iterator<Map.Entry<DataSource, String>> iterator = shadowDataSources.entrySet().iterator();
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             Map.Entry<DataSource, String> next = iterator.next();
-            if(keys.contains(next.getValue())){
+            if (keys.contains(next.getValue())) {
                 iterator.remove();
             }
         }

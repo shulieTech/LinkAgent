@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.shadow.preparation.entity.command;
+package com.pamirs.attach.plugin.shadow.preparation.command;
 
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
 

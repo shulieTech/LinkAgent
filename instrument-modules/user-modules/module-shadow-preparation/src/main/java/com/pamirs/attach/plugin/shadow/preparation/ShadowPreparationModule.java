@@ -1,14 +1,15 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
 import com.alibaba.fastjson.JSON;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.constants.AgentType;
-import com.pamirs.attach.plugin.shadow.preparation.entity.command.JdbcConfigPushCommand;
-import com.pamirs.attach.plugin.shadow.preparation.entity.command.JdbcPrecheckCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPrecheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
-import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcConfigPushCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcPrecheckCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPrecheckCommandProcessor;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
@@ -20,18 +21,13 @@ import io.shulie.agent.management.client.AgentManagementClient;
 import io.shulie.agent.management.client.constant.CommandType;
 import io.shulie.agent.management.client.listener.CommandCallback;
 import io.shulie.agent.management.client.listener.CommandListener;
-import io.shulie.agent.management.client.listener.ConfigCallback;
-import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.Command;
-import io.shulie.agent.management.client.model.Config;
 import io.shulie.agent.management.client.model.ConfigProperties;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -50,7 +46,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             @Override
             public void run() {
                 JdbcDataSourceFetcher.refreshDataSources();
-                handlerConfigPushCommand();
+                handlerWhiteListPushCommand();
             }
         }, 1, 2, TimeUnit.MINUTES);
 
@@ -76,10 +72,10 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         Command cmd = new Command();
         cmd.setId("11111");
         cmd.setArgs(JSON.toJSONString(command));
-        JdbcPrecheckCommandProcessor.handlerPreCheckCommand(cmd, null);
+        JdbcPrecheckCommandProcessor.processPreCheckCommand(cmd, null);
     }
 
-    private void handlerConfigPushCommand(){
+    private void handlerConfigPushCommand() {
         JdbcConfigPushCommand command = new JdbcConfigPushCommand();
         DataSourceConfig config = new DataSourceConfig();
         config.setUrl("jdbc:mysql://192.168.1.46:3306/atester?useUnicode=true");
@@ -94,7 +90,34 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         cmd.setId("11111");
         cmd.setArgs(JSON.toJSONString(command));
 
-        JdbcConfigPushCommandProcessor.handlerConfigPushCommand(cmd, null);
+        JdbcConfigPushCommandProcessor.processConfigPushCommand(cmd, null);
+    }
+
+    private void handlerWhiteListPushCommand(){
+        String json = "[\n" +
+                "    {\n" +
+                "        \"INTERFACE_NAME\":\"/demo/remote/getUser\",\n" +
+                "        \"appNames\":null,\n" +
+                "        \"isGlobal\":null,\n" +
+                "        \"TYPE\":\"http\",\n" +
+                "        \"checkType\":\"mock\",\n" +
+                "        \"content\":\"import com.pamirs.agent.httpclient4.demo.model.User;\\n User user = new User();\\n        user.setId(\\\"23\\\");\\n        user.setName(\\\"OK00\\\");\\n        return user;\",\n" +
+                "        \"forwardUrl\":\"import com.pamirs.agent.httpclient4.demo.model.User;\\n User user = new User();\\n        user.setId(\\\"23\\\");\\n        user.setName(\\\"OK00\\\");\\n        return user;\"\n" +
+                "    },\n" +
+                "    {\n" +
+                "        \"INTERFACE_NAME\":\"/demo/httpclient/post\",\n" +
+                "        \"appNames\":null,\n" +
+                "        \"isGlobal\":null,\n" +
+                "        \"TYPE\":\"http\",\n" +
+                "        \"checkType\":\"white\",\n" +
+                "        \"content\":null,\n" +
+                "        \"forwardUrl\":null\n" +
+                "    }\n" +
+                "]";
+        Command cmd = new Command();
+        cmd.setId("11111");
+        cmd.setArgs(json);
+        WhiteListPushCommandProcessor.handlerConfigPushCommand(cmd, null);
     }
 
     private void registerAgentManagerListener() {
@@ -113,17 +136,17 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             public void receive(Command command, CommandCallback commandCallback) {
                 String id = command.getId();
                 if ("precheck".equals(id)) {
-                    JdbcPrecheckCommandProcessor.handlerPreCheckCommand(command, commandCallback);
+                    JdbcPrecheckCommandProcessor.processPreCheckCommand(command, commandCallback);
                 } else if ("config".equals(id)) {
-                    JdbcConfigPushCommandProcessor.handlerConfigPushCommand(command, commandCallback);
+                    JdbcConfigPushCommandProcessor.processConfigPushCommand(command, commandCallback);
                 }
             }
         });
 
-        client.register("", new ConfigListener() {
+        client.register(CommandType.WHITELIST, new CommandListener() {
             @Override
-            public void receive(Config config, ConfigCallback configCallback) {
-
+            public void receive(Command command, CommandCallback commandCallback) {
+                WhiteListPushCommandProcessor.handlerConfigPushCommand(command, commandCallback);
             }
         });
     }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -93,6 +93,9 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
 
     private Map<String, ShadowHbaseConfig> shadowHbaseConfigs;
 
+    // 是否允许使用影子资源准备模块, 如果允许使用则很多配置信息从准备模块里拉取，不走控制台
+    public static boolean enableShadowPreparationModule = System.getProperty("enable.shadow.preparation.module") != null;
+
 
     /**
      * 插件-redis最大过期时间
@@ -134,7 +137,9 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         for (FIELDS field : fields) {
             switch (field) {
                 case URL_WHITE_LIST:
-                    change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
+                    if (!enableShadowPreparationModule) {
+                        change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
+                    }
                     break;
                 case RPC_ALLOW_LIST:
                     change(FIELDS.RPC_ALLOW_LIST, newConfig.getRpcNameWhiteList());
@@ -146,7 +151,9 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                     change(FIELDS.CACHE_KEY_ALLOW_LIST, newConfig.getCacheKeyAllowList());
                     break;
                 case SHADOW_DATABASE_CONFIGS:
-                    change(FIELDS.SHADOW_DATABASE_CONFIGS, newConfig.getShadowDatabaseConfigs());
+                    if (!enableShadowPreparationModule) {
+                        change(FIELDS.SHADOW_DATABASE_CONFIGS, newConfig.getShadowDatabaseConfigs());
+                    }
                     break;
                 case SHADOW_REDIS_SERVER_CONFIG:
                     change(FIELDS.SHADOW_REDIS_SERVER_CONFIG, newConfig.getShadowRedisConfigs());
@@ -164,7 +171,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                     change(FIELDS.SHADOW_HBASE_SERVER_CONFIG, newConfig.getShadowHbaseConfigs());
                     break;
                 case PLUGIN_MAX_REDIS_EXPIRE_TIME:
-                    change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME,newConfig.getPluginMaxRedisExpireTime());
+                    change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME, newConfig.getPluginMaxRedisExpireTime());
                     break;
                 default:
                     break;
@@ -190,8 +197,8 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         change(FIELDS.SHADOW_REDIS_SERVER_CONFIG, newConfig.getShadowRedisConfigs());
         change(FIELDS.SHADOW_ES_SERVER_CONFIG, newConfig.getShadowEsServerConfigs());
         change(FIELDS.SHADOW_HBASE_SERVER_CONFIG, newConfig.getShadowHbaseConfigs());
-        if(getPlugin){
-            change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME,newConfig.getPluginMaxRedisExpireTime());
+        if (getPlugin) {
+            change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME, newConfig.getPluginMaxRedisExpireTime());
         }
     }
 
@@ -289,7 +296,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
     }
 
     public void setShadowEsServerConfigs(
-        Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
+            Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
         this.shadowEsServerConfigs = shadowEsServerConfigs;
     }
 

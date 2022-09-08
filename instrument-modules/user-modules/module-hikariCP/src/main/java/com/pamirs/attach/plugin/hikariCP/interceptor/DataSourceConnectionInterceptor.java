@@ -20,6 +20,8 @@ import com.pamirs.attach.plugin.dynamic.Type;
 import com.pamirs.attach.plugin.dynamic.template.HikariTemplate;
 import com.pamirs.attach.plugin.hikariCP.ListenerRegisterStatus;
 import com.pamirs.attach.plugin.hikariCP.destroy.HikariCPDestroy;
+import com.pamirs.attach.plugin.hikariCP.listener.HikaricpShadowActiveEventListener;
+import com.pamirs.attach.plugin.hikariCP.listener.HikaricpShadowDisableEventListener;
 import com.pamirs.attach.plugin.hikariCP.utils.DataSourceWrapUtil;
 import com.pamirs.attach.plugin.hikariCP.utils.HikariMediaDataSource;
 import com.pamirs.pradar.CutOffResult;
@@ -31,7 +33,6 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceConfigModifyEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceDisableEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
@@ -133,100 +134,65 @@ public class DataSourceConnectionInterceptor extends CutoffInterceptorAdaptor {
             return;
         }
         EventRouter.router().addListener(new PradarEventListener() {
-            @Override
-            public EventResult onEvent(IEvent event) {
-                if (!(event instanceof ClusterTestSwitchOffEvent)) {
-                    return EventResult.IGNORE;
-                }
-                //关闭压测数据源
-                DataSourceWrapUtil.destroy();
-                return EventResult.success("hikariCP-plugin");
-            }
+                    @Override
+                    public EventResult onEvent(IEvent event) {
+                        if (!(event instanceof ClusterTestSwitchOffEvent)) {
+                            return EventResult.IGNORE;
+                        }
+                        //关闭压测数据源
+                        DataSourceWrapUtil.destroy();
+                        return EventResult.success("hikariCP-plugin");
+                    }
 
-            @Override
-            public int order() {
-                return 8;
-            }
-        }).addListener(new PradarEventListener() {
-            @Override
-            public EventResult onEvent(IEvent event) {
-                if (!(event instanceof ShadowDataSourceConfigModifyEvent)) {
-                    return EventResult.IGNORE;
-                }
-                ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = (ShadowDataSourceConfigModifyEvent) event;
-                Set<ShadowDatabaseConfig> target = shadowDataSourceConfigModifyEvent.getTarget();
-                if (null == target || target.size() == 0) {
-                    return EventResult.IGNORE;
-                }
-                for (ShadowDatabaseConfig config : target) {
-                    Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
-                    while (it.hasNext()) {
-                        Map.Entry<DataSourceMeta, HikariMediaDataSource> entry = it.next();
-                        if (StringUtils.equalsIgnoreCase(DbUrlUtils.getKey(config.getUrl(), config.getUsername()),
-                                DbUrlUtils.getKey(entry.getKey().getUrl(), entry.getKey().getUsername()))) {
-                            HikariMediaDataSource value = entry.getValue();
-                            it.remove();
-                            try {
-                                value.close();
-                                if (logger.isInfoEnabled()) {
-                                    logger.info("module-hikariCP: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                    @Override
+                    public int order() {
+                        return 8;
+                    }
+                }).addListener(new PradarEventListener() {
+                    @Override
+                    public EventResult onEvent(IEvent event) {
+                        if (!(event instanceof ShadowDataSourceConfigModifyEvent)) {
+                            return EventResult.IGNORE;
+                        }
+                        ShadowDataSourceConfigModifyEvent shadowDataSourceConfigModifyEvent = (ShadowDataSourceConfigModifyEvent) event;
+                        Set<ShadowDatabaseConfig> target = shadowDataSourceConfigModifyEvent.getTarget();
+                        if (null == target || target.size() == 0) {
+                            return EventResult.IGNORE;
+                        }
+                        for (ShadowDatabaseConfig config : target) {
+                            Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
+                            while (it.hasNext()) {
+                                Map.Entry<DataSourceMeta, HikariMediaDataSource> entry = it.next();
+                                if (StringUtils.equalsIgnoreCase(DbUrlUtils.getKey(config.getUrl(), config.getUsername()),
+                                        DbUrlUtils.getKey(entry.getKey().getUrl(), entry.getKey().getUsername()))) {
+                                    HikariMediaDataSource value = entry.getValue();
+                                    it.remove();
+                                    try {
+                                        value.close();
+                                        if (logger.isInfoEnabled()) {
+                                            logger.info("module-hikariCP: destroyed shadow table datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                                        }
+                                    } catch (Throwable e) {
+                                        logger.error("module-hikariCP: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
+                                    }
+                                    break;
                                 }
-                            } catch (Throwable e) {
-                                logger.error("module-hikariCP: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
                             }
-                            break;
+
                         }
+                        return EventResult.success("module-hikariCP: destroyed shadow table datasource success.");
                     }
 
-                }
-                return EventResult.success("module-hikariCP: destroyed shadow table datasource success.");
-            }
-
-            @Override
-            public int order() {
-                return 2;
-            }
-        }).addListener(new PradarEventListener() {
-            @Override
-            public EventResult onEvent(IEvent event) {
-                if (!(event instanceof ShadowDataSourceDisableEvent)) {
-                    return EventResult.IGNORE;
-                }
-                Set<String> closeShadowKeys = ((ShadowDataSourceDisableEvent) event).getTarget();
-                if (closeShadowKeys == null || closeShadowKeys.isEmpty()) {
-                    return EventResult.IGNORE;
-                }
-                Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
-                while (it.hasNext()) {
-                    Map.Entry<DataSourceMeta, HikariMediaDataSource> entry = it.next();
-                    HikariDataSource hikariDataSource = entry.getValue().getDataSourcePerformanceTest();
-                    if (hikariDataSource == null) {
-                        continue;
+                    @Override
+                    public int order() {
+                        return 2;
                     }
-                    if (!closeShadowKeys.contains(buildShadowKey(hikariDataSource))) {
-                        continue;
-                    }
-                    it.remove();
-                    try {
-                        hikariDataSource.close();
-                        if (logger.isInfoEnabled()) {
-                            logger.info("module-hikariCP: destroyed shadow datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
-                        }
-                    } catch (Throwable e) {
-                        logger.error("module-hikariCP: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
-                    }
-                }
-                return EventResult.success("module-hikariCP: destroyed shadow table datasource success.");
-            }
-
-            @Override
-            public int order() {
-                return 3;
-            }
-        });
+                })
+                .addListener(new HikaricpShadowDisableEventListener())
+                .addListener(new HikaricpShadowActiveEventListener());
     }
 
-    private String buildShadowKey(HikariDataSource shadowDataSource){
+    private String buildShadowKey(HikariDataSource shadowDataSource) {
         return DbUrlUtils.getKey(shadowDataSource.getJdbcUrl(), shadowDataSource.getUsername());
     }
 }

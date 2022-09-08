@@ -21,9 +21,9 @@ import javax.sql.DataSource;
 import java.util.Iterator;
 import java.util.Map;
 
-public class ShadowDataSourceActiveEventListener implements PradarEventListener {
+public class DruidShadowActiveEventListener implements PradarEventListener {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(ShadowDataSourceDisableEventListener.class.getName());
+    private static Logger LOGGER = LoggerFactory.getLogger(DruidShadowDisableEventListener.class.getName());
 
     @Override
     public EventResult onEvent(IEvent event) {
@@ -118,14 +118,15 @@ public class ShadowDataSourceActiveEventListener implements PradarEventListener 
         if (ptDataSource == null && dsType == 1) {
             return;
         }
-        String ptKey = buildDataSourceKey(ptDataSource);
-        String configKey = DbUrlUtils.getKey(config.getShadowUrl(), config.getShadowUsername());
-        // 影子数据源没修改
-        if (ptKey.equals(configKey)) {
-            return;
+        if (ptDataSource != null) {
+            String ptKey = buildDataSourceKey(ptDataSource);
+            String configKey = DbUrlUtils.getKey(config.getShadowUrl(), config.getShadowUsername());
+            // 影子数据源没修改
+            if (ptKey.equals(configKey)) {
+                return;
+            }
+            media.close();
         }
-        media.close();
-
         ptDataSource = DruidDatasourceUtils.generateDatasourceFromConfiguration(dataSource, config);
         LOGGER.info("[druid] handler shadow datasource active event, refresh shadow datasource, url:{}, username:{}", dataSource.getUrl(), dataSource.getUsername());
         media.setDataSourcePerformanceTest(ptDataSource);

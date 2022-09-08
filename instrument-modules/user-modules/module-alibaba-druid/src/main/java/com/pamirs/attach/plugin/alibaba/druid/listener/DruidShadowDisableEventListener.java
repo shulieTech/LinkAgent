@@ -16,9 +16,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-public class ShadowDataSourceDisableEventListener implements PradarEventListener {
+public class DruidShadowDisableEventListener implements PradarEventListener {
 
-    private static Logger logger = LoggerFactory.getLogger(ShadowDataSourceDisableEventListener.class.getName());
+    private static Logger logger = LoggerFactory.getLogger(DruidShadowDisableEventListener.class.getName());
 
     @Override
     public EventResult onEvent(IEvent event) {

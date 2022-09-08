@@ -1,10 +1,11 @@
-package com.pamirs.attach.plugin.shadow.preparation.jdbc;
+package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
-import com.pamirs.attach.plugin.shadow.preparation.entity.CommandExecuteResult;
-import com.pamirs.attach.plugin.shadow.preparation.entity.command.JdbcPrecheckCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPrecheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.*;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.utils.JdbcTypeFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -34,7 +35,7 @@ public class JdbcPrecheckCommandProcessor {
      * @param command
      * @param callback
      */
-    public static void handlerPreCheckCommand(Command command, CommandCallback callback) {
+    public static void processPreCheckCommand(Command command, CommandCallback callback) {
         JdbcPrecheckCommand entity = JSON.parseObject(command.getArgs(), JdbcPrecheckCommand.class);
 
         DataSourceEntity bizDataSource = entity.getBizDataSource();
@@ -44,7 +45,7 @@ public class JdbcPrecheckCommandProcessor {
             ack.setCommandId(command.getId());
             CommandExecuteResult result = new CommandExecuteResult();
             result.setSuccess(false);
-            result.setErrorMsg("读取业务数据源驱动失败");
+            result.setResponse("读取业务数据源驱动失败");
             ack.setResponse(JSON.toJSONString(result));
             callback.ack(ack);
         }
@@ -106,7 +107,7 @@ public class JdbcPrecheckCommandProcessor {
         Map<String, String> values = compareTableStructures(shadowType, bizInfos, shadowInfos);
         if (!values.isEmpty()) {
             result.setSuccess(false);
-            result.setErrorMsg(JSON.toJSONString(values));
+            result.setResponse(JSON.toJSONString(values));
             ack.setResponse(JSON.toJSONString(result));
             callback.ack(ack);
             return;
@@ -115,7 +116,7 @@ public class JdbcPrecheckCommandProcessor {
         Map<String, String> available = checkTableOperationAvailable(shadowDataSource, shadowTables);
         if (!available.isEmpty()) {
             result.setSuccess(false);
-            result.setErrorMsg(JSON.toJSONString(available));
+            result.setResponse(JSON.toJSONString(available));
             ack.setResponse(JSON.toJSONString(result));
             callback.ack(ack);
             return;
@@ -152,7 +153,7 @@ public class JdbcPrecheckCommandProcessor {
         if (dataSource == null) {
             LOGGER.error("[shadow-preparation] can`t find biz datasource with url:{}, username:{}", entity.getUrl(), entity.getUserName());
             result.setSuccess(false);
-            result.setErrorMsg(String.format("应用内部找不到指定的业务数据源, url:%s, username:%s", entity.getUrl(), entity.getUserName()));
+            result.setResponse(String.format("应用内部找不到指定的业务数据源, url:%s, username:%s", entity.getUrl(), entity.getUserName()));
             ack.setResponse(JSON.toJSONString(result));
             callback.ack(ack);
             return null;
@@ -232,7 +233,7 @@ public class JdbcPrecheckCommandProcessor {
         if (structures == null) {
             LOGGER.error("[shadow-preparation] do not support database type:{}, url{}, username:{}", typeEnum.name(), entity.getUrl(), entity.getUserName());
             result.setSuccess(false);
-            result.setErrorMsg(String.format("目前不支持读取数据库类型[%s]的表结构信息", entity.getUserName()));
+            result.setResponse(String.format("目前不支持读取数据库类型[%s]的表结构信息", entity.getUserName()));
             ack.setResponse(JSON.toJSONString(result));
             callback.ack(ack);
         }

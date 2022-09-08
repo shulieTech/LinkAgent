@@ -1,7 +1,7 @@
 package com.pamirs.attach.plugin.shadow.preparation.jdbc;
 
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
-import com.pamirs.attach.plugin.shadow.preparation.constants.ShadowPreparationConstants;
+import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcDataSourceTypes;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
@@ -21,10 +21,10 @@ public class JdbcDataSourceFetcher {
     private static Map<String, String[]> datasourcePropertiesMappings = new HashMap<String, String[]>();
 
     static {
-        datasourcePropertiesMappings.put(ShadowPreparationConstants.dbcp_datasource_sync_key, new String[]{"driverClassName", "url", "username", "password", "dbcp"});
-        datasourcePropertiesMappings.put(ShadowPreparationConstants.dbcp2_datasource_sync_key, new String[]{"driverClassName", "url", "userName", "password", "dbcp2"});
-        datasourcePropertiesMappings.put(ShadowPreparationConstants.druid_datasource_sync_key, new String[]{"driverClass", "jdbcUrl", "username", "password", "druid"});
-        datasourcePropertiesMappings.put(ShadowPreparationConstants.hikaricp_datasource_sync_key, new String[]{"driverClassName", "jdbcUrl", "username", "password", "hikaricp"});
+        datasourcePropertiesMappings.put(JdbcDataSourceTypes.dbcp_datasource_sync_key, new String[]{"driverClassName", "url", "username", "password", "dbcp"});
+        datasourcePropertiesMappings.put(JdbcDataSourceTypes.dbcp2_datasource_sync_key, new String[]{"driverClassName", "url", "userName", "password", "dbcp2"});
+        datasourcePropertiesMappings.put(JdbcDataSourceTypes.druid_datasource_sync_key, new String[]{"driverClass", "jdbcUrl", "username", "password", "druid"});
+        datasourcePropertiesMappings.put(JdbcDataSourceTypes.hikaricp_datasource_sync_key, new String[]{"driverClassName", "jdbcUrl", "username", "password", "hikaricp"});
     }
 
     public static void refreshDataSources() {
@@ -40,8 +40,8 @@ public class JdbcDataSourceFetcher {
             SyncObjectService.removeSyncObject(key);
         }
 
-        fetchDataSourceForC3p0(SyncObjectService.getSyncObject(ShadowPreparationConstants.c3p0_datasource_sync_key));
-        SyncObjectService.removeSyncObject(ShadowPreparationConstants.c3p0_datasource_sync_key);
+        fetchDataSourceForC3p0(SyncObjectService.getSyncObject(JdbcDataSourceTypes.c3p0_datasource_sync_key));
+        SyncObjectService.removeSyncObject(JdbcDataSourceTypes.c3p0_datasource_sync_key);
     }
 
     private static void fetchDataSource(List<SyncObjectData> dataSources, String driver, String url, String userName, String password, String connectionPool) {
@@ -95,11 +95,11 @@ public class JdbcDataSourceFetcher {
 
     public static String fetchDriverClassName(DataSource dataSource) {
         String className = dataSource.getClass().getName();
-        if (ShadowPreparationConstants.dbcp_datasource_sync_key.equals(className)
-                || ShadowPreparationConstants.dbcp2_datasource_sync_key.equals(className)
-                || ShadowPreparationConstants.hikaricp_datasource_sync_key.equals(className)) {
+        if (JdbcDataSourceTypes.dbcp_datasource_sync_key.equals(className)
+                || JdbcDataSourceTypes.dbcp2_datasource_sync_key.equals(className)
+                || JdbcDataSourceTypes.hikaricp_datasource_sync_key.equals(className)) {
             return ReflectionUtils.get(dataSource, "driverClassName");
-        } else if (ShadowPreparationConstants.druid_datasource_sync_key.equals(className)) {
+        } else if (JdbcDataSourceTypes.druid_datasource_sync_key.equals(className)) {
             return ReflectionUtils.get(dataSource, "driverClass");
         } else {
             return ReflectionUtils.getFieldValues(dataSource, "dmds", "driverClass");
@@ -126,6 +126,16 @@ public class JdbcDataSourceFetcher {
 
     public static Set<String> getShadowKeys(){
         return new HashSet<String>(shadowDataSources.values());
+    }
+
+    public static void removeShadowDataSources(Collection<String> keys){
+        Iterator<Map.Entry<DataSource, String>> iterator = shadowDataSources.entrySet().iterator();
+        while (iterator.hasNext()){
+            Map.Entry<DataSource, String> next = iterator.next();
+            if(keys.contains(next.getValue())){
+                iterator.remove();
+            }
+        }
     }
 
 }

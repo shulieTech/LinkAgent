@@ -17,8 +17,8 @@ package com.pamirs.attach.plugin.alibaba.druid.interceptor;
 import com.alibaba.druid.pool.DruidAbstractDataSource;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.destroy.DruidDestroy;
-import com.pamirs.attach.plugin.alibaba.druid.listener.ShadowDataSourceActiveEventListener;
-import com.pamirs.attach.plugin.alibaba.druid.listener.ShadowDataSourceDisableEventListener;
+import com.pamirs.attach.plugin.alibaba.druid.listener.DruidShadowActiveEventListener;
+import com.pamirs.attach.plugin.alibaba.druid.listener.DruidShadowDisableEventListener;
 import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
 import com.pamirs.attach.plugin.dynamic.Attachment;
@@ -183,8 +183,8 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
                         return 2;
                     }
                 })
-                .addListener(new ShadowDataSourceDisableEventListener())
-                .addListener(new ShadowDataSourceActiveEventListener());
+                .addListener(new DruidShadowDisableEventListener())
+                .addListener(new DruidShadowActiveEventListener());
     }
 
 }

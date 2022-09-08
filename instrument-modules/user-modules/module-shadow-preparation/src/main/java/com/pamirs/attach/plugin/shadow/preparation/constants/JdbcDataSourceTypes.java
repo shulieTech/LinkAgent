@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation.constants;
 
-public interface ShadowPreparationConstants {
+public interface JdbcDataSourceTypes {
 
     String druid_datasource_sync_key = "com.alibaba.druid.pool.DruidDataSource";
 

@@ -281,7 +281,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
 
         boolean isSuccess;
-        if (whiteListPullSwitch.get()) {
+        if (!ApplicationConfig.enableShadowPreparationModule && whiteListPullSwitch.get()) {
             /**
              * 从服务端获取白名单列表,如果失败则启动失败
              */
@@ -302,7 +302,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 ApplicationConfig.getWhiteList = Boolean.TRUE;
             }
         }
-        if (shadowConfigPullSwitch.get()) {
+        if (!ApplicationConfig.enableShadowPreparationModule && shadowConfigPullSwitch.get()) {
             /**
              * 读取压测的影子数据源配置
              */

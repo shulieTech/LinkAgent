@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -255,7 +255,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 throwable = e;
             } catch (Throwable t) {
                 if (!(t instanceof ProcessControlException)) {
-                    LOGGER.error("TraceInterceptor beforeLast exec err, class:" +  this.getClass().getName(), t);
+                    LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), t);
                 }
                 throwable = t;
             }
@@ -264,8 +264,14 @@ abstract class TraceInterceptor extends BaseInterceptor {
             boolean isClusterTest = Pradar.isClusterTest();
             if (advice.hasMark(BEFORE_TRACE_SUCCESS)) {
                 try {
+                    String resultCode = ResultCode.INVOKE_RESULT_FAILED;
                     if (Pradar.isExceptionOn()) {
-                        Pradar.response(throwable);
+                        if (throwable instanceof ProcessControlException) {
+                            Pradar.response(((ProcessControlException) throwable).getResult());
+                            resultCode = ResultCode.INVOKE_RESULT_SUCCESS;
+                        } else {
+                            Pradar.response(throwable);
+                        }
                     }
                     boolean isClient = true;
                     try {
@@ -274,9 +280,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                         LOGGER.error("Trace {} isClient execute error. use default value instead. {}", getClass().getName(), isClient, e);
                     }
                     if (isClient) {
-                        endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType(), advice);
+                        endClientInvoke(resultCode, getPluginType(), advice);
                     } else {
-                        endServerInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType(), advice);
+                        endServerInvoke(resultCode, getPluginType(), advice);
                     }
                 } finally {
                     advice.unMark(BEFORE_TRACE_SUCCESS);

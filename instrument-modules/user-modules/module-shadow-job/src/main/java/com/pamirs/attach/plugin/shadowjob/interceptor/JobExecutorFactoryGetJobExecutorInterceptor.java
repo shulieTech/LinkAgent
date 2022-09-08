@@ -26,7 +26,6 @@ import com.dangdang.ddframe.job.event.rdb.JobEventRdbConfiguration;
 import com.dangdang.ddframe.job.lite.api.JobScheduler;
 import com.dangdang.ddframe.job.lite.api.listener.ElasticJobListener;
 import com.dangdang.ddframe.job.lite.config.LiteJobConfiguration;
-import com.dangdang.ddframe.job.lite.internal.schedule.LiteJobFacade;
 import com.dangdang.ddframe.job.lite.spring.api.SpringJobScheduler;
 import com.dangdang.ddframe.job.reg.base.CoordinatorRegistryCenter;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperConfiguration;
@@ -75,15 +74,18 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
     Logger logger = LoggerFactory.getLogger(getClass());
     Set registered = new HashSet();
 
-
     @Override
     public Object[] getParameter0(Advice advice) throws Throwable {
         ElasticJobCache.bizClassLoad = advice.getTargetClass().getClassLoader();
         Object[] args = advice.getParameterArray();
-        String jobName = ((LiteJobFacade) args[1]).getShardingContexts().getJobName();
+//        String jobName = ((LiteJobFacade) args[1]).getShardingContexts().getJobName();
+        String jobName = args[0].getClass().getName();
         if (jobName.startsWith("com.pamirs.attach.plugin.shadowjob.obj.PtDataflowJob")
                 || jobName.startsWith("com.pamirs.attach.plugin.shadowjob.obj.PtElasticJobSimpleJob")) {
             return advice.getParameterArray();
+        }
+        if (PradarSpringUtil.getBeanFactory() != null) {
+            ElasticJobCache.registryCenter = PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
         }
 
         if (GlobalConfig.getInstance().getNeedRegisterJobs() != null &&
@@ -107,6 +109,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             if (result) {
                 GlobalConfig.getInstance().getNeedStopJobs().remove(jobName);
                 GlobalConfig.getInstance().getRegisteredJobs().remove(jobName);
+                registered.remove(shadowJob.getClassName());
                 ElasticJobCache.EXECUTE_JOB.remove(shadowJob);
             }
         }
@@ -128,15 +131,15 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             String className = shaDowJob.getClassName();
             int index = className.lastIndexOf(".");
             StringBuilder serverIps = new StringBuilder(32);
+            String ptClassName;
+            if (ShaDowJobConstant.SIMPLE.equals(shaDowJob.getJobDataType())) {
+                ptClassName = PtElasticJobSimpleJob.class.getName() + shaDowJob.getClassName();
+            } else {
+                ptClassName = PtDataflowJob.class.getName() + shaDowJob.getClassName();
+            }
             if (-1 != index) {
                 try {
                     JobOperateAPI jobOperateAPI = JobAPIFactory.createJobOperateAPI(configuration.getServerLists(), configuration.getNamespace(), configuration.getDigest());
-                    String ptClassName;
-                    if (ShaDowJobConstant.SIMPLE.equals(shaDowJob.getJobDataType())) {
-                        ptClassName = PtElasticJobSimpleJob.class.getName() + shaDowJob.getClassName();
-                    } else {
-                        ptClassName = PtDataflowJob.class.getName() + shaDowJob.getClassName();
-                    }
                     Collection<String> removeList = jobOperateAPI.remove(ptClassName, null);
                     for (String serverIp : removeList) {
                         Collection<String> remove = jobOperateAPI.remove(ptClassName, serverIp);
@@ -149,7 +152,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 }
 
                 if ("".equals(serverIps.toString())) {
-                    registryCenter.remove("/" + shaDowJob.getClassName().replaceAll("\\.", "/"));
+                    registryCenter.remove("/" + ptClassName);
                     return true;
                 }
                 shaDowJob.setErrorMessage(serverIps.toString());
@@ -190,7 +193,6 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             logger.info("[spring-context] is null, 无法注册影子 ElasticJob");
             return false;
         }
-
 
         try {
             if (checkRegistered(shadowJob)) {

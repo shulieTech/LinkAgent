@@ -31,6 +31,11 @@ public class UpgradeFileUtils {
                 .getParent();
     }
 
+    public static String getSimulatorAgentDir(){
+        return new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
+                .getParentFile().getParent();
+    }
+
     public static String getUpgradeFileTempFileName(String upgradeBatch){
         return "simulator_" + upgradeBatch + ".zip";
     }
@@ -53,9 +58,8 @@ public class UpgradeFileUtils {
     }
 
     public static void checkLocal(){
-        String saveTempDir = getUpgradeFileTempSaveDir();
         //判断agent目录是否存在，存在则做移动agent_upgradeBatch_时间戳
-        String agentBasePath = saveTempDir.replace("core", "");
+        String agentBasePath = getSimulatorAgentDir();
         File file = new File(agentBasePath + "agent/simulator");
         File localFile = new File(agentBasePath + "agent/simulator_-1");
         if (file.exists()){
@@ -72,9 +76,8 @@ public class UpgradeFileUtils {
 
     public static void unzipUpgradeFile(String upgradeBatch){
         String saveFileName = getUpgradeFileTempFileName(upgradeBatch);
-        String saveTempDir = getUpgradeFileTempSaveDir();
         //判断agent目录是否存在，存在则做移动agent_upgradeBatch_时间戳
-        String agentBasePath = saveTempDir.replace("core", "");
+        String agentBasePath = getSimulatorAgentDir();
         File file = new File(agentBasePath + "agent/simulator");
         if (file.exists()){
             //保留最开始的本地版本，回滚可用
@@ -89,7 +92,7 @@ public class UpgradeFileUtils {
         if (!agentDir.exists()){
             agentDir.mkdir();
         }
-        ZipUtils.unZip(saveTempDir + File.separator + saveFileName,
+        ZipUtils.unZip(agentBasePath + File.separator + saveFileName,
                 agentDir.getAbsolutePath() + "/simulator");
     }
 

@@ -39,7 +39,7 @@ public class HeartRequestUtil {
 
     public static String getUpgradeFileTempSaveDir() {
         return new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                .getParent();
+                .getParentFile().getParent();
     }
 
 

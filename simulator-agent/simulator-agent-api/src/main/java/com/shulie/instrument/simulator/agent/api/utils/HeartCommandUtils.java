@@ -49,7 +49,7 @@ public class HeartCommandUtils {
         //.../.../.../simulator-agent/
         String defaultAgentHome
                 = new File(HeartCommandUtils.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                .getParent().replace("core", "");
+                .getParentFile().getParent();
         String agentModuleProperties = defaultAgentHome + "module.properties";
         String simulatorModuleProperties = defaultAgentHome + "agent/simulator/module.properties";
         String userModuleProperties = defaultAgentHome + "agent/simulator/modules/module.properties";

@@ -84,8 +84,8 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 || jobName.startsWith("com.pamirs.attach.plugin.shadowjob.obj.PtElasticJobSimpleJob")) {
             return advice.getParameterArray();
         }
-        if (PradarSpringUtil.getBeanFactory() != null) {
-            ElasticJobCache.registryCenter = PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
+        if (PradarSpringUtil.getBeanFactory() != null && ElasticJobCache.registryCenter == null) {
+            ElasticJobCache.registryCenter = getRegisterConter();
         }
 
         if (GlobalConfig.getInstance().getNeedRegisterJobs() != null &&
@@ -121,7 +121,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
     public static boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
         if (null != PradarSpringUtil.getBeanFactory()) {
-            ZookeeperRegistryCenter registryCenter = PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
+            ZookeeperRegistryCenter registryCenter = (ZookeeperRegistryCenter) ElasticJobCache.registryCenter;
             if (null == zkConfigField) {
                 zkConfigField = ZookeeperRegistryCenter.class.getDeclaredField("zkConfig");
                 zkConfigField.setAccessible(true);

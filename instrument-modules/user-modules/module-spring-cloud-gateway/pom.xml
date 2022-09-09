@@ -67,6 +67,12 @@
             <version>${module.servlet.common.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.shulie.instrument.module</groupId>
+            <artifactId>simulator-bootstrap-api</artifactId>
+            <version>${simulator.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 </project>

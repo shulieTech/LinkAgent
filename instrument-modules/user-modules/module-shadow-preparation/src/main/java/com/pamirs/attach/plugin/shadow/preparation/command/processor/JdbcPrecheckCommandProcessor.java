@@ -1,15 +1,15 @@
 package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.alibaba.fastjson.JSON;
-import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPrecheckCommand;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.*;
+import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
+import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
+import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.JdbcTableColumnInfos;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.utils.JdbcTypeFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
-import io.shulie.agent.management.client.listener.CommandCallback;
 import io.shulie.agent.management.client.model.Command;
 import io.shulie.agent.management.client.model.CommandAck;
 import org.slf4j.Logger;
@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class JdbcPrecheckCommandProcessor {
 
@@ -35,7 +36,7 @@ public class JdbcPrecheckCommandProcessor {
      * @param command
      * @param callback
      */
-    public static void processPreCheckCommand(Command command, CommandCallback callback) {
+    public static void processPreCheckCommand(Command command, Consumer<CommandAck> callback) {
         JdbcPrecheckCommand entity = JSON.parseObject(command.getArgs(), JdbcPrecheckCommand.class);
 
         DataSourceEntity bizDataSource = entity.getBizDataSource();
@@ -47,7 +48,7 @@ public class JdbcPrecheckCommandProcessor {
             result.setSuccess(false);
             result.setResponse("读取业务数据源驱动失败");
             ack.setResponse(JSON.toJSONString(result));
-            callback.ack(ack);
+            callback.accept(ack);
         }
 
         bizDataSource.setDriverClassName(driverClassName);
@@ -109,7 +110,7 @@ public class JdbcPrecheckCommandProcessor {
             result.setSuccess(false);
             result.setResponse(JSON.toJSONString(values));
             ack.setResponse(JSON.toJSONString(result));
-            callback.ack(ack);
+            callback.accept(ack);
             return;
         }
         // 校验表操作权限
@@ -118,13 +119,13 @@ public class JdbcPrecheckCommandProcessor {
             result.setSuccess(false);
             result.setResponse(JSON.toJSONString(available));
             ack.setResponse(JSON.toJSONString(result));
-            callback.ack(ack);
+            callback.accept(ack);
             return;
         }
 
         result.setSuccess(true);
         ack.setResponse(JSON.toJSONString(result));
-        callback.ack(ack);
+        callback.accept(ack);
     }
 
     private static String fetchDriverClassName(DataSourceEntity entity) {
@@ -143,7 +144,7 @@ public class JdbcPrecheckCommandProcessor {
      * @param callback
      * @param entity
      */
-    private static Map<String, List<JdbcTableColumnInfos>> fetchBizTableInfo(Command command, CommandCallback callback, DataSourceEntity entity, List<String> tables) {
+    private static Map<String, List<JdbcTableColumnInfos>> fetchBizTableInfo(Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) {
         String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
         DataSource dataSource = JdbcDataSourceFetcher.getBizDataSource(key);
         CommandAck ack = new CommandAck();
@@ -155,7 +156,7 @@ public class JdbcPrecheckCommandProcessor {
             result.setSuccess(false);
             result.setResponse(String.format("应用内部找不到指定的业务数据源, url:%s, username:%s", entity.getUrl(), entity.getUserName()));
             ack.setResponse(JSON.toJSONString(result));
-            callback.ack(ack);
+            callback.accept(ack);
             return null;
         }
         Connection connection = null;
@@ -166,7 +167,7 @@ public class JdbcPrecheckCommandProcessor {
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
-            callback.ack(ack);
+            callback.accept(ack);
             return null;
         } finally {
             if (connection != null) {
@@ -179,7 +180,7 @@ public class JdbcPrecheckCommandProcessor {
         }
     }
 
-    private static Map<String, List<JdbcTableColumnInfos>> fetchShadowTableInfo(Command command, CommandCallback callback, DataSourceEntity entity, List<String> tables) {
+    private static Map<String, List<JdbcTableColumnInfos>> fetchShadowTableInfo(Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) {
         String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
         DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(key);
         CommandAck ack = new CommandAck();
@@ -196,7 +197,7 @@ public class JdbcPrecheckCommandProcessor {
                 LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
                 result.setSuccess(false);
                 result.setResponse(String.format("读取影子表结构信息时发生异常，创建连接失败，异常信息:%s", e.getMessage()));
-                callback.ack(ack);
+                callback.accept(ack);
                 return null;
             }
         }
@@ -210,7 +211,7 @@ public class JdbcPrecheckCommandProcessor {
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
-            callback.ack(ack);
+            callback.accept(ack);
             return null;
         } finally {
             if (connection != null) {
@@ -223,7 +224,7 @@ public class JdbcPrecheckCommandProcessor {
         }
     }
 
-    private static Map<String, List<JdbcTableColumnInfos>> processReadingTableInfo(Connection connection, Command command, CommandCallback callback, DataSourceEntity entity, List<String> tables) throws Exception {
+    private static Map<String, List<JdbcTableColumnInfos>> processReadingTableInfo(Connection connection, Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) throws Exception {
         CommandAck ack = new CommandAck();
         ack.setCommandId(command.getId());
         CommandExecuteResult result = new CommandExecuteResult();
@@ -235,7 +236,7 @@ public class JdbcPrecheckCommandProcessor {
             result.setSuccess(false);
             result.setResponse(String.format("目前不支持读取数据库类型[%s]的表结构信息", entity.getUserName()));
             ack.setResponse(JSON.toJSONString(result));
-            callback.ack(ack);
+            callback.accept(ack);
         }
         return structures;
     }

@@ -21,6 +21,7 @@ public class JdbcConnectionUtils {
      */
     public static Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
         if (tables == null || tables.isEmpty()) {
+            tables = new ArrayList<>();
             tables.addAll(fetchAllTables(connection));
         }
 

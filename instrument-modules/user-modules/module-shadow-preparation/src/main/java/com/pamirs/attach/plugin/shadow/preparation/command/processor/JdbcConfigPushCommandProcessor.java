@@ -13,7 +13,6 @@ import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
-import io.shulie.agent.management.client.listener.ConfigCallback;
 import io.shulie.agent.management.client.model.Config;
 import io.shulie.agent.management.client.model.ConfigAck;
 import org.slf4j.Logger;
@@ -23,6 +22,7 @@ import javax.sql.DataSource;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class JdbcConfigPushCommandProcessor {
 
@@ -30,7 +30,7 @@ public class JdbcConfigPushCommandProcessor {
 
     private static Future future;
 
-    public static void processConfigPushCommand(final Config config, final ConfigCallback callback) {
+    public static void processConfigPushCommand(final Config config, final Consumer<ConfigAck> callback) {
         //先刷新数据源
         JdbcDataSourceFetcher.refreshDataSources();
 
@@ -41,7 +41,7 @@ public class JdbcConfigPushCommandProcessor {
             ack.setVersion(config.getVersion());
             ack.setResultCode(500);
             ack.setResultDesc("未拉取到数据源配置");
-            callback.ack(ack);
+            callback.accept(ack);
             return;
         }
 
@@ -66,20 +66,20 @@ public class JdbcConfigPushCommandProcessor {
             ack.setVersion(config.getVersion());
             ack.setResultCode(200);
             ack.setResultDesc(JSON.toJSONString("数据配置已生效"));
-            callback.ack(ack);
+            callback.accept(ack);
             return;
         }
         GlobalConfig.getInstance().setShadowDatabaseConfigs(toMap(configs), true);
         if (future != null && !future.isDone()) {
             future.cancel(true);
         }
-        // 注册一个延时任务一分钟后查看数据源是否生效
+        // 注册一个延时任务30s后查看数据源是否生效
         future = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 validateShadowConfigActivation(config, callback, configs);
             }
-        }, 10, TimeUnit.SECONDS);
+        }, 30, TimeUnit.SECONDS);
     }
 
     private static List<ShadowDatabaseConfig> toShadowDatabaseConfig(List<DataSourceConfig> data) {
@@ -169,7 +169,7 @@ public class JdbcConfigPushCommandProcessor {
      * @param callback
      * @param configs
      */
-    private static void validateShadowConfigActivation(Config cfg, ConfigCallback callback, List<ShadowDatabaseConfig> configs) {
+    private static void validateShadowConfigActivation(Config cfg, Consumer<ConfigAck> callback, List<ShadowDatabaseConfig> configs) {
         JdbcDataSourceFetcher.refreshDataSources();
         Set<String> shadowKeys = JdbcDataSourceFetcher.getShadowKeys();
         StringBuilder sb = new StringBuilder();
@@ -194,7 +194,7 @@ public class JdbcConfigPushCommandProcessor {
             ack.setResultCode(500);
             ack.setResultDesc(info);
         }
-        callback.ack(ack);
+        callback.accept(ack);
     }
 
 }

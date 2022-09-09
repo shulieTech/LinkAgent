@@ -1,37 +1,34 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
 import com.alibaba.fastjson.JSON;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.constants.AgentType;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPrecheckCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPrecheckCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.constants.ShadowPreparationConstants;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPrecheckCommandProcessor;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
-import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import io.shulie.agent.management.client.AgentManagementClient;
+import io.shulie.agent.management.client.constant.AgentSpecification;
 import io.shulie.agent.management.client.constant.CommandType;
-import io.shulie.agent.management.client.listener.CommandCallback;
 import io.shulie.agent.management.client.listener.CommandListener;
-import io.shulie.agent.management.client.listener.ConfigCallback;
 import io.shulie.agent.management.client.listener.ConfigListener;
-import io.shulie.agent.management.client.model.Command;
-import io.shulie.agent.management.client.model.Config;
-import io.shulie.agent.management.client.model.ConfigProperties;
+import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 
 @MetaInfServices(ExtensionModule.class)
@@ -42,16 +39,14 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
 
     @Override
     public boolean onActive() throws Throwable {
-//        registerAgentManagerListener();
-
+        registerAgentManagerListener();
         // 每隔5分钟刷新一次数据源
         ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 JdbcDataSourceFetcher.refreshDataSources();
-                handlerWhiteListPushCommand();
             }
-        }, 1, 2, TimeUnit.MINUTES);
+        }, 1, 3, TimeUnit.MINUTES);
 
         return true;
     }
@@ -127,32 +122,33 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
     private void registerAgentManagerListener() {
         ConfigProperties properties = new ConfigProperties();
         properties.setAppName(AppNameUtils.appName());
-        properties.setTenantCode(Pradar.getPradarTenantKey());
-        properties.setUserId(Pradar.getPradarUserId());
+        properties.setTenantCode(simulatorConfig.getProperty(ShadowPreparationConstants.AGENT_MANAGER_TENANT_CODE_KEY));
+//        properties.setUserId(Pradar.getPradarUserId());
+        properties.setUserId("164");
         properties.setEnvCode(Pradar.getEnvCode());
-        properties.setSpecification(AgentType.simulator_agent.getType());
-        properties.setVersion(HeartCommandUtils.SIMULATOR_VERSION);
-        properties.setAgentId(System.getProperty("simulator.agent.id"));
-        AgentManagementClient client = new AgentManagementClient(null, properties);
+        properties.setAgentSpecification(AgentSpecification.SIMULATOR_AGENT);
+        properties.setVersion(simulatorConfig.getAgentVersion());
+        properties.setAgentId(simulatorConfig.getAgentId());
+        AgentManagementClient client = new AgentManagementClient(simulatorConfig.getProperty(ShadowPreparationConstants.AGENT_MANAGER_CLIENT_URL_KEY), properties);
 
         client.register("pressure_database", new ConfigListener() {
             @Override
-            public void receive(Config config, ConfigCallback configCallback) {
-                JdbcConfigPushCommandProcessor.processConfigPushCommand(config, configCallback);
+            public void receive(Config config, Consumer<ConfigAck> consumer) {
+                JdbcConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
             }
         });
 
         client.register("pressure_whitelist", new ConfigListener() {
             @Override
-            public void receive(Config config, ConfigCallback configCallback) {
-                WhiteListPushCommandProcessor.handlerConfigPushCommand(config, configCallback);
+            public void receive(Config config, Consumer<ConfigAck> consumer) {
+                WhiteListPushCommandProcessor.handlerConfigPushCommand(config, consumer);
             }
         });
 
         client.register(CommandType.DATABASE, new CommandListener() {
             @Override
-            public void receive(Command command, CommandCallback commandCallback) {
-                    JdbcPrecheckCommandProcessor.processPreCheckCommand(command, commandCallback);
+            public void receive(Command command, Consumer<CommandAck> consumer) {
+                JdbcPrecheckCommandProcessor.processPreCheckCommand(command, consumer);
             }
         });
     }

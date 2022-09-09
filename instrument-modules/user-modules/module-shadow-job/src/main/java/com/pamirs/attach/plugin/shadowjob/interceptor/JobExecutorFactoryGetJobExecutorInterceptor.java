@@ -386,8 +386,8 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
             DefaultListableBeanFactory defaultListableBeanFactory = PradarSpringUtil.getBeanFactory();
             BeanDefinitionBuilder beanSimple = BeanDefinitionBuilder.rootBeanDefinition(ptJobClass);
-            if (defaultListableBeanFactory.containsBeanDefinition(ptJobClass.getSimpleName())) {
-                defaultListableBeanFactory.removeBeanDefinition(ptJobClass.getSimpleName());
+            if (defaultListableBeanFactory.containsBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName())) {
+                defaultListableBeanFactory.removeBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName());
             }
             defaultListableBeanFactory.registerBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName()
                     , beanSimple.getBeanDefinition());

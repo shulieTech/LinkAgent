@@ -379,7 +379,8 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             Class ptJobClass = PtElasticJobSimpleJob.class;
 
             String cron = StringUtils.defaultIfBlank(elasticSimpleJobAnnotation.cron(), elasticSimpleJobAnnotation.value());
-            SimpleJobConfiguration simpleJobConfiguration = new SimpleJobConfiguration(JobCoreConfiguration.newBuilder(ptJobClass.getName(), cron, elasticSimpleJobAnnotation.shardingTotalCount()).shardingItemParameters(elasticSimpleJobAnnotation.shardingItemParameters()).build(), simpleJob.getClass().getCanonicalName());
+            SimpleJobConfiguration simpleJobConfiguration =
+                    new SimpleJobConfiguration(JobCoreConfiguration.newBuilder(ptJobClass.getName() + originJob.getClass().getName(), cron, elasticSimpleJobAnnotation.shardingTotalCount()).shardingItemParameters(elasticSimpleJobAnnotation.shardingItemParameters()).build(), simpleJob.getClass().getCanonicalName());
             LiteJobConfiguration liteJobConfiguration = LiteJobConfiguration.newBuilder(simpleJobConfiguration).overwrite(true).build();
 
 

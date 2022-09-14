@@ -187,12 +187,6 @@ public class DataSourceConnectionInterceptor extends CutoffInterceptorAdaptor {
                     public int order() {
                         return 2;
                     }
-                })
-                .addListener(new HikaricpShadowDisableEventListener())
-                .addListener(new HikaricpShadowActiveEventListener());
-    }
-
-    private String buildShadowKey(HikariDataSource shadowDataSource) {
-        return DbUrlUtils.getKey(shadowDataSource.getJdbcUrl(), shadowDataSource.getUsername());
+                });
     }
 }

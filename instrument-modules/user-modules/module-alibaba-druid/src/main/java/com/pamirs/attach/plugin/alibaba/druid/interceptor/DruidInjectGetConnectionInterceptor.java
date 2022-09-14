@@ -182,9 +182,7 @@ public class DruidInjectGetConnectionInterceptor extends CutoffInterceptorAdapto
                     public int order() {
                         return 2;
                     }
-                })
-                .addListener(new DruidShadowDisableEventListener())
-                .addListener(new DruidShadowActiveEventListener());
+                });
     }
 
 }

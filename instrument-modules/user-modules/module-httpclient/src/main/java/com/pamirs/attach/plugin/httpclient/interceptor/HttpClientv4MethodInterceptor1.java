@@ -58,8 +58,7 @@ import java.util.*;
  */
 public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
-//    private Integer httpResponsePrintLengthLimit =  simulatorConfig.getIntProperty("http.response.print.length.limit",1024);
-    private Integer httpResponsePrintLengthLimit =  1024;
+    private Integer httpResponsePrintLengthLimit;
 
     private List<String> printResponseContentType = Arrays.asList("application/json","text/plain");
 
@@ -399,6 +398,9 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if(httpResponsePrintLengthLimit == null){
+            httpResponsePrintLengthLimit = simulatorConfig.getIntProperty("http.response.print.length.limit",1024);
+        }
         Object[] args = advice.getParameterArray();
         HttpUriRequest request = (HttpUriRequest) args[0];
         SpanRecord record = new SpanRecord();

@@ -16,7 +16,10 @@ package com.pamirs.attach.plugin.hikariCP;
 
 import com.pamirs.attach.plugin.hikariCP.interceptor.DataSourceConnectionInterceptor;
 import com.pamirs.attach.plugin.hikariCP.interceptor.DataSourceConstructorInterceptor;
+import com.pamirs.attach.plugin.hikariCP.listener.HikaricpShadowActiveEventListener;
+import com.pamirs.attach.plugin.hikariCP.listener.HikaricpShadowDisableEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -62,6 +65,13 @@ public class HikariCPPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         method.addInterceptor(Listeners.of(DataSourceConstructorInterceptor.class));
                     }
                 });
+        addListener();
         return true;
+    }
+
+    private void addListener() {
+        EventRouter.router()
+                .addListener(new HikaricpShadowActiveEventListener())
+                .addListener(new HikaricpShadowDisableEventListener());
     }
 }

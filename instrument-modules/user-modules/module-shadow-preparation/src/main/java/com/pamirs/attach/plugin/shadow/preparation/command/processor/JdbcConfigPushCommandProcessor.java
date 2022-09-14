@@ -13,6 +13,7 @@ import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
+import io.shulie.agent.management.client.constant.ConfigResultEnum;
 import io.shulie.agent.management.client.model.Config;
 import io.shulie.agent.management.client.model.ConfigAck;
 import org.slf4j.Logger;
@@ -26,7 +27,7 @@ import java.util.function.Consumer;
 
 public class JdbcConfigPushCommandProcessor {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(JdbcPrecheckCommandProcessor.class.getName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(JdbcPreCheckCommandProcessor.class.getName());
 
     private static Future future;
 
@@ -39,7 +40,7 @@ public class JdbcConfigPushCommandProcessor {
             ConfigAck ack = new ConfigAck();
             ack.setType(config.getType());
             ack.setVersion(config.getVersion());
-            ack.setResultCode(500);
+            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
             ack.setResultDesc("未拉取到数据源配置");
             callback.accept(ack);
             return;
@@ -64,7 +65,7 @@ public class JdbcConfigPushCommandProcessor {
             ConfigAck ack = new ConfigAck();
             ack.setType(config.getType());
             ack.setVersion(config.getVersion());
-            ack.setResultCode(200);
+            ack.setResultCode(ConfigResultEnum.SUCC.getCode());
             ack.setResultDesc(JSON.toJSONString("数据配置已生效"));
             callback.accept(ack);
             return;
@@ -91,7 +92,7 @@ public class JdbcConfigPushCommandProcessor {
             config.setShadowUrl(c.getShadowUrl());
             config.setShadowUsername(c.getShadowUsername());
             config.setShadowPassword(c.getShadowPassword());
-            config.setDsType(c.getDsType());
+            config.setDsType(c.getShadowType());
             values.add(config);
         }
         return values;
@@ -189,9 +190,9 @@ public class JdbcConfigPushCommandProcessor {
         ack.setType(cfg.getType());
         ack.setVersion(cfg.getVersion());
         if (StringUtil.isEmpty(info)) {
-            ack.setResultCode(200);
+            ack.setResultCode(ConfigResultEnum.SUCC.getCode());
         } else {
-            ack.setResultCode(500);
+            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
             ack.setResultDesc(info);
         }
         callback.accept(ack);

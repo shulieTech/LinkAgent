@@ -15,7 +15,7 @@ public class DataSourceConfig {
     /**
      * 数据源类型 0:影子库 1:影子表 2:影子库+影子表
      */
-    private int dsType;
+    private int shadowType;
 
     /**
      * 影子库url
@@ -72,11 +72,11 @@ public class DataSourceConfig {
         this.shadowPassword = shadowPassword;
     }
 
-    public int getDsType() {
-        return dsType;
+    public int getShadowType() {
+        return shadowType;
     }
 
-    public void setDsType(int dsType) {
-        this.dsType = dsType;
+    public void setShadowType(int shadowType) {
+        this.shadowType = shadowType;
     }
 }

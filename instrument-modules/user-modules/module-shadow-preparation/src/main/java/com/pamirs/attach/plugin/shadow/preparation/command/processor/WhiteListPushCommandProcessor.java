@@ -14,6 +14,7 @@ import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import com.pamirs.pradar.utils.MD5Util;
+import io.shulie.agent.management.client.constant.ConfigResultEnum;
 import io.shulie.agent.management.client.model.Config;
 import io.shulie.agent.management.client.model.ConfigAck;
 import org.apache.commons.lang.StringUtils;
@@ -51,14 +52,14 @@ public class WhiteListPushCommandProcessor {
 
     private static String previousCommandContentMD5;
 
-    public static void handlerConfigPushCommand(final Config config, final Consumer<ConfigAck> callback) {
+    public static void processConfigPushCommand(final Config config, final Consumer<ConfigAck> callback) {
         String whiteLists = config.getParam();
         LOGGER.info("[shadow-preparation] accept whitelist command, content:{}", whiteLists);
 
         ConfigAck ack = new ConfigAck();
         ack.setType(config.getType());
         ack.setVersion(config.getVersion());
-        ack.setResultCode(200);
+        ack.setResultCode(ConfigResultEnum.SUCC.getCode());
 
         String md5 = MD5Util.MD5_32(whiteLists, "utf8");
         if (previousCommandContentMD5 == null || !previousCommandContentMD5.equals(md5)) {

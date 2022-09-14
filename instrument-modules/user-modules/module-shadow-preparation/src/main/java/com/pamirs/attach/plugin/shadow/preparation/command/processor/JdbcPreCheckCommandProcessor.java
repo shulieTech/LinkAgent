@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public class JdbcPrecheckCommandProcessor {
+public class JdbcPreCheckCommandProcessor {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(JdbcPrecheckCommandProcessor.class.getName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(JdbcPreCheckCommandProcessor.class.getName());
 
     /**
      * 处理表信息读取命令
@@ -337,6 +337,9 @@ public class JdbcPrecheckCommandProcessor {
     private static boolean compareString(String b, String s) {
         if ((b == null && s != null) || (b != null && s == null)) {
             return false;
+        }
+        if(b == null && s == null){
+            return true;
         }
         return b.equals(s);
     }

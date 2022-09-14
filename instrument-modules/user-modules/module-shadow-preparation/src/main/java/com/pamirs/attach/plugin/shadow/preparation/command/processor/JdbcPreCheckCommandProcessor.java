@@ -25,6 +25,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class JdbcPreCheckCommandProcessor {
 
@@ -100,30 +102,32 @@ public class JdbcPreCheckCommandProcessor {
                 }
         }
 
-        CommandAck ack = new CommandAck();
-        ack.setCommandId(command.getId());
-        CommandExecuteResult result = new CommandExecuteResult();
-
         // 校验表结构
-        Map<String, String> values = compareTableStructures(shadowType, bizInfos, shadowInfos);
-        if (!values.isEmpty()) {
-            result.setSuccess(false);
-            result.setResponse(JSON.toJSONString(values));
-            ack.setResponse(JSON.toJSONString(result));
-            callback.accept(ack);
+        Map<String, String> compareResult = compareTableStructures(shadowType, bizInfos, shadowInfos);
+        if (!compareResult.isEmpty()) {
+            ackWithFailed(command, callback, compareResult);
             return;
         }
         // 校验表操作权限
-        Map<String, String> available = checkTableOperationAvailable(shadowDataSource, shadowTables);
-        if (!available.isEmpty()) {
-            result.setSuccess(false);
-            result.setResponse(JSON.toJSONString(available));
-            ack.setResponse(JSON.toJSONString(result));
-            callback.accept(ack);
+        Map<String, String> availableResult = checkTableOperationAvailable(shadowDataSource, shadowTables);
+        if (!availableResult.isEmpty()) {
+            ackWithFailed(command, callback, availableResult);
             return;
         }
-
+        CommandAck ack = new CommandAck();
+        ack.setCommandId(command.getId());
+        CommandExecuteResult result = new CommandExecuteResult();
         result.setSuccess(true);
+        ack.setResponse(JSON.toJSONString(result));
+        callback.accept(ack);
+    }
+
+    private static void ackWithFailed(Command command, Consumer<CommandAck> callback, Map<String, String> values) {
+        CommandAck ack = new CommandAck();
+        ack.setCommandId(command.getId());
+        CommandExecuteResult result = new CommandExecuteResult();
+        result.setSuccess(false);
+        result.setResponse(values.entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(Collectors.joining(";\r\n")));
         ack.setResponse(JSON.toJSONString(result));
         callback.accept(ack);
     }
@@ -338,7 +342,7 @@ public class JdbcPreCheckCommandProcessor {
         if ((b == null && s != null) || (b != null && s == null)) {
             return false;
         }
-        if(b == null && s == null){
+        if (b == null && s == null) {
             return true;
         }
         return b.equals(s);

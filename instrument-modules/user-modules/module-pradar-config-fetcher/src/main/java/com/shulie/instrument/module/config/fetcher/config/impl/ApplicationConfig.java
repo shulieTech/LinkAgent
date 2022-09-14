@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.pamirs.pradar.internal.config.*;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.resolver.ConfigResolver;
@@ -93,9 +94,6 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
 
     private Map<String, ShadowHbaseConfig> shadowHbaseConfigs;
 
-    // 是否允许使用影子资源准备模块, 如果允许使用则很多配置信息从准备模块里拉取，不走控制台
-    public static boolean enableShadowPreparationModule = System.getProperty("enable.shadow.preparation.module") != null;
-
 
     /**
      * 插件-redis最大过期时间
@@ -137,7 +135,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         for (FIELDS field : fields) {
             switch (field) {
                 case URL_WHITE_LIST:
-                    if (!enableShadowPreparationModule) {
+                    if (!ConfigFetcherModule.enableShadowPreparationModule) {
                         change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
                     }
                     break;
@@ -151,7 +149,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                     change(FIELDS.CACHE_KEY_ALLOW_LIST, newConfig.getCacheKeyAllowList());
                     break;
                 case SHADOW_DATABASE_CONFIGS:
-                    if (!enableShadowPreparationModule) {
+                    if (!ConfigFetcherModule.enableShadowPreparationModule) {
                         change(FIELDS.SHADOW_DATABASE_CONFIGS, newConfig.getShadowDatabaseConfigs());
                     }
                     break;

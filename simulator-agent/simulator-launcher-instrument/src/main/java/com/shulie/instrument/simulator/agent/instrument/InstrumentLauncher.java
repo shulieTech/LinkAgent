@@ -40,7 +40,9 @@ public class InstrumentLauncher {
     private final static String SIMULATOR_KEY_UNIT = "simulator.unit";
 
     public static void premain(final String agentArgs, final Instrumentation instrumentation) {
+        long startTime = System.currentTimeMillis();
         start(agentArgs, instrumentation);
+        System.out.println("start linkAgent-simulatorAgent use " + (System.currentTimeMillis() - startTime) + "ms");
     }
 
     public static void premain(String agentArgs) {
@@ -182,6 +184,7 @@ public class InstrumentLauncher {
      * @param inst          Instrumentation
      */
     public static void start(String featureString, Instrumentation inst) {
+        long l = System.currentTimeMillis();
         final Map<String, String> args = toFeatureMap(featureString);
         final Integer delay = getDelay(args, null);
         final TimeUnit timeUnit = getTimeUnit(args, null);
@@ -199,6 +202,7 @@ public class InstrumentLauncher {
              * 如果是 jdk9及以上则采用外置进程方式attach 进程
              * 如果是 jdk9以下则使用内部方式attach 进程
              */
+            System.out.println("start linkAgent-simulatorAgent prepare:" + (System.currentTimeMillis() - l));
             startInternal(pid, processName, delay, timeUnit, inst);
         } catch (Throwable e) {
             System.err.println("SIMULATOR: start Agent failed. \n" + getStackTraceAsString(e));
@@ -243,23 +247,38 @@ public class InstrumentLauncher {
      * @throws java.lang.reflect.InvocationTargetException
      */
     private static void startInternal(final long pid, final String processName, Integer delay, TimeUnit unit, Instrumentation inst) throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, java.lang.reflect.InvocationTargetException {
+        long l = System.currentTimeMillis();
         File file = new File(DEFAULT_AGENT_HOME + File.separator + "core", "simulator-agent-core.jar");
         AgentClassLoader agentClassLoader = new AgentClassLoader(new URL[]{file.toURI().toURL()});
         Class coreLauncherOfClass = agentClassLoader.loadClass("com.shulie.instrument.simulator.agent.core.CoreLauncher");
+
+        System.out.println("start linkAgent-simulatorAgent invoke prepare coreLauncherOfClass:" + (System.currentTimeMillis() - l));
+        l = System.currentTimeMillis();
+
         Constructor constructor = coreLauncherOfClass.getConstructor(String.class, long.class, String.class, String.class, Instrumentation.class, ClassLoader.class);
+        System.out.println("start linkAgent-simulatorAgent invoke prepare get constructor:" + (System.currentTimeMillis() - l));
+        l = System.currentTimeMillis();
         Object coreLauncherOfInstance = constructor.newInstance(DEFAULT_AGENT_HOME, pid, processName, getTagFileName(), inst, InstrumentLauncher.class.getClassLoader());
 
+        System.out.println("start linkAgent-simulatorAgent invoke prepare constructor:" + (System.currentTimeMillis() - l));
+        l = System.currentTimeMillis();
         if (delay != null) {
             Method setDelayMethod = coreLauncherOfClass.getDeclaredMethod("setDelay", int.class);
             setDelayMethod.invoke(coreLauncherOfInstance, delay.intValue());
         }
+        System.out.println("start linkAgent-simulatorAgent invoke prepare setDelay:" + (System.currentTimeMillis() - l));
+        l = System.currentTimeMillis();
 
         if (unit != null) {
             Method setUnitMethod = coreLauncherOfClass.getDeclaredMethod("setUnit", TimeUnit.class);
             setUnitMethod.invoke(coreLauncherOfInstance, unit);
         }
 
+        System.out.println("start linkAgent-simulatorAgent invoke prepare setUnit:" + (System.currentTimeMillis() - l));
+
         Method startMethod = coreLauncherOfClass.getDeclaredMethod("start");
+        l = System.currentTimeMillis();
         startMethod.invoke(coreLauncherOfInstance);
+        System.out.println("start linkAgent-simulatorAgent invoke start use " + (System.currentTimeMillis() - l) + "ms");
     }
 }

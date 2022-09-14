@@ -22,8 +22,7 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
-import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.*;
 import static java.util.regex.Pattern.quote;
 
 /**
@@ -51,7 +50,8 @@ public class EventWatchBuilder {
      * @param moduleEventWatcher 模块事件观察者
      */
     public EventWatchBuilder(final ModuleEventWatcher moduleEventWatcher) {
-        this(moduleEventWatcher, WILDCARD);
+//        this(moduleEventWatcher, WILDCARD);
+        this(moduleEventWatcher, STRING);
     }
 
     /**
@@ -79,6 +79,7 @@ public class EventWatchBuilder {
             case REGEX:
                 return onClass(".*");
             case WILDCARD:
+            case STRING:
             default:
                 return onClass("*");
         }

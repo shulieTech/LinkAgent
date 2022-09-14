@@ -27,6 +27,11 @@ public abstract class PatternType {
     public final static int WILDCARD = 1;
 
     /**
+     * 字符串严格匹配
+     */
+    public final static int STRING = 3;
+
+    /**
      * 正则表达式
      */
     public final static int REGEX = 2;
@@ -34,6 +39,8 @@ public abstract class PatternType {
     public static int of(String name) {
         if ("REGEX".equalsIgnoreCase(name)) {
             return REGEX;
+        } else if ("STRING".equalsIgnoreCase(name)) {
+            return STRING;
         }
         return PatternType.WILDCARD;
     }
@@ -44,6 +51,9 @@ public abstract class PatternType {
         }
         if (type == WILDCARD) {
             return "WILDCARD";
+        }
+        if (type == STRING) {
+            return "STRING";
         }
         return "UNKNOW";
     }

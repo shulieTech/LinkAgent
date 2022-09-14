@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,11 +17,14 @@ package com.shulie.instrument.simulator.core.util.matcher;
 import com.shulie.instrument.simulator.api.filter.*;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.listener.ext.EventWatchCondition;
+import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.core.util.matcher.structure.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -105,6 +108,7 @@ public class ExtFilterMatcher implements Matcher {
     public List<BuildingForListeners> getAllListeners() {
         return extFilter.getAllListeners();
     }
+
 
     @Override
     public boolean preMatching(String javaClassName) {

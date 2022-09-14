@@ -22,14 +22,14 @@ import com.shulie.instrument.simulator.api.filter.MethodDescriptor;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
+import com.shulie.instrument.simulator.api.util.LogbackTempUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
-import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
+import static com.shulie.instrument.simulator.api.listener.ext.PatternType.*;
 import static java.util.regex.Pattern.quote;
 
 /**
@@ -62,11 +62,11 @@ class ClassMatchBuilder implements IClassMatchBuilder {
         this.moduleEventWatcher = moduleEventWatcher;
         this.patternType = patternType;
         if (ArrayUtils.isEmpty(pattern)) {
-            this.pattern = this.patternType == WILDCARD ? PATTERN_WILDCARD : PATTERN_REGEX;
+            this.pattern = (this.patternType == WILDCARD || this.patternType == STRING)  ? PATTERN_WILDCARD : PATTERN_REGEX;
         } else {
             this.pattern = pattern;
         }
-        this.superPatterns = this.patternType == WILDCARD ? PATTERN_WILDCARD : PATTERN_REGEX;
+        this.superPatterns = (this.patternType == WILDCARD || this.patternType == STRING) ? PATTERN_WILDCARD : PATTERN_REGEX;
     }
 
     @Override
@@ -166,6 +166,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 return hasInterfaceTypes(toRegexQuoteArray(StringUtil.getJavaClassNameArray(classes)));
             case WILDCARD:
+            case STRING:
             default:
                 return hasInterfaceTypes(StringUtil.getJavaClassNameArray(classes));
         }
@@ -189,6 +190,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 this.superPatterns = toRegexQuoteArray(StringUtil.getJavaClassNameArray(classes));
             case WILDCARD:
+            case STRING:
             default:
                 this.superPatterns = StringUtil.getJavaClassNameArray(classes);
         }
@@ -204,6 +206,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 return hasAnnotationTypes(toRegexQuoteArray(StringUtil.getJavaClassNameArray(classes)));
             case WILDCARD:
+            case STRING:
             default:
                 return hasAnnotationTypes(StringUtil.getJavaClassNameArray(classes));
         }
@@ -297,7 +300,12 @@ class ClassMatchBuilder implements IClassMatchBuilder {
 
             @Override
             public boolean doClassNameFilter(String javaClassName) {
-                return patternMatching(javaClassName, pattern, patternType);
+                long l = System.currentTimeMillis();
+                try {
+                    return patternMatching(javaClassName, pattern, patternType);
+                } finally {
+                    LogbackTempUtils.costTimePrint("patternMatching", null, (superPatterns == PATTERN_REGEX || hasInterfaceTypes.isNotEmpty()) ? "supper" : "signal", l);
+                }
             }
 
             @Override
@@ -310,8 +318,11 @@ class ClassMatchBuilder implements IClassMatchBuilder {
                     return false;
                 }
 
-                if (!patternMatching(classDescriptor.getSuperClassTypeJavaClassName(), superPatterns, patternType)) {
-                    return false;
+//                不是 withSupper 或者 withInterface 跳过这个逻辑
+                if (superPatterns != PATTERN_REGEX && superPatterns != PATTERN_WILDCARD) {
+                    if (!patternMatching(classDescriptor.getSuperClassTypeJavaClassName(), superPatterns, patternType)) {
+                        return false;
+                    }
                 }
 
                 if (getHasInterfaceTypes().isNotEmpty()) {
@@ -403,6 +414,17 @@ class ClassMatchBuilder implements IClassMatchBuilder {
                                            final String[] patterns,
                                            final int patternType) {
         switch (patternType) {
+            case STRING:
+                if (patterns == null || patterns.length == 0) {
+                    return false;
+                }
+                for (String p : patterns) {
+                    boolean matches = "*".equals(p) || StringUtil.equals(string, p);
+                    if (matches) {
+                        return true;
+                    }
+                }
+                return false;
             case WILDCARD:
                 if (patterns == null || patterns.length == 0) {
                     return false;
@@ -446,6 +468,7 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 return CollectionUtils.add(bfBehaviors, new BehaviorMatchBuilder(this, patternType, ".*").withAnyParameters());
             case WILDCARD:
+            case STRING:
             default:
                 return CollectionUtils.add(bfBehaviors, new BehaviorMatchBuilder(this, patternType, "*").withAnyParameters());
         }

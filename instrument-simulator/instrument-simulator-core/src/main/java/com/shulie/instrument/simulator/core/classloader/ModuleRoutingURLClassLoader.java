@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.core.classloader;
 
 import com.shulie.instrument.simulator.core.util.CompoundEnumeration;
 import com.shulie.instrument.simulator.core.util.EmptyEnumeration;
+import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import org.apache.commons.lang.ArrayUtils;
 
 import java.io.IOException;
@@ -143,6 +144,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
      */
     @Override
     protected URL internalGetResource(String name) {
+        long l = System.currentTimeMillis();
         // 1. find routing resource
         URL url = getRoutingResource(name);
 
@@ -203,6 +205,7 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
      */
     @Override
     protected Enumeration<URL> internalGetResources(String name) throws IOException {
+        long l = System.currentTimeMillis();
         List<Enumeration<URL>> enumerationList = new ArrayList<Enumeration<URL>>();
         // 1. find routing resources
         enumerationList.add(getRoutingResources(name));
@@ -215,7 +218,6 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
 
         // 4. find business classloader resources
         enumerationList.add(getBusinessResources(name));
-
 
         return new CompoundEnumeration<URL>(
                 enumerationList.toArray((Enumeration<URL>[]) new Enumeration<?>[0]));
@@ -293,38 +295,50 @@ public abstract class ModuleRoutingURLClassLoader extends RoutingURLClassLoader 
 
     protected Class<?> internalLoadClass(String name, boolean resolve)
             throws ClassNotFoundException {
+        long l = System.currentTimeMillis();
+        long lt = System.currentTimeMillis();
         Class<?> clazz = null;
 
-        // 1. find routing
-        if (clazz == null) {
-            clazz = resolveRouting(name, resolve);
-        }
-
-        // 2. Import class export by other plugins
-        if (clazz == null) {
-            clazz = resolveExportClass(name);
-        }
-
-        // 3. module classpath class
-        if (clazz == null) {
-            clazz = resolveLocalClass(name, resolve);
-        }
-
-        // 4. load class from business classloader
-        if (clazz == null) {
-            clazz = resolveBusinessClassLoader(name);
-        }
-
-        // 5. load class from super
-        if (clazz == null) {
-            clazz = resolveSystemClass(name, resolve);
-        }
-
-        if (clazz != null) {
-            if (resolve) {
-                resolveClass(clazz);
+        try {
+            // 1. find routing
+            if (clazz == null) {
+                clazz = resolveRouting(name, resolve);
+                l = LogbackUtils.costTimePrint("internalLoadClass", name, "resolveRouting", l);
             }
-            return clazz;
+
+            // 2. Import class export by other plugins
+            if (clazz == null) {
+                clazz = resolveExportClass(name);
+                l = LogbackUtils.costTimePrint("internalLoadClass", name, "resolveExportClass", l);
+            }
+
+            // 3. module classpath class
+            if (clazz == null) {
+                clazz = resolveLocalClass(name, resolve);
+                l = LogbackUtils.costTimePrint("internalLoadClass", name, "resolveLocalClass", l);
+            }
+
+            // 4. load class from business classloader
+            if (clazz == null) {
+                clazz = resolveBusinessClassLoader(name);
+                l = LogbackUtils.costTimePrint("internalLoadClass", name, "resolveBusinessClassLoader", l);
+            }
+
+            // 5. load class from super
+            if (clazz == null) {
+                clazz = resolveSystemClass(name, resolve);
+                l = LogbackUtils.costTimePrint("internalLoadClass", name, "resolveSystemClass", l);
+            }
+
+            if (clazz != null) {
+                if (resolve) {
+                    resolveClass(clazz);
+                    l = LogbackUtils.costTimePrint("internalLoadClass", name, "resolveClass", l);
+                }
+                return clazz;
+            }
+        } finally {
+            l = LogbackUtils.costTimePrint("internalLoadClass", name, "total", lt);
         }
 
         throw new ClassNotFoundException("class " + name + " not found in module: " + moduleId);

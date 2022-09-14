@@ -210,6 +210,7 @@ public class AgentLauncher {
      * @throws Throwable 如果启动出现问题可能会抛出异常
      */
     public void startup(StartCommand<CommandPacket> startCommand) throws Throwable {
+        long l = System.currentTimeMillis();
         AgentStatus.installing();
         try {
             if (HeartCommandConstants.startCommandId != startCommand.getPacket().getId() ){
@@ -271,6 +272,8 @@ public class AgentLauncher {
                 //需要判断是否有本地版本
                 UpgradeFileUtils.checkLocal();
             }
+            System.out.println("core.start.install.UpgradeFileUtils cost : " + (System.currentTimeMillis() - l) + "ms");
+            l = System.currentTimeMillis();
 
 
 
@@ -331,6 +334,8 @@ public class AgentLauncher {
             }
 
             start0(descriptor, agentConfig.getAgentJarPath(), builder.toString());
+            System.out.println("core.start.install.start0 cost : " + (System.currentTimeMillis() - l) + "ms");
+            l = System.currentTimeMillis();
             String content = null;
             long startWaitTime = System.currentTimeMillis();
             while (true) {
@@ -347,6 +352,9 @@ public class AgentLauncher {
                 content = read(resultFile);
                 break;
             }
+
+            System.out.println("core.start.install.waitResultFile cost : " + (System.currentTimeMillis() - l) + "ms");
+            l = System.currentTimeMillis();
             if (StringUtils.isBlank(content)) {
                 logger.error("AGENT: launch on agent err. can't get a empty result from result file:{}",
                     this.agentConfig.getAgentResultFilePath());
@@ -370,6 +378,9 @@ public class AgentLauncher {
 
             logger.info("AGENT: got a available agent url: {} version : {}", this.baseUrl, result[2]);
             System.setProperty("ttl.disabled", "false");
+
+            System.out.println("core.start.install.finish cost : " + (System.currentTimeMillis() - l) + "ms");
+            l = System.currentTimeMillis();
         } catch (Throwable throwable) {
             try {
                 if (throwable instanceof NoClassDefFoundError) {

@@ -15,10 +15,13 @@
 package com.shulie.instrument.simulator.core.server.jetty;
 
 import com.shulie.instrument.simulator.api.LoadMode;
+import com.shulie.instrument.simulator.api.ModuleException;
+import com.shulie.instrument.simulator.api.resource.ModuleLoader;
 import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.Simulator;
-import com.shulie.instrument.simulator.core.manager.impl.DefaultDeploymentManager;
+import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
+import com.shulie.instrument.simulator.core.manager.impl.*;
 import com.shulie.instrument.simulator.core.server.CoreServer;
 import com.shulie.instrument.simulator.core.server.jetty.servlet.ModuleHttpServlet;
 import com.shulie.instrument.simulator.core.util.Initializer;
@@ -54,7 +57,10 @@ public class JettyCoreServer implements CoreServer {
     private Server httpServer;
     private CoreConfigure config;
     private Simulator simulator;
+    private Simulator syncModuleSimulator;
     private ModuleHttpServlet moduleHttpServlet;
+
+    private boolean isLogInited;
     // is destroyed already
     private AtomicBoolean isDestroyed = new AtomicBoolean(false);
 
@@ -205,14 +211,17 @@ public class JettyCoreServer implements CoreServer {
 
     @Override
     public synchronized void bind(final CoreConfigure config, final Instrumentation inst) throws IOException {
+        long startTime = System.currentTimeMillis();
+        long l = System.currentTimeMillis();
+        if ("true".equals(System.getProperty("simulator.exp.test.start.fail"))) {
+            throw new NullPointerException("指定了启动失败参数 simulator.exp.test.start.fail， 注入空指针异常！");
+        }
         this.config = config;
         try {
             initializer.initProcess(new Initializer.Processor() {
                 @Override
                 public void process() throws Throwable {
-                    LogbackUtils.init(
-                            config.getConfigLibPath() + File.separator + "simulator-logback.xml"
-                    );
+                    initLog();
                     if (logger.isInfoEnabled()) {
                         logger.info("SIMULATOR: initializing server. config={}", config);
                     }
@@ -223,17 +232,20 @@ public class JettyCoreServer implements CoreServer {
                 }
             });
             config.setSocketAddress(getLocal());
+            l = LogbackUtils.costTimePrint("bind", null, "initProcess", l);
             simulator.getCoreModuleManager().reset();
+            l = LogbackUtils.costTimePrint("bind", null, "module-reset", l);
 
             final InetSocketAddress local = getLocal();
             if (logger.isInfoEnabled()) {
                 System.out.println(String.format("SIMULATOR: initialized server. actual bind to %s:%s", local.getHostName(), local.getPort()));
-                logger.info("SIMULATOR: initialized server. actual bind to {}:{}",
+                logger.info("SIMULATOR: initialized server. actual bind to {}:{} cost {}ms",
                         local.getHostName(),
-                        local.getPort()
+                        local.getPort(),
+                        (System.currentTimeMillis() - startTime)
                 );
             }
-
+            l = LogbackUtils.costTimePrint("bind", null, "printLog", l);
         } catch (Throwable cause) {
             // 这里会抛出到目标应用层，所以在这里留下错误信息
             logger.error("SIMULATOR: initialize server failed.", cause);
@@ -282,6 +294,15 @@ public class JettyCoreServer implements CoreServer {
         this.simulator = null;
         this.moduleHttpServlet = null;
         coreServer = null;
+    }
+
+    private void initLog() {
+        if (!isLogInited) {
+            LogbackUtils.init(
+                    config.getConfigLibPath() + File.separator + "simulator-logback.xml"
+            );
+            isLogInited = true;
+        }
     }
 
     @Override

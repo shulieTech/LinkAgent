@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.core.util;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import com.shulie.instrument.simulator.api.util.LogbackTempUtils;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,11 +24,18 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Logback日志框架工具类
  */
 public class LogbackUtils {
+    public static long costTimePrint(String type,String name,String cn, long startTime) {
+        return LogbackTempUtils.costTimePrint(type, name, cn, startTime);
+    }
 
 
     /**

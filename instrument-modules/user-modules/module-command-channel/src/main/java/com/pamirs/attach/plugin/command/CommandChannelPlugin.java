@@ -27,6 +27,8 @@ import io.shulie.takin.channel.router.zk.DefaultClientChannel;
 import io.shulie.takin.channel.router.zk.ZkClientConfig;
 import io.shulie.takin.channel.type.CustomCommand;
 import org.kohsuke.MetaInfServices;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
 import java.util.concurrent.Executors;
@@ -42,6 +44,8 @@ import java.util.concurrent.ThreadFactory;
 @ModuleInfo(id = CommandChannelConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",
     description = "命令下发模块,负责与控制台下发命令集成")
 public class CommandChannelPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
+    private static final Logger logger = LoggerFactory.getLogger(CommandChannelPlugin.class);
+
     private ClientChannel channel;
     @Resource
     private ModuleCommandInvoker commandInvoker;
@@ -50,29 +54,42 @@ public class CommandChannelPlugin extends ModuleLifecycleAdapter implements Exte
 
     @Override
     public boolean onActive() throws Throwable {
-        // 启动时，注册zk
-        // zk配置命令参数
-        ZkClientConfig config = new ZkClientConfig();
-        config.setZkServers(simulatorConfig.getZkServers());
-        // 实例化客户端通道
-        channel = new DefaultClientChannel()
-            .setChannelProtocol(new JsonChannelProtocol())
-            .setScheduledExecutorService(Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-                @Override
-                public Thread newThread(Runnable r) {
-                    Thread t = new Thread(r, "Command-Channel-Heartbeat");
-                    t.setDaemon(true);
-                    return t;
-                }
-            }))
-            .registerTenantAndEnv(simulatorConfig.getProperty(Pradar.TENANT_APP_KEY),
-                simulatorConfig.getProperty(Pradar.ENV_CODE))
-            .registerHandler(new CustomCommand("DEFAULT_CHANNEL"),
-                new DispatcherCommandHandler(commandInvoker))
-            .build(config);
-        // 注册监听AgendId 客户端唯一标识
-        channel.register(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
+       new Thread(new Runnable() {
+           @Override
+           public void run() {
+               CommandChannelPlugin.this.init();
+           }
+       }).start();
         return true;
+    }
+
+    private void init(){
+        try {
+            // 启动时，注册zk
+            // zk配置命令参数
+            ZkClientConfig config = new ZkClientConfig();
+            config.setZkServers(simulatorConfig.getZkServers());
+            // 实例化客户端通道
+            channel = new DefaultClientChannel()
+                    .setChannelProtocol(new JsonChannelProtocol())
+                    .setScheduledExecutorService(Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+                        @Override
+                        public Thread newThread(Runnable r) {
+                            Thread t = new Thread(r, "Command-Channel-Heartbeat");
+                            t.setDaemon(true);
+                            return t;
+                        }
+                    }))
+                    .registerTenantAndEnv(simulatorConfig.getProperty(Pradar.TENANT_APP_KEY),
+                            simulatorConfig.getProperty(Pradar.ENV_CODE))
+                    .registerHandler(new CustomCommand("DEFAULT_CHANNEL"),
+                            new DispatcherCommandHandler(commandInvoker))
+                    .build(config);
+            // 注册监听AgendId 客户端唯一标识
+            channel.register(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
+        } catch (Exception e) {
+            logger.error("注册命令通道失败！", e);
+        }
     }
 
     @Override

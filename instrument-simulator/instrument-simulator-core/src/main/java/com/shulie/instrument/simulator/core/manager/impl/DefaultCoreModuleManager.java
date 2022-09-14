@@ -36,6 +36,7 @@ import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
 import com.shulie.instrument.simulator.core.manager.ModuleLoader;
 import com.shulie.instrument.simulator.core.manager.*;
 import com.shulie.instrument.simulator.core.util.DefaultModuleLoadInfoManagerUtils;
+import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.core.util.ModuleSpecUtils;
 import com.shulie.instrument.simulator.core.util.VersionUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -367,7 +368,6 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                    final ExtensionModule module,
                                    final File moduleJarFile,
                                    final ClassLoaderFactory classLoaderFactory) throws ModuleException {
-
         if (loadedModuleMap.containsKey(moduleSpec.getModuleId())) {
             if (isDebugEnabled) {
                 logger.debug("SIMULATOR: module already loaded. module={};", moduleSpec);
@@ -406,6 +406,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         // 通知生命周期，模块加载完成
         callAndFireModuleLifeCycle(coreModule, MODULE_LOAD_COMPLETED);
+
 
     }
 
@@ -847,7 +848,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
     @Override
     public synchronized void active(final CoreModule coreModule) throws ModuleException {
-
+        long l = System.currentTimeMillis();
         // 如果模块已经被激活，则直接幂等返回
         if (coreModule.isActivated()) {
             if (isDebugEnabled) {
@@ -865,6 +866,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         // 通知生命周期
         callAndFireModuleLifeCycle(coreModule, MODULE_ACTIVE);
+        l = LogbackUtils.costTimePrint("activity", coreModule.getModuleId(), "callAndFireModuleLifeCycle", l);
 
         // 激活所有监听器
         for (final SimulatorClassFileTransformer simulatorClassFileTransformer : coreModule.getSimulatorClassFileTransformers()) {
@@ -1051,6 +1053,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 }
                 return;
             }
+            long l = System.currentTimeMillis();
 
             // 需要经过ModuleLoadingChain的过滤
             providerManager.loading(
@@ -1060,6 +1063,8 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                     moduleJarFile,
                     classLoaderFactory.getDefaultClassLoader()
             );
+
+            l = LogbackUtils.costTimePrint("load-callback", moduleSpec.getModuleId() + ":" + module.getClass().getName(), "providerManager.loading", l);
 
             // 之前没有加载过，这里进行加载
             if (isInfoEnabled) {
@@ -1137,6 +1142,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      * @param action
      */
     private void loadModule(final ModuleSpec moduleSpec, String action) {
+        long l = System.currentTimeMillis();
         if (isInfoEnabled) {
             logger.info("SIMULATOR: prepare to load module {} ,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
         }
@@ -1167,10 +1173,11 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 return;
             }
         }
-
+        l = LogbackUtils.costTimePrint("loading", moduleSpec.getModuleId(), "fetchModule", l);
         try {
             final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule());
             classLoaderService.load(moduleSpec, moduleClassLoader);
+            l = LogbackUtils.costTimePrint("loading", moduleSpec.getModuleId(), "classLoaderService.load", l);
         } catch (Throwable e) {
             logger.info("load module [{}] fail, set module invalid", moduleSpec.getModuleId(), e);
             moduleSpec.setValid(false);
@@ -1184,6 +1191,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
              */
             if (switcherManager.isAllSwitchOn(moduleSpec.getDependencies())) {
                 loadModule(moduleSpec);
+                l = LogbackUtils.costTimePrint("loading", moduleSpec.getModuleId(), "sync-loadModule", l);
                 if (isInfoEnabled) {
                     logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
                 }
@@ -1212,6 +1220,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         } else {
             loadModule(moduleSpec);
+            l = LogbackUtils.costTimePrint("loading", moduleSpec.getModuleId(), "sync-loadModule", l);
             if (isInfoEnabled) {
                 logger.info("SIMULATOR: load module {} successful,file={}", moduleSpec.getModuleId(), moduleSpec.getFile().getAbsolutePath());
             }
@@ -1236,7 +1245,6 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules:{}", loadedModuleMap.keySet());
         }
-
         waitLoadModules.clear();
 
         // 1. 强制卸载所有模块

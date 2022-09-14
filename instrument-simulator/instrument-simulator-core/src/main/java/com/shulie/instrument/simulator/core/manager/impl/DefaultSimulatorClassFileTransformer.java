@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,6 +21,7 @@ import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.enhance.EventEnhancer;
 import com.shulie.instrument.simulator.core.manager.AffectStatistic;
 import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransformer;
+import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
 import com.shulie.instrument.simulator.core.util.matcher.MatchingResult;
@@ -136,70 +137,91 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                               String internalClassName,
                               final Class<?> classBeingRedefined,
                               byte[] srcByteCodeArray) {
+        long start = System.currentTimeMillis();
+        long l = System.currentTimeMillis();
         // 如果未开启unsafe开关，是不允许增强来自BootStrapClassLoader的类
-        if (!isEnableUnsafe
-                && null == loader) {
-            if (isDebugEnabled) {
-                logger.debug("SIMULATOR: transform ignore {}, class from bootstrap but unsafe.enable=false.", internalClassName);
-            }
-            return null;
-        }
-
-        final ClassStructure classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
-        if (internalClassName == null) {
-            internalClassName = classStructure.getJavaClassName();
-        }
-
-        if (!matcher.preMatching(internalClassName.replace('/', '.'))) {
-            if (isDebugEnabled) {
-                logger.debug("SIMULATOR: transform ignore {}, classname is not matched!", internalClassName, loader);
-            }
-            return null;
-        }
-
-        final MatchingResult matchingResult = new UnsupportedMatcher(loader, isEnableUnsafe).and(matcher).matching(classStructure);
-        final Map<String, Set<BuildingForListeners>> behaviorSignCodes = matchingResult.getBehaviorSignCodeMap();
-
-        // 如果一个行为都没匹配上也不用继续了
-        if (!matchingResult.isMatched() || behaviorSignCodes.isEmpty()) {
-            if (isDebugEnabled) {
-                logger.debug("SIMULATOR: transform ignore {}, no behaviors matched in loader={}", internalClassName, loader);
-            }
-            return null;
-        }
-
-        /**
-         * ASM增强中使用到了 LDC 命令，LDC命令在 java5(49)才支持，所以当类版本低于此版本时，强制将类版本设置为 java5(49)
-         */
-        if (getClassMajorVersion(srcByteCodeArray) < CLASS_VERSION_15) {
-            srcByteCodeArray = resetClassVersionToJava5(srcByteCodeArray);
-        }
-
-        // 开始进行类匹配
         try {
-            byte[] toByteCodeArray = new EventEnhancer().toByteCodeArray(
-                    loader,
-                    srcByteCodeArray,
-                    behaviorSignCodes
-            );
-            if (srcByteCodeArray == toByteCodeArray) {
+            if (!isEnableUnsafe
+                    && null == loader) {
                 if (isDebugEnabled) {
-                    logger.debug("SIMULATOR: transform ignore {}, nothing changed in loader={}", internalClassName, loader);
+                    logger.debug("SIMULATOR: transform ignore {}, class from bootstrap but unsafe.enable=false.", internalClassName);
                 }
                 return null;
             }
 
-            // statistic affect
-            affectStatistic.statisticAffect(loader, internalClassName, behaviorSignCodes);
-
-            if (isInfoEnabled) {
-                logger.info("SIMULATOR: transform {} finished, by module={} in loader={}", internalClassName, moduleId, loader);
+            ClassStructure classStructure =null;
+            if (internalClassName == null) {
+                classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
+                internalClassName = classStructure.getJavaClassName();
             }
-            return toByteCodeArray;
-        } catch (Throwable cause) {
-            logger.warn("SIMULATOR: transform {} failed, by module={} in loader={}", internalClassName, moduleId, loader, cause);
-            return null;
+            l = costTimePrint(internalClassName, "internalClassName", l);
+            if (!matcher.preMatching(internalClassName.replace('/', '.'))) {
+                if (isDebugEnabled) {
+                    logger.debug("SIMULATOR: transform ignore {}, classname is not matched!", internalClassName, loader);
+                }
+                l = costTimePrint(internalClassName, "preNoMatch", l);
+                return null;
+            }
+
+            if (classStructure == null) {
+                classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
+            }
+            l = costTimePrint(internalClassName, "getClassStructure", l);
+            final MatchingResult matchingResult = new UnsupportedMatcher(loader, isEnableUnsafe).and(matcher).matching(classStructure);
+            final Map<String, Set<BuildingForListeners>> behaviorSignCodes = matchingResult.getBehaviorSignCodeMap();
+
+            // 如果一个行为都没匹配上也不用继续了
+            if (!matchingResult.isMatched() || behaviorSignCodes.isEmpty()) {
+                if (isDebugEnabled) {
+                    logger.debug("SIMULATOR: transform ignore {}, no behaviors matched in loader={}", internalClassName, loader);
+                }
+                l = costTimePrint(internalClassName, "noMatch", l);
+                return null;
+            }
+
+            /**
+             * ASM增强中使用到了 LDC 命令，LDC命令在 java5(49)才支持，所以当类版本低于此版本时，强制将类版本设置为 java5(49)
+             */
+            if (getClassMajorVersion(srcByteCodeArray) < CLASS_VERSION_15) {
+                srcByteCodeArray = resetClassVersionToJava5(srcByteCodeArray);
+            }
+            l = costTimePrint(internalClassName, "matched", l);
+
+            // 开始进行类匹配
+            try {
+                byte[] toByteCodeArray = new EventEnhancer().toByteCodeArray(
+                        loader,
+                        srcByteCodeArray,
+                        behaviorSignCodes
+                );
+                l = costTimePrint(internalClassName, "toByteCode", l);
+
+                if (srcByteCodeArray == toByteCodeArray) {
+                    if (isDebugEnabled) {
+                        logger.debug("SIMULATOR: transform ignore {}, nothing changed in loader={}", internalClassName, loader);
+                    }
+                    return null;
+                }
+                // statistic affect
+                affectStatistic.statisticAffect(loader, internalClassName, behaviorSignCodes);
+
+                if (isInfoEnabled) {
+                    logger.info("SIMULATOR:[tcf]cost {} transform {} finished, by module={} in loader={}", (System.currentTimeMillis() - start), internalClassName, moduleId, loader);
+                }
+                l = costTimePrint(internalClassName, "toFinish", l);
+                return toByteCodeArray;
+            } catch (Throwable cause) {
+                logger.warn("SIMULATOR: transform {} failed, by module={} in loader={}", internalClassName, moduleId, loader, cause);
+                return null;
+            }
+        } finally {
+            costTimePrint(internalClassName, "transform", start);
         }
+    }
+
+    private long costTimePrint(String cn, String name, long startTime) {
+        LogbackUtils.costTimePrint("transform", cn, name, startTime);
+        return System.currentTimeMillis();
     }
 
     /**

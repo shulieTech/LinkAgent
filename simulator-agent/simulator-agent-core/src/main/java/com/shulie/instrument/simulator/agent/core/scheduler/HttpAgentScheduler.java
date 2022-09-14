@@ -305,7 +305,10 @@ public class HttpAgentScheduler implements AgentScheduler {
     public void start() {
         //install local if no latest command packet found
         //卸载的命令在的时候，重启的时候这里这个installLocal会无法执行，
+        long l = System.currentTimeMillis();
         CommandPacket commandPacket = getLatestCommandPacket();
+        System.out.println("core.start.getLatestCommandPacket cost : " + (System.currentTimeMillis() - l) + "ms");
+        l = System.currentTimeMillis();
         if (commandPacket == null) {
             installLocalOrRemote();
         } else {
@@ -313,7 +316,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         }
 
 
-    startScheduler();
+        startScheduler();
     }
 
     private List<CommandExecuteResponse> handleCommandExecuteResponse(CommandExecuteResponse commandExecuteResponse){
@@ -509,6 +512,7 @@ public class HttpAgentScheduler implements AgentScheduler {
      * use local jar installed if exists
      */
     private void installLocalOrRemote() {
+        long l = System.currentTimeMillis();
         CommandPacket startCommandPacket;
         //直到成功为止，控制台可能重启、网络问题等原因
         //TODO
@@ -519,7 +523,11 @@ public class HttpAgentScheduler implements AgentScheduler {
             } catch (InterruptedException ignore) {
             }
         }
+        System.out.println("core.start.getStartCommandPacket cost : " + (System.currentTimeMillis() - l) + "ms");
+        l = System.currentTimeMillis();
         install(startCommandPacket);
+        System.out.println("core.start.install cost : " + (System.currentTimeMillis() - l) + "ms");
+        l = System.currentTimeMillis();
     }
 
 
@@ -725,4 +733,11 @@ public class HttpAgentScheduler implements AgentScheduler {
             }
     }
 
+    public ExternalAPI getExternalAPI() {
+        return externalAPI;
+    }
+
+    public void setExternalAPI(ExternalAPI externalAPI) {
+        this.externalAPI = externalAPI;
+    }
 }

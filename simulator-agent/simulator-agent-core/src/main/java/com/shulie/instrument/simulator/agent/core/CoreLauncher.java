@@ -95,7 +95,13 @@ public class CoreLauncher {
         this.agentConfig = new AgentConfigImpl(this.coreConfig);
         System.setProperty("SIMULATOR_LOG_PATH", this.agentConfig.getLogPath());
         System.setProperty("SIMULATOR_LOG_LEVEL", this.agentConfig.getLogLevel());
-        LogbackUtils.init(this.agentConfig.getLogConfigFile());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                LogbackUtils.init(agentConfig.getLogConfigFile());
+            }
+        }).start();
+
         this.launcher = new AgentLauncher(this.agentConfig, instrumentation, classLoader);
         this.externalAPI = new ExternalAPIImpl(this.agentConfig);
         initAgentLoader();
@@ -122,25 +128,7 @@ public class CoreLauncher {
      * 初始化 Agent Loader
      */
     private void initAgentLoader() {
-        List<File> files = JarUtils.readFiles(new File(this.coreConfig.getProviderFilePath()), new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return file.isFile() && file.exists() && file.canRead();
-            }
-        });
-        if (files != null && !files.isEmpty()) {
-            URL[] urls = JarUtils.toURLs(files);
-            ProviderClassLoader classLoader = new ProviderClassLoader(urls, CoreLauncher.class.getClassLoader());
-            ServiceLoader<AgentScheduler> serviceLoader = ServiceLoader.load(AgentScheduler.class, classLoader);
-            for (AgentScheduler agentScheduler : serviceLoader) {
-                this.agentScheduler = agentScheduler;
-                break;
-            }
-        }
-
-        if (this.agentScheduler == null) {
-            this.agentScheduler = new HttpAgentScheduler();
-        }
+        this.agentScheduler = new HttpAgentScheduler();
 
         try {
             inject(this.agentScheduler);
@@ -156,17 +144,20 @@ public class CoreLauncher {
      * @throws IllegalAccessException
      */
     private void inject(Object object) throws IllegalAccessException {
-        final Field[] resourceFieldArray = getFieldsWithAnnotation(object.getClass(), Resource.class);
-        if (ArrayUtils.isEmpty(resourceFieldArray)) {
-            return;
+        if (object instanceof HttpAgentScheduler) {
+            ((HttpAgentScheduler) object).setExternalAPI(this.externalAPI);
         }
-        for (final Field resourceField : resourceFieldArray) {
-            final Class<?> fieldType = resourceField.getType();
-            // ConfigProvider 注入
-            if (ExternalAPI.class.isAssignableFrom(fieldType)) {
-                FieldUtils.writeField(resourceField, object, this.externalAPI, true);
-            }
-        }
+//        final Field[] resourceFieldArray = getFieldsWithAnnotation(object.getClass(), Resource.class);
+//        if (ArrayUtils.isEmpty(resourceFieldArray)) {
+//            return;
+//        }
+//        for (final Field resourceField : resourceFieldArray) {
+//            final Class<?> fieldType = resourceField.getType();
+//            // ConfigProvider 注入
+//            if (ExternalAPI.class.isAssignableFrom(fieldType)) {
+//                FieldUtils.writeField(resourceField, object, this.externalAPI, true);
+//            }
+//        }
     }
 
     private static Field[] getFieldsWithAnnotation(final Class<?> cls,
@@ -204,21 +195,28 @@ public class CoreLauncher {
      * @throws Throwable
      */
     public void start() throws Throwable {
+        long l = System.currentTimeMillis();
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 try {
-                    //delay了之后再启动，防止一些zk等的类加载问题
-                    RegisterFactory.init(agentConfig);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            //delay了之后再启动，防止一些zk等的类加载问题
+                            RegisterFactory.init(agentConfig);
 
-                    ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
-                    applicationUploader.checkAndGenerateApp();
+                            ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
+                            applicationUploader.checkAndGenerateApp();
 
                     Register register = RegisterFactory.getRegister(
                         agentConfig.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
                     register.start();
+
+                        }
+                    }).start();
 
 
 
@@ -293,7 +291,11 @@ public class CoreLauncher {
             }
         };
         if (delay <= 0) {
+            System.out.println("core.start cost : " + (System.currentTimeMillis() - l) + "ms");
+            l = System.currentTimeMillis();
             runnable.run();
+            System.out.println("core.run cost : " + (System.currentTimeMillis() - l) + "ms");
+            l = System.currentTimeMillis();
         } else {
             this.startService.schedule(runnable, delay, unit);
         }

@@ -26,6 +26,7 @@ import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.manager.CoreLoadedClassDataSource;
 import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransformer;
+import com.shulie.instrument.simulator.core.util.LogbackUtils;
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.GroupMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
@@ -34,10 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
 
@@ -58,6 +56,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     // 观察ID序列生成器
     private final Sequencer watchIdSequencer = new Sequencer();
     private EventListenerHandler eventListenerHandler;
+    private final boolean isEnableReTransform = !"0".equals(System.getProperty("simulator.delay"));
+
 
 
     DefaultModuleEventWatcher(final Instrumentation inst,
@@ -294,19 +294,25 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         SimulatorClassFileTransformer proxy = CostDumpTransformer.wrap(BytecodeDumpTransformer.wrap(transformer, coreModule.getSimulatorConfig()), coreModule.getSimulatorConfig());
         // 注册到CoreModule中
         coreModule.getSimulatorClassFileTransformers().add(proxy);
+        logger.info("tcccc  SimulatorClassFileTransformer number: {}", coreModule.getSimulatorClassFileTransformers().size());
 
         //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer 每个enhanceTemplate.enhance都是单独的一个transformer
         inst.addTransformer(proxy, true);
 
-        // 查找需要渲染的类集合
-        final List<Class<?>> waitingReTransformClasses = classDataSource.findForReTransform(matcher);
-        if (isInfoEnabled) {
-            logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
-                    watchId,
-                    coreModule.getModuleId(),
-                    waitingReTransformClasses.size()
-            );
+
+        List<Class<?>> waitingReTransformClassesTemp = Collections.emptyList();
+        if (isEnableReTransform) {
+            // 查找需要渲染的类集合
+            waitingReTransformClassesTemp = classDataSource.findForReTransform(matcher);
+            if (isInfoEnabled) {
+                logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
+                        watchId,
+                        coreModule.getModuleId(),
+                        waitingReTransformClassesTemp.size()
+                );
+            }
         }
+        final List<Class<?>> waitingReTransformClasses = waitingReTransformClassesTemp;
 
         int effectClassCount = 0, effectMethodCount = 0;
 
@@ -337,6 +343,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         } finally {
             finishProgress(progress, effectClassCount, effectMethodCount);
         }
+//        LogbackUtils.costTimePrint("watch", coreModule.getModuleId(), null, l);
 
         return watchId;
     }

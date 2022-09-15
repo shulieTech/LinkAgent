@@ -294,7 +294,6 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         SimulatorClassFileTransformer proxy = CostDumpTransformer.wrap(BytecodeDumpTransformer.wrap(transformer, coreModule.getSimulatorConfig()), coreModule.getSimulatorConfig());
         // 注册到CoreModule中
         coreModule.getSimulatorClassFileTransformers().add(proxy);
-        logger.info("tcccc  SimulatorClassFileTransformer number: {}", coreModule.getSimulatorClassFileTransformers().size());
 
         //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer 每个enhanceTemplate.enhance都是单独的一个transformer
         inst.addTransformer(proxy, true);

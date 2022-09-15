@@ -50,8 +50,7 @@ public class EventWatchBuilder {
      * @param moduleEventWatcher 模块事件观察者
      */
     public EventWatchBuilder(final ModuleEventWatcher moduleEventWatcher) {
-//        this(moduleEventWatcher, WILDCARD);
-        this(moduleEventWatcher, STRING);
+        this(moduleEventWatcher, WILDCARD);
     }
 
     /**
@@ -79,7 +78,6 @@ public class EventWatchBuilder {
             case REGEX:
                 return onClass(".*");
             case WILDCARD:
-            case STRING:
             default:
                 return onClass("*");
         }

@@ -62,11 +62,11 @@ class ClassMatchBuilder implements IClassMatchBuilder {
         this.moduleEventWatcher = moduleEventWatcher;
         this.patternType = patternType;
         if (ArrayUtils.isEmpty(pattern)) {
-            this.pattern = (this.patternType == WILDCARD || this.patternType == STRING)  ? PATTERN_WILDCARD : PATTERN_REGEX;
+            this.pattern = (this.patternType == WILDCARD)  ? PATTERN_WILDCARD : PATTERN_REGEX;
         } else {
             this.pattern = pattern;
         }
-        this.superPatterns = (this.patternType == WILDCARD || this.patternType == STRING) ? PATTERN_WILDCARD : PATTERN_REGEX;
+        this.superPatterns = (this.patternType == WILDCARD) ? PATTERN_WILDCARD : PATTERN_REGEX;
     }
 
     @Override
@@ -166,7 +166,6 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 return hasInterfaceTypes(toRegexQuoteArray(StringUtil.getJavaClassNameArray(classes)));
             case WILDCARD:
-            case STRING:
             default:
                 return hasInterfaceTypes(StringUtil.getJavaClassNameArray(classes));
         }
@@ -190,7 +189,6 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 this.superPatterns = toRegexQuoteArray(StringUtil.getJavaClassNameArray(classes));
             case WILDCARD:
-            case STRING:
             default:
                 this.superPatterns = StringUtil.getJavaClassNameArray(classes);
         }
@@ -206,7 +204,6 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 return hasAnnotationTypes(toRegexQuoteArray(StringUtil.getJavaClassNameArray(classes)));
             case WILDCARD:
-            case STRING:
             default:
                 return hasAnnotationTypes(StringUtil.getJavaClassNameArray(classes));
         }
@@ -310,30 +307,41 @@ class ClassMatchBuilder implements IClassMatchBuilder {
 
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
+                long l = System.currentTimeMillis();
                 if ((classDescriptor.getAccess() & getWithAccess()) != getWithAccess()) {
+                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "access", l);
                     return false;
                 }
+                l = LogbackTempUtils.costTimePrint("doClassFilter", null, "access", l);
 
                 if (!patternMatching(classDescriptor.getClassName(), pattern, patternType)) {
+                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatching", l);
                     return false;
                 }
+                l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatching", l);
 
 //                不是 withSupper 或者 withInterface 跳过这个逻辑
                 if (superPatterns != PATTERN_REGEX && superPatterns != PATTERN_WILDCARD) {
                     if (!patternMatching(classDescriptor.getSuperClassTypeJavaClassName(), superPatterns, patternType)) {
+                        l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatchingSuper", l);
                         return false;
                     }
+                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatchingSuper", l);
                 }
 
                 if (getHasInterfaceTypes().isNotEmpty()) {
                     if (!getHasInterfaceTypes().patternWith(classDescriptor.getInterfaceTypeJavaClassNameArray())) {
+                        l = LogbackTempUtils.costTimePrint("doClassFilter", null, "interface", l);
                         return false;
                     }
+                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "interface", l);
                 }
                 if (getHasAnnotationTypes().isNotEmpty()) {
                     if (!getHasAnnotationTypes().patternWith(classDescriptor.getAnnotationTypeJavaClassNameArray())) {
+                        l = LogbackTempUtils.costTimePrint("doClassFilter", null, "annotation", l);
                         return false;
                     }
+                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "annotation", l);
                 }
 
                 return true;
@@ -414,17 +422,6 @@ class ClassMatchBuilder implements IClassMatchBuilder {
                                            final String[] patterns,
                                            final int patternType) {
         switch (patternType) {
-            case STRING:
-                if (patterns == null || patterns.length == 0) {
-                    return false;
-                }
-                for (String p : patterns) {
-                    boolean matches = "*".equals(p) || StringUtil.equals(string, p);
-                    if (matches) {
-                        return true;
-                    }
-                }
-                return false;
             case WILDCARD:
                 if (patterns == null || patterns.length == 0) {
                     return false;
@@ -468,7 +465,6 @@ class ClassMatchBuilder implements IClassMatchBuilder {
             case REGEX:
                 return CollectionUtils.add(bfBehaviors, new BehaviorMatchBuilder(this, patternType, ".*").withAnyParameters());
             case WILDCARD:
-            case STRING:
             default:
                 return CollectionUtils.add(bfBehaviors, new BehaviorMatchBuilder(this, patternType, "*").withAnyParameters());
         }

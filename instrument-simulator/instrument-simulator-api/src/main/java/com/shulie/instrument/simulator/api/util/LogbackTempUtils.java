@@ -30,7 +30,7 @@ public class LogbackTempUtils {
 
     private static ConcurrentHashMap<String, CostTime> costTimeMap = new ConcurrentHashMap<String, CostTime>();
 
-    public static long costTimePrint(String type,String name,String cn, long startTime) {
+    public static long costTimePrint(String key, long startTime) {
         if (costTimeMap.isEmpty()) {
             logger.info("[tcccc]start thread");
             new Thread(()->{
@@ -49,7 +49,7 @@ public class LogbackTempUtils {
             }).start();
         }
         long l = System.currentTimeMillis() - startTime;
-        costTimeMap.compute(type+"_"+cn,(a,b)->{
+        costTimeMap.compute(key,(a,b)->{
             if (b == null) {
                 b = new CostTime();
             }

@@ -34,7 +34,12 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class LogbackUtils {
     public static long costTimePrint(String type,String name,String cn, long startTime) {
-        return LogbackTempUtils.costTimePrint(type, name, cn, startTime);
+        return LogbackTempUtils.costTimePrint(type + "_" + cn, startTime);
+    }
+
+    public static long costTimePrint(String key,long startTime) {
+//        return LogbackTempUtils.costTimePrint(key, startTime);
+        return System.currentTimeMillis();
     }
 
 

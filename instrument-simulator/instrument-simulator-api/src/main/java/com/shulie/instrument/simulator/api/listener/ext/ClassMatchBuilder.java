@@ -297,51 +297,46 @@ class ClassMatchBuilder implements IClassMatchBuilder {
 
             @Override
             public boolean doClassNameFilter(String javaClassName) {
-                long l = System.currentTimeMillis();
-                try {
-                    return patternMatching(javaClassName, pattern, patternType);
-                } finally {
-                    LogbackTempUtils.costTimePrint("patternMatching", null, (superPatterns == PATTERN_REGEX || hasInterfaceTypes.isNotEmpty()) ? "supper" : "signal", l);
-                }
+                return patternMatching(javaClassName, pattern, patternType);
             }
 
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
                 long l = System.currentTimeMillis();
                 if ((classDescriptor.getAccess() & getWithAccess()) != getWithAccess()) {
-                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "access", l);
+                    l = LogbackTempUtils.costTimePrint("doClassFilter_access", l);
                     return false;
                 }
-                l = LogbackTempUtils.costTimePrint("doClassFilter", null, "access", l);
+                l = LogbackTempUtils.costTimePrint("doClassFilter_access", l);
 
                 if (!patternMatching(classDescriptor.getClassName(), pattern, patternType)) {
-                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatching", l);
+                    l = LogbackTempUtils.costTimePrint("doClassFilter_patternMatching", l);
                     return false;
                 }
-                l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatching", l);
+                l = LogbackTempUtils.costTimePrint("doClassFilter_patternMatching", l);
 
 //                不是 withSupper 或者 withInterface 跳过这个逻辑
                 if (superPatterns != PATTERN_REGEX && superPatterns != PATTERN_WILDCARD) {
                     if (!patternMatching(classDescriptor.getSuperClassTypeJavaClassName(), superPatterns, patternType)) {
-                        l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatchingSuper", l);
+                        l = LogbackTempUtils.costTimePrint("doClassFilter_patternMatchingSuper", l);
                         return false;
                     }
-                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "patternMatchingSuper", l);
+                    l = LogbackTempUtils.costTimePrint("doClassFilter_patternMatchingSuper", l);
                 }
 
                 if (getHasInterfaceTypes().isNotEmpty()) {
                     if (!getHasInterfaceTypes().patternWith(classDescriptor.getInterfaceTypeJavaClassNameArray())) {
-                        l = LogbackTempUtils.costTimePrint("doClassFilter", null, "interface", l);
+                        l = LogbackTempUtils.costTimePrint("doClassFilter_interface", l);
                         return false;
                     }
-                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "interface", l);
+                    l = LogbackTempUtils.costTimePrint("doClassFilter_interface", l);
                 }
                 if (getHasAnnotationTypes().isNotEmpty()) {
                     if (!getHasAnnotationTypes().patternWith(classDescriptor.getAnnotationTypeJavaClassNameArray())) {
-                        l = LogbackTempUtils.costTimePrint("doClassFilter", null, "annotation", l);
+                        l = LogbackTempUtils.costTimePrint("doClassFilter_annotation", l);
                         return false;
                     }
-                    l = LogbackTempUtils.costTimePrint("doClassFilter", null, "annotation", l);
+                    l = LogbackTempUtils.costTimePrint("doClassFilter_annotation", l);
                 }
 
                 return true;

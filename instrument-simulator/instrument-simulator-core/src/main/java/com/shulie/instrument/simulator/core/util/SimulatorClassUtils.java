@@ -16,6 +16,9 @@ package com.shulie.instrument.simulator.core.util;
 
 import org.apache.commons.lang.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Simulator的类操作工具类
  */
@@ -23,6 +26,15 @@ public class SimulatorClassUtils {
 
     private static final String SIMULATOR_FAMILY_CLASS_RES_PREFIX = "com/shulie/instrument/simulator/";
     private static final String SIMULATOR_FAMILY_CLASS_PREFIX = SIMULATOR_FAMILY_CLASS_RES_PREFIX.replace('/', '.');
+
+    private static final List<String> other_class_prefix = new ArrayList<>();
+
+    static {
+        other_class_prefix.add("net/bytebuddy");
+        other_class_prefix.add("org/objectweb/asm");
+        other_class_prefix.add("com/alibaba/ttl");
+        other_class_prefix.add("com/navercorp/pinpoint");
+    }
 
     /**
      * 是否是 Simulator 的类加载器
@@ -65,6 +77,12 @@ public class SimulatorClassUtils {
             return true;
         }
 
+        // 其他肯定不需要增强的类，比如 ams/bytebuddy 等
+        if (null != internalClassName
+                && isOtherPrefix(internalClassName)) {
+            return true;
+        }
+
         return false;
 
     }
@@ -104,5 +122,14 @@ public class SimulatorClassUtils {
      */
     private static boolean isSimulatorClassPrefix(String className) {
         return className.startsWith(SIMULATOR_FAMILY_CLASS_PREFIX);
+    }
+
+    private static boolean isOtherPrefix(String internalClassName) {
+        for (String otherClassPrefix : other_class_prefix) {
+            if (internalClassName.startsWith(otherClassPrefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

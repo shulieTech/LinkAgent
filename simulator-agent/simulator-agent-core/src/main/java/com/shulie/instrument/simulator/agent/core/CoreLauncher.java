@@ -44,18 +44,19 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.JarFile;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -196,6 +197,7 @@ public class CoreLauncher {
      */
     public void start() throws Throwable {
         long l = System.currentTimeMillis();
+//        startTtl();
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
@@ -342,5 +344,69 @@ public class CoreLauncher {
         if (this.unit != null) {
             this.unit = unit;
         }
+    }
+
+    private void startTtl() {
+        try {
+            Class<?> loadClass = Thread.currentThread().getContextClassLoader().loadClass("com.alibaba.ttl.threadpool.agent.TtlAgent");
+            if (loadClass != null) {
+                Method method = loadClass.getMethod("isTtlAgentLoaded");
+                if (method == null) {
+                    LOGGER.error("ttl class {}  no method {} !! exit!", loadClass.getName(), "isTtlAgentLoaded");
+                    System.exit(-1);
+                }
+                Object obj = method.invoke(null);
+                if ("true".equals(obj)) {
+                    LOGGER.info("ttl is exists! will not load ttl self");
+                    return;
+                }
+            }
+        } catch (ClassNotFoundException e1) {
+            LOGGER.info("not found ttl,try to load ttl!:{}", e1.getMessage());
+        } catch (Throwable e) {
+            LOGGER.info("ttl check error! try to start ttl self", e);
+            //
+        }
+        // 将bootstrap下所有的jar注入到BootstrapClassLoader
+        List<File> bootstrapFiles = getBootstrapJars(agentConfig.getAgentHome());
+        for (File file : bootstrapFiles) {
+            if (file.isHidden()) {
+                LOGGER.warn(
+                        "prepare to append bootstrap file " + file.getAbsolutePath()
+                                + " but found a hidden file. skip it.");
+                continue;
+            }
+            if (!file.isFile()) {
+                LOGGER.warn("prepare to append bootstrap file " + file.getAbsolutePath()
+                        + " but found a directory file. skip it.");
+                continue;
+            }
+            LOGGER.info("append bootstrap file=" + file.getAbsolutePath());
+            try {
+                instrumentation.appendToBootstrapClassLoaderSearch(new JarFile(file));
+                instrumentation.appendToSystemClassLoaderSearch(new JarFile(file));
+            } catch (IOException e) {
+                throw new RuntimeException("ttl加载失败！", e);
+            }
+        }
+        try {
+            Class<?> loadClass = Thread.currentThread().getContextClassLoader().loadClass("com.alibaba.ttl.threadpool.agent.TtlAgent");
+            Method premain = loadClass.getDeclaredMethod("premain", String.class, Instrumentation.class);
+            LOGGER.info("start ttl method {}", premain.getName());
+            premain.invoke(null, "ttl.agent.logger:STDOUT", instrumentation);
+            LOGGER.info("start ttl success!");
+        }  catch (Throwable error) {
+            LOGGER.error("fail to load ttl", error);
+        }
+    }
+
+    private static List<File> getBootstrapJars(String simulatorHome) {
+        File file = new File(simulatorHome, "bootstrap");
+        return Arrays.asList(file.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.endsWith(".jar");
+            }
+        }));
     }
 }

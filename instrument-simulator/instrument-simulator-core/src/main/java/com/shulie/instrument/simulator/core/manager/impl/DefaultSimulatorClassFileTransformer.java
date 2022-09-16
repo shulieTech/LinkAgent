@@ -146,6 +146,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: transform ignore {}, class from bootstrap but unsafe.enable=false.", internalClassName);
                 }
+                l = costTimePrint( "transform_isEnableUnsafe", l);
                 return null;
             }
 
@@ -154,19 +155,19 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                 classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
                 internalClassName = classStructure.getJavaClassName();
             }
-            l = costTimePrint(internalClassName, "internalClassName", l);
+//            l = costTimePrint(internalClassName, "internalClassName", l);
             if (!matcher.preMatching(internalClassName.replace('/', '.'))) {
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: transform ignore {}, classname is not matched!", internalClassName, loader);
                 }
-                l = costTimePrint(internalClassName, "preNoMatch", l);
+                l = costTimePrint( "transform_preNoMatch", l);
                 return null;
             }
 
             if (classStructure == null) {
                 classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
             }
-            l = costTimePrint(internalClassName, "getClassStructure", l);
+            l = costTimePrint( "transform_getClassStructure", l);
             final MatchingResult matchingResult = new UnsupportedMatcher(loader, isEnableUnsafe).and(matcher).matching(classStructure);
             final Map<String, Set<BuildingForListeners>> behaviorSignCodes = matchingResult.getBehaviorSignCodeMap();
 
@@ -175,7 +176,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: transform ignore {}, no behaviors matched in loader={}", internalClassName, loader);
                 }
-                l = costTimePrint(internalClassName, "noMatch", l);
+                l = costTimePrint( "transform_noMatch", l);
                 return null;
             }
 
@@ -185,7 +186,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             if (getClassMajorVersion(srcByteCodeArray) < CLASS_VERSION_15) {
                 srcByteCodeArray = resetClassVersionToJava5(srcByteCodeArray);
             }
-            l = costTimePrint(internalClassName, "matched", l);
+            l = costTimePrint( "transform_matched", l);
 
             // 开始进行类匹配
             try {
@@ -194,12 +195,13 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                         srcByteCodeArray,
                         behaviorSignCodes
                 );
-                l = costTimePrint(internalClassName, "toByteCode", l);
+                l = costTimePrint( "transform_toByteCode", l);
 
                 if (srcByteCodeArray == toByteCodeArray) {
                     if (isDebugEnabled) {
                         logger.debug("SIMULATOR: transform ignore {}, nothing changed in loader={}", internalClassName, loader);
                     }
+                    l = costTimePrint( "transform_ignore", l);
                     return null;
                 }
                 // statistic affect
@@ -208,20 +210,20 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                 if (isInfoEnabled) {
                     logger.info("SIMULATOR:[tcf]cost {} transform {} finished, by module={} in loader={}", (System.currentTimeMillis() - start), internalClassName, moduleId, loader);
                 }
-                l = costTimePrint(internalClassName, "toFinish", l);
+                l = costTimePrint( "transform_toFinish", l);
                 return toByteCodeArray;
             } catch (Throwable cause) {
                 logger.warn("SIMULATOR: transform {} failed, by module={} in loader={}", internalClassName, moduleId, loader, cause);
                 return null;
             }
         } finally {
-            costTimePrint(internalClassName, "transform", start);
+            costTimePrint( "transform_transform_return", l);
+            costTimePrint( "transform_transform", start);
         }
     }
 
-    private long costTimePrint(String cn, String name, long startTime) {
-        LogbackUtils.costTimePrint("transform", cn, name, startTime);
-        return System.currentTimeMillis();
+    private long costTimePrint(String key, long startTime) {
+        return LogbackUtils.costTimePrint(key, startTime);
     }
 
     /**

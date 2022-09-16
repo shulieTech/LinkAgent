@@ -36,11 +36,11 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
         }
 
         DataSource source = entry.getValue();
-        Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
 
-        if (!(source instanceof DruidDataSource)) {
+        if (!(source.getClass().getName().equals("com.alibaba.druid.pool.DruidDataSource"))) {
             return EventResult.IGNORE;
         }
+        Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
         DruidDataSource druidDataSource = (DruidDataSource) source;
 
         ShadowDatabaseConfig config = entry.getKey();

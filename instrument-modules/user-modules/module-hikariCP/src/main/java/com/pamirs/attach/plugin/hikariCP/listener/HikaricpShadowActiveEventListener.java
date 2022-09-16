@@ -33,14 +33,11 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
         if (entry == null) {
             return EventResult.IGNORE;
         }
-
         DataSource source = entry.getValue();
-        Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
-
-        if (!(source instanceof HikariDataSource)) {
+        if (!(source.getClass().getName().equals("com.zaxxer.hikari.HikariDataSource"))) {
             return EventResult.IGNORE;
         }
-
+        Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
         HikariDataSource druidDataSource = (HikariDataSource) source;
 
         ShadowDatabaseConfig config = entry.getKey();

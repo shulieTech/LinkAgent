@@ -31,33 +31,34 @@ public class LogbackTempUtils {
     private static ConcurrentHashMap<String, CostTime> costTimeMap = new ConcurrentHashMap<String, CostTime>();
 
     public static long costTimePrint(String key, long startTime) {
-        if (costTimeMap.isEmpty()) {
-            logger.info("[tcccc]start thread");
-            new Thread(()->{
-                while (true) {
-                    try {
-                        logger.info("[tcccc]=============== print cost time!");
-                        TreeMap<String, CostTime> temp = new TreeMap<>(costTimeMap);
-                        for (Map.Entry<String, CostTime> entry : temp.entrySet()) {
-                            logger.info("[tcccc]{} cost: {}, times: {}", entry.getKey(), entry.getValue().cost, entry.getValue().times);
-                        }
-                        Thread.sleep(10000);
-                    } catch (Throwable e) {
-                        logger.error("aaaaaa", e);
-                    }
-                }
-            }).start();
-        }
-        long l = System.currentTimeMillis() - startTime;
-        costTimeMap.compute(key,(a,b)->{
-            if (b == null) {
-                b = new CostTime();
-            }
-            b.times.incrementAndGet();
-            b.cost.addAndGet(l);
-            return b;
-        });
-        return System.currentTimeMillis();
+//        if (costTimeMap.isEmpty()) {
+//            logger.info("[tcccc]start thread");
+//            new Thread(()->{
+//                while (true) {
+//                    try {
+//                        logger.info("[tcccc]=============== print cost time!");
+//                        TreeMap<String, CostTime> temp = new TreeMap<>(costTimeMap);
+//                        for (Map.Entry<String, CostTime> entry : temp.entrySet()) {
+//                            logger.info("[tcccc]{} cost: {}, times: {}", entry.getKey(), entry.getValue().cost, entry.getValue().times);
+//                        }
+//                        Thread.sleep(10000);
+//                    } catch (Throwable e) {
+//                        logger.error("aaaaaa", e);
+//                    }
+//                }
+//            }).start();
+//        }
+//        long l = System.currentTimeMillis() - startTime;
+//        costTimeMap.compute(key,(a,b)->{
+//            if (b == null) {
+//                b = new CostTime();
+//            }
+//            b.times.incrementAndGet();
+//            b.cost.addAndGet(l);
+//            return b;
+//        });
+//        return System.currentTimeMillis();
+        return 0;
     }
 
     public static class CostTime{

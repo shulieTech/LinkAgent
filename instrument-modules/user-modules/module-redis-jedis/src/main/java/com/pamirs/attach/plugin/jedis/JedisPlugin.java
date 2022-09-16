@@ -155,6 +155,13 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+        enhanceTemplate.enhance(this,"org.springframework.context.support.AbstractApplicationContext",new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("prepareBeanFactory").addInterceptor(Listeners.of(JedisClassPreLoadInterceptor.class));
+            }
+        });
+
 
         return true;
     }

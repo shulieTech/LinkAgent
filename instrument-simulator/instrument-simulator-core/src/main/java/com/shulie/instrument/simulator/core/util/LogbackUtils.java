@@ -38,8 +38,7 @@ public class LogbackUtils {
     }
 
     public static long costTimePrint(String key,long startTime) {
-//        return LogbackTempUtils.costTimePrint(key, startTime);
-        return System.currentTimeMillis();
+        return LogbackTempUtils.costTimePrint(key, startTime);
     }
 
 

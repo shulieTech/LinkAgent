@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -25,7 +25,6 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ObjectUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.pulsar.client.api.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,9 +58,15 @@ public class PulsarTraceConsumerInterceptor extends AroundInterceptor {
             }
             Message<?> message = (Message<?>) messageObj;
 
+            String topic = message.getTopicName();
+            //persistent://public/default/demo-topic
+            if (topic.startsWith("persistent:")) {
+                topic = topic.substring(topic.lastIndexOf("/") + 1);
+            }
+
             MQTraceContext mqTraceContext = new MQTraceContext();
             mqTraceContext.setMqType(MQType.PULSAR);
-            mqTraceContext.setGroup(message.getProducerName() + ":" + message.getTopicName());
+            mqTraceContext.setGroup(message.getProducerName() + ":" + topic);
             MQTraceBean traceBean = new MQTraceBean();
             Map<String, String> properties = message.getProperties();
             if (properties != null) {
@@ -74,15 +79,15 @@ public class PulsarTraceConsumerInterceptor extends AroundInterceptor {
                 }
                 traceBean.setContext(rpcContext);
             }
-            traceBean.setTopic(message.getTopicName());
+            traceBean.setTopic(topic);
             traceBean.setKeys(message.getKey());
             traceBean.setBodyLength(message.getData().length);
             // topic是否PT_开头
-            boolean isClusterTest = message.getTopicName() != null
-                    && (Pradar.isClusterTestPrefix(message.getTopicName()));
+            boolean isClusterTest = Pradar.isClusterTestPrefix(topic);
             // 消息的properties是否包含Pradar.PRADAR_CLUSTER_TEST_KEY
             if (properties != null) {
-                isClusterTest = isClusterTest || StringUtils.equalsIgnoreCase(Boolean.TRUE.toString(), ObjectUtils.toString(properties.get(PradarService.PRADAR_CLUSTER_TEST_KEY)));
+                String clusterTestValue = ObjectUtils.toString(properties.get(PradarService.PRADAR_CLUSTER_TEST_KEY));
+                isClusterTest = isClusterTest || Boolean.TRUE.toString().equals(clusterTestValue) || "1".equals(clusterTestValue);
             }
             if (isClusterTest) {
                 traceBean.setClusterTest(Boolean.TRUE.toString());

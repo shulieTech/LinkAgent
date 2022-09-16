@@ -146,9 +146,12 @@ public class JdbcPreCheckCommandProcessor {
             return;
         }
         // 校验表操作权限
-
-        Map<String, String> availableResult = checkTableOperationAvailable(bizDataSourceClass, shadowType == 3 ? bizDataSource : shadowDataSource, shadowTables);
-        if (!availableResult.isEmpty()) {
+        Map<String, String> availableResult = null;
+        // 影子表不校验
+        if (shadowType != 3) {
+            availableResult = checkTableOperationAvailable(bizDataSourceClass, shadowDataSource, shadowTables);
+        }
+        if (availableResult != null && !availableResult.isEmpty()) {
             ackWithFailed(command, callback, availableResult);
             return;
         }

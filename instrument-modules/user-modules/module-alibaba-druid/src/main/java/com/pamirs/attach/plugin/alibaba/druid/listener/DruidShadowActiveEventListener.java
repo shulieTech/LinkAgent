@@ -57,15 +57,19 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
                 break;
             }
         }
-        // 没有找到对应的数据源对
-        if (media == null) {
-            buildShadowDataSource(dsType, druidDataSource, config);
+        try {
+            // 没有找到对应的数据源对
+            if (media == null) {
+                buildShadowDataSource(dsType, druidDataSource, config);
+                return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
+            }
+            // 找到了成对的数据源
+            refreshShadowDataSource(dsType, druidDataSource, config, media);
             return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
+        } catch (Exception e) {
+            LOGGER.error("module-alibaba-druid: handler shadow datasource active event occur exception", e);
+            return EventResult.error("active-shadow-datasource-event", "module-alibaba-druid: handler shadow datasource active event occur exception.");
         }
-        // 找到了成对的数据源
-        refreshShadowDataSource(dsType, druidDataSource, config, media);
-
-        return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
     }
 
     private void buildShadowDataSource(int dsType, DruidDataSource dataSource, ShadowDatabaseConfig config) {

@@ -1,8 +1,9 @@
 package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.alibaba.fastjson.JSON;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
-import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPrecheckCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.JdbcTableColumnInfos;
@@ -16,16 +17,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class JdbcPreCheckCommandProcessor {
@@ -39,51 +37,70 @@ public class JdbcPreCheckCommandProcessor {
      * @param callback
      */
     public static void processPreCheckCommand(Command command, Consumer<CommandAck> callback) {
-        JdbcPrecheckCommand entity = JSON.parseObject(command.getArgs(), JdbcPrecheckCommand.class);
+        LOGGER.info("[shadow-preparation] accept shadow datasource precheck command, content:{}", command.getArgs());
+        CommandAck ack = new CommandAck();
+        ack.setCommandId(command.getId());
+        CommandExecuteResult result = new CommandExecuteResult();
+
+        JdbcPreCheckCommand entity = null;
+        try {
+            // 服务器上发现有JSON类加载不到的问题
+            entity = JSON.parseObject(command.getArgs(), JdbcPreCheckCommand.class);
+        } catch (Exception e) {
+            LOGGER.error("[shadow-preparation] parse jdbc precheck command occur exception", e);
+            result.setSuccess(false);
+            result.setResponse("解析校验命令失败");
+            ack.setResponse(JSON.toJSONString(result));
+            callback.accept(ack);
+            return;
+        }
+        JdbcDataSourceFetcher.refreshDataSources();
 
         DataSourceEntity bizDataSource = entity.getBizDataSource();
         String driverClassName = fetchDriverClassName(bizDataSource);
         if (driverClassName == null) {
-            CommandAck ack = new CommandAck();
-            ack.setCommandId(command.getId());
-            CommandExecuteResult result = new CommandExecuteResult();
+            LOGGER.error("[shadow-preparation] can`t find biz datasource to extract driver className.");
             result.setSuccess(false);
             result.setResponse("读取业务数据源驱动失败");
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
+            return;
+        }
+
+        // 0-未设置 1-影子库 2-影子库/影子表 3-影子表
+        Integer shadowType = entity.getShadowType();
+
+        if ((shadowType == 1 || shadowType == 2) && entity.getShadowDataSource() == null) {
+            LOGGER.error("[shadow-preparation] ds type is shadow database or shadow database table, but shadow datasource is null");
+            result.setSuccess(false);
+            result.setResponse("影子库/影子库影子表模式时影子数据源不能未空");
+            ack.setResponse(JSON.toJSONString(result));
+            callback.accept(ack);
+            return;
         }
 
         bizDataSource.setDriverClassName(driverClassName);
         DataSourceEntity shadowDataSource = entity.getShadowDataSource();
-        shadowDataSource.setDriverClassName(driverClassName);
+        if (shadowDataSource != null) {
+            shadowDataSource.setDriverClassName(driverClassName);
+        }
 
-        // 数据源类型 0:影子库 1:影子表 2:影子库+影子表
-        Integer shadowType = entity.getShadowType();
+        Class<?> bizDataSourceClass = extractBizClassForClassLoader(bizDataSource);
+
         List<String> tables = entity.getTables();
         List<String> shadowTables = new ArrayList<String>();
 
-        Map<String, List<JdbcTableColumnInfos>> bizInfos = null, shadowInfos = null;
+
+        Map<String, List<JdbcTableColumnInfos>> bizInfos, shadowInfos;
+        // 1-影子库 2-影子库/影子表 3-影子表
         switch (shadowType) {
-            case 0:
+            case 1:
                 // 如果表为空，执行此步骤会填充业务表名称
                 bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
                 if (bizInfos == null) {
                     return;
                 }
-                shadowInfos = fetchShadowTableInfo(command, callback, shadowDataSource, tables);
-                if (shadowInfos == null) {
-                    return;
-                }
-                break;
-            case 1:
-                bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
-                if (bizInfos == null) {
-                    return;
-                }
-                for (String table : tables) {
-                    shadowTables.add(Pradar.addClusterTestPrefix(table));
-                }
-                shadowInfos = fetchBizTableInfo(command, callback, bizDataSource, shadowTables);
+                shadowInfos = fetchShadowTableInfo(bizDataSourceClass, command, callback, shadowDataSource, tables);
                 if (shadowInfos == null) {
                     return;
                 }
@@ -96,10 +113,30 @@ public class JdbcPreCheckCommandProcessor {
                 for (String table : tables) {
                     shadowTables.add(Pradar.addClusterTestPrefix(table));
                 }
-                shadowInfos = fetchShadowTableInfo(command, callback, shadowDataSource, shadowTables);
+                shadowInfos = fetchShadowTableInfo(bizDataSourceClass, command, callback, shadowDataSource, shadowTables);
                 if (shadowInfos == null) {
                     return;
                 }
+            case 3:
+                bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
+                if (bizInfos == null) {
+                    return;
+                }
+                for (String table : tables) {
+                    shadowTables.add(Pradar.addClusterTestPrefix(table));
+                }
+                shadowInfos = fetchBizTableInfo(command, callback, bizDataSource, shadowTables);
+                if (shadowInfos == null) {
+                    return;
+                }
+                break;
+            default:
+                LOGGER.error("[shadow-preparation] unknown shadow ds type {}", shadowType);
+                result.setSuccess(false);
+                result.setResponse("未知的隔离类型");
+                ack.setResponse(JSON.toJSONString(result));
+                callback.accept(ack);
+                return;
         }
 
         // 校验表结构
@@ -109,14 +146,13 @@ public class JdbcPreCheckCommandProcessor {
             return;
         }
         // 校验表操作权限
-        Map<String, String> availableResult = checkTableOperationAvailable(shadowDataSource, shadowTables);
+
+        Map<String, String> availableResult = checkTableOperationAvailable(bizDataSourceClass, shadowType == 3 ? bizDataSource : shadowDataSource, shadowTables);
         if (!availableResult.isEmpty()) {
             ackWithFailed(command, callback, availableResult);
             return;
         }
-        CommandAck ack = new CommandAck();
-        ack.setCommandId(command.getId());
-        CommandExecuteResult result = new CommandExecuteResult();
+        LOGGER.info("[shadow-preparation] shadow datasource config check passed!");
         result.setSuccess(true);
         ack.setResponse(JSON.toJSONString(result));
         callback.accept(ack);
@@ -128,6 +164,7 @@ public class JdbcPreCheckCommandProcessor {
         CommandExecuteResult result = new CommandExecuteResult();
         result.setSuccess(false);
         result.setResponse(values.entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(Collectors.joining(";\r\n")));
+        LOGGER.error("[shadow-preparation] 影子配置校验结不通过，结果> {}", result.getResponse());
         ack.setResponse(JSON.toJSONString(result));
         callback.accept(ack);
     }
@@ -139,6 +176,15 @@ public class JdbcPreCheckCommandProcessor {
             return null;
         }
         return JdbcDataSourceFetcher.fetchDriverClassName(dataSource);
+    }
+
+    private static Class extractBizClassForClassLoader(DataSourceEntity entity) {
+        String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
+        DataSource dataSource = JdbcDataSourceFetcher.getBizDataSource(key);
+        if (dataSource == null) {
+            return null;
+        }
+        return dataSource.getClass();
     }
 
     /**
@@ -184,7 +230,7 @@ public class JdbcPreCheckCommandProcessor {
         }
     }
 
-    private static Map<String, List<JdbcTableColumnInfos>> fetchShadowTableInfo(Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) {
+    private static Map<String, List<JdbcTableColumnInfos>> fetchShadowTableInfo(Class bizClass, Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) {
         String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
         DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(key);
         CommandAck ack = new CommandAck();
@@ -195,8 +241,7 @@ public class JdbcPreCheckCommandProcessor {
         if (dataSource == null) {
             LOGGER.info("[shadow-preparation] get shadow connection by DriverManager, url:{}, userName:{}", entity.getUrl(), entity.getUserName());
             try {
-                Class.forName(entity.getDriverClassName());
-                connection = DriverManager.getConnection(entity.getUrl(), entity.getUserName(), entity.getPassword());
+                connection = getConnection(bizClass, entity);
             } catch (Exception e) {
                 LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
                 result.setSuccess(false);
@@ -229,23 +274,22 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     private static Map<String, List<JdbcTableColumnInfos>> processReadingTableInfo(Connection connection, Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) throws Exception {
-        CommandAck ack = new CommandAck();
-        ack.setCommandId(command.getId());
-        CommandExecuteResult result = new CommandExecuteResult();
-
         JdbcTypeEnum typeEnum = JdbcTypeFetcher.fetchJdbcType(entity.getDriverClassName());
-        Map<String, List<JdbcTableColumnInfos>> structures = typeEnum.fetchTablesStructures(connection, tables);
-        if (structures == null) {
+        if (typeEnum == null) {
             LOGGER.error("[shadow-preparation] do not support database type:{}, url{}, username:{}", typeEnum.name(), entity.getUrl(), entity.getUserName());
+            CommandAck ack = new CommandAck();
+            ack.setCommandId(command.getId());
+            CommandExecuteResult result = new CommandExecuteResult();
             result.setSuccess(false);
             result.setResponse(String.format("目前不支持读取数据库类型[%s]的表结构信息", entity.getUserName()));
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
         }
+        Map<String, List<JdbcTableColumnInfos>> structures = typeEnum.fetchTablesStructures(connection, tables);
         return structures;
     }
 
-    private static Map<String, String> checkTableOperationAvailable(DataSourceEntity entity, List<String> tables) {
+    private static Map<String, String> checkTableOperationAvailable(Class bizClass, DataSourceEntity entity, List<String> tables) {
         String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
         DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(key);
         Map<String, String> result = new HashMap<String, String>();
@@ -254,15 +298,23 @@ public class JdbcPreCheckCommandProcessor {
             if (dataSource != null) {
                 connection = dataSource.getConnection();
             } else {
-                connection = DriverManager.getConnection(entity.getUrl(), entity.getUserName(), entity.getPassword());
+                connection = getConnection(bizClass, entity);
             }
             for (String table : tables) {
+                Statement statement = null;
                 try {
-                    Statement statement = connection.createStatement();
+                    statement = connection.createStatement();
                     statement.execute(String.format("select 1 from %s", table));
                 } catch (SQLException e) {
                     LOGGER.error("[shadow-preparation] check jdbc shadow datasource available failed, table:{}", table, e);
                     result.put(table, e.getMessage());
+                } finally {
+                    if (statement != null) {
+                        try {
+                            statement.close();
+                        } catch (Exception e) {
+                        }
+                    }
                 }
             }
         } catch (Exception e) {
@@ -292,12 +344,16 @@ public class JdbcPreCheckCommandProcessor {
             String tableName = entry.getKey();
             List<JdbcTableColumnInfos> bizColumns = entry.getValue();
             String shadowTable = tableName;
-            if (shadowType > 0 && !Pradar.isClusterTestPrefix(tableName)) {
+            if (shadowType > 1 && !Pradar.isClusterTestPrefix(tableName)) {
                 shadowTable = Pradar.addClusterTestPrefix(tableName);
             }
             List<JdbcTableColumnInfos> shadowColumns = shadowInfos.get(shadowTable);
             if (shadowColumns == null) {
                 compareResult.put(tableName, "影子表不存在");
+                continue;
+            }
+            if (bizColumns.size() != shadowColumns.size()) {
+                compareResult.put(tableName, "业务表字段和影子表字段个数不一致");
                 continue;
             }
             String ret = compareColumnInfos(toMap(bizColumns), toMap(shadowColumns));
@@ -318,9 +374,6 @@ public class JdbcPreCheckCommandProcessor {
 
 
     private static String compareColumnInfos(Map<String, JdbcTableColumnInfos> bizInfos, Map<String, JdbcTableColumnInfos> shadowInfos) {
-        if (bizInfos.size() != shadowInfos.size()) {
-            return "业务表字段和影子表字段个数不一致";
-        }
         for (Map.Entry<String, JdbcTableColumnInfos> entry : bizInfos.entrySet()) {
             String column = entry.getKey();
             if (!shadowInfos.containsKey(column)) {
@@ -346,6 +399,21 @@ public class JdbcPreCheckCommandProcessor {
             return true;
         }
         return b.equals(s);
+    }
+
+    /**
+     * 获取connection时如果当前class不是业务线程，会有驱动加载不到的问题，绕过去
+     *
+     * @param clazz
+     * @param entity
+     * @return
+     */
+    private static Connection getConnection(Class clazz, DataSourceEntity entity) {
+        Method method = ReflectionUtils.findMethod(DriverManager.class, "getConnection", String.class, Properties.class, Class.class);
+        Properties info = new java.util.Properties();
+        info.put("user", entity.getUserName());
+        info.put("password", entity.getPassword());
+        return (Connection) ReflectionUtils.invokeMethod(method, null, entity.getUrl(), info, clazz);
     }
 
 }

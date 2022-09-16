@@ -45,7 +45,6 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
             public void doEnhance(InstrumentClass instrumentClass) {
                 InstrumentMethod getConnectionMethod = instrumentClass.getDeclaredMethod("getConnection", "long");
                 getConnectionMethod.addInterceptor(Listeners.of(DruidInjectGetConnectionInterceptor.class, "Druid_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
-
             }
         });
         addListener();

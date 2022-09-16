@@ -25,6 +25,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+
 public class JdbcConfigPushCommandProcessor {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(JdbcPreCheckCommandProcessor.class.getName());
@@ -32,14 +33,23 @@ public class JdbcConfigPushCommandProcessor {
     private static Future future;
 
     public static void processConfigPushCommand(final Config config, final Consumer<ConfigAck> callback) {
+        LOGGER.info("[shadow-preparation] accept shadow datasource push command, content:{}", config.getParam());
         //先刷新数据源
         JdbcDataSourceFetcher.refreshDataSources();
+        ConfigAck ack = new ConfigAck();
+        ack.setType(config.getType());
+        ack.setVersion(config.getVersion());
 
-        JdbcConfigPushCommand cmd = JSON.parseObject(config.getParam(), JdbcConfigPushCommand.class);
+        JdbcConfigPushCommand cmd = null;
+        try {
+            cmd = JSON.parseObject(config.getParam(), JdbcConfigPushCommand.class);
+        } catch (Exception e) {
+            LOGGER.error("[shadow-preparation] parse jdbc config push command occur exception", e);
+            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
+            ack.setResultDesc("解析数据源下发命令失败");
+            callback.accept(ack);
+        }
         if (CollectionUtils.isEmpty(cmd.getData())) {
-            ConfigAck ack = new ConfigAck();
-            ack.setType(config.getType());
-            ack.setVersion(config.getVersion());
             ack.setResultCode(ConfigResultEnum.FAIL.getCode());
             ack.setResultDesc("未拉取到数据源配置");
             callback.accept(ack);
@@ -51,7 +61,7 @@ public class JdbcConfigPushCommandProcessor {
         Set<String> needClosed = (Set<String>) compareResult[0];
         // 有需要关闭的影子数据源
         if (!needClosed.isEmpty()) {
-            publishShadowDataSourceDisableEvent(needClosed);
+            publishShadowDataSourceDisableEvents(needClosed);
             JdbcDataSourceFetcher.removeShadowDataSources(needClosed);
         }
 
@@ -62,11 +72,8 @@ public class JdbcConfigPushCommandProcessor {
 
         if (needAdd.isEmpty()) {
             // 数据已生效
-            ConfigAck ack = new ConfigAck();
-            ack.setType(config.getType());
-            ack.setVersion(config.getVersion());
             ack.setResultCode(ConfigResultEnum.SUCC.getCode());
-            ack.setResultDesc(JSON.toJSONString("数据配置已生效"));
+            ack.setResultDesc("数据配置已生效");
             callback.accept(ack);
             return;
         }
@@ -89,10 +96,17 @@ public class JdbcConfigPushCommandProcessor {
             ShadowDatabaseConfig config = new ShadowDatabaseConfig();
             config.setUrl(c.getUrl());
             config.setUsername(c.getUsername());
-            config.setShadowUrl(c.getShadowUrl());
+            if (c.getShadowUrl() != null) {
+                config.setShadowUrl(c.getShadowUrl());
+            }
             config.setShadowUsername(c.getShadowUsername());
             config.setShadowPassword(c.getShadowPassword());
-            config.setDsType(c.getShadowType());
+            int shadowType = c.getShadowType();
+            Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
+            if (dsType == null) {
+                LOGGER.error("[shadow-preparation] illegal shadow type {}", shadowType);
+            }
+            config.setDsType(dsType);
             values.add(config);
         }
         return values;
@@ -139,14 +153,24 @@ public class JdbcConfigPushCommandProcessor {
         return new Object[]{needClosed, needAdd};
     }
 
-    private static void publishShadowDataSourceDisableEvent(Set<String> keys) {
-        EventRouter.router().publish(new ShadowDataSourceDisableEvent(keys));
-        LOGGER.info("[shadow-preparation] publish ShadowDataSourceDisableEvent, keys:{}", keys);
+    private static void publishShadowDataSourceDisableEvents(Set<String> urlUsernames) {
+        for (String key : urlUsernames) {
+            String dataSourceClass = getShadowDataSourceClass(key);
+            if (dataSourceClass == null) {
+                LOGGER.error("[shadow-preparation] can`t find shadow datasource class for key:{}, ignore disable it.", key);
+                continue;
+            }
+            EventRouter.router().publish(new ShadowDataSourceDisableEvent(new AbstractMap.SimpleEntry<>(dataSourceClass, key)));
+            LOGGER.info("[shadow-preparation] publish ShadowDataSourceDisableEvent, key:{}", key);
+        }
+    }
+
+    private static String getShadowDataSourceClass(String shadowKey) {
+        DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(shadowKey);
+        return dataSource == null ? null : dataSource.getClass().getName();
     }
 
     private static void publishShadowDataSourceActiveEvent(Set<ShadowDatabaseConfig> databaseConfigs) {
-        StringBuilder info = new StringBuilder();
-        Map<ShadowDatabaseConfig, DataSource> dataSourceMap = new HashMap<ShadowDatabaseConfig, DataSource>();
         for (ShadowDatabaseConfig config : databaseConfigs) {
             String key = DbUrlUtils.getKey(config.getUrl(), config.getUsername());
             DataSource dataSource = JdbcDataSourceFetcher.getBizDataSource(key);
@@ -154,14 +178,9 @@ public class JdbcConfigPushCommandProcessor {
                 LOGGER.error("[shadow-preparation] active shadow datasource failed with reason can`t find biz datasource with key:{}, ignore datasource", key);
                 continue;
             }
-            info.append("key").append(",");
-            dataSourceMap.put(config, dataSource);
+            LOGGER.info("[shadow-preparation] publish ShadowDataSourceActiveEvent, key:{}", key);
+            EventRouter.router().publish(new ShadowDataSourceActiveEvent(new AbstractMap.SimpleEntry<>(config, dataSource)));
         }
-        if (dataSourceMap.isEmpty()) {
-            return;
-        }
-        LOGGER.info("[shadow-preparation] publish ShadowDataSourceActiveEvent, keys:{}", info);
-        EventRouter.router().publish(new ShadowDataSourceActiveEvent(dataSourceMap));
     }
 
     /**
@@ -176,12 +195,17 @@ public class JdbcConfigPushCommandProcessor {
         StringBuilder sb = new StringBuilder();
 
         for (ShadowDatabaseConfig config : configs) {
+            // 影子表模式不校验
+            if (config.getDsType() == 1) {
+                LOGGER.info("[shadow-preparation] shadow datasource config with url:{}, username:{} active success", config.getUrl(), config.getUsername());
+                continue;
+            }
             String key = DbUrlUtils.getKey(config.getShadowUrl(), config.getShadowUsername());
             if (!shadowKeys.contains(key)) {
-                LOGGER.error("[shadow-preparation] shadow datasource config with url:{}, username:{} not activated", config.getShadowUrl(), config.getUsername());
+                LOGGER.error("[shadow-preparation] shadow datasource config with url:{}, username:{} not activated", config.getUrl(), config.getUsername());
                 sb.append(String.format("影子配置 url:%s, username:%s 未生效", config.getUrl(), config.getUsername())).append(",");
             } else {
-                LOGGER.info("[shadow-preparation] shadow datasource config with url:{}, username:{} active success", config.getShadowUrl(), config.getUsername());
+                LOGGER.info("[shadow-preparation] shadow datasource config with url:{}, username:{} active success", config.getUrl(), config.getUsername());
             }
         }
         String info = sb.toString();

@@ -4,7 +4,6 @@ import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigP
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.constants.ShadowPreparationConstants;
-import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -22,24 +21,21 @@ import org.kohsuke.MetaInfServices;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "shadow-preparation", version = "1.0.0", author = "jiangjibo@shulie.io", description = "影子资源准备工作，包括创建，校验，生效")
 public class ShadowPreparationModule extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
     public boolean onActive() throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("enable.shadow.preparation.module", false)) {
+        if (!simulatorConfig.getBooleanProperty("shadow.preparation.enabled", false)) {
             return true;
         }
-        registerAgentManagerListener();
-        // 每隔3分钟刷新一次数据源
-        ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
+        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
-                JdbcDataSourceFetcher.refreshDataSources();
+                registerAgentManagerListener();
             }
-        }, 1, 3, TimeUnit.MINUTES);
+        }, 1, TimeUnit.MINUTES);
         return true;
     }
 

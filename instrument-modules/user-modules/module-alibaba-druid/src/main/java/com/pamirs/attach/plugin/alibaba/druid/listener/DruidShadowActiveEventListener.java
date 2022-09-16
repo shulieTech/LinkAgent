@@ -30,41 +30,40 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
         if (!(event instanceof ShadowDataSourceActiveEvent)) {
             return EventResult.IGNORE;
         }
-        Map<ShadowDatabaseConfig, DataSource> target = ((ShadowDataSourceActiveEvent) event).getTarget();
-        if (target == null || target.isEmpty()) {
+        Map.Entry<ShadowDatabaseConfig, DataSource> entry = ((ShadowDataSourceActiveEvent) event).getTarget();
+        if (entry == null) {
             return EventResult.IGNORE;
         }
 
-        for (Map.Entry<ShadowDatabaseConfig, DataSource> entry : target.entrySet()) {
+        DataSource source = entry.getValue();
+        Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
 
-            DataSource source = entry.getValue();
-            if (!(source instanceof DruidDataSource)) {
-                continue;
-            }
-            DruidDataSource druidDataSource = (DruidDataSource) source;
-
-            ShadowDatabaseConfig config = entry.getKey();
-            int dsType = config.getDsType();
-
-            DbDruidMediatorDataSource media = null;
-            // 找到对应的数据源对
-            Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry<DataSourceMeta, DbDruidMediatorDataSource> entry1 = it.next();
-                DruidDataSource dataSource = entry1.getValue().getDataSourceBusiness();
-                if (dataSource.equals(druidDataSource)) {
-                    media = entry1.getValue();
-                    break;
-                }
-            }
-            // 没有找到对应的数据源对
-            if (media == null) {
-                buildShadowDataSource(dsType, druidDataSource, config);
-                continue;
-            }
-            // 找到了成对的数据源
-            refreshShadowDataSource(dsType, druidDataSource, config, media);
+        if (!(source instanceof DruidDataSource)) {
+            return EventResult.IGNORE;
         }
+        DruidDataSource druidDataSource = (DruidDataSource) source;
+
+        ShadowDatabaseConfig config = entry.getKey();
+        int dsType = config.getDsType();
+
+        DbDruidMediatorDataSource media = null;
+        // 找到对应的数据源对
+        Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<DataSourceMeta, DbDruidMediatorDataSource> entry1 = it.next();
+            DruidDataSource dataSource = entry1.getValue().getDataSourceBusiness();
+            if (dataSource.equals(druidDataSource)) {
+                media = entry1.getValue();
+                break;
+            }
+        }
+        // 没有找到对应的数据源对
+        if (media == null) {
+            buildShadowDataSource(dsType, druidDataSource, config);
+            return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
+        }
+        // 找到了成对的数据源
+        refreshShadowDataSource(dsType, druidDataSource, config, media);
 
         return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
     }
@@ -139,7 +138,7 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
 
     @Override
     public int order() {
-        return 4;
+        return 14;
     }
 
     private String buildDataSourceKey(DruidDataSource dataSource) {

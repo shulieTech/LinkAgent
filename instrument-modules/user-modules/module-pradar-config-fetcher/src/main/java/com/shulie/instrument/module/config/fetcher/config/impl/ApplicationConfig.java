@@ -135,7 +135,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         for (FIELDS field : fields) {
             switch (field) {
                 case URL_WHITE_LIST:
-                    if (!ConfigFetcherModule.enableShadowPreparationModule) {
+                    if (!ConfigFetcherModule.shadowPreparationEnabled) {
                         change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
                     }
                     break;
@@ -149,7 +149,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                     change(FIELDS.CACHE_KEY_ALLOW_LIST, newConfig.getCacheKeyAllowList());
                     break;
                 case SHADOW_DATABASE_CONFIGS:
-                    if (!ConfigFetcherModule.enableShadowPreparationModule) {
+                    if (!ConfigFetcherModule.shadowPreparationEnabled) {
                         change(FIELDS.SHADOW_DATABASE_CONFIGS, newConfig.getShadowDatabaseConfigs());
                     }
                     break;

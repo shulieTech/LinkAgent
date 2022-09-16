@@ -29,41 +29,41 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
         if (!(event instanceof ShadowDataSourceActiveEvent)) {
             return EventResult.IGNORE;
         }
-        Map<ShadowDatabaseConfig, DataSource> target = ((ShadowDataSourceActiveEvent) event).getTarget();
-        if (target == null || target.isEmpty()) {
+        Map.Entry<ShadowDatabaseConfig, DataSource> entry = ((ShadowDataSourceActiveEvent) event).getTarget();
+        if (entry == null) {
             return EventResult.IGNORE;
         }
 
-        for (Map.Entry<ShadowDatabaseConfig, DataSource> entry : target.entrySet()) {
+        DataSource source = entry.getValue();
+        Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
 
-            DataSource source = entry.getValue();
-            if (!(source instanceof HikariDataSource)) {
-                continue;
-            }
-            HikariDataSource druidDataSource = (HikariDataSource) source;
-
-            ShadowDatabaseConfig config = entry.getKey();
-            int dsType = config.getDsType();
-
-            HikariMediaDataSource media = null;
-            // 找到对应的数据源对
-            Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry<DataSourceMeta, HikariMediaDataSource> entry1 = it.next();
-                HikariDataSource dataSource = entry1.getValue().getDataSourceBusiness();
-                if (dataSource.equals(druidDataSource)) {
-                    media = entry1.getValue();
-                    break;
-                }
-            }
-            // 没有找到对应的数据源对
-            if (media == null) {
-                buildShadowDataSource(dsType, druidDataSource, config);
-                continue;
-            }
-            // 找到了成对的数据源
-            refreshShadowDataSource(dsType, druidDataSource, config, media);
+        if (!(source instanceof HikariDataSource)) {
+            return EventResult.IGNORE;
         }
+
+        HikariDataSource druidDataSource = (HikariDataSource) source;
+
+        ShadowDatabaseConfig config = entry.getKey();
+        int dsType = config.getDsType();
+
+        HikariMediaDataSource media = null;
+        // 找到对应的数据源对
+        Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<DataSourceMeta, HikariMediaDataSource> entry1 = it.next();
+            HikariDataSource dataSource = entry1.getValue().getDataSourceBusiness();
+            if (dataSource.equals(druidDataSource)) {
+                media = entry1.getValue();
+                break;
+            }
+        }
+        // 没有找到对应的数据源对
+        if (media == null) {
+            buildShadowDataSource(dsType, druidDataSource, config);
+            return EventResult.success("[module-hikariCP]: handler shadow datasource active event success.");
+        }
+        // 找到了成对的数据源
+        refreshShadowDataSource(dsType, druidDataSource, config, media);
 
         return EventResult.success("[module-hikariCP]: handler shadow datasource active event success.");
     }
@@ -114,8 +114,8 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
     private void refreshShadowDataSource(int dsType, HikariDataSource dataSource, ShadowDatabaseConfig config, HikariMediaDataSource media) {
         HikariDataSource ptDataSource = media.getDataSourcePerformanceTest();
         // 影子表模式不修改
-        if (dsType == 1 ) {
-            if(ptDataSource != null){
+        if (dsType == 1) {
+            if (ptDataSource != null) {
                 media.close();
                 media.setDataSourcePerformanceTest(null);
                 LOGGER.info("[module-hikariCP] biz datasource with url:{}, username:{} change to shadow table type, close shadow datasource!", dataSource.getJdbcUrl(), dataSource.getUsername());
@@ -139,7 +139,7 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
 
     @Override
     public int order() {
-        return 4;
+        return 15;
     }
 
     private String buildDataSourceKey(HikariDataSource dataSource) {

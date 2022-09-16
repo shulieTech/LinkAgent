@@ -8,14 +8,14 @@ import java.util.Map;
 
 public class ShadowDataSourceActiveEvent implements IEvent {
 
-    private Map<ShadowDatabaseConfig, DataSource> dataSourceMap;
+    private Map.Entry<ShadowDatabaseConfig, DataSource> dataSource;
 
-    public ShadowDataSourceActiveEvent(Map<ShadowDatabaseConfig, DataSource> dataSourceMap) {
-        this.dataSourceMap = dataSourceMap;
+    public ShadowDataSourceActiveEvent(Map.Entry<ShadowDatabaseConfig, DataSource> dataSource) {
+        this.dataSource = dataSource;
     }
 
     @Override
-    public Map<ShadowDatabaseConfig, DataSource>  getTarget() {
-        return dataSourceMap;
+    public Map.Entry<ShadowDatabaseConfig, DataSource>  getTarget() {
+        return dataSource;
     }
 }

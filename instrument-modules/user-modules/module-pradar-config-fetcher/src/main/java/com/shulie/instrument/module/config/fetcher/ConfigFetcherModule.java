@@ -20,7 +20,6 @@ import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
 import com.shulie.instrument.module.config.fetcher.config.SimulatorDetail;
 import com.shulie.instrument.module.config.fetcher.config.event.model.*;
-import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.config.fetcher.config.resolver.zk.ZookeeperOptions;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -59,7 +58,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     private ConfigManager configManager;
 
     // 是否允许使用影子资源准备模块, 如果允许使用则很多配置信息从准备模块里拉取，不走控制台
-    public static boolean enableShadowPreparationModule;
+    public static boolean shadowPreparationEnabled;
 
     /**
      * 获取simulator配置的接口，目前只获取静默开关状态
@@ -109,7 +108,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
         PradarInternalService.registerConfigFetcher(new DefaultConfigFetcher());
 
-        enableShadowPreparationModule = simulatorConfig.getBooleanProperty("enable.shadow.preparation.module", false);
+        shadowPreparationEnabled = simulatorConfig.getBooleanProperty("shadow.preparation.enabled", false);
         return true;
     }
 

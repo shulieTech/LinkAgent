@@ -44,6 +44,7 @@ public class JdbcConnectionUtils {
         List<JdbcTableColumnInfos> columns = new ArrayList<JdbcTableColumnInfos>();
         ResultSet tables = connection.getMetaData().getColumns(null, null, table, null);
         tables.getMetaData();
+        Set<String> names = new HashSet<>();
         while (tables.next()) {
             JdbcTableColumnInfos column = new JdbcTableColumnInfos();
             column.setColumnName(tables.getString("COLUMN_NAME"));
@@ -55,7 +56,11 @@ public class JdbcConnectionUtils {
             if (column.getColumnName().equals("Host") && "CHAR".equals(column.getTypeName()) && "60".equals(column.getColumnSize())) {
                 break;
             }
+            if (names.contains(column.getColumnName())) {
+                break;
+            }
             columns.add(column);
+            names.add(column.getColumnName());
         }
         return columns;
     }

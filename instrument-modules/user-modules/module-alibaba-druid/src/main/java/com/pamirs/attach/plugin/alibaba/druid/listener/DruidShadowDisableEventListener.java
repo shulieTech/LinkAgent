@@ -25,8 +25,12 @@ public class DruidShadowDisableEventListener implements PradarEventListener {
         if (!(event instanceof ShadowDataSourceDisableEvent)) {
             return EventResult.IGNORE;
         }
-        Set<String> closeShadowKeys = ((ShadowDataSourceDisableEvent) event).getTarget();
-        if (closeShadowKeys == null || closeShadowKeys.isEmpty()) {
+        Map.Entry<String, String> target = ((ShadowDataSourceDisableEvent) event).getTarget();
+        if (target == null) {
+            return EventResult.IGNORE;
+        }
+        String dataSourceClass = target.getKey();
+        if (!DruidDataSource.class.getName().equals(dataSourceClass)) {
             return EventResult.IGNORE;
         }
         Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
@@ -36,7 +40,7 @@ public class DruidShadowDisableEventListener implements PradarEventListener {
             if (shadowDataSource == null) {
                 continue;
             }
-            if (!closeShadowKeys.contains(buildShadowKey(shadowDataSource))) {
+            if (!target.getValue().equals(buildShadowKey(shadowDataSource))) {
                 continue;
             }
             it.remove();
@@ -54,7 +58,7 @@ public class DruidShadowDisableEventListener implements PradarEventListener {
 
     @Override
     public int order() {
-        return 3;
+        return 13;
     }
 
 

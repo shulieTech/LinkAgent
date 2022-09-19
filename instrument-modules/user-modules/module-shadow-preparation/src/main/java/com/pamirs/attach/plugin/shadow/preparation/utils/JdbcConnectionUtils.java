@@ -27,7 +27,10 @@ public class JdbcConnectionUtils {
 
         Map<String, List<JdbcTableColumnInfos>> structures = new HashMap<String, List<JdbcTableColumnInfos>>();
         for (String table : tables) {
-            structures.put(table, fetchColumnInfos(connection, table));
+            List<JdbcTableColumnInfos> columnInfos = fetchColumnInfos(connection, table);
+            if(!columnInfos.isEmpty()){
+                structures.put(table, columnInfos);
+            }
         }
         return structures;
     }

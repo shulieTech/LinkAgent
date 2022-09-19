@@ -1,5 +1,7 @@
 package com.pamirs.attach.plugin.shadow.preparation.entity.jdbc;
 
+import java.util.List;
+
 public class DataSourceConfig {
 
     /**
@@ -31,6 +33,11 @@ public class DataSourceConfig {
      * 影子库密码
      */
     private String shadowPassword;
+
+    /**
+     * 业务表名称
+     */
+    private List<String> bizTables;
 
     public String getUrl() {
         return url;
@@ -78,5 +85,13 @@ public class DataSourceConfig {
 
     public void setShadowType(int shadowType) {
         this.shadowType = shadowType;
+    }
+
+    public List<String> getBizTables() {
+        return bizTables;
+    }
+
+    public void setBizTables(List<String> bizTables) {
+        this.bizTables = bizTables;
     }
 }

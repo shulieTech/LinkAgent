@@ -100,6 +100,11 @@ public class JdbcPreCheckCommandProcessor {
                 if (bizInfos == null) {
                     return;
                 }
+                // 业务表不存在
+                if (bizInfos.size() != tables.size()) {
+                    achWithBizTableNotExists(command, callback, bizInfos.keySet(), tables);
+                    return;
+                }
                 shadowInfos = fetchShadowTableInfo(bizDataSourceClass, command, callback, shadowDataSource, tables);
                 if (shadowInfos == null) {
                     return;
@@ -108,6 +113,11 @@ public class JdbcPreCheckCommandProcessor {
             case 2:
                 bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
                 if (bizInfos == null) {
+                    return;
+                }
+                // 业务表不存在
+                if (bizInfos.size() != tables.size()) {
+                    achWithBizTableNotExists(command, callback, bizInfos.keySet(), tables);
                     return;
                 }
                 for (String table : tables) {
@@ -120,6 +130,11 @@ public class JdbcPreCheckCommandProcessor {
             case 3:
                 bizInfos = fetchBizTableInfo(command, callback, bizDataSource, tables);
                 if (bizInfos == null) {
+                    return;
+                }
+                // 业务表不存在
+                if (bizInfos.size() != tables.size()) {
+                    achWithBizTableNotExists(command, callback, bizInfos.keySet(), tables);
                     return;
                 }
                 for (String table : tables) {
@@ -162,14 +177,24 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     private static void ackWithFailed(Command command, Consumer<CommandAck> callback, Map<String, String> values) {
+        ackWithFailed(command, callback, values.entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(Collectors.joining(";\r\n")));
+    }
+
+    private static void ackWithFailed(Command command, Consumer<CommandAck> callback, String msg) {
         CommandAck ack = new CommandAck();
         ack.setCommandId(command.getId());
         CommandExecuteResult result = new CommandExecuteResult();
         result.setSuccess(false);
-        result.setResponse(values.entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(Collectors.joining(";\r\n")));
+        result.setResponse(msg);
         LOGGER.error("[shadow-preparation] 影子配置校验结不通过，结果> {}", result.getResponse());
         ack.setResponse(JSON.toJSONString(result));
         callback.accept(ack);
+    }
+
+    private static void achWithBizTableNotExists(Command command, Consumer<CommandAck> callback, Set<String> infoTables, List<String> checkTables) {
+        checkTables.removeAll(infoTables);
+        String msg = String.format("业务表:%s不存在", JSON.toJSONString(checkTables));
+        ackWithFailed(command, callback, msg);
     }
 
     private static String fetchDriverClassName(DataSourceEntity entity) {
@@ -234,35 +259,30 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     private static Map<String, List<JdbcTableColumnInfos>> fetchShadowTableInfo(Class bizClass, Command command, Consumer<CommandAck> callback, DataSourceEntity entity, List<String> tables) {
-        String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
-        DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(key);
         CommandAck ack = new CommandAck();
         ack.setCommandId(command.getId());
         CommandExecuteResult result = new CommandExecuteResult();
-        Connection connection = null;
+        Connection connection;
 
-        if (dataSource == null) {
-            LOGGER.info("[shadow-preparation] get shadow connection by DriverManager, url:{}, userName:{}", entity.getUrl(), entity.getUserName());
-            try {
-                connection = getConnection(bizClass, entity);
-            } catch (Exception e) {
-                LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
-                result.setSuccess(false);
-                result.setResponse(String.format("读取影子表结构信息时发生异常，创建连接失败，异常信息:%s", e.getMessage()));
-                callback.accept(ack);
-                return null;
-            }
+        LOGGER.info("[shadow-preparation] get shadow connection by DriverManager, url:{}, userName:{}", entity.getUrl(), entity.getUserName());
+        try {
+            connection = getConnection(bizClass, entity);
+        } catch (Exception e) {
+            LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
+            result.setSuccess(false);
+            result.setResponse("读取影子表结构信息时发生异常，创建连接失败");
+            ack.setResponse(JSON.toJSONString(result));
+            callback.accept(ack);
+            return null;
         }
 
         try {
-            if (connection == null) {
-                connection = dataSource.getConnection();
-            }
             return processReadingTableInfo(connection, command, callback, entity, tables);
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
+            ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
             return null;
         } finally {
@@ -293,16 +313,10 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     private static Map<String, String> checkTableOperationAvailable(Class bizClass, DataSourceEntity entity, List<String> tables) {
-        String key = DbUrlUtils.getKey(entity.getUrl(), entity.getUserName());
-        DataSource dataSource = JdbcDataSourceFetcher.getShadowDataSource(key);
         Map<String, String> result = new HashMap<String, String>();
         Connection connection = null;
         try {
-            if (dataSource != null) {
-                connection = dataSource.getConnection();
-            } else {
-                connection = getConnection(bizClass, entity);
-            }
+            connection = getConnection(bizClass, entity);
             for (String table : tables) {
                 Statement statement = null;
                 try {

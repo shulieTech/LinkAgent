@@ -30,7 +30,7 @@ public class HikaricpShadowDisableEventListener implements PradarEventListener {
             return EventResult.IGNORE;
         }
         String dataSourceClass = target.getKey();
-        if (!HikariDataSource.class.getName().equals(dataSourceClass)) {
+        if (!(dataSourceClass.getClass().getName().equals("com.zaxxer.hikari.HikariDataSource"))) {
             return EventResult.IGNORE;
         }
         Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();

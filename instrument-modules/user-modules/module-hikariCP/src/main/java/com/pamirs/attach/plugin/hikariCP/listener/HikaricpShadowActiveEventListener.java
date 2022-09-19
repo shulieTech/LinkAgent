@@ -116,6 +116,7 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
         HikariDataSource ptDataSource = media.getDataSourcePerformanceTest();
         // 影子表模式不修改
         if (dsType == 1) {
+            media.resetIniStated();
             if (ptDataSource != null) {
                 media.close();
                 media.setDataSourcePerformanceTest(null);
@@ -136,6 +137,7 @@ public class HikaricpShadowActiveEventListener implements PradarEventListener {
         ptDataSource = DataSourceWrapUtil.generate(dataSource, config);
         LOGGER.info("[module-hikariCP] handler shadow datasource active event, refresh shadow datasource, url:{}, username:{}", dataSource.getJdbcUrl(), dataSource.getUsername());
         media.setDataSourcePerformanceTest(ptDataSource);
+        media.resetIniStated();
     }
 
     @Override

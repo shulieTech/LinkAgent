@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
 import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceActiveEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceDisableEvent;
@@ -57,6 +58,8 @@ public class JdbcConfigPushCommandProcessor {
         }
 
         final List<ShadowDatabaseConfig> configs = toShadowDatabaseConfig(cmd.getData());
+        GlobalConfig.getInstance().setShadowDatabaseConfigs(toMap(configs), true);
+
         Object[] compareResult = compareShadowDataSource(configs);
         Set<String> needClosed = (Set<String>) compareResult[0];
         // 有需要关闭的影子数据源
@@ -77,7 +80,6 @@ public class JdbcConfigPushCommandProcessor {
             callback.accept(ack);
             return;
         }
-        GlobalConfig.getInstance().setShadowDatabaseConfigs(toMap(configs), true);
         if (future != null && !future.isDone()) {
             future.cancel(true);
         }
@@ -104,9 +106,22 @@ public class JdbcConfigPushCommandProcessor {
             int shadowType = c.getShadowType();
             Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
             if (dsType == null) {
-                LOGGER.error("[shadow-preparation] illegal shadow type {}", shadowType);
+                LOGGER.error("[shadow-preparation] illegal shadow type {}, config:{}", shadowType, JSON.toJSONString(c));
+                continue;
             }
             config.setDsType(dsType);
+            if ((dsType == 1)) {
+                if(CollectionUtils.isEmpty(c.getBizTables())){
+                    LOGGER.error("[shadow-preparation] shadow table need bizTables param {}", JSON.toJSONString(c));
+                    continue;
+                }else{
+                    Map<String, String> businessShadowTables = new HashMap<>();
+                    for (String table : c.getBizTables()) {
+                        businessShadowTables.put(table, Pradar.addClusterTestPrefix(table));
+                    }
+                    config.setBusinessShadowTables(businessShadowTables);
+                }
+            }
             values.add(config);
         }
         return values;

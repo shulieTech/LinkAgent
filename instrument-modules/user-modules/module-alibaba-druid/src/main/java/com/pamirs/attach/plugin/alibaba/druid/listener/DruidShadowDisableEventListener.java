@@ -30,7 +30,7 @@ public class DruidShadowDisableEventListener implements PradarEventListener {
             return EventResult.IGNORE;
         }
         String dataSourceClass = target.getKey();
-        if (!DruidDataSource.class.getName().equals(dataSourceClass)) {
+        if (!(dataSourceClass.getClass().getName().equals("com.alibaba.druid.pool.DruidDataSource"))) {
             return EventResult.IGNORE;
         }
         Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();

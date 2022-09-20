@@ -13,6 +13,7 @@ import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,7 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
                 break;
             }
         }
+        SqlParser.clear();
         try {
             // 没有找到对应的数据源对
             if (media == null) {

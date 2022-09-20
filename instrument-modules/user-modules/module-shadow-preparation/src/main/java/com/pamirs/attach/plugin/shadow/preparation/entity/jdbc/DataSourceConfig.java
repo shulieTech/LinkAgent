@@ -39,6 +39,10 @@ public class DataSourceConfig {
      */
     private List<String> bizTables;
 
+    /**
+     * 字段废弃
+     */
+    @Deprecated
     private boolean disabled;
 
     public String getUrl() {

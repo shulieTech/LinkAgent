@@ -8,6 +8,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceDisableEv
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
+import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,7 @@ public class DruidShadowDisableEventListener implements PradarEventListener {
                 logger.error("module-alibaba-druid: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
             }
         }
+        SqlParser.clear();
         return EventResult.success("module-alibaba-druid: handler shadow datasource disable event success,  destroyed shadow table datasource success.");
     }
 

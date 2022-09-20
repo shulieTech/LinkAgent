@@ -263,8 +263,6 @@ public class JdbcPreCheckCommandProcessor {
         ack.setCommandId(command.getId());
         CommandExecuteResult result = new CommandExecuteResult();
         Connection connection;
-
-        LOGGER.info("[shadow-preparation] get shadow connection by DriverManager, url:{}, userName:{}", entity.getUrl(), entity.getUserName());
         try {
             connection = getConnection(bizClass, entity);
         } catch (Exception e) {

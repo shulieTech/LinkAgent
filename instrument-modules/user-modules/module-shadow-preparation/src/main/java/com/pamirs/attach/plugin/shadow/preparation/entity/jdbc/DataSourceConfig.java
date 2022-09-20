@@ -39,6 +39,8 @@ public class DataSourceConfig {
      */
     private List<String> bizTables;
 
+    private boolean disabled;
+
     public String getUrl() {
         return url;
     }
@@ -93,5 +95,13 @@ public class DataSourceConfig {
 
     public void setBizTables(List<String> bizTables) {
         this.bizTables = bizTables;
+    }
+
+    public boolean isDisabled() {
+        return disabled;
+    }
+
+    public void setDisabled(boolean disabled) {
+        this.disabled = disabled;
     }
 }

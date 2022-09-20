@@ -62,6 +62,7 @@ public class JdbcConfigPushCommandProcessor {
 
         Object[] compareResult = compareShadowDataSource(configs);
         Set<String> needClosed = (Set<String>) compareResult[0];
+
         // 有需要关闭的影子数据源
         if (!needClosed.isEmpty()) {
             publishShadowDataSourceDisableEvents(needClosed);
@@ -84,12 +85,7 @@ public class JdbcConfigPushCommandProcessor {
             future.cancel(true);
         }
         // 注册一个延时任务30s后查看数据源是否生效
-        future = ExecutorServiceFactory.getFactory().schedule(new Runnable() {
-            @Override
-            public void run() {
-                validateShadowConfigActivation(config, callback, configs);
-            }
-        }, 30, TimeUnit.SECONDS);
+        future = ExecutorServiceFactory.getFactory().schedule(() -> validateShadowConfigActivation(config, callback, configs), 30, TimeUnit.SECONDS);
     }
 
     private static List<ShadowDatabaseConfig> toShadowDatabaseConfig(List<DataSourceConfig> data) {
@@ -98,11 +94,6 @@ public class JdbcConfigPushCommandProcessor {
             ShadowDatabaseConfig config = new ShadowDatabaseConfig();
             config.setUrl(c.getUrl());
             config.setUsername(c.getUsername());
-            if (c.getShadowUrl() != null) {
-                config.setShadowUrl(c.getShadowUrl());
-            }
-            config.setShadowUsername(c.getShadowUsername());
-            config.setShadowPassword(c.getShadowPassword());
             int shadowType = c.getShadowType();
             Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
             if (dsType == null) {
@@ -111,16 +102,22 @@ public class JdbcConfigPushCommandProcessor {
             }
             config.setDsType(dsType);
             if ((dsType == 1)) {
-                if(CollectionUtils.isEmpty(c.getBizTables())){
-                    LOGGER.error("[shadow-preparation] shadow table need bizTables param {}", JSON.toJSONString(c));
-                    continue;
-                }else{
+                // 一张影子表都没有
+                if (CollectionUtils.isEmpty(c.getBizTables())) {
+                    config.setBusinessShadowTables(new HashMap<>());
+                    LOGGER.info("[shadow-preparation] disable shadow table config with no tables! config: {}", JSON.toJSONString(c));
+                } else {
                     Map<String, String> businessShadowTables = new HashMap<>();
                     for (String table : c.getBizTables()) {
                         businessShadowTables.put(table, Pradar.addClusterTestPrefix(table));
                     }
                     config.setBusinessShadowTables(businessShadowTables);
                 }
+            } else {
+                // 非影子表模式
+                config.setShadowUrl(c.getShadowUrl());
+                config.setShadowUsername(c.getShadowUsername());
+                config.setShadowPassword(c.getShadowPassword());
             }
             values.add(config);
         }
@@ -162,7 +159,7 @@ public class JdbcConfigPushCommandProcessor {
         }
         // 遇到特殊情况, 多个业务数据源的影子数据源是一样的, 需要禁用其中一个
         if (needClosed.isEmpty() && data.size() < JdbcDataSourceFetcher.getShadowDataSourceNum()) {
-            // 因为没有保存业务数据源和影子数据源的映射关系，所以清楚所有影子数据源，重新构建
+            // 因为没有保存业务数据源和影子数据源的映射关系，所以清除所有影子数据源，重新构建
             return new Object[]{new HashSet<String>(JdbcDataSourceFetcher.getShadowKeys()), data};
         }
         return new Object[]{needClosed, needAdd};

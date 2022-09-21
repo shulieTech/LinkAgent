@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.ehcache;
 
 
 import com.pamirs.attach.plugin.ehcache.interceptor.*;
+import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -23,6 +24,7 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 
 /**
@@ -30,7 +32,7 @@ import org.kohsuke.MetaInfServices;
  * @since 2020/8/19 10:26 上午
  */
 @MetaInfServices(ExtensionModule.class)
-@ModuleInfo(id = EhcacheConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",description = "ehcache 本地缓存")
+@ModuleInfo(id = EhcacheConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "ehcache 本地缓存")
 public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
@@ -83,7 +85,9 @@ public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                         InstrumentMethod putInternalMethod = target.getDeclaredMethods(
                                 "put", "putQuiet", "putWithWriter", "putIfAbsent", "removeElement",
                                 "replace", "isExpired");
-                        putInternalMethod.addInterceptor(Listeners.of(CacheKeyInterceptor0.class));
+                        putInternalMethod.addInterceptor(Listeners.of(CacheKeyInterceptor0.class, "ehcache-put",
+                                ExecutionPolicy.BOUNDARY,
+                                Interceptors.SCOPE_CALLBACK));
 
                         InstrumentMethod method = target.getDeclaredMethods("get", "getQuiet"
                                 , "load", "tryRemoveImmediately", "remove", "removeQuiet"
@@ -125,7 +129,9 @@ public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod getKeyMethod = target.getDeclaredMethods("getKey", "getObjectKey");
-                getKeyMethod.addInterceptor(Listeners.of(ElementGetObjectKeyInterceptor.class));
+                getKeyMethod.addInterceptor(Listeners.of(ElementGetObjectKeyInterceptor.class, "ehcache-put",
+                        ExecutionPolicy.BOUNDARY,
+                        Interceptors.SCOPE_CALLBACK));
             }
         });
 

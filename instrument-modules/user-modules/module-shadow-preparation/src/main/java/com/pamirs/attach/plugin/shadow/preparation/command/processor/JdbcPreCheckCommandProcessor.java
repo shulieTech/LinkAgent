@@ -61,7 +61,7 @@ public class JdbcPreCheckCommandProcessor {
         if (driverClassName == null) {
             LOGGER.error("[shadow-preparation] can`t find biz datasource to extract driver className.");
             result.setSuccess(false);
-            result.setResponse("读取业务数据源驱动失败");
+            result.setResponse("业务数据源不存在");
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
             return;

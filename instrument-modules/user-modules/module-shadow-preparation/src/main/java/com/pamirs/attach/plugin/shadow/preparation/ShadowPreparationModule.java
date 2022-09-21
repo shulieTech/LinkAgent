@@ -3,9 +3,9 @@ package com.pamirs.attach.plugin.shadow.preparation;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.constants.ShadowPreparationConstants;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -27,7 +27,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
 
     @Override
     public boolean onActive() throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("shadow.preparation.enabled", false)) {
+        if (!PropertyUtil.isShadowPreparationEnabled()) {
             return true;
         }
         ExecutorServiceFactory.getFactory().schedule(new Runnable() {
@@ -42,13 +42,13 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
     private void registerAgentManagerListener() {
         ConfigProperties properties = new ConfigProperties();
         properties.setAppName(AppNameUtils.appName());
-        properties.setTenantCode(simulatorConfig.getProperty(ShadowPreparationConstants.AGENT_MANAGER_TENANT_CODE_KEY));
+        properties.setTenantCode(PropertyUtil.getAgentManagerTenantCode());
         properties.setUserId(Pradar.getPradarUserId());
         properties.setEnvCode(Pradar.getEnvCode());
         properties.setAgentSpecification(AgentSpecification.SIMULATOR_AGENT);
         properties.setVersion(simulatorConfig.getAgentVersion());
         properties.setAgentId(simulatorConfig.getAgentId());
-        AgentManagementClient client = new AgentManagementClient(simulatorConfig.getProperty(ShadowPreparationConstants.AGENT_MANAGER_CLIENT_URL_KEY), properties);
+        AgentManagementClient client = new AgentManagementClient(PropertyUtil.getAgentManagerUrl(), properties);
 
         client.register("pressure_database", new ConfigListener() {
             @Override

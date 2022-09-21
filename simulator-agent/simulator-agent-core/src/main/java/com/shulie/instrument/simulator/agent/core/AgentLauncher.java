@@ -401,6 +401,15 @@ public class AgentLauncher {
         if (StringUtils.isNotBlank(this.agentConfig.getEnvCode())) {
             builder.append(";envCode=").append(this.agentConfig.getEnvCode());
         }
+        if (StringUtils.isNotBlank(this.agentConfig.getTenantCode())) {
+            builder.append(";tenantCode=").append(this.agentConfig.getTenantCode());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getAgentManagerUrl())) {
+            builder.append(";agentManagerUrl=").append(this.agentConfig.getAgentManagerUrl());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getShadowPreparationEnable())) {
+            builder.append(";shadowPreparationEnabled=").append(this.agentConfig.getShadowPreparationEnable());
+        }
         /**
          * 指定simulator配置文件的获取地址
          */

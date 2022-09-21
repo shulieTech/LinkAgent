@@ -16,6 +16,7 @@ package com.shulie.instrument.module.config.fetcher;
 
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.PradarInternalService;
+import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
 import com.shulie.instrument.module.config.fetcher.config.SimulatorDetail;
@@ -108,7 +109,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
         PradarInternalService.registerConfigFetcher(new DefaultConfigFetcher());
 
-        shadowPreparationEnabled = simulatorConfig.getBooleanProperty("shadow.preparation.enabled", false);
+        shadowPreparationEnabled = PropertyUtil.isShadowPreparationEnabled();
         return true;
     }
 

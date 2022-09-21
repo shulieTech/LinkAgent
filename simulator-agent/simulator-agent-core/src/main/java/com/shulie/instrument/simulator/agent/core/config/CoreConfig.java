@@ -507,6 +507,18 @@ public class CoreConfig {
         return getProperty("pradar.env.code");
     }
 
+    public String getTenantCode(){
+        return getProperty("shulie.agent.tenant.code");
+    }
+
+    public String getAgentManagerUrl(){
+        return getProperty("shulie.agent.manager.url");
+    }
+
+    public String getShadowPreparationEnable(){
+        return getProperty("shadow.preparation.enabled");
+    }
+
     /**
      * 获取发起http请求中必须包含的head
      *

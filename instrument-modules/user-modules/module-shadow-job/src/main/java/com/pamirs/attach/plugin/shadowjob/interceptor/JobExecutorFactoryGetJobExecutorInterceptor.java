@@ -84,8 +84,8 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 || jobName.startsWith("com.pamirs.attach.plugin.shadowjob.obj.PtElasticJobSimpleJob")) {
             return advice.getParameterArray();
         }
-        if (PradarSpringUtil.getBeanFactory() != null) {
-            ElasticJobCache.registryCenter = PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
+        if (PradarSpringUtil.getBeanFactory() != null && ElasticJobCache.registryCenter == null) {
+            ElasticJobCache.registryCenter = getRegisterConter();
         }
 
         if (GlobalConfig.getInstance().getNeedRegisterJobs() != null &&
@@ -121,7 +121,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
     public static boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
         if (null != PradarSpringUtil.getBeanFactory()) {
-            ZookeeperRegistryCenter registryCenter = PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
+            ZookeeperRegistryCenter registryCenter = (ZookeeperRegistryCenter) ElasticJobCache.registryCenter;
             if (null == zkConfigField) {
                 zkConfigField = ZookeeperRegistryCenter.class.getDeclaredField("zkConfig");
                 zkConfigField.setAccessible(true);
@@ -379,14 +379,15 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             Class ptJobClass = PtElasticJobSimpleJob.class;
 
             String cron = StringUtils.defaultIfBlank(elasticSimpleJobAnnotation.cron(), elasticSimpleJobAnnotation.value());
-            SimpleJobConfiguration simpleJobConfiguration = new SimpleJobConfiguration(JobCoreConfiguration.newBuilder(ptJobClass.getName(), cron, elasticSimpleJobAnnotation.shardingTotalCount()).shardingItemParameters(elasticSimpleJobAnnotation.shardingItemParameters()).build(), simpleJob.getClass().getCanonicalName());
+            SimpleJobConfiguration simpleJobConfiguration =
+                    new SimpleJobConfiguration(JobCoreConfiguration.newBuilder(ptJobClass.getName() + originJob.getClass().getName(), cron, elasticSimpleJobAnnotation.shardingTotalCount()).shardingItemParameters(elasticSimpleJobAnnotation.shardingItemParameters()).build(), simpleJob.getClass().getCanonicalName());
             LiteJobConfiguration liteJobConfiguration = LiteJobConfiguration.newBuilder(simpleJobConfiguration).overwrite(true).build();
 
 
             DefaultListableBeanFactory defaultListableBeanFactory = PradarSpringUtil.getBeanFactory();
             BeanDefinitionBuilder beanSimple = BeanDefinitionBuilder.rootBeanDefinition(ptJobClass);
-            if (defaultListableBeanFactory.containsBeanDefinition(ptJobClass.getSimpleName())) {
-                defaultListableBeanFactory.removeBeanDefinition(ptJobClass.getSimpleName());
+            if (defaultListableBeanFactory.containsBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName())) {
+                defaultListableBeanFactory.removeBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName());
             }
             defaultListableBeanFactory.registerBeanDefinition(ptJobClass.getSimpleName() + originJob.getClass().getName()
                     , beanSimple.getBeanDefinition());

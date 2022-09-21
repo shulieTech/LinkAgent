@@ -14,14 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.common;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -36,6 +28,7 @@ import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisable
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.message.ConcurrentWeakHashMap;
 import com.shulie.instrument.simulator.message.DestroyHook;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -48,6 +41,10 @@ import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -201,6 +198,14 @@ public class ConsumerRegistry {
         } else {
             defaultMQPushConsumer.setInstanceName(
                 Pradar.addClusterTestPrefix(businessConsumer.getConsumerGroup() + instanceName));
+        }
+
+        Object bizMQPushConsumerImpl = businessConsumer.getDefaultMQPushConsumerImpl();
+        if (Reflect.on(bizMQPushConsumerImpl).existsField("rpcHook")) {
+            Object bizRpcHook = Reflect.on(bizMQPushConsumerImpl).get("rpcHook");
+            if (bizRpcHook != null) {
+                Reflect.on(defaultMQPushConsumer.getDefaultMQPushConsumerImpl()).set("rpcHook", bizRpcHook);
+            }
         }
 
         defaultMQPushConsumer.setNamesrvAddr(businessConsumer.getNamesrvAddr());

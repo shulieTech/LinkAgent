@@ -115,7 +115,8 @@ public class WhiteListPushCommandProcessor {
         }
 
         GlobalConfig.getInstance().setUrlWhiteList(urlWarList);
-        ArbiterHttpExit.clearHttpMatch();
+        GlobalConfig.getInstance().setRpcNameWhiteList(rpcClassMethodName);
+        ArbiterHttpExit.release();
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.URL_WHITE_LIST);
     }
 

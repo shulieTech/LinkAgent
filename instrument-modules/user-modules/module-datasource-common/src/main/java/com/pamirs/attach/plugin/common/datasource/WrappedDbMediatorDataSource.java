@@ -457,6 +457,10 @@ public abstract class WrappedDbMediatorDataSource<T extends DataSource> extends 
         }
     }
 
+    public void resetIniStated(){
+        this.init.set(false);
+    }
+
     @Override
     public void close() {
     }

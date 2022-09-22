@@ -42,7 +42,7 @@
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>druid</artifactId>
-            <version>1.2.5.8</version>
+            <version>1.2.5.8-test0.1</version>
         </dependency>
 
         <dependency>

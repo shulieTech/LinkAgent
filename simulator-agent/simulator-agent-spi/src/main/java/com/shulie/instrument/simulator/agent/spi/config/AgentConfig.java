@@ -230,6 +230,16 @@ public interface AgentConfig {
     String getEnvCode();
 
     /**
+     *  租户code
+     * @return
+     */
+    String getTenantCode();
+
+    String getAgentManagerUrl();
+
+    String getShadowPreparationEnable();
+
+    /**
      * 获取http请求必须携带的head
      *
      * @return map集合

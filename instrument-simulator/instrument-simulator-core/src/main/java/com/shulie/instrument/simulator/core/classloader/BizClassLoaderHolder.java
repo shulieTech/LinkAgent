@@ -114,8 +114,8 @@ public class BizClassLoaderHolder {
             classLoader = stack.getClassLoader();
         }
         //防止不在我们的插件范围内去执行的时候， 比如业务代码（注册filter等方式），拿不到业务类加载器的情况
-        ClassLoader bizClassLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
-        if (SimulatorClassUtils.isSimulatorClassLoader(bizClassLoader)) {
+        classLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
+        if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
             return null;
         }
         return classLoader;

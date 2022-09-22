@@ -78,11 +78,11 @@ public abstract class ReflectionUtils {
         }
     }
 
-    public static Object getFieldValues(Object object, String... filedNames){
+    public static <T> T getFieldValues(Object object, String... filedNames){
         for (String filedName : filedNames) {
             object = get(object, filedName);
         }
-        return object;
+        return (T) object;
     }
 
     public static Field findField(Class<?> clazz, String name) {

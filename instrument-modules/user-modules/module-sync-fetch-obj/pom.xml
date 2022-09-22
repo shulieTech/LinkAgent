@@ -37,5 +37,5 @@
            <version>1.7.31</version>
            <scope>provided</scope>
        </dependency>
-   </dependencies>
+    </dependencies>
 </project>

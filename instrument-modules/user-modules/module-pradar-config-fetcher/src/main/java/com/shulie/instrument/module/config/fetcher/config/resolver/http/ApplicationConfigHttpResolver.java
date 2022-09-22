@@ -38,6 +38,7 @@ import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
@@ -281,7 +282,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
 
         boolean isSuccess;
-        if (whiteListPullSwitch.get()) {
+        if (!ConfigFetcherModule.shadowPreparationEnabled && whiteListPullSwitch.get()) {
             /**
              * 从服务端获取白名单列表,如果失败则启动失败
              */
@@ -302,7 +303,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 ApplicationConfig.getWhiteList = Boolean.TRUE;
             }
         }
-        if (shadowConfigPullSwitch.get()) {
+        if (!ConfigFetcherModule.shadowPreparationEnabled && shadowConfigPullSwitch.get()) {
             /**
              * 读取压测的影子数据源配置
              */

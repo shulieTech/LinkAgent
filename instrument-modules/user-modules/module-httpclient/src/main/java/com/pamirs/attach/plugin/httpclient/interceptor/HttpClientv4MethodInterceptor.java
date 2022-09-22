@@ -41,10 +41,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.*;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
+import org.apache.http.util.EntityUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -52,14 +54,16 @@ import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by xiaobin on 2016/12/15.
  */
 public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
+
+    private Integer httpResponsePrintLengthLimit;
+
+    private List<String> printResponseContentType = Arrays.asList("application/json","text/plain");
 
     @Override
     public String getPluginName() {
@@ -423,13 +427,26 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if(httpResponsePrintLengthLimit == null){
+            httpResponsePrintLengthLimit = simulatorConfig.getIntProperty("http.response.print.length.limit",1024);
+        }
         Object[] args = advice.getParameterArray();
         HttpRequest request = (HttpRequest) args[1];
         SpanRecord record = new SpanRecord();
         if (advice.getReturnObj() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) advice.getReturnObj();
             try {
-                record.setResponseSize(response == null ? 0 : response.getEntity().getContentLength());
+                if(response == null){
+                    record.setResponseSize(0);
+                }else{
+                    long length = response.getEntity().getContentLength();
+                    record.setResponseSize(length);
+                    if(length < httpResponsePrintLengthLimit && isContentTypeApplicable(response)){
+                        BufferedHttpEntity entity = new BufferedHttpEntity(response.getEntity());
+                        record.setResponse(EntityUtils.toString(entity));
+                        response.setEntity(entity);
+                    }
+                }
             } catch (Throwable e) {
                 record.setResponseSize(0);
             }
@@ -443,6 +460,16 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         }
         return record;
 
+    }
+
+    private boolean isContentTypeApplicable(HttpResponse response){
+        String type = response.getHeaders("Content-Type")[0].getValue();
+        for (String s : printResponseContentType) {
+            if(type.contains(s)){
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -52,6 +52,30 @@ public class PropertyUtil {
         return str + File.separator + AppNameUtils.appName() + File.separator + "es_white_list";
     }
 
+    public static String getAgentManagerUrl(){
+        String url = System.getenv("shulie.agent.manager.url");
+        if (url == null || url.isEmpty()) {
+            url = System.getProperty("shulie.agent.manager.url", null);
+        }
+        return url;
+    }
+
+    public static String getAgentManagerTenantCode(){
+        String code = System.getenv("shulie.agent.tenant.code");
+        if (code == null || code.isEmpty()) {
+            code = System.getProperty("shulie.agent.tenant.code", null);
+        }
+        return code;
+    }
+
+    public static boolean isShadowPreparationEnabled(){
+        String enabled = System.getenv("shadow.preparation.enabled");
+        if (enabled == null || enabled.isEmpty()) {
+            enabled = System.getProperty("shadow.preparation.enabled", "");
+        }
+        return "true".equals(enabled);
+    }
+
     public static String getAppKey() {
         return System.getProperty(Pradar.PRADAR_TENANT_KEY, "default");
     }

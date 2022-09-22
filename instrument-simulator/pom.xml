@@ -18,7 +18,7 @@
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
         <simulator.bootstrap.api.version>1.0.1</simulator.bootstrap.api.version>
-        <simulator.major.version>5.4.2</simulator.major.version>
+        <simulator.major.version>5.5.0</simulator.major.version>
         <simulator.minor.version>0</simulator.minor.version>
     </properties>
 

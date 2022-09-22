@@ -140,6 +140,7 @@ public class ConfigUtils {
 
     public static void setAgentId(String agentId) {
         ConfigUtils.agentId = agentId;
+        System.setProperty("simulator.agent.id",agentId);
     }
 
     public static String getAppName() {

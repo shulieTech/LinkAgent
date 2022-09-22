@@ -109,11 +109,6 @@
             <version>4.1.70.Final</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.shulie.takin</groupId>
-            <artifactId>takin-common-sdk</artifactId>
-            <version>common-1.7.5</version>
-        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>io.shulie.tro</groupId>-->
 <!--            <artifactId>tro-sdk</artifactId>-->

@@ -42,6 +42,10 @@ public class DruidDatasourceUtils {
         if (ptDataSourceConf == null) {
             return null;
         }
+        return generateDatasourceFromConfiguration(sourceDatasource, ptDataSourceConf);
+    }
+
+    public static DruidDataSource generateDatasourceFromConfiguration(DruidDataSource sourceDatasource, ShadowDatabaseConfig ptDataSourceConf){
         String url = ptDataSourceConf.getShadowUrl();
         String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
         String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());

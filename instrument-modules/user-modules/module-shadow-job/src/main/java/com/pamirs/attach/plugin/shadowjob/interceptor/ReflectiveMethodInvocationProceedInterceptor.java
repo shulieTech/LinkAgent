@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -42,9 +42,6 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
      * 只初始化一次
      */
     private void init() {
-        if (!isInited.compareAndSet(false, true)) {
-            return;
-        }
         try {
             interceptorsField = ReflectiveMethodInvocation.class.getDeclaredField(ShadowJobConstants.DYNAMIC_FIELD_INTERCEPTORS_AND_DYNAMIC_METHOD_MATCHERS);
             interceptorsField.setAccessible(true);
@@ -76,6 +73,10 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        // 只需要执行一次，不然会有严重的性能损耗
+        if (!isInited.compareAndSet(false, true)) {
+            return;
+        }
         if (PradarSpringUtil.isInit()) {
             return;
         }

@@ -51,12 +51,6 @@
             <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>io.shulie.instrument.simulator</groupId>
-            <artifactId>instrument-simulator-core</artifactId>
-            <version>${simulator.version}</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>

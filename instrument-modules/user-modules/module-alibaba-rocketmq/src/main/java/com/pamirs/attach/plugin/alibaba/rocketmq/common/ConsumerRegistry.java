@@ -19,6 +19,7 @@ import com.alibaba.rocketmq.client.consumer.listener.MessageListener;
 import com.alibaba.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import com.alibaba.rocketmq.client.consumer.listener.MessageListenerOrderly;
 import com.alibaba.rocketmq.client.exception.MQClientException;
+import com.alibaba.rocketmq.client.impl.consumer.RebalanceImpl;
 import com.alibaba.rocketmq.common.UtilAll;
 import com.alibaba.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import com.pamirs.pradar.ErrorTypeEnum;
@@ -402,6 +403,7 @@ public class ConsumerRegistry {
     }
 
     private static void addListener(final DefaultMQPushConsumer businessConsumer) {
+        final RebalanceImpl rebalance = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl();
         final PradarEventListener listener = new PradarEventListener() {
             @Override
             public EventResult onEvent(IEvent event) {
@@ -422,8 +424,7 @@ public class ConsumerRegistry {
                     return shutdownShadowConsumer(businessConsumer);
                 } else if (event instanceof ShadowConsumerDisableEvent) {
                     String group = businessConsumer.getConsumerGroup();
-                    Set<String> topics = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl()
-                            .getSubscriptionInner().keySet();
+                    Set<String> topics = rebalance.getSubscriptionInner().keySet();
                     for (String topic : topics) {
                         List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent) event).getTarget();
                         for (ShadowConsumerDisableInfo disableInfo : disableInfos) {
@@ -452,13 +453,7 @@ public class ConsumerRegistry {
             //从配置中取出消费者关闭
             DefaultMQPushConsumer consumer = caches.remove(businessConsumer);
             if (consumer != null) {
-                ClassLoader currClassLoad = Thread.currentThread().getContextClassLoader();
-                try {
-                    Thread.currentThread().setContextClassLoader(businessConsumer.getClass().getClassLoader());
-                    consumer.shutdown();
-                } finally {
-                    Thread.currentThread().setContextClassLoader(currClassLoad);
-                }
+                consumer.shutdown();
                 shadowConsumers.remove(consumer);
             }
         } catch (Throwable e) {

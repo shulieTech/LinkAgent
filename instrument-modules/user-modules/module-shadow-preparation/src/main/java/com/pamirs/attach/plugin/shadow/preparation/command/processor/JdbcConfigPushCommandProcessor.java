@@ -2,7 +2,7 @@ package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;

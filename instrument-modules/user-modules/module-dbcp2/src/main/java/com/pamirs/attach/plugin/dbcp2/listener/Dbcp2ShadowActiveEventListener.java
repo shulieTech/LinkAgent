@@ -1,9 +1,7 @@
-package com.pamirs.attach.plugin.alibaba.druid.listener;
+package com.pamirs.attach.plugin.dbcp2.listener;
 
-import com.alibaba.druid.pool.DruidDataSource;
-import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
-import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
-import com.pamirs.attach.plugin.alibaba.druid.util.DruidDatasourceUtils;
+import com.pamirs.attach.plugin.dbcp2.utils.DataSourceWrapUtil;
+import com.pamirs.attach.plugin.dbcp2.utils.DbcpMediaDataSource;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -15,6 +13,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,9 +21,9 @@ import javax.sql.DataSource;
 import java.util.Iterator;
 import java.util.Map;
 
-public class DruidShadowActiveEventListener implements PradarEventListener {
+public class Dbcp2ShadowActiveEventListener implements PradarEventListener {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(DruidShadowDisableEventListener.class.getName());
+    private static Logger LOGGER = LoggerFactory.getLogger(Dbcp2ShadowDisableEventListener.class.getName());
 
     @Override
     public EventResult onEvent(IEvent event) {
@@ -38,22 +37,22 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
 
         DataSource source = entry.getValue();
 
-        if (!(source.getClass().getName().equals("com.alibaba.druid.pool.DruidDataSource"))) {
+        if (!(source.getClass().getName().equals("org.apache.commons.dbcp2.BasicDataSource"))) {
             return EventResult.IGNORE;
         }
         Thread.currentThread().setContextClassLoader(source.getClass().getClassLoader());
-        DruidDataSource druidDataSource = (DruidDataSource) source;
+        BasicDataSource dbcpDataSource = (BasicDataSource) source;
 
         ShadowDatabaseConfig config = entry.getKey();
         int dsType = config.getDsType();
 
-        DbDruidMediatorDataSource media = null;
+        DbcpMediaDataSource media = null;
         // 找到对应的数据源对
-        Iterator<Map.Entry<DataSourceMeta, DbDruidMediatorDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
+        Iterator<Map.Entry<DataSourceMeta, DbcpMediaDataSource>> it = DataSourceWrapUtil.pressureDataSources.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<DataSourceMeta, DbDruidMediatorDataSource> entry1 = it.next();
-            DruidDataSource dataSource = entry1.getValue().getDataSourceBusiness();
-            if (dataSource.equals(druidDataSource)) {
+            Map.Entry<DataSourceMeta, DbcpMediaDataSource> entry1 = it.next();
+            BasicDataSource dataSource = entry1.getValue().getDataSourceBusiness();
+            if (dataSource.equals(dbcpDataSource)) {
                 media = entry1.getValue();
                 break;
             }
@@ -62,35 +61,35 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
         try {
             // 没有找到对应的数据源对
             if (media == null) {
-                buildShadowDataSource(dsType, druidDataSource, config);
-                return EventResult.success("[druid]: handler shadow datasource active event success.");
+                buildShadowDataSource(dsType, dbcpDataSource, config);
+                return EventResult.success("[dbcp2]: handler shadow datasource active event success.");
             }
             // 找到了成对的数据源
-            refreshShadowDataSource(dsType, druidDataSource, config, media);
-            return EventResult.success("[druid]: handler shadow datasource active event success.");
+            refreshShadowDataSource(dsType, dbcpDataSource, config, media);
+            return EventResult.success("[dbcp2]: handler shadow datasource active event success.");
         } catch (Exception e) {
-            LOGGER.error("[druid]: handler shadow datasource active event occur exception", e);
+            LOGGER.error("[dbcp2]: handler shadow datasource active event occur exception", e);
             return EventResult.error("active-shadow-datasource-event", "module-alibaba-druid: handler shadow datasource active event occur exception.");
         }
     }
 
-    private void buildShadowDataSource(int dsType, DruidDataSource dataSource, ShadowDatabaseConfig config) {
-        DataSourceMeta<DruidDataSource> dataSourceMeta = new DataSourceMeta<DruidDataSource>(dataSource.getUrl(), dataSource.getUsername(), dataSource);
+    private void buildShadowDataSource(int dsType, BasicDataSource dataSource, ShadowDatabaseConfig config) {
+        DataSourceMeta<BasicDataSource> dataSourceMeta = new DataSourceMeta<BasicDataSource>(dataSource.getUrl(), dataSource.getUsername(), dataSource);
         // 影子表
         if (dsType == 1) {
-            DbDruidMediatorDataSource dbMediatorDataSource = new DbDruidMediatorDataSource();
+            DbcpMediaDataSource dbMediatorDataSource = new DbcpMediaDataSource();
             dbMediatorDataSource.setDataSourceBusiness(dataSource);
-            DbDruidMediatorDataSource old = DataSourceWrapUtil.pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+            DbcpMediaDataSource old = DataSourceWrapUtil.pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
             if (old != null) {
-                LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", dataSource.getUrl(), dataSource.getUsername());
+                LOGGER.info("[dbcp2] destroyed shadow table datasource success. url:{} ,username:{}", dataSource.getUrl(), dataSource.getUsername());
                 old.close();
             }
             return;
         }
         // 影子库 影子库/表
-        DruidDataSource ptDataSource = DruidDatasourceUtils.generateDatasourceFromConfiguration(dataSource, config);
+        BasicDataSource ptDataSource = DataSourceWrapUtil.generate(dataSource, config);
         if (ptDataSource == null) {
-            LOGGER.error("[druid] handler shadow datasource active event failed, create shadow datasource error. maybe datasource config is not correct, url: {} username:{} configuration:{}", dataSource.getUrl(), dataSource.getUsername(), config);
+            LOGGER.error("[dbcp2] handler shadow datasource active event failed, create shadow datasource error. maybe datasource config is not correct, url: {} username:{} configuration:{}", dataSource.getUrl(), dataSource.getUsername(), config);
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0003")
@@ -100,12 +99,12 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
                     .report();
             return;
         }
-        DbDruidMediatorDataSource dbMediatorDataSource = new DbDruidMediatorDataSource();
+        DbcpMediaDataSource dbMediatorDataSource = new DbcpMediaDataSource();
         dbMediatorDataSource.setDataSourceBusiness(dataSource);
         dbMediatorDataSource.setDataSourcePerformanceTest(ptDataSource);
-        DbDruidMediatorDataSource old = DataSourceWrapUtil.pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+        DbcpMediaDataSource old = DataSourceWrapUtil.pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
         if (old != null) {
-            LOGGER.info("[druid] destroyed shadow table datasource success. url:{} ,username:{}", dataSource.getUrl(), dataSource.getUsername());
+            LOGGER.info("[dbcp2] destroyed shadow table datasource success. url:{} ,username:{}", dataSource.getUrl(), dataSource.getUsername());
             old.close();
         }
     }
@@ -117,15 +116,15 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
      * @param dataSource
      * @param config
      */
-    private void refreshShadowDataSource(int dsType, DruidDataSource dataSource, ShadowDatabaseConfig config, DbDruidMediatorDataSource media) {
-        DruidDataSource ptDataSource = media.getDataSourcePerformanceTest();
+    private void refreshShadowDataSource(int dsType, BasicDataSource dataSource, ShadowDatabaseConfig config, DbcpMediaDataSource media) {
+        BasicDataSource ptDataSource = media.getDataSourcePerformanceTest();
         // 影子表模式不修改
         if (dsType == 1) {
             media.resetIniStated();
             if (ptDataSource != null) {
                 media.close();
                 media.setDataSourcePerformanceTest(null);
-                LOGGER.info("[druid] biz datasource with url:{}, username:{} change to shadow table type, close shadow datasource!", dataSource.getUrl(), dataSource.getUsername());
+                LOGGER.info("[dbcp2] biz datasource with url:{}, username:{} change to shadow table type, close shadow datasource!", dataSource.getUrl(), dataSource.getUsername());
             }
             return;
         }
@@ -138,18 +137,18 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
             }
             media.close();
         }
-        ptDataSource = DruidDatasourceUtils.generateDatasourceFromConfiguration(dataSource, config);
-        LOGGER.info("[druid] handler shadow datasource active event, refresh shadow datasource, url:{}, username:{}", dataSource.getUrl(), dataSource.getUsername());
+        ptDataSource = DataSourceWrapUtil.generate(dataSource, config);
+        LOGGER.info("[dbcp2] handler shadow datasource active event, refresh shadow datasource, url:{}, username:{}", dataSource.getUrl(), dataSource.getUsername());
         media.setDataSourcePerformanceTest(ptDataSource);
         media.resetIniStated();
     }
 
     @Override
     public int order() {
-        return 14;
+        return 19;
     }
 
-    private String buildDataSourceKey(DruidDataSource dataSource) {
+    private String buildDataSourceKey(BasicDataSource dataSource) {
         return DbUrlUtils.getKey(dataSource.getUrl(), dataSource.getUsername());
     }
 }

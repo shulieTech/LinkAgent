@@ -1,7 +1,7 @@
 package com.pamirs.attach.plugin.shadow.preparation.jdbc;
 
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
-import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcDataSourceClassProperties;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.constants.JdbcDataSourceClassPropertiesEnum;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
@@ -20,7 +20,7 @@ public class JdbcDataSourceFetcher {
     private static WeakHashMap<DataSource, String> shadowDataSources = new WeakHashMap<DataSource, String>();
 
     public static synchronized void refreshDataSources() {
-        for (JdbcDataSourceClassProperties value : JdbcDataSourceClassProperties.getValues()) {
+        for (JdbcDataSourceClassPropertiesEnum value : JdbcDataSourceClassPropertiesEnum.getValues()) {
             SyncObject syncObject = SyncObjectService.removeSyncObject(value.getClassName());
             if (syncObject != null) {
                 fetchDataSource(syncObject.getDatas(), value.getJdbcUrlProperty(), value.getUsernameProperty());
@@ -86,7 +86,7 @@ public class JdbcDataSourceFetcher {
      */
     public static String fetchDriverClassName(DataSource dataSource) {
         String className = dataSource.getClass().getName();
-        JdbcDataSourceClassProperties properties = JdbcDataSourceClassProperties.getEnumByClassName(className);
+        JdbcDataSourceClassPropertiesEnum properties = JdbcDataSourceClassPropertiesEnum.getEnumByClassName(className);
         if (properties != null) {
             return ReflectionUtils.get(dataSource, properties.getDriverClassProperty());
         } else if (c3p0_datasource_sync_key.equals(className)) {

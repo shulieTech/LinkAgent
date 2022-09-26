@@ -4,11 +4,11 @@ import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
-import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.JdbcTableColumnInfos;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.constants.JdbcTypeEnum;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.JdbcTableColumnInfos;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.utils.JdbcTypeFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcTypeFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import io.shulie.agent.management.client.model.Command;
@@ -87,7 +87,7 @@ public class JdbcPreCheckCommandProcessor {
 
         Class<?> bizDataSourceClass = extractBizClassForClassLoader(bizDataSource);
 
-        List<String> tables = entity.getTables();
+        List<String> tables = entity.getTables() != null ? entity.getTables() : new ArrayList<>();
         List<String> shadowTables = new ArrayList<String>();
 
 

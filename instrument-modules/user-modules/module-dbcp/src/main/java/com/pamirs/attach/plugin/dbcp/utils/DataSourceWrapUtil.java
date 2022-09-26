@@ -213,6 +213,11 @@ public class DataSourceWrapUtil {
         if (ptDataSourceConf == null) {
             return null;
         }
+
+        return generate(sourceDatasource, ptDataSourceConf);
+    }
+
+    public static BasicDataSource generate(BasicDataSource sourceDatasource, ShadowDatabaseConfig ptDataSourceConf) {
         String url = ptDataSourceConf.getShadowUrl();
         String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
         String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
@@ -387,7 +392,6 @@ public class DataSourceWrapUtil {
         } else {
             target.setLogAbandoned(sourceDatasource.getLogAbandoned());
         }
-
 
         return target;
     }

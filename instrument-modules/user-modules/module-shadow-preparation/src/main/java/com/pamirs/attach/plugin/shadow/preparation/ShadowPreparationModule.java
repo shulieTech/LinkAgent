@@ -1,8 +1,11 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
+import com.alibaba.fastjson.JSON;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
@@ -18,6 +21,7 @@ import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -30,13 +34,44 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         if (!PropertyUtil.isShadowPreparationEnabled()) {
             return true;
         }
-        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
+        /*ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 registerAgentManagerListener();
             }
-        }, 1, TimeUnit.MINUTES);
+        }, 1, TimeUnit.MINUTES);*/
+
+
+        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
+            @Override
+            public void run() {
+                handlerPreCheckCommand();
+            }
+        }, 30, TimeUnit.SECONDS);
+
         return true;
+    }
+
+    private void handlerPreCheckCommand() {
+        JdbcPreCheckCommand command = new JdbcPreCheckCommand();
+        DataSourceEntity bizDataSource = new DataSourceEntity();
+        bizDataSource.setUrl("jdbc:oracle:thin:@192.168.1.208:1521:ORCL");
+        bizDataSource.setUserName("c##ws_test");
+
+        DataSourceEntity shadowDataSource = new DataSourceEntity();
+        shadowDataSource.setUrl("jdbc:oracle:thin:@192.168.1.208:1521:ORCL");
+        shadowDataSource.setUserName("c##pt_ws_test");
+        shadowDataSource.setPassword("PT_oracle");
+
+        command.setShadowType(3);
+        command.setBizDataSource(bizDataSource);
+        command.setShadowDataSource(shadowDataSource);
+        command.setTables(Arrays.asList("M_USER"));
+
+        Command cmd = new Command();
+        cmd.setId("11111");
+        cmd.setArgs(JSON.toJSONString(command));
+        JdbcPreCheckCommandProcessor.processPreCheckCommand(cmd, null);
     }
 
     private void registerAgentManagerListener() {

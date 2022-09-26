@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation.command;
 
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 
 import java.util.List;
 

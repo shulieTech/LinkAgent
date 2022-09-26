@@ -136,7 +136,7 @@ public final class EventRouter {
         return INSTANCE;
     }
 
-    // 目前已经使用的order: -1 0 6 10 11 12 13 14 15 16 17 18 99
+    // 目前已经使用的order: -1 0 6 10 11 12 13 14 15 16 17 18 19 20 21 22 99
     private Set<PradarEventListener> listeners = new TreeSet<PradarEventListener>(new Comparator<PradarEventListener>() {
         @Override
         public int compare(PradarEventListener o1, PradarEventListener o2) {

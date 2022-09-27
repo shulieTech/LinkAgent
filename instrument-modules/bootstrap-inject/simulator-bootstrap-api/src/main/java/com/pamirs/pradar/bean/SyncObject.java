@@ -28,7 +28,7 @@ public class SyncObject {
     }
 
     public List<SyncObjectData> getDatas() {
-        return new ArrayList<SyncObjectData>(datas);
+        return datas;
     }
 
     public void setDatas(List<SyncObjectData> datas) {

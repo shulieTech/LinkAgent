@@ -359,10 +359,12 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         /**
          * 拉取mq影子消费者信息
          */
-        isSuccess = fetchMqShadowConsumer(troControlWebUrl, applicationConfig);
-        if (!isSuccess) {
-            PradarSwitcher.turnConfigSyncSwitchOff();
-            logger.error("[pradar] get shadow consumer from server failed");
+        if(!ConfigFetcherModule.shadowPreparationEnabled ){
+            isSuccess = fetchMqShadowConsumer(troControlWebUrl, applicationConfig);
+            if (!isSuccess) {
+                PradarSwitcher.turnConfigSyncSwitchOff();
+                logger.error("[pradar] get shadow consumer from server failed");
+            }
         }
 
         if (PradarSwitcher.configSyncSwitchOn()

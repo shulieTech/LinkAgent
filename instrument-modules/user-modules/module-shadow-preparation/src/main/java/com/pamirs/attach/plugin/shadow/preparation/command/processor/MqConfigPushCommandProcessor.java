@@ -1,19 +1,8 @@
-/**
- * Copyright 2021 Shulie Technology, Co.Ltd
- * Email: shulie@shulie.io
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.shulie.instrument.module.config.fetcher.config.event.model;
+package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.event.impl.MqWhiteListConfigEvent;
@@ -23,53 +12,58 @@ import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisable
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerEnableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
-import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
-import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
+import io.shulie.agent.management.client.constant.ConfigResultEnum;
+import io.shulie.agent.management.client.model.Config;
+import io.shulie.agent.management.client.model.ConfigAck;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
 
-/**
- * @ClassName: RabbitWhiteList
- * @author: wangjian
- * @Date: 2020/9/29 09:54
- * @Description:
- */
-public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
-    private final static Logger LOGGER = LoggerFactory.getLogger(MQWhiteList.class);
-    private static MQWhiteList INSTANCE;
+public class MqConfigPushCommandProcessor {
 
-    public static MQWhiteList getInstance() {
-        if (INSTANCE == null) {
-            synchronized (MQWhiteList.class) {
-                if (INSTANCE == null) {
-                    INSTANCE = new MQWhiteList();
+    private final static Logger LOGGER = LoggerFactory.getLogger(MqConfigPushCommandProcessor.class.getName());
+
+    public static void processConfigPushCommand(final Config config, final Consumer<ConfigAck> callback) {
+        LOGGER.info("[shadow-preparation] accept shadow mq push command, content:{}", config.getParam());
+
+        ConfigAck ack = new ConfigAck();
+        ack.setType(config.getType());
+        ack.setVersion(config.getVersion());
+        ack.setResultCode(ConfigResultEnum.SUCC.getCode());
+
+        JSONArray mapList = JSON.parseArray(config.getParam());
+        Set<String> mqList = new HashSet<>();
+
+        for (int i = 0; i < mapList.size(); i++) {
+            JSONObject stringObjectMap = (JSONObject) mapList.get(i);
+            Map<String, List<String>> topicGroups = (Map<String, List<String>>) stringObjectMap.get("topicGroups");
+            Set<Map.Entry<String, List<String>>> entries = topicGroups.entrySet();
+
+            for (Map.Entry<String, List<String>> entry : entries) {
+                String key = entry.getKey();
+                List<String> values = entry.getValue();
+                for (int j = 0; j < values.size(); j++) {
+                    String value = key + "#" + values.get(j);
+                    mqList.add(value);
                 }
             }
         }
-        return INSTANCE;
+        compareIsChangeAndSet(mqList);
+
+        callback.accept(ack);
+
     }
 
-    public static void release() {
-        INSTANCE = null;
-    }
-
-    @Override
-    public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Set<String> newValue) {
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
-            return true;
-        }
+    private static void compareIsChangeAndSet(Set<String> newValue) {
         final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(newValue);
         EventRouter.router().publish(mqWhiteListConfigEvent);
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
-        if (ObjectUtils.equals(mqWhiteList.size(), newValue.size())
+        if (compareEquals(mqWhiteList.size(), newValue.size())
                 && mqWhiteList.containsAll(newValue)) {
-            return Boolean.FALSE;
+            return;
         }
         // 仅对影子消费者禁用事件处理
         for (String s : mqWhiteList) {
@@ -120,13 +114,22 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
             }
         }
 
-        currentValue.setMqList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.MQ_WHITE_LIST);
         GlobalConfig.getInstance().setMqWhiteList(newValue);
 
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("publish mq whitelist config successful. config={}", newValue);
+            LOGGER.info("[shadow-preparation] publish mq whitelist config successful. config={}", newValue);
         }
-        return Boolean.TRUE;
     }
+
+    private static boolean compareEquals(Object object1, Object object2) {
+        if (object1 == object2) {
+            return true;
+        }
+        if ((object1 == null) || (object2 == null)) {
+            return false;
+        }
+        return object1.equals(object2);
+    }
+
 }

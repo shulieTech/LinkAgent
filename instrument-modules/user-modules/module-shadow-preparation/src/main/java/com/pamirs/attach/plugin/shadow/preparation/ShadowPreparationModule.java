@@ -1,11 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
-import com.alibaba.fastjson.JSON;
-import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.*;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
@@ -21,7 +16,6 @@ import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
 
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -34,7 +28,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         if (!PropertyUtil.isShadowPreparationEnabled()) {
             return true;
         }
-        /*ExecutorServiceFactory.getFactory().schedule(new Runnable() {
+       /*ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
                 registerAgentManagerListener();
@@ -47,31 +41,29 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             public void run() {
                 handlerPreCheckCommand();
             }
-        }, 30, TimeUnit.SECONDS);
+        }, 60, TimeUnit.SECONDS);
 
         return true;
     }
 
     private void handlerPreCheckCommand() {
-        JdbcPreCheckCommand command = new JdbcPreCheckCommand();
-        DataSourceEntity bizDataSource = new DataSourceEntity();
-        bizDataSource.setUrl("jdbc:oracle:thin:@192.168.1.208:1521:ORCL");
-        bizDataSource.setUserName("c##ws_test");
+        String content = "[\n" +
+                "    {\n" +
+                "        \"type\":\"ROCKETMQ\",\n" +
+                "        \"topicGroups\":{\n" +
+                "            \"Apache_MQ420_OrderedTopic\":[\n" +
+                "                \"apache-rocketmq-420-order-consumer\"\n" +
+                "            ],\n" +
+                "            \"Apache_MQ420_SyncTopic\":[\n" +
+                "                \"apache-rocketmq-420-consumer\"\n" +
+                "            ]\n" +
+                "        }\n" +
+                "    }\n" +
+                "]";
+        Config config = new Config();
+        config.setParam(content);
 
-        DataSourceEntity shadowDataSource = new DataSourceEntity();
-        shadowDataSource.setUrl("jdbc:oracle:thin:@192.168.1.208:1521:ORCL");
-        shadowDataSource.setUserName("c##pt_ws_test");
-        shadowDataSource.setPassword("PT_oracle");
-
-        command.setShadowType(3);
-        command.setBizDataSource(bizDataSource);
-        command.setShadowDataSource(shadowDataSource);
-        command.setTables(Arrays.asList("M_USER"));
-
-        Command cmd = new Command();
-        cmd.setId("11111");
-        cmd.setArgs(JSON.toJSONString(command));
-        JdbcPreCheckCommandProcessor.processPreCheckCommand(cmd, null);
+        MqConfigPushCommandProcessor.processConfigPushCommand(config, null);
     }
 
     private void registerAgentManagerListener() {
@@ -85,6 +77,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         properties.setAgentId(simulatorConfig.getAgentId());
         AgentManagementClient client = new AgentManagementClient(PropertyUtil.getAgentManagerUrl(), properties);
 
+        // 数据源
         client.register("pressure_database", new ConfigListener() {
             @Override
             public void receive(Config config, Consumer<ConfigAck> consumer) {
@@ -92,6 +85,14 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             }
         });
 
+        client.register("pressure_database", new CommandListener() {
+            @Override
+            public void receive(Command command, Consumer<CommandAck> consumer) {
+                JdbcPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+            }
+        });
+
+        // 白名单
         client.register("pressure_whitelist", new ConfigListener() {
             @Override
             public void receive(Config config, Consumer<ConfigAck> consumer) {
@@ -99,10 +100,18 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             }
         });
 
-        client.register(CommandType.DATABASE, new CommandListener() {
+        // mq
+        client.register("pressure_mq", new CommandListener() {
             @Override
             public void receive(Command command, Consumer<CommandAck> consumer) {
-                JdbcPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+                MqPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+            }
+        });
+
+        client.register("pressure_mq", new ConfigListener() {
+            @Override
+            public void receive(Config config, Consumer<ConfigAck> consumer) {
+                MqConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
             }
         });
     }

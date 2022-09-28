@@ -23,7 +23,7 @@ public class ShadowMqPreCheckEvent implements IEvent {
         return checkResult;
     }
 
-    public void handlerEvent(Map<String, String> checkResult) {
+    public void handlerResult(Map<String, String> checkResult) {
         this.checkResult = checkResult;
         latch.countDown();
     }

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -241,7 +242,10 @@ public class JdbcPreCheckCommandProcessor {
         try {
             connection = dataSource.getConnection();
             return processReadingTableInfo(connection, command, callback, entity, tables);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if(e instanceof UndeclaredThrowableException){
+                e = ((UndeclaredThrowableException)e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
@@ -265,7 +269,10 @@ public class JdbcPreCheckCommandProcessor {
         Connection connection;
         try {
             connection = getConnection(bizClass, entity);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if(e instanceof UndeclaredThrowableException){
+                e = ((UndeclaredThrowableException)e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse("连接影子数据库失败，请检查配置信息确保数据源可用，异常信息:" + e.getMessage());
@@ -276,7 +283,10 @@ public class JdbcPreCheckCommandProcessor {
 
         try {
             return processReadingTableInfo(connection, command, callback, entity, tables);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if(e instanceof UndeclaredThrowableException){
+                e = ((UndeclaredThrowableException)e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
@@ -320,7 +330,10 @@ public class JdbcPreCheckCommandProcessor {
                 try {
                     statement = connection.createStatement();
                     statement.execute(String.format("select 1 from %s", table));
-                } catch (SQLException e) {
+                } catch (Throwable e) {
+                    if(e instanceof UndeclaredThrowableException){
+                        e = ((UndeclaredThrowableException)e).getUndeclaredThrowable();
+                    }
                     LOGGER.error("[shadow-preparation] check jdbc shadow datasource available failed, table:{}", table, e);
                     result.put(table, e.getMessage());
                 } finally {
@@ -332,7 +345,10 @@ public class JdbcPreCheckCommandProcessor {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if(e instanceof UndeclaredThrowableException){
+                e = ((UndeclaredThrowableException)e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, ignore table operation access check, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
         } finally {
             if (connection != null) {

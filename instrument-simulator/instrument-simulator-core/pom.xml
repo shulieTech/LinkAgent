@@ -205,9 +205,9 @@
             <artifactId>javax.annotation-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>simulator-bootstrap-api</artifactId>
-            <version>${simulator.bootstrap.api.version}</version>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-internal-bootstrap-api</artifactId>
+            <version>1.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

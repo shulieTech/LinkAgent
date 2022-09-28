@@ -18,8 +18,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>simulator-bootstrap-api</artifactId>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>

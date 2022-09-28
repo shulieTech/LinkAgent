@@ -238,7 +238,6 @@
     </dependencies>
 
     <modules>
-        <module>bootstrap-inject</module>
         <module>user-modules</module>
         <module>biz-classloader-inject</module>
     </modules>

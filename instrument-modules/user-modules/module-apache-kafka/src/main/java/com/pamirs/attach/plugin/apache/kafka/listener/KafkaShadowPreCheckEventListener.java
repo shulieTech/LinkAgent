@@ -121,12 +121,20 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
 
         try {
             KafkaConsumer ptConsumer = createShadowConsumer(consumer, ptTopic);
-            if (isTopicExists(adminClient, ptTopic) && isGroupExists(adminClient, ptGroup)) {
+            boolean topicExists = isTopicExists(adminClient, ptTopic);
+            boolean groupExists = isGroupExists(adminClient, ptGroup);
+            if (topicExists && groupExists) {
                 successCheckedTopicGroups.add(key);
                 result.put(key, "success");
                 return;
             }
-            LOGGER.error("[apache-kafka] handler shadow mq precheck event failed, topic or group not exists!");
+            if (!topicExists) {
+                LOGGER.error("[apache-kafka] handler shadow mq precheck event failed, create topic {} failed!", ptTopic);
+                result.put(key, "自动创建topic:" + ptTopic + "失败");
+            } else {
+                LOGGER.error("[apache-kafka] handler shadow mq precheck event failed, create group {} failed!", ptGroup);
+                result.put(key, "自动创建group:" + ptGroup + "失败");
+            }
             closePreCheckConsumer(ptConsumer);
         } catch (Exception e) {
             LOGGER.error("[apache-kafka] handler shadow mq precheck event failed", e);
@@ -235,7 +243,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
             config.put(org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getClass());
         }
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.CLIENT_ID_CONFIG,
-                Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(bizConsumer).get("clientId"))));
+                Pradar.addClusterTestPrefix(ReflectionUtils.get(bizConsumer, "clientId")));
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getBootstrapServers(bizConsumer));
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (getAllowMaxLag() * 2 * 3) + "");
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
@@ -247,13 +255,13 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
         /**
          * 认证配置
          */
-        Object selector = Reflect.on(kafkaClient).get("selector");
-        Object channelBuilder = Reflect.on(selector).get("channelBuilder");
+        Object selector = ReflectionUtils.get(kafkaClient, "selector");
+        Object channelBuilder = ReflectionUtils.get(selector, "channelBuilder");
         if (channelBuilder.getClass().getName().equals("org.apache.kafka.common.network.SaslChannelBuilder")) {
-            String clientSaslMechanism = Reflect.on(channelBuilder).get("clientSaslMechanism");
+            String clientSaslMechanism = ReflectionUtils.get(channelBuilder, "clientSaslMechanism");
             config.put(SaslConfigs.SASL_MECHANISM, clientSaslMechanism);
             config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
-                    Reflect.on(channelBuilder).get("securityProtocol").toString());
+                    ReflectionUtils.get(channelBuilder, "securityProtocol").toString());
             if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
                 Map jaasContexts = ReflectionUtils.get(channelBuilder, "jaasContexts");
                 if (jaasContexts == null) {
@@ -382,7 +390,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
     public static String getBootstrapServers(KafkaConsumer<?, ?> consumer) {
         Object metadata = Reflect.on(consumer).get("metadata");
         Field clusterField = ReflectionUtils.findField(metadata.getClass(), "cluster");
-        Object cluster = clusterField != null ?  ReflectionUtils.get(metadata, "cluster") : null;
+        Object cluster = clusterField != null ? ReflectionUtils.get(metadata, "cluster") : null;
         Iterable<Node> nodes;
         if (cluster != null) {
             nodes = Reflect.on(cluster).get("nodes");

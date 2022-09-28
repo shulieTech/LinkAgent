@@ -142,7 +142,10 @@ public final class EventRouter {
         public int compare(PradarEventListener o1, PradarEventListener o2) {
             int r = o1.order() - o2.order() > 0 ? 1 : (o1.order() - o2.order() < 0 ? -1 : 0);
             if (r == 0) {
-                LOGGER.warn("listener order 一致 o1 is :{}, o2 is :{}", o1.getClass().getName(), o2.getClass().getName());
+                r = o1.hashCode() - o2.hashCode();
+                if (r == 0) {
+                    LOGGER.warn("listener order 一致 o1 is :{}, o2 is :{}", o1.getClass().getName(), o2.getClass().getName());
+                }
             }
             return r;
         }

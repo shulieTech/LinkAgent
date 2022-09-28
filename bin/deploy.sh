@@ -10,7 +10,7 @@ SIMULATOR_TARGET=${HOME}/simulator-agent/target/simulator-agent
 cp -r $INSTRUMENT_MODULES_TARGET/modules/* $INSTRUMENT_SIMULATOR_TARGET/simulator/modules/
 cp -r $INSTRUMENT_MODULES_TARGET/biz-classloader-jars/* $INSTRUMENT_SIMULATOR_TARGET/simulator/biz-classloader-jars/
 #cp -r $INSTRUMENT_MODULES_TARGET/bootstrap/* $INSTRUMENT_SIMULATOR_TARGET/simulator/bootstrap/
-#cp $INSTRUMENT_MODULES_TARGET/../module.properties $INSTRUMENT_SIMULATOR_TARGET/simulator/modules/
+cp $INSTRUMENT_MODULES_TARGET/../module.properties $INSTRUMENT_SIMULATOR_TARGET/simulator/modules/
 #cp $INSTRUMENT_SIMULATOR_TARGET/../module.properties $INSTRUMENT_SIMULATOR_TARGET/simulator/
 #cp $SIMULATOR_TARGET/../../module.properties $SIMULATOR_TARGET
 

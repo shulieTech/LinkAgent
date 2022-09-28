@@ -207,6 +207,46 @@
                     </gitDescribe>
                 </configuration>
             </plugin>
+
+
+
+            <!--            //自定义校验规则-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+                    <!-- checkstyle的配置文件路径，如果不在根路径则在前面加上具体的目录即可 -->
+                    <configLocation>checkstyle.xml</configLocation>
+                    <!-- 配置包D工程中的配置文件 -->
+                    <packageNamesLocation>net/genez/customck/check/packagenames.xml</packageNamesLocation>
+                </configuration>
+                <!-- 该配置非常重要，如果没有executions标签，则在该工程执行install时不会执行自定义的校验 -->
+                <executions>
+                    <execution>
+                        <!-- 该插件执行的生命周期点，在initialize时进行执行 -->
+                        <phase>initialize</phase>
+                        <!-- 执行目标，要想具体了解目标的概念需要了解maven的插件生命周期，这里不再展开，下方会有推荐阅读的链接 -->
+                        <goals>
+                            <goal>checkstyle</goal><!-- checkstyle只会统计数量。check会在控制台输出具体结果 -->
+                        </goals>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <!-- 插件依赖的checkstyle版本，2.17版本的插件默认使用的6.11.2，如果要升级就需要增加以下配置 -->
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>7.3</version>
+                    </dependency>
+                    <!-- 依赖的已安装的自定义插件 -->
+                    <dependency>
+                        <groupId>io.shulie</groupId>
+                        <artifactId>custom-maven-checkstyle</artifactId>
+                        <version>1.0.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
         </plugins>
     </build>
 

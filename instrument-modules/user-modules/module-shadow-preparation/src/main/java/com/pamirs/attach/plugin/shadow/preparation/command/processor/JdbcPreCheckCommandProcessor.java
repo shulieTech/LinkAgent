@@ -268,7 +268,7 @@ public class JdbcPreCheckCommandProcessor {
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
-            result.setResponse("读取影子表结构信息时发生异常，创建连接失败");
+            result.setResponse("连接影子数据库失败，请检查配置信息确保数据源可用，异常信息:" + e.getMessage());
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
             return null;

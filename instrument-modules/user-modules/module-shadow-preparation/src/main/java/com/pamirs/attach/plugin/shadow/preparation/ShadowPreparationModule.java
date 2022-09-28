@@ -49,21 +49,22 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
     private void handlerPreCheckCommand() {
         String content = "[\n" +
                 "    {\n" +
-                "        \"type\":\"ROCKETMQ\",\n" +
+                "        \"type\":\"KAFKA\",\n" +
                 "        \"topicGroups\":{\n" +
-                "            \"Apache_MQ420_OrderedTopic\":[\n" +
-                "                \"apache-rocketmq-420-order-consumer\"\n" +
+                "            \"kafka_client_220_is_biz_first_topic\":[\n" +
+                "                \"kafka_client_220_consumer\"\n" +
                 "            ],\n" +
-                "            \"Apache_MQ420_SyncTopic\":[\n" +
-                "                \"apache-rocketmq-420-consumer\"\n" +
+                "            \"kafka_client_220_test_topic\":[\n" +
+                "                \"kafka_client_220_consumer\"\n" +
                 "            ]\n" +
                 "        }\n" +
                 "    }\n" +
                 "]";
-        Config config = new Config();
-        config.setParam(content);
 
-        MqConfigPushCommandProcessor.processConfigPushCommand(config, null);
+        Command cmd = new Command();
+        cmd.setId("11111");
+        cmd.setArgs(content);
+        MqPreCheckCommandProcessor.processPreCheckCommand(cmd, null);
     }
 
     private void registerAgentManagerListener() {

@@ -52,7 +52,7 @@
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-common-command-channel</artifactId>
-            <version>common-2.0.1-SNAPSHOT</version>
+            <version>common-2.0.1</version>
             <exclusions>
                 <exclusion>
                     <artifactId>zookeeper</artifactId>

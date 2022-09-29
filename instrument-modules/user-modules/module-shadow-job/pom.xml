@@ -153,7 +153,7 @@
             <version>${biz.classloader.inject.shadow.job.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>
         </dependency>

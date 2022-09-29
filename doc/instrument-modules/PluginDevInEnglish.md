@@ -44,7 +44,7 @@
     <scope>compile</scope>
 </dependency>
 <dependency>
-    <groupId>com.shulie.instrument.module</groupId>
+    <groupId>io.shulie.instrument.simulator</groupId>
     <artifactId>simulator-internal-bootstrap-api</artifactId>
     <version>1.0.0</version>
     <!--Make sure the version is newest-->

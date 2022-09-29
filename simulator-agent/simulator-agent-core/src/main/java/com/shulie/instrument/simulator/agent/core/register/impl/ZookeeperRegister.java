@@ -196,49 +196,6 @@ public class ZookeeperRegister implements Register {
     }
 
     /**
-     * 校验agent配置文件参数
-     *
-     * @return
-     */
-    private Map<String, String> checkConfigs() {
-        Map<String, String> result = new HashMap<String, String>(32, 1);
-        //当前agent使用配置文件的配置
-        Map<String, String> agentFileConfigs = agentConfig.getAgentFileConfigs();
-        Map<String, Object> agentConfigFromUrl =
-                ConfigUtils.getFixedAgentConfigFromUrl(agentConfig.getTroWebUrl(), agentConfig.getAppName()
-                        , agentConfig.getAgentVersion(), agentConfig.getHttpMustHeaders());
-        if (agentConfigFromUrl == null
-                || agentConfigFromUrl.get("success") == null
-                || !Boolean.parseBoolean(agentConfigFromUrl.get("success").toString())) {
-            result.put("status", "false");
-            result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
-            return result;
-        }
-        boolean status = true;
-        StringBuilder unEqualConfigs = new StringBuilder();
-
-        JSONObject jsonObject = (JSONObject) agentConfigFromUrl.get("data");
-        for (Map.Entry<String, String> entry : agentFileConfigs.entrySet()) {
-            String value = (String) jsonObject.get(entry.getKey());
-            if (entry.getValue().equals(value)) {
-                result.put(entry.getKey(), "true");
-            } else {
-                status = false;
-                result.put(entry.getKey(), "false");
-                unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
-                        entry.getValue())
-                        .append(",").append("远程参数值:").append(value).append(",");
-            }
-        }
-        result.put("status", String.valueOf(result));
-        if (!status) {
-            result.put("errorMsg", unEqualConfigs.toString());
-        }
-        return result;
-
-    }
-
-    /**
      * 获取agentId
      *
      * @param needUserInfo 是否需要用户信息

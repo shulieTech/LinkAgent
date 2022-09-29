@@ -42,8 +42,15 @@ public class SpringRabbitmqShadowServer implements ShadowServer {
 
     @Override
     public void start() {
-        shadowContainer.start();
-        started.set(true);
+        // 有classLoad问题，所以这里制定业务的classLoad
+        ClassLoader currentClassLoad = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(shadowContainer.getClass().getClassLoader());
+            shadowContainer.start();
+            started.set(true);
+        } finally {
+            Thread.currentThread().setContextClassLoader(currentClassLoad);
+        }
     }
 
     @Override

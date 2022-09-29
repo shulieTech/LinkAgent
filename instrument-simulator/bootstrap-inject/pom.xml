@@ -28,6 +28,12 @@
             <artifactId>instrument-simulator-api</artifactId>
             <version>${simulator.version}</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>instrument-simulator-base-api</artifactId>
+                    <groupId>io.shulie.instrument.simulator</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>

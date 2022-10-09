@@ -49,13 +49,11 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
     private void handlerPreCheckCommand() {
         String content = "[\n" +
                 "    {\n" +
-                "        \"type\":\"KAFKA\",\n" +
+                "        \"type\":\"RABBITMQ\",\n" +
                 "        \"topicGroups\":{\n" +
-                "            \"kafka_client_220_is_biz_first_topic\":[\n" +
-                "                \"kafka_client_220_consumer\"\n" +
-                "            ],\n" +
-                "            \"kafka_client_220_test_topic\":[\n" +
-                "                \"kafka_client_220_consumer\"\n" +
+                "            \"\":[\n" +
+                "                \"queue1\",\n" +
+                "                \"fanout-queue1\"\n" +
                 "            ]\n" +
                 "        }\n" +
                 "    }\n" +

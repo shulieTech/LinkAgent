@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoDataSourceFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceActiveEvent;
@@ -25,6 +26,8 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 
 public class JdbcConfigPushCommandProcessor {
@@ -37,6 +40,7 @@ public class JdbcConfigPushCommandProcessor {
         LOGGER.info("[shadow-preparation] accept shadow datasource push command, content:{}", config.getParam());
         //先刷新数据源
         JdbcDataSourceFetcher.refreshDataSources();
+        MongoDataSourceFetcher.refreshDataSources();
         ConfigAck ack = new ConfigAck();
         ack.setType(config.getType());
         ack.setVersion(config.getVersion());
@@ -59,6 +63,14 @@ public class JdbcConfigPushCommandProcessor {
 
         final List<ShadowDatabaseConfig> configs = toShadowDatabaseConfig(cmd.getData());
         GlobalConfig.getInstance().setShadowDatabaseConfigs(toMap(configs), true);
+
+        // mongo的配置不和jdbc的一起处理
+        List<ShadowDatabaseConfig> mongoConfigs = configs.stream().filter(config1 -> config1.getUrl().startsWith("mongodb://")).collect(Collectors.toList());
+        if(!mongoConfigs.isEmpty()){
+            configs.removeAll(mongoConfigs);
+            // mongo生效不需要额外操作，但修改配置时需要关闭影子数据源，清除缓存
+            MongoConfigPushCommandProcessor.processConfigPushCommand(mongoConfigs);
+        }
 
         Object[] compareResult = compareShadowDataSource(configs);
         Set<String> needClosed = (Set<String>) compareResult[0];

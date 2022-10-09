@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -58,6 +59,7 @@ public class MqPreCheckCommandProcessor {
             if (!handler) {
                 LOGGER.error("[shadow-preparation] publish ShadowMqPreCheckEvent after 30s has not accept result!");
             }
+            final AtomicBoolean success = new AtomicBoolean(true);
             String commandResult = events.stream().map(new Function<ShadowMqPreCheckEvent, String>() {
                 @Override
                 public String apply(ShadowMqPreCheckEvent shadowMqPreCheckEvent) {
@@ -65,18 +67,22 @@ public class MqPreCheckCommandProcessor {
                     return shadowMqPreCheckEvent.getCheckResult().entrySet().stream().map(new Function<Map.Entry<String, String>, String>() {
                         @Override
                         public String apply(Map.Entry<String, String> entry) {
+                            // 当某个topic-group验证不通过
+                            if (success.get() && !"success".equals(entry.getValue())) {
+                                success.set(false);
+                            }
                             return entry.getKey() + ">>" + entry.getValue();
                         }
                     }).collect(Collectors.joining(";\n"));
                 }
             }).collect(Collectors.joining(";\n"));
 
-            result.setSuccess(true);
+            result.setSuccess(success.get());
             result.setResponse(commandResult);
-            ack.setResponse(commandResult);
+            ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
         } catch (InterruptedException e) {
-
+            LOGGER.error("[shadow-preparation] wait for mq precheck processing occur exception", e);
         }
     }
 

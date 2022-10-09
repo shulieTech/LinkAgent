@@ -407,6 +407,7 @@ public class ConsumerRegistry {
         final PradarEventListener listener = new PradarEventListener() {
             @Override
             public EventResult onEvent(IEvent event) {
+                Thread.currentThread().setContextClassLoader(businessConsumer.getClass().getClassLoader());
                 if (event instanceof ClusterTestSwitchOnEvent) {
                     try {
                         //取出配置创建影子消费者

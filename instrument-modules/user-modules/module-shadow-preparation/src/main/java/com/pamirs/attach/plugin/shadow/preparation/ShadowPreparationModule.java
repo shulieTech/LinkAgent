@@ -1,6 +1,11 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
+import com.alibaba.fastjson.JSON;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.*;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
@@ -16,6 +21,7 @@ import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -41,28 +47,32 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             public void run() {
                 handlerPreCheckCommand();
             }
-        }, 60, TimeUnit.SECONDS);
+        }, 30, TimeUnit.SECONDS);
 
         return true;
     }
 
     private void handlerPreCheckCommand() {
-        String content = "[\n" +
-                "    {\n" +
-                "        \"type\":\"RABBITMQ\",\n" +
-                "        \"topicGroups\":{\n" +
-                "            \"\":[\n" +
-                "                \"queue1\",\n" +
-                "                \"fanout-queue1\"\n" +
-                "            ]\n" +
-                "        }\n" +
-                "    }\n" +
-                "]";
 
-        Command cmd = new Command();
-        cmd.setId("11111");
-        cmd.setArgs(content);
-        MqPreCheckCommandProcessor.processPreCheckCommand(cmd, null);
+         Config config = new Config();
+        config.setType("mongo");
+        config.setVersion("1");
+
+        JdbcConfigPushCommand command = new JdbcConfigPushCommand();
+        DataSourceConfig config1 = new DataSourceConfig();
+        config1.setUrl("mongodb://192.168.1.217:27017/test");
+        config1.setShadowUrl("mongodb://192.168.1.217:27017/PT_test");
+        config1.setShadowType(1);
+        command.setData(Arrays.asList(config1));
+
+        config.setParam(JSON.toJSONString(command));
+
+        JdbcConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
+            @Override
+            public void accept(ConfigAck configAck) {
+                System.out.println("success");
+            }
+        });
     }
 
     private void registerAgentManagerListener() {

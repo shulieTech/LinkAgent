@@ -81,4 +81,16 @@ public class MongoDataSourceFetcher {
     public static Set<String> getShadowKeys() {
         return new HashSet<String>(shadowClients.values());
     }
+
+    /**
+     * 是否是mongo v4
+     *
+     * @return
+     */
+    public static boolean isMongoV4() {
+        Object client = bizClients.entrySet().iterator().next().getKey();
+        String dependencyPath = client.getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
+        String[] splits = dependencyPath.split("-");
+        return splits[splits.length - 1].startsWith("4");
+    }
 }

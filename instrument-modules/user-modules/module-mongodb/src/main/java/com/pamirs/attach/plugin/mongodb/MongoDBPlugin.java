@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.mongodb;
 import com.pamirs.attach.plugin.mongodb.interceptor.*;
 import com.pamirs.attach.plugin.mongodb.interceptor.mongo2_14_3.*;
 import com.pamirs.attach.plugin.mongodb.listener.MongoDBShadowPreCheckEventListener;
+import com.pamirs.attach.plugin.mongodb.listener.MongoDbShadowDisableEventListener;
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
 import com.pamirs.pradar.interceptor.Interceptors;
@@ -305,7 +306,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             }
         });
 
-        EventRouter.router().addListener(new MongoDBShadowPreCheckEventListener());
+        EventRouter.router().addListener(new MongoDBShadowPreCheckEventListener()).addListener(new MongoDbShadowDisableEventListener());
 
         return true;
     }

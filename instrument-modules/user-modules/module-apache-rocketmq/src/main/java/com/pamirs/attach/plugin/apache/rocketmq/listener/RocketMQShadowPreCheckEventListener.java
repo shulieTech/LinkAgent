@@ -104,11 +104,13 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
         String ptTopic = Pradar.addClusterTestPrefix(topic);
         String ptGroup = Pradar.addClusterTestPrefix(group);
 
-        DefaultMQPushConsumer preCheckConsumer = buildPreCheckConsumer(topic, consumer);
-        if (preCheckConsumer == null) {
-            result.put(key, String.format("影子消费者订阅topic:[%s]失败", ptTopic));
+        Object buildResult = buildPreCheckConsumer(topic, consumer);
+        if (buildResult != null && buildResult instanceof String) {
+            result.put(key, String.format("影子消费者订阅topic:[%s]失败, 失败信息:%s", ptTopic, buildResult));
             return;
         }
+
+        DefaultMQPushConsumer preCheckConsumer = (DefaultMQPushConsumer) buildResult;
 
         MQAdminImpl mqAdmin = ReflectionUtils.getFieldValues(consumer, "defaultMQPushConsumerImpl", "mQClientFactory", "mQAdminImpl");
         try {
@@ -145,7 +147,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
             result.put(key, String.format("创建影子消费者Group:%s失败", ptGroup));
         } catch (Exception e) {
             LOGGER.error("[apache-rocketmq] check if group:{} auto created occur exception", ptGroup, e);
-            result.put(key, String.format("查看影子消费组:%s 是否创建过程中出现异常", ptGroup));
+            result.put(key, String.format("查看影子消费组:%s 创建过程中出现异常%s", ptGroup, e.getMessage()));
         } finally {
             closePreCheckConsumer(preCheckConsumer);
         }
@@ -176,7 +178,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
      * @param businessConsumer 业务消费者
      * @return 返回注册的影子消费者，如果初始化失败会返回 null
      */
-    private synchronized static DefaultMQPushConsumer buildPreCheckConsumer(String topic, DefaultMQPushConsumer businessConsumer) {
+    private synchronized static Object buildPreCheckConsumer(String topic, DefaultMQPushConsumer businessConsumer) {
         DefaultMQPushConsumer ptConsumer = new DefaultMQPushConsumer();
 
         String instanceName = getInstanceName();
@@ -381,7 +383,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                                         + "filterClassSource:{}",
                                 topic, subString, filterClassSource, e);
                         ptConsumer.shutdown();
-                        return null;
+                        return e.getMessage();
                     }
                 } else {
                     try {
@@ -392,7 +394,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                                 "Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} subExpression:{}",
                                 topic, subString, e);
                         ptConsumer.shutdown();
-                        return null;
+                        return e.getMessage();
                     }
                 }
                 hasSubscribe = true;
@@ -402,7 +404,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                 return ptConsumer;
             }
         }
-        return null;
+        return "业务消费者没有订阅topic";
     }
 
     private static String getInstanceName() {

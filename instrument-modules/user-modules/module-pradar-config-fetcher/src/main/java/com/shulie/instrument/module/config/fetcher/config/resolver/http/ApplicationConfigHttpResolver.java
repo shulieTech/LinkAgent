@@ -343,8 +343,10 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
          */
         getShadowRedisServerConfig(troControlWebUrl, applicationConfig);
 
-        getShadowEsServerConfig(troControlWebUrl, applicationConfig);
-        getHbaseShadowConfig(troControlWebUrl, applicationConfig);
+        if(!ConfigFetcherModule.shadowPreparationEnabled){
+            getShadowEsServerConfig(troControlWebUrl, applicationConfig);
+            getHbaseShadowConfig(troControlWebUrl, applicationConfig);
+        }
 
         /**
          * 获取 trace 规则入口配置

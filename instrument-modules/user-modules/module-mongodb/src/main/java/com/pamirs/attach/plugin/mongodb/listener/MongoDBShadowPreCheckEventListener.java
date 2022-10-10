@@ -128,7 +128,7 @@ public class MongoDBShadowPreCheckEventListener implements PradarEventListener {
             mongoClient = MongoClients.create(url);
             needClosedClient.add(mongoClient);
         }
-        String database = url.substring(url.lastIndexOf("/"));
+        String database = url.substring(url.lastIndexOf("/") + 1);
         if (StringUtils.isEmpty(database)) {
             LOGGER.error("[Mongodb]: url:{} not assign database", url);
             event.handlerResult(String.format("配置url%s中未指定数据库", url));
@@ -137,8 +137,8 @@ public class MongoDBShadowPreCheckEventListener implements PradarEventListener {
         try {
             return mongoClient.getDatabase(database);
         } catch (IllegalArgumentException e) {
-            LOGGER.error("[Mongodb]: database {} not exists!", database);
-            event.handlerResult(String.format("数据库%s不存在", database));
+            LOGGER.error("[Mongodb]: database {} name is illegal!", database);
+            event.handlerResult(String.format("数据库%s名称不符合规范", database));
         } catch (Exception e) {
             LOGGER.error("[Mongodb]: get database {} occur exception", database, e);
             event.handlerResult(String.format("查询数据库%s出现异常,异常信息:%s", database, e.getMessage()));
@@ -163,6 +163,6 @@ public class MongoDBShadowPreCheckEventListener implements PradarEventListener {
 
     @Override
     public int order() {
-        return 23;
+        return 24;
     }
 }

@@ -37,11 +37,8 @@ public class MongoPreCheckCommandProcessor {
             callback.accept(ack);
             return;
         }
-        // 依赖文件路径
-        String dependencyPath = client.getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
-        String[] splits = dependencyPath.split("-");
-        boolean isMongoV4 = splits[splits.length - 1].startsWith("4");
 
+        boolean isMongoV4 = MongoDataSourceFetcher.isMongoV4();
         Integer shadowType = command.getShadowType();
         Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
         String shadowUrl = command.getShadowDataSource() == null ? null : command.getShadowDataSource().getUrl();

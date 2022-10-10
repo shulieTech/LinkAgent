@@ -18,6 +18,7 @@ import com.pamirs.attach.plugin.mongodb.interceptor.AggregateOperationImplInterc
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorInterceptor;
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorTraceInterceptor;
 import com.pamirs.attach.plugin.mongodb.listener.MongoDB4ShadowPreCheckEventListener;
+import com.pamirs.attach.plugin.mongodb.listener.MongoDb4ShadowDisableEventListener;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
@@ -62,7 +63,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             return false;
         }
 
-        EventRouter.router().addListener(new MongoDB4ShadowPreCheckEventListener());
+        EventRouter.router().addListener(new MongoDB4ShadowPreCheckEventListener()).addListener(new MongoDb4ShadowDisableEventListener());
 
         enhanceTemplate.enhance(this, "com.mongodb.client.internal.MongoClientDelegate$DelegateOperationExecutor", new EnhanceCallback() {
             @Override

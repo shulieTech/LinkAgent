@@ -3,6 +3,8 @@ package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoDataSourceFetcher;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
+import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMongoDisableEvent;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 
 import java.util.HashSet;
 import java.util.List;
@@ -13,7 +15,7 @@ public class MongoConfigPushCommandProcessor {
     public static void processConfigPushCommand(List<ShadowDatabaseConfig> mongoConfigs) {
         Object[] compareResults = compareShadowDataSource(mongoConfigs);
         Set<String> needClosed = (Set<String>) compareResults[0];
-
+        EventRouter.router().publish(new ShadowMongoDisableEvent(MongoDataSourceFetcher.isMongoV4(), needClosed));
     }
 
     /**
@@ -48,5 +50,6 @@ public class MongoConfigPushCommandProcessor {
         }
         return new Object[]{needClosed, needAdd};
     }
+
 
 }

@@ -86,6 +86,12 @@ public class HeartRequest {
      */
     private String agentVersion;
 
+
+    /**
+     * simulator版本
+     */
+    private String simulatorVersion;
+
     /**
      * 模块版本信息
      */
@@ -230,5 +236,13 @@ public class HeartRequest {
 
     public void setTaskExceed(boolean taskExceed) {
         this.taskExceed = taskExceed;
+    }
+
+    public String getSimulatorVersion() {
+        return simulatorVersion;
+    }
+
+    public void setSimulatorVersion(String simulatorVersion) {
+        this.simulatorVersion = simulatorVersion;
     }
 }

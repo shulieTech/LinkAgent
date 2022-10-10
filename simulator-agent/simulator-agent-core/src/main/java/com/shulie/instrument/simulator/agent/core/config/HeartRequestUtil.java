@@ -53,7 +53,8 @@ public class HeartRequestUtil {
         heartRequest.setAgentErrorInfo(agentErrorMsg);
         heartRequest.setSimulatorErrorInfo(SimulatorStatus.getAgentStatus());
         heartRequest.setAgentVersion(agentConfig.getAgentVersion());
-        if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())){
+        heartRequest.setSimulatorVersion(HeartCommandUtils.SIMULATOR_VERSION);
+        if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())) {
             String agentBasePath = getUpgradeFileTempSaveDir().replace("core", "");
             File localFile = new File(agentBasePath + "agent/simulator_-1");
             if (!localFile.exists()){

@@ -24,13 +24,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author angju
  * @date 2021/11/18 15:27
  */
 public class HeartCommandUtils {
+
+    public static String SIMULATOR_VERSION = null;
 
     /**
      * 是否已经执行成功startCommandId名
@@ -57,18 +59,19 @@ public class HeartCommandUtils {
         String agentModuleProperties = defaultAgentHome + "module.properties";
         String simulatorModuleProperties = defaultAgentHome + "agent/simulator/module.properties";
         String userModuleProperties = defaultAgentHome + "agent/simulator/modules/module.properties";
-
+        String simulatorVersion = defaultAgentHome + "agent/simulator/config/version";
         File agentModulePropertiesFile = new File(agentModuleProperties);
         File simulatorModulePropertiesFile = new File(simulatorModuleProperties);
         File userModulePropertiesFile = new File(userModuleProperties);
+        File simulatorVersionFile = new File(simulatorVersion);
         if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
-            || !userModulePropertiesFile.exists()){
+            || !userModulePropertiesFile.exists() || !simulatorVersionFile.exists()){
             throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");
         } else {
             List<String> agentModulePropertiesLines = readFile(agentModulePropertiesFile);
             List<String> simulatorModulePropertiesLines = readFile(simulatorModulePropertiesFile);
             List<String> userModulePropertiesLines = readFile(userModulePropertiesFile);
-            agentModulePropertiesLines.addAll(simulatorModulePropertiesLines);
+            SIMULATOR_VERSION = readLine(simulatorVersionFile);
             agentModulePropertiesLines.addAll(userModulePropertiesLines);
             Collections.sort(agentModulePropertiesLines);
             StringBuilder stringBuilder = new StringBuilder();
@@ -93,6 +96,25 @@ public class HeartCommandUtils {
                 String[] temp = str.split(";");
                 result.add(temp[0] + "," + temp[1]);
             }
+            //close
+            inputStream.close();
+            bufferedReader.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            return result;
+        }
+    }
+
+    private static String readLine(File file){
+        FileInputStream inputStream = null;
+       String result = "";
+        try {
+            inputStream = new FileInputStream(file);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            result = bufferedReader.readLine();
             //close
             inputStream.close();
             bufferedReader.close();

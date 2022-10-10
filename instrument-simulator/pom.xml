@@ -17,8 +17,7 @@
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
-        <simulator.bootstrap.api.version>1.0.1</simulator.bootstrap.api.version>
-        <simulator.major.version>5.5.0</simulator.major.version>
+        <simulator.major.version>5.5.1</simulator.major.version>
         <simulator.minor.version>0</simulator.minor.version>
     </properties>
 
@@ -169,6 +168,7 @@
         <module>instrument-simulator-management-provider</module>
         <module>system-modules</module>
         <module>instrument-simulator-jdk</module>
+        <module>bootstrap-inject</module>
     </modules>
 
     <dependencyManagement>

@@ -17,7 +17,6 @@ package com.shulie.instrument.simulator.core.classloader.impl;
 import com.shulie.instrument.simulator.api.ModuleRuntimeException;
 import com.shulie.instrument.simulator.api.util.ObjectIdUtils;
 import com.shulie.instrument.simulator.core.CoreConfigure;
-import com.shulie.instrument.simulator.core.classloader.BizClassLoaderHolder;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.ModuleClassLoader;

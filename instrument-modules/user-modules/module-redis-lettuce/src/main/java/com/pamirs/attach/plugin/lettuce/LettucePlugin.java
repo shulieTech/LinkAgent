@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -185,6 +185,8 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
         addCloseConnectionSupport();
 
         addAbstractRedisAsyncCommandsDispatchInterceptor();
+
+//        springLettuceShadowDb();
 
         InvalidatedResourcesEvictor.scheduleDropInvalidatedResources(manager);
 
@@ -759,6 +761,18 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                         final InstrumentMethod closeMethod = target.getDeclaredMethod("dispatch", "io.lettuce.core.protocol.ProtocolKeyword", "io.lettuce.core.output.CommandOutput", "io.lettuce.core.protocol.CommandArgs");
                         closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchTraceInterceptor.class, "Lettuce_Commands_Trace", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                         closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchClusterTestInterceptor.class, "Lettuce_Commands_Cluster", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    }
+                });
+    }
+
+    private void springLettuceShadowDb() {
+        this.enhanceTemplate.enhance(this, "org.springframework.data.redis.core.RedisAccessor",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        final InstrumentMethod getConnectionFactory = target.getDeclaredMethod("getConnectionFactory");
+                        getConnectionFactory.addInterceptor(Listeners.of(SpringLettuceShadowDbInterceptor.class
+                                , "Spring_lettuce_shadowDb", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                     }
                 });
     }

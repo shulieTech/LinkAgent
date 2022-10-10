@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DataSourceWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(DataSourceWrapUtil.class.getName());
+    private final static Object lock = new Object();
 
     public static final ConcurrentHashMap<DataSourceMeta, DbcpMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, DbcpMediaDataSource>();
 
@@ -123,29 +124,18 @@ public class DataSourceWrapUtil {
         if (isPerformanceDataSource(target)) {
             return;
         }
-        if (!validate(target)) {
-            //没有配置对应的影子表或影子库
-            ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0002")
-                    .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl()  + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：dbcp")
-                    .report();
-            DbcpMediaDataSource dbMediatorDataSource = new DbcpMediaDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (logger.isInfoEnabled()) {
-                    logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
-                }
-                old.close();
+        synchronized (lock) {
+            if (pressureDataSources.containsKey(dataSourceMeta) && pressureDataSources.get(dataSourceMeta) != null) {
+                return;
             }
-            return;
-        }
-        if (shadowTable(target)) {
-            //影子表
-            try {
+            if (!validate(target)) {
+                //没有配置对应的影子表或影子库
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.DataSource)
+                        .setErrorCode("datasource-0002")
+                        .setMessage("没有配置对应的影子表或影子库！")
+                        .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：dbcp")
+                        .report();
                 DbcpMediaDataSource dbMediatorDataSource = new DbcpMediaDataSource();
                 dbMediatorDataSource.setDataSourceBusiness(target);
 
@@ -156,43 +146,59 @@ public class DataSourceWrapUtil {
                     }
                     old.close();
                 }
-            } catch (Throwable e) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子表设置初始化异常！")
-                        .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(e))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
-                logger.error("init datasource err!", e);
+                return;
             }
-        } else {
-            //影子库
-            try {
-                DbcpMediaDataSource dataSource = new DbcpMediaDataSource();
-                BasicDataSource ptDataSource = copy(target);
-                dataSource.setDataSourcePerformanceTest(ptDataSource);
-                dataSource.setDataSourceBusiness(target);
+            if (shadowTable(target)) {
+                //影子表
+                try {
+                    DbcpMediaDataSource dbMediatorDataSource = new DbcpMediaDataSource();
+                    dbMediatorDataSource.setDataSourceBusiness(target);
 
-                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
-                if (old != null) {
-                    if (logger.isInfoEnabled()) {
-                        logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                    if (old != null) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                        }
+                        old.close();
                     }
-                    old.close();
+                } catch (Throwable e) {
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0003")
+                            .setMessage("影子表设置初始化异常！")
+                            .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(e))
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
+                    logger.error("init datasource err!", e);
                 }
-                if (logger.isInfoEnabled()) {
-                    logger.info("[dbcp] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+            } else {
+                //影子库
+                try {
+                    DbcpMediaDataSource dataSource = new DbcpMediaDataSource();
+                    BasicDataSource ptDataSource = copy(target);
+                    dataSource.setDataSourcePerformanceTest(ptDataSource);
+                    dataSource.setDataSourceBusiness(target);
+
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
+                    if (old != null) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("[dbcp] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                        }
+                        old.close();
+                    }
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[dbcp] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+                    }
+                } catch (Throwable t) {
+                    logger.error("[dbcp] init datasource err!", t);
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0003")
+                            .setMessage("影子库设置初始化异常！")
+                            .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(t))
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
                 }
-            } catch (Throwable t) {
-                logger.error("[dbcp] init datasource err!", t);
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子库设置初始化异常！")
-                        .setDetail("dbcp:DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(t))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
             }
         }
     }

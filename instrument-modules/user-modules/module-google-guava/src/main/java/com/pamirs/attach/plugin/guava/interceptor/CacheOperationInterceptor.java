@@ -19,6 +19,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.flag.GuavaCacheSkipFlag;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -35,6 +36,9 @@ public class CacheOperationInterceptor extends ParametersWrapperInterceptorAdapt
     @Override
     protected Object[] getParameter0(Advice advice) throws Throwable {
         Object[] parameterArray = advice.getParameterArray();
+        if (GuavaCacheSkipFlag.skip.get()) {
+            return parameterArray;
+        }
         if (!Pradar.isClusterTest()) {
             // 非压测流量
             return parameterArray;

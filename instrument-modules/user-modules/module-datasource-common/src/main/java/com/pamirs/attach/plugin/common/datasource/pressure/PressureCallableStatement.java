@@ -2551,4 +2551,21 @@ public class PressureCallableStatement implements CallableStatement {
         return false;
     }
 
+
+
+    @Override
+    public int hashCode() {
+        return callableStatement.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return callableStatement.equals(obj);
+    }
+
+    @Override
+    public String toString() {
+        return callableStatement.toString();
+    }
+
 }

@@ -1320,4 +1320,18 @@ public class NormalPreparedStatement implements PreparedStatement {
 
     }
 
+    @Override
+    public int hashCode() {
+        return preparedStatement.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return preparedStatement.equals(obj);
+    }
+
+    @Override
+    public String toString() {
+        return preparedStatement.toString();
+    }
 }

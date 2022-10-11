@@ -622,4 +622,19 @@ public class NormalStatment implements Statement {
 
     }
 
+    @Override
+    public int hashCode() {
+        return statement.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return statement.equals(obj);
+    }
+
+    @Override
+    public String toString() {
+        return statement.toString();
+    }
+
 }

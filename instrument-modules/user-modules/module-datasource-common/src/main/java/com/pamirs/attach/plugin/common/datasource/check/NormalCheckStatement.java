@@ -260,4 +260,21 @@ public class NormalCheckStatement implements Statement {
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return statement.isWrapperFor(iface);
     }
+
+
+
+    @Override
+    public int hashCode() {
+        return statement.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return statement.equals(obj);
+    }
+
+    @Override
+    public String toString() {
+        return statement.toString();
+    }
 }

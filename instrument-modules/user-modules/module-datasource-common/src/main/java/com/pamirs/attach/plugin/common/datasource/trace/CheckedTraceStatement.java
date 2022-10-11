@@ -812,4 +812,19 @@ public class CheckedTraceStatement implements Statement {
         }
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        return targetStatement.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return targetStatement.equals(obj);
+    }
+
+    @Override
+    public String toString() {
+        return targetStatement.toString();
+    }
 }

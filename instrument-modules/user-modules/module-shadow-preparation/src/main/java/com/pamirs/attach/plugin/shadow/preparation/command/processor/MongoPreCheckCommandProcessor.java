@@ -4,8 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
-import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoDataSourceFetcher;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMongoPreCheckEvent;
+import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import io.shulie.agent.management.client.model.CommandAck;
@@ -21,14 +21,14 @@ public class MongoPreCheckCommandProcessor {
     private final static Logger LOGGER = LoggerFactory.getLogger(MongoPreCheckCommandProcessor.class.getName());
 
     public static void processPreCheckCommand(String commandId, final JdbcPreCheckCommand command, final Consumer<CommandAck> callback) {
-        MongoDataSourceFetcher.refreshDataSources();
+        MongoClientsFetcher.refreshClients();
 
         CommandAck ack = new CommandAck();
         ack.setCommandId(commandId);
         CommandExecuteResult result = new CommandExecuteResult();
 
         DataSourceEntity bizDataSource = command.getBizDataSource();
-        Object client = MongoDataSourceFetcher.getBizClient(bizDataSource.getUrl());
+        Object client = MongoClientsFetcher.getBizClient(bizDataSource.getUrl());
         if (client == null) {
             LOGGER.error("[shadow-preparation] can`t find business mongo client object instance for url:{}", bizDataSource.getUrl());
             result.setSuccess(false);
@@ -38,7 +38,7 @@ public class MongoPreCheckCommandProcessor {
             return;
         }
 
-        boolean isMongoV4 = MongoDataSourceFetcher.isMongoV4();
+        boolean isMongoV4 = MongoClientsFetcher.isMongoV4();
         Integer shadowType = command.getShadowType();
         Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
         String shadowUrl = command.getShadowDataSource() == null ? null : command.getShadowDataSource().getUrl();

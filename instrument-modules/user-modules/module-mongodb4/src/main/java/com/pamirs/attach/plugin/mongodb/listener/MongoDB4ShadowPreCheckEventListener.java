@@ -8,7 +8,7 @@ import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMongoPreCheckEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import org.apache.commons.lang.StringUtils;

@@ -1,9 +1,9 @@
 package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoDataSourceFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMongoDisableEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoDisableEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 
 import java.util.HashSet;
@@ -15,7 +15,10 @@ public class MongoConfigPushCommandProcessor {
     public static void processConfigPushCommand(List<ShadowDatabaseConfig> mongoConfigs) {
         Object[] compareResults = compareShadowDataSource(mongoConfigs);
         Set<String> needClosed = (Set<String>) compareResults[0];
-        EventRouter.router().publish(new ShadowMongoDisableEvent(MongoDataSourceFetcher.isMongoV4(), needClosed));
+        if (!needClosed.isEmpty()) {
+            MongoClientsFetcher.clearShadowCache();
+            EventRouter.router().publish(new ShadowMongoDisableEvent(MongoClientsFetcher.isMongoV4(), needClosed));
+        }
     }
 
     /**
@@ -27,7 +30,7 @@ public class MongoConfigPushCommandProcessor {
      */
     private static Object[] compareShadowDataSource(List<ShadowDatabaseConfig> data) {
         // 需要被关闭的影子数据源
-        Set<String> needClosed = new HashSet<>(MongoDataSourceFetcher.getShadowKeys());
+        Set<String> needClosed = new HashSet<>(MongoClientsFetcher.getShadowKeys());
         // 新增的数据源
         Set<ShadowDatabaseConfig> needAdd = new HashSet<>();
 

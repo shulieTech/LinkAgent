@@ -14,7 +14,7 @@ import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMqPreCheckEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMqPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.rabbitmq.client.Channel;
@@ -94,7 +94,7 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
 
     private void doCheckExchangeQueues(String exchange, List<String> queues, Map<String, String> result) throws Exception {
         SyncObject syncObject = SyncObjectService.getSyncObject("com.rabbitmq.client.impl.ChannelN#basicConsume");
-        ChannelN channelN = null;
+        Object channelN = null;
         for (String queue : queues) {
             for (SyncObjectData data : syncObject.getDatas()) {
                 ChannelN target = (ChannelN) data.getTarget();
@@ -109,7 +109,8 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
                 result.put(exchange + "#" + queue, String.format("exchange:%s, queue:%s 找不到对应的业务消费者", exchange, queue));
                 continue;
             }
-            doCheckExchangeQueue(channelN, exchange, queue, result);
+            Thread.currentThread().setContextClassLoader(channelN.getClass().getClassLoader());
+            doCheckExchangeQueue((ChannelN) channelN, exchange, queue, result);
         }
     }
 

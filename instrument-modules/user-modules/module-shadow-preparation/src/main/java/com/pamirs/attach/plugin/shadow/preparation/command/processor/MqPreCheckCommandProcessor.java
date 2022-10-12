@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMqPreCheckEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMqPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import io.shulie.agent.management.client.model.Command;
 import io.shulie.agent.management.client.model.CommandAck;

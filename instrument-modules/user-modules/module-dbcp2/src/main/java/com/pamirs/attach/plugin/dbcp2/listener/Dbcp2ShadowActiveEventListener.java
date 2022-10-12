@@ -6,7 +6,7 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceActiveEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceActiveEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;

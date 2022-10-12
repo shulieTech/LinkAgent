@@ -1,9 +1,12 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
 import com.alibaba.fastjson.JSON;
+import com.pamirs.attach.plugin.shadow.preparation.command.EsConfigPushCommand;
+import com.pamirs.attach.plugin.shadow.preparation.command.EsPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.*;
+import com.pamirs.attach.plugin.shadow.preparation.es.EsConfigEntity;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.pradar.AppNameUtils;
@@ -45,34 +48,54 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
-                handlerPreCheckCommand();
+                try {
+                    handlerPreCheckCommand();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }, 30, TimeUnit.SECONDS);
 
         return true;
     }
 
-    private void handlerPreCheckCommand() {
+    private void handlerPreCheckCommand() throws InterruptedException {
 
-         Config config = new Config();
-        config.setType("mongo");
+        EsConfigEntity entity = new EsConfigEntity();
+        entity.setBusinessNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
+        entity.setPerformanceTestNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
+        entity.setShadowType(1);
+        entity.setIndices(Arrays.asList("es7-test-index"));
+
+        EsConfigPushCommand pushCommand = new EsConfigPushCommand();
+        pushCommand.setData(Arrays.asList(entity));
+
+        Config config = new Config();
+        config.setParam(JSON.toJSONString(pushCommand));
         config.setVersion("1");
 
-        JdbcConfigPushCommand command = new JdbcConfigPushCommand();
-        DataSourceConfig config1 = new DataSourceConfig();
-        config1.setUrl("mongodb://192.168.1.217:27017/test");
-        config1.setShadowUrl("mongodb://192.168.1.217:27017/PT_test");
-        config1.setShadowType(1);
-        command.setData(Arrays.asList(config1));
-
-        config.setParam(JSON.toJSONString(command));
-
-        JdbcConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
+        EsConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
             @Override
             public void accept(ConfigAck configAck) {
                 System.out.println("success");
             }
         });
+
+        Thread.sleep(1 * 1000);
+
+        EsConfigEntity et = new EsConfigEntity();
+        et.setBusinessNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
+        et.setPerformanceTestNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
+        et.setShadowType(3);
+        pushCommand.setData(Arrays.asList(et));
+        config.setParam(JSON.toJSONString(pushCommand));
+        EsConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
+            @Override
+            public void accept(ConfigAck configAck) {
+                System.out.println("success");
+            }
+        });
+
     }
 
     private void registerAgentManagerListener() {
@@ -121,6 +144,20 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             @Override
             public void receive(Config config, Consumer<ConfigAck> consumer) {
                 MqConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
+            }
+        });
+
+        //es
+        client.register("pressure_es", new CommandListener() {
+            @Override
+            public void receive(Command command, Consumer<CommandAck> consumer) {
+                EsPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+            }
+        });
+        client.register("pressure_es", new ConfigListener() {
+            @Override
+            public void receive(Config config, Consumer<ConfigAck> consumer) {
+                EsConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
             }
         });
     }

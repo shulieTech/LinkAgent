@@ -6,7 +6,7 @@ import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMqPreCheckEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMqPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -14,7 +14,6 @@ import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.MessageListener;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
-import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.MQAdminImpl;
 import org.apache.rocketmq.client.impl.MQClientAPIImpl;
 import org.apache.rocketmq.common.UtilAll;
@@ -75,11 +74,11 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
 
     private void doCheckTopicGroups(String topic, List<String> groups, Map<String, String> result) {
         SyncObject syncObject = SyncObjectService.getSyncObject("org.apache.rocketmq.client.consumer.DefaultMQPushConsumer#start");
-        DefaultMQPushConsumer consumer = null;
+        Object consumer = null;
         for (String group : groups) {
             for (SyncObjectData data : syncObject.getDatas()) {
-                DefaultMQPushConsumer target = (DefaultMQPushConsumer) data.getTarget();
-                if (group.equals(target.getConsumerGroup())) {
+                Object target = data.getTarget();
+                if (group.equals(ReflectionUtils.invoke(target, "getConsumerGroup"))) {
                     consumer = target;
                     break;
                 }
@@ -89,7 +88,8 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                 result.put(topic + "#" + group, String.format("topic:%s, group:%s 找不到对应的业务消费者", topic, group));
                 continue;
             }
-            doCheckTopicGroup(consumer, topic, group, result);
+            Thread.currentThread().setContextClassLoader(consumer.getClass().getClassLoader());
+            doCheckTopicGroup((DefaultMQPushConsumer) consumer, topic, group, result);
         }
     }
 
@@ -120,7 +120,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                 closePreCheckConsumer(preCheckConsumer);
                 return;
             }
-        } catch (MQClientException e) {
+        } catch (Exception e) {
             LOGGER.error("[apache-rocketmq] fetch publish message queues for topic :{} occur exception", ptTopic, e);
             result.put(key, String.format("影子topic:[%s]自动创建失败", ptTopic));
             closePreCheckConsumer(preCheckConsumer);
@@ -378,7 +378,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                     try {
                         ptConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString, filterClassSource);
                         ptConsumer.start();
-                    } catch (MQClientException e) {
+                    } catch (Exception e) {
                         LOGGER.error("Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} fullClassName:{} "
                                         + "filterClassSource:{}",
                                 topic, subString, filterClassSource, e);
@@ -389,7 +389,7 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
                     try {
                         ptConsumer.subscribe(Pradar.addClusterTestPrefix(topic), subString);
                         ptConsumer.start();
-                    } catch (MQClientException e) {
+                    } catch (Exception e) {
                         LOGGER.error(
                                 "Apache-RocketMQ: subscribe shadow DefaultMQPushConsumer err! topic:{} subExpression:{}",
                                 topic, subString, e);

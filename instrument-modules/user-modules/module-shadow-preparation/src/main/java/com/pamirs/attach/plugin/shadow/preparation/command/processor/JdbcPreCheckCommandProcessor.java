@@ -9,7 +9,6 @@ import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.JdbcTableColumnInfos;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcTypeFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoDataSourceFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import io.shulie.agent.management.client.model.Command;
@@ -82,7 +81,7 @@ public class JdbcPreCheckCommandProcessor {
         if ((shadowType == 1 || shadowType == 2) && entity.getShadowDataSource() == null) {
             LOGGER.error("[shadow-preparation] ds type is shadow database or shadow database table, but shadow datasource is null");
             result.setSuccess(false);
-            result.setResponse("影子库/影子库影子表模式时影子数据源不能未空");
+            result.setResponse("影子库/影子库影子表模式时影子数据源不能为空");
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
             return;

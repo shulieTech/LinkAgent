@@ -2,7 +2,7 @@ package com.pamirs.attach.plugin.mongodb.listener;
 
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMongoDisableEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoDisableEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 

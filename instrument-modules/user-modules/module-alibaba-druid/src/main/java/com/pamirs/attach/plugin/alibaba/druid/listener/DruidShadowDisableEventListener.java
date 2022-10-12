@@ -4,7 +4,7 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceDisableEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceDisableEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 public class DruidShadowDisableEventListener implements PradarEventListener {
 

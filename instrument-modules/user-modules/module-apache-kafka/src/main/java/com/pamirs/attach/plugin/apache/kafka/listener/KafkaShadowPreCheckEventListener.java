@@ -7,7 +7,7 @@ import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowMqPreCheckEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMqPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -79,10 +79,10 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
 
     private void doCheckTopicGroups(String topic, List<String> groups, Map<String, String> result) {
         SyncObject syncObject = SyncObjectService.getSyncObject("org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");
-        KafkaConsumer consumer = null;
+        Object consumer = null;
         for (String group : groups) {
             for (SyncObjectData data : syncObject.getDatas()) {
-                KafkaConsumer target = (KafkaConsumer) data.getTarget();
+                Object target = data.getTarget();
                 String groupId = getGroup(target);
                 if (group.equals(groupId)) {
                     consumer = target;
@@ -94,7 +94,8 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
                 result.put(topic + "#" + group, String.format("topic:%s, group:%s 找不到对应的业务消费者", topic, group));
                 continue;
             }
-            doCheckTopicGroup(consumer, topic, group, result);
+            Thread.currentThread().setContextClassLoader(consumer.getClass().getClassLoader());
+            doCheckTopicGroup((KafkaConsumer) consumer, topic, group, result);
         }
     }
 
@@ -190,7 +191,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
      * @param bizConsumer 业务consumer
      * @return group
      */
-    private String getGroup(KafkaConsumer bizConsumer) {
+    private String getGroup(Object bizConsumer) {
         try {
             Object coordinator = ReflectionUtils.get(bizConsumer, REFLECT_FIELD_COORDINATOR);
             Field field = ReflectionUtils.findField(bizConsumer.getClass(), REFLECT_FIELD_GROUP_ID);

@@ -9,18 +9,18 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 
 import java.util.*;
 
-public class MongoDataSourceFetcher {
+public class MongoClientsFetcher {
 
-    private static String mongo_datasource_sync_key = "com.mongodb.client.internal.MongoClientImpl";
+    private static String mongo_client_sync_key = "com.mongodb.client.internal.MongoClientImpl";
 
     private static WeakHashMap<Object, String> bizClients = new WeakHashMap<>();
     private static WeakHashMap<Object, String> shadowClients = new WeakHashMap<>();
 
-    public static synchronized void refreshDataSources() {
-        fetchDataSourceForMongo(SyncObjectService.removeSyncObject(mongo_datasource_sync_key));
+    public static synchronized void refreshClients() {
+        fetchClientsForMongo(SyncObjectService.removeSyncObject(mongo_client_sync_key));
     }
 
-    private static void fetchDataSourceForMongo(SyncObject syncObject) {
+    private static void fetchClientsForMongo(SyncObject syncObject) {
         if (syncObject == null) {
             return;
         }
@@ -80,6 +80,10 @@ public class MongoDataSourceFetcher {
 
     public static Set<String> getShadowKeys() {
         return new HashSet<String>(shadowClients.values());
+    }
+
+    public static void clearShadowCache(){
+        shadowClients.clear();
     }
 
     /**

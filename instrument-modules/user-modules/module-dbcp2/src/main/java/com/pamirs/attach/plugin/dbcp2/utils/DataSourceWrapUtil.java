@@ -29,6 +29,7 @@ import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
 import com.pamirs.pradar.pressurement.datasource.DbMediatorDataSource;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -275,11 +276,14 @@ public class DataSourceWrapUtil {
             target.setEvictionPolicyClassName(sourceDatasource.getEvictionPolicyClassName());
         }
 
-        Boolean fastFailValidation = ptDataSourceConf.getBooleanProperty("fastFailValidation");
-        if (fastFailValidation != null) {
-            target.setFastFailValidation(fastFailValidation);
-        } else {
-            target.setFastFailValidation(sourceDatasource.getFastFailValidation());
+        // 低版本没有fastFailValidation字段
+        if (Reflect.on(sourceDatasource).existsField("fastFailValidation")) {
+            Boolean fastFailValidation = ptDataSourceConf.getBooleanProperty("fastFailValidation");
+            if (fastFailValidation != null) {
+                target.setFastFailValidation(fastFailValidation);
+            } else {
+                target.setFastFailValidation(sourceDatasource.getFastFailValidation());
+            }
         }
 
         Integer maxIdle = ptDataSourceConf.getIntProperty("maxIdle");

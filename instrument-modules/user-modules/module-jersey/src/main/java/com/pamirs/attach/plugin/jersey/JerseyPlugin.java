@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.jersey;
 
-import com.pamirs.attach.plugin.jersey.interceptor.client.ClientInterceptor;
 import com.pamirs.attach.plugin.jersey.interceptor.server.ServerInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;

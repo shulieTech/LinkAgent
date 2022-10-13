@@ -76,8 +76,8 @@ public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 InstrumentMethod removeAllMethod = target.getDeclaredMethod("removeAll", "java.util.Set");
                 removeAllMethod.addInterceptor(Listeners.of(CacheGetAllRemoveAllInterceptor.class));
             }
-        }, "org.ehcache.core.Ehcache", "org.ehcache.core.EhcacheWithLoaderWriter", "org.ehcache.core.PersistentUserManagedEhcache");
-
+        }, "org.ehcache.core.EhcacheBase", "org.ehcache.core.Ehcache", "org.ehcache.core.EhcacheWithLoaderWriter", "org.ehcache.core" +
+                ".PersistentUserManagedEhcache");
 
         enhanceTemplate.enhance(this, new EnhanceCallback() {
                     @Override
@@ -134,6 +134,14 @@ public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                         Interceptors.SCOPE_CALLBACK));
             }
         });
+
+        enhanceTemplate.enhance(this, new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod checkMethod = target.getDeclaredMethods("checkKey", "checkValue");
+                checkMethod.addInterceptor(Listeners.of(BaseStoreCheckTypeInterceptor.class));
+            }
+        }, "org.ehcache.impl.internal.util.CheckerUtil", "org.ehcache.impl.store.BaseStore", "org.ehcache.impl.internal.store.heap.OnHeapStore");
 
         return true;
     }

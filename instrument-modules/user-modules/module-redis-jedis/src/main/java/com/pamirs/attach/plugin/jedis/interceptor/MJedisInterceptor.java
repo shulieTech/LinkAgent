@@ -136,6 +136,11 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                 data[i] = key.getBytes();
             }
             return args;
+        } else if (params instanceof byte[]) {
+            byte[] data = (byte[]) params;
+            String key = fetchKeyString(new String(data), whiteList, canMatchWhiteList);
+            data = key.getBytes();
+            return args;
         }
 
         throw new PressureMeasureError("Jedis not support mset key deserialize !");

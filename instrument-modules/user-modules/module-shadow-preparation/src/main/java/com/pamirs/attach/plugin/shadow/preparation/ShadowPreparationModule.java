@@ -22,6 +22,7 @@ import io.shulie.agent.management.client.constant.CommandType;
 import io.shulie.agent.management.client.listener.CommandListener;
 import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 import java.util.Arrays;
@@ -45,7 +46,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         }, 1, TimeUnit.MINUTES);*/
 
 
-        ExecutorServiceFactory.getFactory().scheduleWithFixedDelay(new Runnable() {
+        ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -61,23 +62,32 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
 
     private void handlerPreCheckCommand() throws InterruptedException {
         String mqPreCheckContent = System.getProperty("shadow.preparation.mq.precheck.content");
-        Command command = new Command();
-        command.setId("mq_precheck");
-        command.setArgs(mqPreCheckContent);
-        command.setType("pressure_mq");
-        MqPreCheckCommandProcessor.processPreCheckCommand(command, commandAck -> System.out.println(commandAck.getResponse()));
+        if(StringUtils.isNotBlank(mqPreCheckContent)){
+            Command command = new Command();
+            command.setId("mq_precheck");
+            command.setArgs(mqPreCheckContent);
+            command.setType("pressure_mq");
+            MqPreCheckCommandProcessor.processPreCheckCommand(command, new Consumer<CommandAck>() {
+                @Override
+                public void accept(CommandAck commandAck) {
+                    System.out.println(commandAck.getResponse());
+                }
+            });
+        }
 
         String mqActiveContent = System.getProperty("shadow.preparation.mq.active.content");
-        Config config = new Config();
-        config.setVersion("1");
-        config.setType("pressure_mq");
-        config.setParam(mqActiveContent);
-        MqConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
-            @Override
-            public void accept(ConfigAck configAck) {
-                System.out.println(configAck.getResultDesc());
-            }
-        });
+        if(StringUtils.isNotBlank(mqActiveContent)){
+            Config config = new Config();
+            config.setVersion("1");
+            config.setType("pressure_mq");
+            config.setParam(mqActiveContent);
+            MqConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
+                @Override
+                public void accept(ConfigAck configAck) {
+                    System.out.println(configAck.getResultDesc());
+                }
+            });
+        }
     }
 
     private void registerAgentManagerListener() {

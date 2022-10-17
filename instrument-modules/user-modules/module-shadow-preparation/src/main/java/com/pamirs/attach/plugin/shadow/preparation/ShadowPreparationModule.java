@@ -45,7 +45,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         }, 1, TimeUnit.MINUTES);*/
 
 
-        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
+        ExecutorServiceFactory.getFactory().scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -54,48 +54,30 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
                     e.printStackTrace();
                 }
             }
-        }, 30, TimeUnit.SECONDS);
+        }, 30, 30, TimeUnit.SECONDS);
 
         return true;
     }
 
     private void handlerPreCheckCommand() throws InterruptedException {
+        String mqPreCheckContent = System.getProperty("shadow.preparation.mq.precheck.content");
+        Command command = new Command();
+        command.setId("mq_precheck");
+        command.setArgs(mqPreCheckContent);
+        command.setType("pressure_mq");
+        MqPreCheckCommandProcessor.processPreCheckCommand(command, commandAck -> System.out.println(commandAck.getResponse()));
 
-        EsConfigEntity entity = new EsConfigEntity();
-        entity.setBusinessNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
-        entity.setPerformanceTestNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
-        entity.setShadowType(1);
-        entity.setIndices(Arrays.asList("es7-test-index"));
-
-        EsConfigPushCommand pushCommand = new EsConfigPushCommand();
-        pushCommand.setData(Arrays.asList(entity));
-
+        String mqActiveContent = System.getProperty("shadow.preparation.mq.active.content");
         Config config = new Config();
-        config.setParam(JSON.toJSONString(pushCommand));
         config.setVersion("1");
-
-        EsConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
+        config.setType("pressure_mq");
+        config.setParam(mqActiveContent);
+        MqConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
             @Override
             public void accept(ConfigAck configAck) {
-                System.out.println("success");
+                System.out.println(configAck.getResultDesc());
             }
         });
-
-        Thread.sleep(1 * 1000);
-
-        EsConfigEntity et = new EsConfigEntity();
-        et.setBusinessNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
-        et.setPerformanceTestNodes("192.168.1.210:9200,192.168.1.193:9200,192.168.1.194:9200");
-        et.setShadowType(3);
-        pushCommand.setData(Arrays.asList(et));
-        config.setParam(JSON.toJSONString(pushCommand));
-        EsConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
-            @Override
-            public void accept(ConfigAck configAck) {
-                System.out.println("success");
-            }
-        });
-
     }
 
     private void registerAgentManagerListener() {

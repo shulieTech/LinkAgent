@@ -35,24 +35,36 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
+
+    protected SimulatorConfig simulatorConfig;
+
+    private AtomicBoolean initBuilders = new AtomicBoolean(false);
 
     /**
      * 检查过的成功的exchange#queue
      */
     private static Set<String> successCheckedExchangeQueues = new HashSet<String>();
 
-    private final List<ConsumerMetaDataBuilder> consumerMetaDataBuilders = new ArrayList<ConsumerMetaDataBuilder>();
+    private final List consumerMetaDataBuilders = new ArrayList();
 
     private final static Logger LOGGER = LoggerFactory.getLogger(RabbitMQShadowPreCheckEventHandler.class.getName());
 
-    public RabbitMQShadowPreCheckEventHandler(SimulatorConfig simulatorConfig) throws Exception {
-        consumerMetaDataBuilders.add(SpringConsumerMetaDataBuilder.getInstance());
-        consumerMetaDataBuilders.add(SpringConsumerDecoratorMetaDataBuilder.getInstance());
-        consumerMetaDataBuilders.add(AutorecoveringChannelConsumerMetaDataBuilder.getInstance());
-        consumerMetaDataBuilders.add(new AdminApiConsumerMetaDataBuilder(simulatorConfig,
-                CacheSupportFactory.create(simulatorConfig)));
+    public RabbitMQShadowPreCheckEventHandler(SimulatorConfig simulatorConfig) {
+        this.simulatorConfig = simulatorConfig;
+    }
+
+    private void initBuilders() {
+        try {
+            consumerMetaDataBuilders.add(SpringConsumerMetaDataBuilder.getInstance());
+            consumerMetaDataBuilders.add(SpringConsumerDecoratorMetaDataBuilder.getInstance());
+            consumerMetaDataBuilders.add(AutorecoveringChannelConsumerMetaDataBuilder.getInstance());
+            consumerMetaDataBuilders.add(new AdminApiConsumerMetaDataBuilder(simulatorConfig, CacheSupportFactory.create(simulatorConfig)));
+        } catch (Exception e) {
+            LOGGER.error("[RABBITMQ] init ConsumerMetaDataBuilder failed", e);
+        }
     }
 
     @Override
@@ -94,7 +106,7 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
 
     private void doCheckExchangeQueues(String exchange, List<String> queues, Map<String, String> result) throws Exception {
         SyncObject syncObject = SyncObjectService.getSyncObject("com.rabbitmq.client.impl.ChannelN#basicConsume");
-        Object channelN = null;
+        ChannelN channelN = null;
         for (String queue : queues) {
             for (SyncObjectData data : syncObject.getDatas()) {
                 ChannelN target = (ChannelN) data.getTarget();
@@ -110,11 +122,15 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
                 continue;
             }
             Thread.currentThread().setContextClassLoader(channelN.getClass().getClassLoader());
-            doCheckExchangeQueue((ChannelN) channelN, exchange, queue, result);
+            if (initBuilders.compareAndSet(false, true)) {
+                initBuilders();
+            }
+            doCheckExchangeQueue(channelN, exchange, queue, result);
         }
     }
 
-    private void doCheckExchangeQueue(ChannelN channelN, String exchange, String queue, Map<String, String> result) throws Exception {
+    private void doCheckExchangeQueue(Object channel, String exchange, String queue, Map<String, String> result) throws Exception {
+        ChannelN channelN = (ChannelN) channel;
         String key = exchange + "#" + queue;
         if (successCheckedExchangeQueues.contains(key)) {
             result.put(key, "success");
@@ -159,17 +175,17 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
         LOGGER.info("[RabbitMQ] prepare create shadow consumer, queue : {} pt_queue : {} tag : {} pt_tag : {}",
                 queue, ptQueue, consumerDetail.getConsumerTag(), ptConsumerTag);
 
-        Channel channel = null;
+        Channel innerChannel = null;
         try {
-            channel = consumeShadowQueue(channelN, consumerMetaData);
+            innerChannel = consumeShadowQueue(channelN, consumerMetaData);
         } catch (Throwable e) {
             LOGGER.error("[RabbitMQ] consume shadow queue:{} occur exception!", ptQueue);
             result.put(key, String.format("订阅影子queue失败, 异常信息:%s", e.getMessage()));
             return;
         } finally {
             try {
-                if (channel != null) {
-                    closePreCheckConsumer(channel);
+                if (innerChannel != null) {
+                    closePreCheckConsumer(innerChannel);
                 }
             } catch (Exception e) {
                 LOGGER.error("[RabbitMQ] close shadow channel occur exception!", e);
@@ -179,7 +195,8 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
         result.put(key, "success");
     }
 
-    private boolean checkQueueExists(ChannelN channelN, String queue, String exchange, Map<String, String> result) {
+    private boolean checkQueueExists(Object channel, String queue, String exchange, Map<String, String> result) {
+        ChannelN channelN = (ChannelN) channel;
         String ptQueue = Pradar.addClusterTestPrefix(queue);
         try {
             channelN.messageCount(ptQueue);
@@ -191,7 +208,8 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
         }
     }
 
-    private boolean checkExchangeExists(ChannelN channelN, String queue, String exchange, Map<String, String> result) {
+    private boolean checkExchangeExists(Object channel, String queue, String exchange, Map<String, String> result) {
+        ChannelN channelN = (ChannelN) channel;
         if (StringUtils.isEmpty(exchange)) {
             return true;
         }
@@ -207,7 +225,8 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
     }
 
 
-    private List<ConsumerDetail> getAllConsumersFromConnection(Connection connection) {
+    private List<ConsumerDetail> getAllConsumersFromConnection(Object conn) {
+        Connection connection = (Connection) conn;
         List<ConsumerDetail> consumerDetails = new ArrayList<ConsumerDetail>();
         Set<Channel> channels = new HashSet<Channel>();
         if (connection instanceof AMQConnection) {
@@ -264,8 +283,8 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
     }
 
     private ConsumerMetaData buildConsumerMetaData(ConsumerDetail deliverDetail) throws Exception {
-        for (ConsumerMetaDataBuilder consumerMetaDataBuilder : consumerMetaDataBuilders) {
-            ConsumerMetaData consumerMetaData = consumerMetaDataBuilder.tryBuild(deliverDetail);
+        for (Object builder : consumerMetaDataBuilders) {
+            ConsumerMetaData consumerMetaData = ((ConsumerMetaDataBuilder)builder).tryBuild(deliverDetail);
             if (consumerMetaData != null) {
                 return consumerMetaData;
             }
@@ -273,7 +292,7 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
         return null;
     }
 
-    public Channel consumeShadowQueue(Channel target, ConsumerMetaData consumerMetaData) throws
+    public Channel consumeShadowQueue(Object target, ConsumerMetaData consumerMetaData) throws
             IOException {
         return consumeShadowQueue(target, consumerMetaData.getPtQueue(), consumerMetaData.isAutoAck(),
                 consumerMetaData.getPtConsumerTag(), false, consumerMetaData.isExclusive(),
@@ -281,12 +300,12 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
                 new ShadowConsumerProxy(consumerMetaData.getConsumer()));
     }
 
-    public Channel consumeShadowQueue(Channel target, String ptQueue, boolean autoAck,
+    public Channel consumeShadowQueue(Object target, String ptQueue, boolean autoAck,
                                       String ptConsumerTag,
                                       boolean noLocal, boolean exclusive, Map<String, Object> arguments, int prefetchCount,
-                                      Consumer consumer) throws IOException {
+                                      Object consumer) throws IOException {
         synchronized (ChannelHolder.class) {
-            Channel shadowChannel = ChannelHolder.getOrShadowChannel(target);
+            Channel shadowChannel = ChannelHolder.getOrShadowChannel((Channel) target);
             if (shadowChannel == null) {
                 LOGGER.warn("[RabbitMQ] basicConsume failed. cause by shadow channel is not found. queue={}, consumerTag={}", ptQueue, ptConsumerTag);
                 return null;
@@ -298,12 +317,13 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
             if (prefetchCount > 0) {
                 shadowChannel.basicQos(prefetchCount);
             }
-            shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments, consumer);
+            shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments, (Consumer) consumer);
             return shadowChannel;
         }
     }
 
-    private void closePreCheckConsumer(Channel channel) throws IOException, TimeoutException {
+    private void closePreCheckConsumer(Object arg) throws IOException, TimeoutException {
+        Channel channel = (Channel) arg;
         SyncObject syncObject = SyncObjectService.getSyncObject("com.rabbitmq.client.impl.ChannelN#basicConsume");
         List<SyncObjectData> datas = syncObject.getDatas();
         Iterator<SyncObjectData> iterator = datas.iterator();

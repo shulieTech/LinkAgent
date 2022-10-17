@@ -131,10 +131,10 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
             }
             if (!topicExists) {
                 LOGGER.error("[apache-kafka] handler shadow mq precheck event failed, create topic {} failed!", ptTopic);
-                result.put(key, "自动创建topic:" + ptTopic + "失败");
+                result.put(key, "自动创建topic:" + ptTopic + "失败,请手动创建影子topic");
             } else {
                 LOGGER.error("[apache-kafka] handler shadow mq precheck event failed, create group {} failed!", ptGroup);
-                result.put(key, "自动创建group:" + ptGroup + "失败");
+                result.put(key, "自动创建group:" + ptGroup + "失败,请手动创建影子group");
             }
             closePreCheckConsumer(ptConsumer);
         } catch (Exception e) {

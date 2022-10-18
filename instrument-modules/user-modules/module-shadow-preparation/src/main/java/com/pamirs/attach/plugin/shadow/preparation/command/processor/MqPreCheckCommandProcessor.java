@@ -44,6 +44,8 @@ public class MqPreCheckCommandProcessor {
             callback.accept(ack);
         }
 
+        LOGGER.info("[shadow-preparation] 成功解析mq_precheck命令");
+
         CountDownLatch latch = new CountDownLatch(mapList.size());
         List<IEvent> events = new ArrayList<>();
 
@@ -61,6 +63,7 @@ public class MqPreCheckCommandProcessor {
             // sf-kafka配置
             boolean isSfKafkaConfig = obj.containsKey("topicTokens") || obj.containsKey("systemIdToken");
             if (isSfKafkaConfig) {
+                LOGGER.info("[shadow-preparation] 发送sf-kafka-precheck-event");
                 String sfKafkaConfig = ((JSONObject) o).toJSONString();
                 ShadowSfKafkaPreCheckEvent event = JSON.parseObject(sfKafkaConfig, ShadowSfKafkaPreCheckEvent.class);
                 event.setLatch(latch);
@@ -70,6 +73,7 @@ public class MqPreCheckCommandProcessor {
         }
 
         try {
+            LOGGER.info("[shadow-preparation] 等待30s执行校验命令");
             boolean handler = latch.await(30, TimeUnit.SECONDS);
             if (!handler) {
                 LOGGER.error("[shadow-preparation] publish ShadowMqPreCheckEvent after 30s still not accept result!");
@@ -95,6 +99,8 @@ public class MqPreCheckCommandProcessor {
 
                 }
             }).collect(Collectors.joining(";\n"));
+
+            LOGGER.info("[shadow-preparation] 命令执行结果:{}", commandResult);
 
             result.setSuccess(success.get());
             result.setResponse(commandResult);

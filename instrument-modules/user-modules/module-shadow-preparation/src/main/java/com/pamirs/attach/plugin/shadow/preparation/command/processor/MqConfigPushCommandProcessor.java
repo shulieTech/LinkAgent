@@ -64,6 +64,9 @@ public class MqConfigPushCommandProcessor {
             boolean isSfKafkaConfig = stringObjectMap.containsKey("topicTokens") || stringObjectMap.containsKey("systemIdToken");
             if (isSfKafkaConfig) {
                 ShadowSfKafkaActiveEvent sfKafkaConfig = JSON.parseObject(stringObjectMap.toJSONString(), ShadowSfKafkaActiveEvent.class);
+                if (StringUtils.isBlank(sfKafkaConfig.getGroup())) {
+                    continue;
+                }
                 // 增加顺丰kafka白名单
                 if (sfKafkaConfig.getGroup() != null) {
                     String topic = extractRawConfig(sfKafkaConfig.getTopic());

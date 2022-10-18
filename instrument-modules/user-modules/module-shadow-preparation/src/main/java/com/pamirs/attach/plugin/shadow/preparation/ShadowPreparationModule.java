@@ -24,6 +24,8 @@ import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +34,8 @@ import java.util.function.Consumer;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "shadow-preparation", version = "1.0.0", author = "jiangjibo@shulie.io", description = "影子资源准备工作，包括创建，校验，生效")
 public class ShadowPreparationModule extends ModuleLifecycleAdapter implements ExtensionModule {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(ShadowPreparationModule.class.getName());
 
     @Override
     public boolean onActive() throws Throwable {
@@ -51,8 +55,8 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             public void run() {
                 try {
                     handlerPreCheckCommand();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                } catch (Throwable e) {
+                    LOGGER.error("[shadow-preparation] handler prechecke mq command occur exception", e);
                 }
             }
         }, 30, 30, TimeUnit.SECONDS);
@@ -62,7 +66,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
 
     private void handlerPreCheckCommand() throws InterruptedException {
         String mqPreCheckContent = System.getProperty("shadow.preparation.mq.precheck.content");
-        if(StringUtils.isNotBlank(mqPreCheckContent)){
+        if (StringUtils.isNotBlank(mqPreCheckContent)) {
             Command command = new Command();
             command.setId("mq_precheck");
             command.setArgs(mqPreCheckContent);
@@ -70,13 +74,13 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             MqPreCheckCommandProcessor.processPreCheckCommand(command, new Consumer<CommandAck>() {
                 @Override
                 public void accept(CommandAck commandAck) {
-                    System.out.println(commandAck.getResponse());
+                    LOGGER.info("[shadow-preparation] processPreCheckCommand:{}", commandAck.getResponse());
                 }
             });
         }
 
         String mqActiveContent = System.getProperty("shadow.preparation.mq.active.content");
-        if(StringUtils.isNotBlank(mqActiveContent)){
+        if (StringUtils.isNotBlank(mqActiveContent)) {
             Config config = new Config();
             config.setVersion("1");
             config.setType("pressure_mq");
@@ -84,7 +88,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             MqConfigPushCommandProcessor.processConfigPushCommand(config, new Consumer<ConfigAck>() {
                 @Override
                 public void accept(ConfigAck configAck) {
-                    System.out.println(configAck.getResultDesc());
+                    LOGGER.info("[shadow-preparation] processConfigPushCommand:{}", configAck.getResultDesc());
                 }
             });
         }

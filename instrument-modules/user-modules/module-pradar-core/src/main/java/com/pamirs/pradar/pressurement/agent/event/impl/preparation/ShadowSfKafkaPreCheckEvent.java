@@ -20,8 +20,14 @@ public class ShadowSfKafkaPreCheckEvent implements IEvent {
     private String result;
 
     public void handlerResult(String result) {
+        this.handlerResult(result, true);
+    }
+
+    public void handlerResult(String result, boolean fireCount) {
         this.result = result;
-        this.latch.countDown();
+        if (fireCount) {
+            this.latch.countDown();
+        }
     }
 
     public void setTopic(String topic) {

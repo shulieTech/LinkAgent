@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @MetaInfServices(ExtensionModule.class)
@@ -36,6 +37,8 @@ import java.util.function.Consumer;
 public class ShadowPreparationModule extends ModuleLifecycleAdapter implements ExtensionModule {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ShadowPreparationModule.class.getName());
+
+    private AtomicBoolean checkSuccess = new AtomicBoolean(false);
 
     @Override
     public boolean onActive() throws Throwable {
@@ -64,9 +67,9 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         return true;
     }
 
-    private void handlerPreCheckCommand() throws InterruptedException {
+    private void handlerPreCheckCommand() {
         String mqPreCheckContent = System.getProperty("shadow.preparation.mq.precheck.content");
-        if (StringUtils.isNotBlank(mqPreCheckContent)) {
+        if (StringUtils.isNotBlank(mqPreCheckContent) && !checkSuccess.get()) {
             Command command = new Command();
             command.setId("mq_precheck");
             command.setArgs(mqPreCheckContent);
@@ -74,6 +77,9 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             MqPreCheckCommandProcessor.processPreCheckCommand(command, new Consumer<CommandAck>() {
                 @Override
                 public void accept(CommandAck commandAck) {
+                    if ("success".equals(commandAck.getResponse())) {
+                        checkSuccess.set(true);
+                    }
                     LOGGER.info("[shadow-preparation] processPreCheckCommand:{}", commandAck.getResponse());
                 }
             });

@@ -73,8 +73,8 @@ public class MqPreCheckCommandProcessor {
         }
 
         try {
-            LOGGER.info("[shadow-preparation] 等待30s执行校验命令");
-            boolean handler = latch.await(30, TimeUnit.SECONDS);
+            LOGGER.info("[shadow-preparation] 等待65s执行校验命令");
+            boolean handler = latch.await(65, TimeUnit.SECONDS);
             if (!handler) {
                 LOGGER.error("[shadow-preparation] publish ShadowMqPreCheckEvent after 30s still not accept result!");
             }

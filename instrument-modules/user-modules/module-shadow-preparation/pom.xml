@@ -49,7 +49,7 @@
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>agent-management-client</artifactId>
-            <version>3.0.0-SNAPSHOT</version>
+            <version>3.0.0</version>
         </dependency>
 
     </dependencies>

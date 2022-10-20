@@ -19,7 +19,6 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowEsServerDisableEven
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowEsServerRegisterEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,9 +55,9 @@ public class EsShadowServerConfig implements IChange<Map<String, ShadowEsServerC
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig,
                                          Map<String, ShadowEsServerConfig> newConfig) {
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
+       /* if (ConfigFetcherModule.shadowPreparationEnabled) {
             return true;
-        }
+        }*/
         Map<String, ShadowEsServerConfig> old = applicationConfig.getShadowEsServerConfigs();
         List<ShadowEsServerConfig> removes = getRemoves(newConfig, old);
         List<ShadowEsServerConfig> adds = getAdds(newConfig, old);

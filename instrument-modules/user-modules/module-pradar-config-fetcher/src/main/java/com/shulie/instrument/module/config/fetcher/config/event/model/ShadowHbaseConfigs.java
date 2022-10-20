@@ -52,9 +52,9 @@ public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Map<String, ShadowHbaseConfig> newValue) {
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
+        /*if (ConfigFetcherModule.shadowPreparationEnabled) {
             return true;
-        }
+        }*/
         Map<String, ShadowHbaseConfig> old = GlobalConfig.getInstance().getShadowHbaseServerConfigs();
         boolean change = false;
 

@@ -76,7 +76,8 @@ public class MqConfigPushCommandProcessor {
                 sfKafkaConfigs.add(sfKafkaConfig);
             }
         }
-        compareIsChangeAndSet(mqList);
+        //  暂时注释, 等其他mq迁移完再打开
+//        compareIsChangeAndSet(mqList);
 
         if (sfKafkaConfigs.isEmpty()) {
             callback.accept(ack);

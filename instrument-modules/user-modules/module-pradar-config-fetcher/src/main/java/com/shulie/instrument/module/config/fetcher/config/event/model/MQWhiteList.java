@@ -61,9 +61,9 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Set<String> newValue) {
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
+        /*if (ConfigFetcherModule.shadowPreparationEnabled) {
             return true;
-        }
+        }*/
         final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(newValue);
         EventRouter.router().publish(mqWhiteListConfigEvent);
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();

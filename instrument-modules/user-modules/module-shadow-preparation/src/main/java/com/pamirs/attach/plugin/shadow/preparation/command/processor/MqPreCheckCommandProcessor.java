@@ -44,8 +44,6 @@ public class MqPreCheckCommandProcessor {
             callback.accept(ack);
         }
 
-        LOGGER.info("[shadow-preparation] 成功解析mq_precheck命令");
-
         CountDownLatch latch = new CountDownLatch(mapList.size());
         List<IEvent> events = new ArrayList<>();
 
@@ -63,7 +61,6 @@ public class MqPreCheckCommandProcessor {
             // sf-kafka配置
             boolean isSfKafkaConfig = obj.containsKey("topicTokens") || obj.containsKey("systemIdToken");
             if (isSfKafkaConfig) {
-                LOGGER.info("[shadow-preparation] 发送sf-kafka-precheck-event");
                 String sfKafkaConfig = ((JSONObject) o).toJSONString();
                 ShadowSfKafkaPreCheckEvent event = JSON.parseObject(sfKafkaConfig, ShadowSfKafkaPreCheckEvent.class);
                 event.setLatch(latch);
@@ -73,8 +70,7 @@ public class MqPreCheckCommandProcessor {
         }
 
         try {
-            LOGGER.info("[shadow-preparation] 等待65s执行校验命令");
-            boolean handler = latch.await(65, TimeUnit.SECONDS);
+            boolean handler = latch.await(70, TimeUnit.SECONDS);
             if (!handler) {
                 LOGGER.error("[shadow-preparation] publish ShadowMqPreCheckEvent after 30s still not accept result!");
             }
@@ -87,7 +83,7 @@ public class MqPreCheckCommandProcessor {
                             @Override
                             public String apply(Map.Entry<String, String> entry) {
                                 // 当某个topic-group验证不通过
-                                if (success.get() && !"success".equals(entry.getValue())) {
+                                if (!"success".equals(entry.getValue())) {
                                     success.set(false);
                                 }
                                 return entry.getKey() + ">>" + entry.getValue();
@@ -100,7 +96,7 @@ public class MqPreCheckCommandProcessor {
                 }
             }).collect(Collectors.joining(";\n"));
 
-            LOGGER.info("[shadow-preparation] 命令执行结果:{}", commandResult);
+            LOGGER.info("[shadow-preparation] command execute result:{}", commandResult);
 
             result.setSuccess(success.get());
             result.setResponse(commandResult);

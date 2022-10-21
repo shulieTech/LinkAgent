@@ -107,6 +107,9 @@ public final class GlobalConfig {
      */
     private volatile boolean isShadowDbRedisServer = false;
 
+    /**
+     * es默认影子表
+     */
     private volatile boolean isShadowEsServer = Boolean.FALSE;
 
     private volatile boolean isShadowHbaseServer = Boolean.FALSE;

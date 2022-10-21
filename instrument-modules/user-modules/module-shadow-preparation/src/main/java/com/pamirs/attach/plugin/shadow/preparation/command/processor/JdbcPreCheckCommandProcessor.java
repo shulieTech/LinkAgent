@@ -4,11 +4,11 @@ import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
-import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceEntity;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.JdbcTableColumnInfos;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.constants.JdbcTypeEnum;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.JdbcTableColumnInfos;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.utils.JdbcTypeFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcTypeFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import io.shulie.agent.management.client.model.Command;
@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -42,9 +43,8 @@ public class JdbcPreCheckCommandProcessor {
         ack.setCommandId(command.getId());
         CommandExecuteResult result = new CommandExecuteResult();
 
-        JdbcPreCheckCommand entity = null;
+        JdbcPreCheckCommand entity;
         try {
-            // 服务器上发现有JSON类加载不到的问题
             entity = JSON.parseObject(command.getArgs(), JdbcPreCheckCommand.class);
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] parse jdbc precheck command occur exception", e);
@@ -58,6 +58,14 @@ public class JdbcPreCheckCommandProcessor {
 
         DataSourceEntity bizDataSource = entity.getBizDataSource();
         String driverClassName = fetchDriverClassName(bizDataSource);
+
+        boolean isMongoDataSource = bizDataSource.getUrl().startsWith("mongodb://");
+        // 如果是mongo数据源
+        if (isMongoDataSource) {
+            MongoPreCheckCommandProcessor.processPreCheckCommand(command.getId(), entity, callback);
+            return;
+        }
+
         if (driverClassName == null) {
             LOGGER.error("[shadow-preparation] can`t find biz datasource to extract driver className.");
             result.setSuccess(false);
@@ -73,7 +81,7 @@ public class JdbcPreCheckCommandProcessor {
         if ((shadowType == 1 || shadowType == 2) && entity.getShadowDataSource() == null) {
             LOGGER.error("[shadow-preparation] ds type is shadow database or shadow database table, but shadow datasource is null");
             result.setSuccess(false);
-            result.setResponse("影子库/影子库影子表模式时影子数据源不能未空");
+            result.setResponse("影子库/影子库影子表模式时影子数据源不能为空");
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
             return;
@@ -87,7 +95,7 @@ public class JdbcPreCheckCommandProcessor {
 
         Class<?> bizDataSourceClass = extractBizClassForClassLoader(bizDataSource);
 
-        List<String> tables = entity.getTables();
+        List<String> tables = entity.getTables() != null ? entity.getTables() : new ArrayList<>();
         List<String> shadowTables = new ArrayList<String>();
 
 
@@ -241,7 +249,10 @@ public class JdbcPreCheckCommandProcessor {
         try {
             connection = dataSource.getConnection();
             return processReadingTableInfo(connection, command, callback, entity, tables);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if (e instanceof UndeclaredThrowableException) {
+                e = ((UndeclaredThrowableException) e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
@@ -265,10 +276,13 @@ public class JdbcPreCheckCommandProcessor {
         Connection connection;
         try {
             connection = getConnection(bizClass, entity);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if (e instanceof UndeclaredThrowableException) {
+                e = ((UndeclaredThrowableException) e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
-            result.setResponse("读取影子表结构信息时发生异常，创建连接失败");
+            result.setResponse("连接影子数据库失败，请检查配置信息确保数据源可用，异常信息:" + e.getMessage());
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
             return null;
@@ -276,7 +290,10 @@ public class JdbcPreCheckCommandProcessor {
 
         try {
             return processReadingTableInfo(connection, command, callback, entity, tables);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if (e instanceof UndeclaredThrowableException) {
+                e = ((UndeclaredThrowableException) e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] fetch table info for biz datasource failed, url:{}, username:{}", entity.getUrl(), entity.getUserName(), e);
             result.setSuccess(false);
             result.setResponse(String.format("读取业务表结构信息时发生异常，异常信息:%s", e.getMessage()));
@@ -320,7 +337,10 @@ public class JdbcPreCheckCommandProcessor {
                 try {
                     statement = connection.createStatement();
                     statement.execute(String.format("select 1 from %s", table));
-                } catch (SQLException e) {
+                } catch (Throwable e) {
+                    if (e instanceof UndeclaredThrowableException) {
+                        e = ((UndeclaredThrowableException) e).getUndeclaredThrowable();
+                    }
                     LOGGER.error("[shadow-preparation] check jdbc shadow datasource available failed, table:{}", table, e);
                     result.put(table, e.getMessage());
                 } finally {
@@ -332,7 +352,10 @@ public class JdbcPreCheckCommandProcessor {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            if (e instanceof UndeclaredThrowableException) {
+                e = ((UndeclaredThrowableException) e).getUndeclaredThrowable();
+            }
             LOGGER.error("[shadow-preparation] get shadow connection by DriverManager failed, ignore table operation access check, url:{}, userName:{}", entity.getUrl(), entity.getUserName(), e);
         } finally {
             if (connection != null) {

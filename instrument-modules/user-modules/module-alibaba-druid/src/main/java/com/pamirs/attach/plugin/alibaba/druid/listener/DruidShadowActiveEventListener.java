@@ -8,7 +8,7 @@ import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceActiveEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceActiveEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
@@ -63,13 +63,13 @@ public class DruidShadowActiveEventListener implements PradarEventListener {
             // 没有找到对应的数据源对
             if (media == null) {
                 buildShadowDataSource(dsType, druidDataSource, config);
-                return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
+                return EventResult.success("[druid]: handler shadow datasource active event success.");
             }
             // 找到了成对的数据源
             refreshShadowDataSource(dsType, druidDataSource, config, media);
-            return EventResult.success("module-alibaba-druid: handler shadow datasource active event success.");
+            return EventResult.success("[druid]: handler shadow datasource active event success.");
         } catch (Exception e) {
-            LOGGER.error("module-alibaba-druid: handler shadow datasource active event occur exception", e);
+            LOGGER.error("[druid]: handler shadow datasource active event occur exception", e);
             return EventResult.error("active-shadow-datasource-event", "module-alibaba-druid: handler shadow datasource active event occur exception.");
         }
     }

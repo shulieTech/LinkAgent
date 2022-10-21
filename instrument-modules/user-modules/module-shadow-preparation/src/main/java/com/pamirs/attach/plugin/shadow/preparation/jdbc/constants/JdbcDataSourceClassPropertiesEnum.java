@@ -1,10 +1,10 @@
-package com.pamirs.attach.plugin.shadow.preparation.constants;
+package com.pamirs.attach.plugin.shadow.preparation.jdbc.constants;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public enum JdbcDataSourceClassProperties {
+public enum JdbcDataSourceClassPropertiesEnum {
 
     DRUID("com.alibaba.druid.pool.DruidDataSource", new String[]{"driverClass", "jdbcUrl", "username", "password"}),
 
@@ -17,15 +17,15 @@ public enum JdbcDataSourceClassProperties {
     private String className;
     private String[] fields;
 
-    private static final Map<String, JdbcDataSourceClassProperties> values = new HashMap<>();
+    private static final Map<String, JdbcDataSourceClassPropertiesEnum> values = new HashMap<>();
 
     static {
-        for (JdbcDataSourceClassProperties properties : JdbcDataSourceClassProperties.values()) {
+        for (JdbcDataSourceClassPropertiesEnum properties : JdbcDataSourceClassPropertiesEnum.values()) {
             values.put(properties.className, properties);
         }
     }
 
-    JdbcDataSourceClassProperties(String className, String[] fields) {
+    JdbcDataSourceClassPropertiesEnum(String className, String[] fields) {
         this.className = className;
         this.fields = fields;
     }
@@ -34,7 +34,7 @@ public enum JdbcDataSourceClassProperties {
         return className;
     }
 
-    public static JdbcDataSourceClassProperties getEnumByClassName(String className) {
+    public static JdbcDataSourceClassPropertiesEnum getEnumByClassName(String className) {
         return values.get(className);
     }
 
@@ -50,7 +50,7 @@ public enum JdbcDataSourceClassProperties {
         return fields[2];
     }
 
-    public static Collection<JdbcDataSourceClassProperties> getValues() {
+    public static Collection<JdbcDataSourceClassPropertiesEnum> getValues() {
         return values.values();
     }
 

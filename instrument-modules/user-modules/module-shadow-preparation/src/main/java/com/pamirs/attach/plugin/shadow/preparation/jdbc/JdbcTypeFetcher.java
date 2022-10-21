@@ -1,6 +1,6 @@
-package com.pamirs.attach.plugin.shadow.preparation.utils;
+package com.pamirs.attach.plugin.shadow.preparation.jdbc;
 
-import com.pamirs.attach.plugin.shadow.preparation.constants.JdbcTypeEnum;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.constants.JdbcTypeEnum;
 
 public abstract class JdbcTypeFetcher {
 

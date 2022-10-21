@@ -207,6 +207,10 @@ public class DataSourceWrapUtil {
         if (ptDataSourceConf == null) {
             return null;
         }
+        return generate(sourceDatasource, ptDataSourceConf);
+    }
+
+    public static ComboPooledDataSource generate(ComboPooledDataSource sourceDatasource, ShadowDatabaseConfig ptDataSourceConf) {
         String url = ptDataSourceConf.getShadowUrl();
         String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUser());
         String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());

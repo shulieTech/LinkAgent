@@ -1,8 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcConfigPushCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.WhiteListPushCommandProcessor;
+import com.pamirs.attach.plugin.shadow.preparation.command.processor.*;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
@@ -12,7 +10,6 @@ import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import io.shulie.agent.management.client.AgentManagementClient;
 import io.shulie.agent.management.client.constant.AgentSpecification;
-import io.shulie.agent.management.client.constant.CommandType;
 import io.shulie.agent.management.client.listener.CommandListener;
 import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
@@ -36,6 +33,8 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
                 registerAgentManagerListener();
             }
         }, 1, TimeUnit.MINUTES);
+
+
         return true;
     }
 
@@ -50,6 +49,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         properties.setAgentId(simulatorConfig.getAgentId());
         AgentManagementClient client = new AgentManagementClient(PropertyUtil.getAgentManagerUrl(), properties);
 
+        // 数据源
         client.register("pressure_database", new ConfigListener() {
             @Override
             public void receive(Config config, Consumer<ConfigAck> consumer) {
@@ -57,6 +57,14 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             }
         });
 
+        client.register("pressure_database", new CommandListener() {
+            @Override
+            public void receive(Command command, Consumer<CommandAck> consumer) {
+                JdbcPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+            }
+        });
+
+        // 白名单
         client.register("pressure_whitelist", new ConfigListener() {
             @Override
             public void receive(Config config, Consumer<ConfigAck> consumer) {
@@ -64,10 +72,32 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             }
         });
 
-        client.register(CommandType.DATABASE, new CommandListener() {
+        // mq
+        client.register("pressure_mq", new CommandListener() {
             @Override
             public void receive(Command command, Consumer<CommandAck> consumer) {
-                JdbcPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+                MqPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+            }
+        });
+
+        client.register("pressure_mq", new ConfigListener() {
+            @Override
+            public void receive(Config config, Consumer<ConfigAck> consumer) {
+                MqConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
+            }
+        });
+
+        //es
+        client.register("pressure_es", new CommandListener() {
+            @Override
+            public void receive(Command command, Consumer<CommandAck> consumer) {
+                EsPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+            }
+        });
+        client.register("pressure_es", new ConfigListener() {
+            @Override
+            public void receive(Config config, Consumer<ConfigAck> consumer) {
+                EsConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
             }
         });
     }

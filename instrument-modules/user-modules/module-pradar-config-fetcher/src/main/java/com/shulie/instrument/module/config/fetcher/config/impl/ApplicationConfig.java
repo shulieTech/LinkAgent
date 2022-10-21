@@ -135,9 +135,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         for (FIELDS field : fields) {
             switch (field) {
                 case URL_WHITE_LIST:
-                    if (!ConfigFetcherModule.shadowPreparationEnabled) {
-                        change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
-                    }
+                    change(FIELDS.URL_WHITE_LIST, newConfig.getUrlWhiteList());
                     break;
                 case RPC_ALLOW_LIST:
                     change(FIELDS.RPC_ALLOW_LIST, newConfig.getRpcNameWhiteList());
@@ -149,9 +147,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                     change(FIELDS.CACHE_KEY_ALLOW_LIST, newConfig.getCacheKeyAllowList());
                     break;
                 case SHADOW_DATABASE_CONFIGS:
-                    if (!ConfigFetcherModule.shadowPreparationEnabled) {
-                        change(FIELDS.SHADOW_DATABASE_CONFIGS, newConfig.getShadowDatabaseConfigs());
-                    }
+                    change(FIELDS.SHADOW_DATABASE_CONFIGS, newConfig.getShadowDatabaseConfigs());
                     break;
                 case SHADOW_REDIS_SERVER_CONFIG:
                     change(FIELDS.SHADOW_REDIS_SERVER_CONFIG, newConfig.getShadowRedisConfigs());

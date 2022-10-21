@@ -4,7 +4,7 @@ import com.alibaba.druid.pool.DruidDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.obj.DbDruidMediatorDataSource;
 import com.pamirs.attach.plugin.alibaba.druid.util.DataSourceWrapUtil;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceDisableEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceDisableEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 public class DruidShadowDisableEventListener implements PradarEventListener {
 
@@ -48,14 +47,14 @@ public class DruidShadowDisableEventListener implements PradarEventListener {
             try {
                 shadowDataSource.close();
                 if (logger.isInfoEnabled()) {
-                    logger.info("module-alibaba-druid: destroyed shadow datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
+                    logger.info("[druid]: destroyed shadow datasource success. url:{} ,username:{}", entry.getKey().getUrl(), entry.getKey().getUsername());
                 }
             } catch (Throwable e) {
-                logger.error("module-alibaba-druid: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
+                logger.error("[druid]: closed datasource err! target:{}, url:{} username:{}", entry.getKey().getDataSource().hashCode(), entry.getKey().getUrl(), entry.getKey().getUsername(), e);
             }
         }
         SqlParser.clear();
-        return EventResult.success("module-alibaba-druid: handler shadow datasource disable event success,  destroyed shadow table datasource success.");
+        return EventResult.success("[druid]: handler shadow datasource disable event success,  destroyed shadow table datasource success.");
     }
 
     @Override

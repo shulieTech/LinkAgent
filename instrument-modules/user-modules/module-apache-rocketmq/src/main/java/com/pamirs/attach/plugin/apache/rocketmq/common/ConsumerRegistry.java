@@ -463,7 +463,7 @@ public class ConsumerRegistry {
     }
 
     private static void addListener(final DefaultMQPushConsumer businessConsumer) {
-        final RebalanceImpl rebalance = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl();
+        final Set<String> topics = businessConsumer.getDefaultMQPushConsumerImpl().getRebalanceImpl().getSubscriptionInner().keySet();
         final PradarEventListener listener = new PradarEventListener() {
             @Override
             public EventResult onEvent(IEvent event) {
@@ -484,7 +484,6 @@ public class ConsumerRegistry {
                     return shutdownShadowConsumer(businessConsumer);
                 } else if (event instanceof ShadowConsumerDisableEvent) {
                     String group = businessConsumer.getConsumerGroup();
-                    Set<String> topics = rebalance.getSubscriptionInner().keySet();
                     for (String topic : topics) {
                         List<ShadowConsumerDisableInfo> disableInfos = ((ShadowConsumerDisableEvent)event).getTarget();
                         for (ShadowConsumerDisableInfo disableInfo : disableInfos) {

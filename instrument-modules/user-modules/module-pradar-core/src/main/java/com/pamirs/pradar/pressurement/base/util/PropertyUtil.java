@@ -75,8 +75,4 @@ public class PropertyUtil {
         }
         return "true".equals(enabled);
     }
-
-    public static String getAppKey() {
-        return System.getProperty(Pradar.PRADAR_TENANT_KEY, "default");
-    }
 }

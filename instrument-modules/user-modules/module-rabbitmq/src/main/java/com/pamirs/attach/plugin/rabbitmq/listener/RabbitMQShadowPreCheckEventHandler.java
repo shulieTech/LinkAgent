@@ -185,7 +185,7 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
         } finally {
             try {
                 if (innerChannel != null) {
-                    closePreCheckConsumer(innerChannel);
+                    innerChannel.close();
                 }
             } catch (Exception e) {
                 LOGGER.error("[RabbitMQ] close shadow channel occur exception!", e);
@@ -320,20 +320,6 @@ public class RabbitMQShadowPreCheckEventHandler implements PradarEventListener {
             shadowChannel.basicConsume(ptQueue, autoAck, ptConsumerTag, noLocal, exclusive, arguments, (Consumer) consumer);
             return shadowChannel;
         }
-    }
-
-    private void closePreCheckConsumer(Object arg) throws IOException, TimeoutException {
-        Channel channel = (Channel) arg;
-        SyncObject syncObject = SyncObjectService.getSyncObject("com.rabbitmq.client.impl.ChannelN#basicConsume");
-        List<SyncObjectData> datas = syncObject.getDatas();
-        Iterator<SyncObjectData> iterator = datas.iterator();
-        while (iterator.hasNext()) {
-            SyncObjectData next = iterator.next();
-            if (next.getTarget().equals(channel)) {
-                iterator.remove();
-            }
-        }
-        channel.close();
     }
 
     @Override

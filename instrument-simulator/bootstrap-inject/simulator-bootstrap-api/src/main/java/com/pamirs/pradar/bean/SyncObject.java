@@ -28,6 +28,13 @@ public class SyncObject {
     }
 
     public List<SyncObjectData> getDatas() {
+        Iterator<SyncObjectData> iterator = datas.iterator();
+        while (iterator.hasNext()) {
+            SyncObjectData next = iterator.next();
+            if (next.getTarget() == null) {
+                iterator.remove();
+            }
+        }
         return datas;
     }
 

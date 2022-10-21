@@ -136,7 +136,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
                 LOGGER.error("[apache-kafka] handler shadow mq precheck event failed, create group {} failed!", ptGroup);
                 result.put(key, "自动创建group:" + ptGroup + "失败,请手动创建影子group");
             }
-            closePreCheckConsumer(ptConsumer);
+            ptConsumer.close();
         } catch (Exception e) {
             LOGGER.error("[apache-kafka] handler shadow mq precheck event failed", e);
         }
@@ -416,19 +416,6 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
                     .toString()).append(",");
         }
         return sb.substring(0, sb.length() - 1);
-    }
-
-    private void closePreCheckConsumer(KafkaConsumer consumer) {
-        SyncObject syncObject = SyncObjectService.getSyncObject("org.apache.kafka.clients.consumer.KafkaConsumer#subscribe");
-        List<SyncObjectData> datas = syncObject.getDatas();
-        Iterator<SyncObjectData> iterator = datas.iterator();
-        while (iterator.hasNext()) {
-            SyncObjectData next = iterator.next();
-            if (next.getTarget().equals(consumer)) {
-                iterator.remove();
-            }
-        }
-        consumer.close();
     }
 
 }

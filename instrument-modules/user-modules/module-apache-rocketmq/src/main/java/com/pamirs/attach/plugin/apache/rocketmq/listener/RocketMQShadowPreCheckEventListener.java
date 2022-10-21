@@ -117,13 +117,13 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
             List<MessageQueue> messageQueues = mqAdmin.fetchPublishMessageQueues(ptTopic);
             if (messageQueues == null || messageQueues.isEmpty()) {
                 result.put(key, String.format("影子topic:[%s]自动创建失败", ptTopic));
-                closePreCheckConsumer(preCheckConsumer);
+                preCheckConsumer.shutdown();
                 return;
             }
         } catch (Exception e) {
             LOGGER.error("[apache-rocketmq] fetch publish message queues for topic :{} occur exception", ptTopic, e);
             result.put(key, String.format("影子topic:[%s]自动创建失败", ptTopic));
-            closePreCheckConsumer(preCheckConsumer);
+            preCheckConsumer.shutdown();
             return;
         }
 
@@ -149,26 +149,13 @@ public class RocketMQShadowPreCheckEventListener implements PradarEventListener 
             LOGGER.error("[apache-rocketmq] check if group:{} auto created occur exception", ptGroup, e);
             result.put(key, String.format("查看影子消费组:%s 创建过程中出现异常%s", ptGroup, e.getMessage()));
         } finally {
-            closePreCheckConsumer(preCheckConsumer);
+            preCheckConsumer.shutdown();
         }
     }
 
     @Override
     public int order() {
         return 30;
-    }
-
-    private void closePreCheckConsumer(DefaultMQPushConsumer consumer) {
-        SyncObject syncObject = SyncObjectService.getSyncObject("org.apache.rocketmq.client.consumer.DefaultMQPushConsumer#start");
-        List<SyncObjectData> datas = syncObject.getDatas();
-        Iterator<SyncObjectData> iterator = datas.iterator();
-        while (iterator.hasNext()) {
-            SyncObjectData next = iterator.next();
-            if (next.getTarget().equals(consumer)) {
-                iterator.remove();
-            }
-        }
-        consumer.shutdown();
     }
 
     /**

@@ -218,7 +218,7 @@ public abstract class RequestTracer<REQ, RESP> {
      */
     public boolean isClusterTestRequest(REQ request) {
         String value = getProperty(request, PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY);
-        if (StringUtils.equals(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+        if (StringUtils.equals(value, PradarService.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
             return true;
         }
         value = getProperty(request, PradarService.PRADAR_CLUSTER_TEST_KEY);

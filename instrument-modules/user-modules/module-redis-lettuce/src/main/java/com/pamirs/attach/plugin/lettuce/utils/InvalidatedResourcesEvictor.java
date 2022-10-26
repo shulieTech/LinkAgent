@@ -1,7 +1,7 @@
 package com.pamirs.attach.plugin.lettuce.utils;
 
 
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +37,7 @@ public class InvalidatedResourcesEvictor {
     }
 
     public static void releaseInvalidatedResources() {
-        Map<Object, Object> fields = Reflect.on(manager).get("dynamicFields");
+        Map<Object, Object> fields = ReflectionUtils.get(manager, "dynamicFields");;
         if (fields == null || fields.isEmpty()) {
             return;
         }
@@ -45,7 +45,7 @@ public class InvalidatedResourcesEvictor {
         for (Map.Entry<Object, Object> entry : fields.entrySet()) {
             Object key = entry.getKey();
             if (key.getClass().getSimpleName().startsWith("StatefulRedis")) {
-                boolean isOpen = Reflect.on(key).call("isOpen").get();
+                boolean isOpen = ReflectionUtils.invoke(key, "isOpen");
                 if (!isOpen) {
                     needRemoved.add(key);
                 }

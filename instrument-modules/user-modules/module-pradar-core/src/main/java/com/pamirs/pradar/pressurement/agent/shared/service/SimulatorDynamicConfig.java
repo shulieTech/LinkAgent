@@ -74,6 +74,12 @@ public class SimulatorDynamicConfig {
     private static final Integer DEFAULT_PRADAR_PERF_THREAD_COLLECT_INTERVAL = 60;
 
     /**
+     * apache-kafka poll方法报警
+     */
+    private static final String PRADAR_CLOSE_KAFKA_POLL_REPORT = "pradar.close.kafka.poll.report";
+
+    private final boolean closeKafkaPollReport;
+    /**
      * trace 业务流量采样率
      */
     private final int traceSamplingInterval;
@@ -156,6 +162,7 @@ public class SimulatorDynamicConfig {
         this.shadowDatasourceAccountSuffix = getShadowDatasourceAccountSuffix(config);
         this.kafkaPtConsumerPollMaxRatio = getKafkaPtConsumerMaxPollRatio(config);
         this.perfThreadCollectInterval = getPerfThreadCollectInterval(config);
+        this.closeKafkaPollReport = getCloseKafkaPollReport(config);
     }
 
     public String shadowDatasourceAccountPrefix() {
@@ -168,6 +175,10 @@ public class SimulatorDynamicConfig {
 
     public String shadowDatasourceAccountSuffix() {
         return this.shadowDatasourceAccountSuffix;
+    }
+
+    public boolean closeKafkaPollReport() {
+        return this.closeKafkaPollReport;
     }
 
     /**
@@ -186,7 +197,7 @@ public class SimulatorDynamicConfig {
             }
             return data;
         } catch (Exception e) {
-            LOGGER.error("getShadowDatasourceAccountPrefix error {}", e);
+            LOGGER.error("getShadowDatasourceAccountPrefix error ", e);
             return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_PREFIX;
         }
     }
@@ -207,7 +218,7 @@ public class SimulatorDynamicConfig {
             }
             return data;
         } catch (Exception e) {
-            LOGGER.error("getShadowDatasourceAccountSuffix error {}", e);
+            LOGGER.error("getShadowDatasourceAccountSuffix error ", e);
             return DEFAULT_SHADOW_DATASOURCE_ACCOUNT_SUFFIX;
         }
     }
@@ -221,8 +232,7 @@ public class SimulatorDynamicConfig {
             return null;
         }
         String[] splitter = date.split(",");
-        List<String> list = Arrays.asList(splitter);
-        return list;
+        return Arrays.asList(splitter);
     }
 
     public List<String> getSecurityFieldCollection() {
@@ -257,7 +267,7 @@ public class SimulatorDynamicConfig {
         try {
             result = Boolean.parseBoolean(date);
         } catch (Throwable t) {
-
+            //
         }
         return result;
     }
@@ -297,7 +307,7 @@ public class SimulatorDynamicConfig {
              * 格式化table,可能是db.table
              */
             String table = entry.getTable();
-            table = table.contains(".") ? table.split(".")[1] : table;
+            table = table.contains(".") ? table.split("\\.")[1] : table;
             String operateType = entry.getOperateType();
             String key = url.concat("#").concat(table).concat("#").concat(operateType).toLowerCase();
             res.put(key, entry);
@@ -321,7 +331,7 @@ public class SimulatorDynamicConfig {
             }
             return Integer.valueOf(data.replace(".", ""));
         } catch (Exception e) {
-            LOGGER.error("getPradarTraceLogVersion error {}", e);
+            LOGGER.error("getPradarTraceLogVersion error ", e);
             return null;
         }
     }
@@ -354,7 +364,7 @@ public class SimulatorDynamicConfig {
             }
             return Integer.valueOf(data.replace(".", ""));
         } catch (Exception e) {
-            LOGGER.error("getPradarMonitorLogVersion error {}", e);
+            LOGGER.error("getPradarMonitorLogVersion error ", e);
             return null;
         }
     }
@@ -382,7 +392,7 @@ public class SimulatorDynamicConfig {
             }
             return Integer.valueOf(data);
         } catch (Exception e) {
-            LOGGER.error("getPradarErrorLogVersion error {}", e);
+            LOGGER.error("getPradarErrorLogVersion error ", e);
             return null;
         }
     }
@@ -409,7 +419,7 @@ public class SimulatorDynamicConfig {
             }
             return Boolean.valueOf(data);
         } catch (Exception e) {
-            LOGGER.error("getIsKafkaMessageHeaders error {}", e);
+            LOGGER.error("getIsKafkaMessageHeaders error ", e);
             return null;
         }
     }
@@ -463,10 +473,9 @@ public class SimulatorDynamicConfig {
             if (value == null) {
                 return DEFAULT_TRACE_SAMPLING_INTERVAL;
             }
-            int traceSamplingInterval = Integer.valueOf(value);
-            return traceSamplingInterval;
+            return Integer.parseInt(value);
         } catch (Throwable e) {
-            LOGGER.error("getTraceSamplingInterval error {}.", e);
+            LOGGER.error("getTraceSamplingInterval error.", e);
             return DEFAULT_TRACE_SAMPLING_INTERVAL;
         }
     }
@@ -480,9 +489,9 @@ public class SimulatorDynamicConfig {
             if (value == null) {
                 return DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO;
             }
-            return Double.valueOf(value);
+            return Double.parseDouble(value);
         } catch (Throwable e) {
-            LOGGER.error("getKafkaPtConsumerMaxPollRatio error {}.", e);
+            LOGGER.error("getKafkaPtConsumerMaxPollRatio error.", e);
             return DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO;
         }
     }
@@ -498,7 +507,7 @@ public class SimulatorDynamicConfig {
             }
             return Integer.valueOf(value);
         } catch (Throwable e) {
-            LOGGER.error("getKafkaPtConsumerMaxPollRatio error {}.", e);
+            LOGGER.error("getKafkaPtConsumerMaxPollRatio error .", e);
             return DEFAULT_PRADAR_PERF_THREAD_COLLECT_INTERVAL;
         }
     }
@@ -517,10 +526,9 @@ public class SimulatorDynamicConfig {
             if (value == null) {
                 return DEFAULT_CLUSTER_TEST_TRACE_SAMPLING_INTERVAL;
             }
-            int traceSamplingInterval = Integer.valueOf(value);
-            return traceSamplingInterval;
+            return Integer.parseInt(value);
         } catch (Exception e) {
-            LOGGER.error("getClusterTestTraceSamplingInterval error {}.", e);
+            LOGGER.error("getClusterTestTraceSamplingInterval error .", e);
             return DEFAULT_CLUSTER_TEST_TRACE_SAMPLING_INTERVAL;
         }
     }
@@ -562,9 +570,9 @@ public class SimulatorDynamicConfig {
             if (data == null) {
                 return false;
             }
-            return Boolean.valueOf(data);
+            return Boolean.parseBoolean(data);
         } catch (Exception e) {
-            LOGGER.error("getBusRequestResponseDataAllowTrace error {}, use default false.", e);
+            LOGGER.error("getBusRequestResponseDataAllowTrace error , use default false.", e);
             return false;
         }
     }
@@ -583,9 +591,30 @@ public class SimulatorDynamicConfig {
             if (data == null) {
                 return false;
             }
-            return Boolean.valueOf(data);
+            return Boolean.parseBoolean(data);
         } catch (Exception e) {
-            LOGGER.error("getShadowRequestResponseDataAllowTrace error {}, use default false.", e);
+            LOGGER.error("getShadowRequestResponseDataAllowTrace error , use default false.", e);
+            return false;
+        }
+    }
+
+    /**
+     * 是否关闭kafka poll报警
+     *
+     * @return
+     */
+    private boolean getCloseKafkaPollReport(Map<String, String> config) {
+        try {
+            if (config == null) {
+                return false;
+            }
+            String data = getConfig(config, PRADAR_CLOSE_KAFKA_POLL_REPORT);
+            if (data == null) {
+                return false;
+            }
+            return Boolean.parseBoolean(data);
+        } catch (Exception e) {
+            LOGGER.error("getCloseKafkaPollReport error , use default false.", e);
             return false;
         }
     }

@@ -157,52 +157,6 @@ public class CoreConfig {
         }
     }
 
-    private void initFetchConfigTask() {
-        this.service = Executors.newScheduledThreadPool(1, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "Pradar-agent-Fetch-Config-Service");
-                t.setDaemon(true);
-                t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                    @Override
-                    public void uncaughtException(Thread t, Throwable e) {
-                        logger.error("Thread {} caught a Unknown exception with UncaughtExceptionHandler", t.getName(),
-                            e);
-                    }
-                });
-                return t;
-            }
-        });
-
-        service.scheduleAtFixedRate(getRunnableTask(), 60 * 3, 60 * 3, TimeUnit.SECONDS);
-    }
-
-    private Runnable getRunnableTask() {
-        return new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Map<String, Object> dynamicConfigs = ConfigUtils.getDynamicAgentConfigFromUrl(getTroWebUrl(),
-                        getAppName(), "", getHttpMustHeaders());
-                    if (dynamicConfigs == null
-                        || dynamicConfigs.get("success") == null
-                        || !Boolean.parseBoolean(dynamicConfigs.get("success").toString())) {
-                        logger.error("getDynamicAgentConfigFromUrl failed");
-                        return;
-                    }
-                    JSONObject jsonObject = (JSONObject)dynamicConfigs.get("data");
-                    //                    for (Map.Entry<String, String> entry : jsonObject){
-                    //                        if (!agentFileConfigs.containsKey(entry.getKey())){
-                    //                            configs.put(entry.getKey(), entry.getValue());
-                    //                        }
-                    //                    }
-                } catch (Throwable e) {
-                    logger.error("CoreConfig getRunnableTask error ", e);
-                }
-            }
-        };
-    }
-
     public boolean isMultiAppSwitch() {
         String value = configs.get(MULTI_APP_SWITCH);
         return Boolean.parseBoolean(value);
@@ -505,6 +459,18 @@ public class CoreConfig {
      */
     public String getEnvCode() {
         return getProperty("pradar.env.code");
+    }
+
+    public String getTenantCode(){
+        return getProperty("shulie.agent.tenant.code");
+    }
+
+    public String getAgentManagerUrl(){
+        return getProperty("shulie.agent.manager.url");
+    }
+
+    public String getShadowPreparationEnable(){
+        return getProperty("shadow.preparation.enabled");
     }
 
     /**

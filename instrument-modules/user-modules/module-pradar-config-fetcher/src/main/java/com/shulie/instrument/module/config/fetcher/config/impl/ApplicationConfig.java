@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.pamirs.pradar.internal.config.*;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.resolver.ConfigResolver;
@@ -164,7 +165,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
                     change(FIELDS.SHADOW_HBASE_SERVER_CONFIG, newConfig.getShadowHbaseConfigs());
                     break;
                 case PLUGIN_MAX_REDIS_EXPIRE_TIME:
-                    change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME,newConfig.getPluginMaxRedisExpireTime());
+                    change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME, newConfig.getPluginMaxRedisExpireTime());
                     break;
                 default:
                     break;
@@ -190,8 +191,8 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
         change(FIELDS.SHADOW_REDIS_SERVER_CONFIG, newConfig.getShadowRedisConfigs());
         change(FIELDS.SHADOW_ES_SERVER_CONFIG, newConfig.getShadowEsServerConfigs());
         change(FIELDS.SHADOW_HBASE_SERVER_CONFIG, newConfig.getShadowHbaseConfigs());
-        if(getPlugin){
-            change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME,newConfig.getPluginMaxRedisExpireTime());
+        if (getPlugin) {
+            change(FIELDS.PLUGIN_MAX_REDIS_EXPIRE_TIME, newConfig.getPluginMaxRedisExpireTime());
         }
     }
 
@@ -289,7 +290,7 @@ public class ApplicationConfig extends AbstractConfig<ApplicationConfig> {
     }
 
     public void setShadowEsServerConfigs(
-        Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
+            Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
         this.shadowEsServerConfigs = shadowEsServerConfigs;
     }
 

@@ -16,7 +16,7 @@ package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
@@ -54,9 +54,9 @@ public class JedisClusterConnectionInterceptor extends CutoffInterceptorAdaptor 
                 return;
             }
             JedisSlotBasedConnectionHandler handler = (JedisSlotBasedConnectionHandler) advice.getTarget();
-            JedisClusterInfoCache cache = Reflect.on(handler).get("cache");
-            String password = Reflect.on(cache).get("password");
-            Map hashmap = Reflect.on(cache).get("nodes");
+            JedisClusterInfoCache cache = ReflectionUtils.get(handler, "cache");
+            String password = ReflectionUtils.get(cache, "password");
+            Map hashmap = ReflectionUtils.get(cache, "nodes");
 
             StringBuilder builder = new StringBuilder();
             for (Object node : hashmap.keySet()) {

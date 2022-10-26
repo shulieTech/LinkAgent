@@ -177,6 +177,21 @@ public class AgentConfigImpl implements AgentConfig {
     }
 
     @Override
+    public String getTenantCode() {
+        return coreConfig.getTenantCode();
+    }
+
+    @Override
+    public String getAgentManagerUrl() {
+        return coreConfig.getAgentManagerUrl();
+    }
+
+    @Override
+    public String getShadowPreparationEnable() {
+        return coreConfig.getShadowPreparationEnable();
+    }
+
+    @Override
     public Map<String, String> getHttpMustHeaders() {
         return coreConfig.getHttpMustHeaders();
     }

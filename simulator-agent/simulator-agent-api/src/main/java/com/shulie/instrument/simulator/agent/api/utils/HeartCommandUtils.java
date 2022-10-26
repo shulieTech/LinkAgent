@@ -49,16 +49,12 @@ public class HeartCommandUtils {
         //.../.../.../simulator-agent/
         String defaultAgentHome
                 = new File(HeartCommandUtils.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                .getParent().replace("core", "");
-        String agentModuleProperties = defaultAgentHome + "module.properties";
-        String simulatorModuleProperties = defaultAgentHome + "agent/simulator/module.properties";
-        String userModuleProperties = defaultAgentHome + "agent/simulator/modules/module.properties";
-        String simulatorVersion = defaultAgentHome + "agent/simulator/config/version";
+                .getParentFile().getParent();
 
-        File agentModulePropertiesFile = new File(agentModuleProperties);
-        File simulatorModulePropertiesFile = new File(simulatorModuleProperties);
-        File userModulePropertiesFile = new File(userModuleProperties);
-        File simulatorVersionFile = new File(simulatorVersion);
+        File agentModulePropertiesFile = new File(defaultAgentHome , "module.properties");
+        File simulatorModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/module.properties");
+        File userModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/modules/module.properties");
+        File simulatorVersionFile = new File(defaultAgentHome , "agent/simulator/config/version");
         if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
                 || !userModulePropertiesFile.exists()) {
             throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");

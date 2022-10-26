@@ -1,12 +1,12 @@
-/**
+/*
  * Copyright 2021 Shulie Technology, Co.Ltd
  * Email: shulie@shulie.io
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -22,9 +22,6 @@ import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,8 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class PradarSwitcher {
     private final static Logger LOGGER = LoggerFactory.getLogger(PradarSwitcher.class);
-
-    private static ConcurrentMap<String, Boolean> configSwitchers = new ConcurrentHashMap<String, Boolean>();
 
     private static CopyOnWriteArrayList<PradarSwitcherListener> listeners = new CopyOnWriteArrayList<PradarSwitcherListener>();
 
@@ -78,11 +73,6 @@ public class PradarSwitcher {
     static private boolean userDataEnabled = getUserDataEnabled();
 
     /**
-     * 是否支持压测
-     */
-    private static boolean isClusterTestEnabled = getPressEnabled();
-
-    /**
      * kafka是否支持消息header
      */
     private static boolean isKafkaMessageHeadersEnabled = getKafkaMessageHeadersEnabled();
@@ -90,11 +80,6 @@ public class PradarSwitcher {
      * rabbitmq是否使用routingKey
      */
     private static boolean isRabbitmqRoutingkeyEnabled = getRabbitmqRoutingkeyEnabled();
-
-    /**
-     * 压测开关 -- 控制台
-     */
-    private static AtomicBoolean clusterTestSwitch = new AtomicBoolean(true);
 
     /**
      * 静默开关 -- 控制台
@@ -126,16 +111,6 @@ public class PradarSwitcher {
      * 采样率是否使用zk配置
      */
     static private boolean samplingZkConfig = false;
-
-    /**
-     * 是否有效期内
-     */
-    private static volatile boolean isValid = true;
-
-    /**
-     * 压测环境是否已经准备好
-     */
-    private static volatile boolean isClusterTestReady = false;
 
     /**
      * 错误编码
@@ -174,8 +149,8 @@ public class PradarSwitcher {
     }
 
     public static void turnConfigSwitcherOn(String configName) {
-        configSwitchers.get(configName);
-        Boolean oldValue = configSwitchers.put(configName, Boolean.TRUE);
+        PradarService.configSwitchers.get(configName);
+        Boolean oldValue = PradarService.configSwitchers.put(configName, Boolean.TRUE);
         if (oldValue != null && !oldValue) {
             for (PradarSwitcherListener listener : listeners) {
                 listener.onListen(new PradarSwitchEvent(isClusterTestEnabled(), getClusterTestUnableReason()));
@@ -185,22 +160,13 @@ public class PradarSwitcher {
     }
 
     public static void turnConfigSwitcherOff(String configName) {
-        Boolean oldValue = configSwitchers.get(configName);
-        configSwitchers.put(configName, Boolean.FALSE);
+        Boolean oldValue = PradarService.configSwitchers.get(configName);
+        PradarService.configSwitchers.put(configName, Boolean.FALSE);
         if (oldValue == null || oldValue) {
             for (PradarSwitcherListener listener : listeners) {
                 listener.onListen(new PradarSwitchEvent(isClusterTestEnabled(), getClusterTestUnableReason()));
             }
         }
-    }
-
-    private static boolean isAllConfigValid() {
-        for (Map.Entry<String, Boolean> entry : configSwitchers.entrySet()) {
-            if (!entry.getValue()) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
@@ -209,7 +175,7 @@ public class PradarSwitcher {
     static public boolean turnClusterTestSwitchOn() {
         boolean before = isClusterTestEnabled();
         try {
-            boolean compareAndSet = clusterTestSwitch.compareAndSet(false, true);
+            boolean compareAndSet = PradarService.clusterTestSwitch.compareAndSet(false, true);
             if (compareAndSet) {
                 LOGGER.info("turnClusterTestSwitchOn");
             }
@@ -230,7 +196,7 @@ public class PradarSwitcher {
     static public boolean turnClusterTestSwitchOff() {
         boolean before = isClusterTestEnabled();
         try {
-            boolean compareAndSet = clusterTestSwitch.compareAndSet(true, false);
+            boolean compareAndSet = PradarService.clusterTestSwitch.compareAndSet(true, false);
             if (compareAndSet) {
                 LOGGER.info("turnClusterTestSwitchOff");
             }
@@ -251,7 +217,7 @@ public class PradarSwitcher {
      * @return
      */
     static public boolean clusterTestSwitchOn() {
-        return clusterTestSwitch.get();
+        return PradarService.clusterTestSwitch.get();
     }
 
 
@@ -354,8 +320,8 @@ public class PradarSwitcher {
      */
     static public void clusterTestReady() {
         boolean before = isClusterTestEnabled();
-        isClusterTestReady = true;
-        configSwitchers.clear();
+        PradarService.isClusterTestReady = true;
+        PradarService.configSwitchers.clear();
         boolean after = isClusterTestEnabled();
         if (before != after) {
             for (PradarSwitcherListener listener : listeners) {
@@ -371,11 +337,11 @@ public class PradarSwitcher {
         /**
          * 只要有一次 ready 则不会再 prepare
          */
-        if (isClusterTestReady) {
+        if (PradarService.isClusterTestReady) {
             return;
         }
         boolean before = isClusterTestEnabled();
-        isClusterTestReady = false;
+        PradarService.isClusterTestReady = false;
         boolean after = isClusterTestEnabled();
         if (before != after) {
             for (PradarSwitcherListener listener : listeners) {
@@ -390,7 +356,7 @@ public class PradarSwitcher {
      * @return
      */
     static public boolean isClusterTestReady() {
-        return isClusterTestReady;
+        return PradarService.isClusterTestReady;
     }
 
     /**
@@ -444,12 +410,6 @@ public class PradarSwitcher {
         return !monitorStatus;
     }
 
-    private static Boolean getPressEnabled() {
-        Boolean flag = Boolean.valueOf(getSystemProperty("pradar.switcher.press", "true"));
-        LOGGER.info("pradar.switcher.press={}", flag);
-        return flag;
-    }
-
     private static boolean getKafkaMessageHeadersEnabled() {
         Boolean flag = Boolean.valueOf(getSystemProperty("is.kafka.message.headers", "false"));
         LOGGER.info("is.kafka.shadow.message={}", flag);
@@ -494,7 +454,7 @@ public class PradarSwitcher {
      * @return
      */
     public static boolean isTraceEnabled() {
-        return isTraceEnabled && isValid;
+        return isTraceEnabled && PradarService.isValid;
     }
 
     /**
@@ -503,7 +463,7 @@ public class PradarSwitcher {
      * @return
      */
     public static boolean isMonitorEnabled() {
-        return isMonitorEnabled && isValid;
+        return isMonitorEnabled && PradarService.isValid;
     }
 
     /**
@@ -514,7 +474,7 @@ public class PradarSwitcher {
      * @return
      */
     public static boolean isClusterTestEnabled() {
-        return isClusterTestReady && clusterTestSwitch.get() && (isClusterTestEnabled && isValid) && isAllConfigValid();
+        return PradarService.isClusterTestEnabled();
     }
 
     public static String getErrorCode() {
@@ -542,11 +502,11 @@ public class PradarSwitcher {
      * @return
      */
     public static String getClusterTestUnableReason() {
-        if (!isClusterTestReady) {
+        if (!isClusterTestReady()) {
             return PRADAR_CLUSTER_TEST_NOT_READY + ":" + AppNameUtils.appName();
         }
-        if (!(isClusterTestEnabled && isValid)) {
-            if (!isValid) {
+        if (!(PradarService.isClusterTestEnabled && PradarService.isValid)) {
+            if (!PradarService.isValid) {
                 return PRADAR_LICENSE_IS_VALID + ":" + AppNameUtils.appName();
             }
         }
@@ -567,14 +527,14 @@ public class PradarSwitcher {
      * @return
      */
     public static boolean isPradarLogDaemonEnabled() {
-        return isPradarLogDaemonEnabled && isValid;
+        return isPradarLogDaemonEnabled && PradarService.isValid;
     }
 
 
     public synchronized static void invalid() {
         boolean before = isClusterTestEnabled();
         LOGGER.info("Cluster Tester is force closed....");
-        isValid = false;
+        PradarService.isValid = false;
         boolean after = isClusterTestEnabled();
         if (before != after) {
             for (PradarSwitcherListener listener : listeners) {
@@ -584,7 +544,7 @@ public class PradarSwitcher {
     }
 
     public static void destroy() {
-        configSwitchers.clear();
+        PradarService.configSwitchers.clear();
         listeners.clear();
     }
 

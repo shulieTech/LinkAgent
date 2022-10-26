@@ -82,13 +82,13 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     }
                 });
 
-        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
-                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
-            }
-        });
+//        this.enhanceTemplate.enhance(this, "com.alibaba.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
+//            @Override
+//            public void doEnhance(InstrumentClass target) {
+//                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
+//                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
+//            }
+//        });
 
 
         this.enhanceTemplate.enhance(this,
@@ -156,6 +156,16 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     public void doEnhance(InstrumentClass target) {
                         InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
                         enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceContextInterceptor.class));
+                    }
+                });
+
+        //--for orderly
+        this.enhanceTemplate.enhanceWithInterface(this,
+                "com.alibaba.rocketmq.client.consumer.listener.MessageListenerOrderly", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("consumeMessage");
+                        enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
                     }
                 });
 

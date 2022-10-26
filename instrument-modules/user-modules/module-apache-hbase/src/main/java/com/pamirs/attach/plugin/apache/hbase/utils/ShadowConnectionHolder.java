@@ -1,9 +1,9 @@
 package com.pamirs.attach.plugin.apache.hbase.utils;
 
 import com.pamirs.attach.plugin.apache.hbase.interceptor.HConnectionShadowReplaceInterceptor;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -169,7 +169,7 @@ public class ShadowConnectionHolder {
         Configuration conf = null;
         try {
             initConf(clusterConnection);
-            conf = Reflect.on(clusterConnection).get(confField);
+            conf = ReflectionUtils.getField(confField, clusterConnection);
         } catch (Throwable t) {
             // ignore
         }

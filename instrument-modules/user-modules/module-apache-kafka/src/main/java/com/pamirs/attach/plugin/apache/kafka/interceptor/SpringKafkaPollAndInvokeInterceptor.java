@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
+import com.pamirs.attach.plugin.apache.kafka.util.AopTargetUtil;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -25,6 +26,8 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.kafka.clients.consumer.Consumer;
 
 import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -34,11 +37,17 @@ import java.lang.reflect.Proxy;
 @Destroyable(KafkaDestroy.class)
 public class SpringKafkaPollAndInvokeInterceptor extends AroundInterceptor {
 
+    private Map<Object, Object> hasAddConsumers = new ConcurrentHashMap<Object, Object>();
+
     @Override
     public void doBefore(Advice advice) throws Throwable {
         try {
             Object consumer = Reflect.on(advice.getTarget()).get(KafkaConstants.REFLECT_FIELD_CONSUMER);
             if (Proxy.class.isInstance(consumer)) {
+                if (!hasAddConsumers.containsKey(consumer)) {
+                    hasAddConsumers.put(consumer, new Object());
+                    ConsumerHolder.addWorkWithSpring((Consumer<?, ?>) AopTargetUtil.getTarget(consumer));
+                }
                 return;
             }
             if (consumer instanceof Consumer) {

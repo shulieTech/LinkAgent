@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -46,14 +46,14 @@ public abstract class HttpUtils {
             socket = new Socket();
             socket.connect(address, 1000);
             BufferedWriter bufferedWriter = new BufferedWriter(
-                new OutputStreamWriter(socket.getOutputStream(), UTF_8));
+                    new OutputStreamWriter(socket.getOutputStream(), UTF_8));
 
             StringBuilder request = new StringBuilder("GET ").append(url).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append(":").append(port).append("\r\n")
-                .append("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n")
-                .append("Accept-Charset: GBK,utf-8;q=0.7,*;q=0.3\r\n")
-                .append("Accept-Language: zh-CN,zh;q=0.8\r\n")
-                .append("Connection: close\r\n");
+                    .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                    .append("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n")
+                    .append("Accept-Charset: GBK,utf-8;q=0.7,*;q=0.3\r\n")
+                    .append("Accept-Language: zh-CN,zh;q=0.8\r\n")
+                    .append("Connection: close\r\n");
             Map<String, String> mustHeaders = getHttpMustHeaders();
             if (!mustHeaders.isEmpty()) {
                 for (Map.Entry<String, String> entry : mustHeaders.entrySet()) {
@@ -113,8 +113,8 @@ public abstract class HttpUtils {
             SocketAddress address = new InetSocketAddress(host, port);
 
             StringBuilder request = new StringBuilder("GET ").append(url).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append(":").append(port).append("\r\n")
-                .append("Connection: Keep-Alive\r\n");
+                    .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                    .append("Connection: Keep-Alive\r\n");
 
             Map<String, String> mustHeaders = getHttpMustHeaders();
             if (!mustHeaders.isEmpty()) {
@@ -182,8 +182,8 @@ public abstract class HttpUtils {
             output = socket.getOutputStream();
 
             StringBuilder request = new StringBuilder("POST ").append(url).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append(":").append(port).append("\r\n")
-                .append("Connection: Keep-Alive\r\n");
+                    .append("Host: ").append(host).append(":").append(port).append("\r\n")
+                    .append("Connection: Keep-Alive\r\n");
 
             Map<String, String> mustHeaders = getHttpMustHeaders();
             if (!mustHeaders.isEmpty()) {
@@ -196,7 +196,7 @@ public abstract class HttpUtils {
 
             if (body != null && !body.isEmpty()) {
                 request.append("Content-Length: ").append(body.getBytes(UTF_8).length).append("\r\n")
-                    .append("Content-Type: application/json\r\n");
+                        .append("Content-Type: application/json\r\n");
             }
 
             request.append("\r\n");
@@ -278,7 +278,7 @@ public abstract class HttpUtils {
     }
 
     public static InputStream wrapperInput(Map<String, List<String>> headers, InputStream input) {
-        List<String> transferEncodings = headers.get("Transfer-Encoding");
+        List<String> transferEncodings = headers.get("transfer-encoding");
         if (transferEncodings != null && !transferEncodings.isEmpty()) {
             String encodings = transferEncodings.get(0);
             String[] elements = encodings.split(";");
@@ -288,7 +288,7 @@ public abstract class HttpUtils {
             }
             return input;
         }
-        List<String> contentLengths = headers.get("Content-Length");
+        List<String> contentLengths = headers.get("content-length");
         if (contentLengths != null && !contentLengths.isEmpty()) {
             long length = -1;
             for (String contentLength : contentLengths) {
@@ -307,12 +307,12 @@ public abstract class HttpUtils {
     }
 
     public static Map<String, List<String>> readHeaders(InputStream input)
-        throws IOException {
+            throws IOException {
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
             String[] headerPair = line.split(":");
-            String name = headerPair[0].trim();
+            String name = headerPair[0].trim().toLowerCase();
             String value = headerPair[1].trim();
             List<String> values = headers.get(name);
             if (values == null) {
@@ -326,7 +326,7 @@ public abstract class HttpUtils {
     }
 
     public static void exhaustInputStream(InputStream inStream)
-        throws IOException {
+            throws IOException {
         byte buffer[] = new byte[1024];
         while (inStream.read(buffer) >= 0) {
         }
@@ -343,7 +343,7 @@ public abstract class HttpUtils {
     }
 
     private static final Pattern URL_PATTERN = Pattern.compile("^(([^:/?#]+):)?(//([^/?#]*))?",
-        Pattern.CASE_INSENSITIVE);
+            Pattern.CASE_INSENSITIVE);
 
     private static HostPort getHostPortUrlFromUrl(String url) {
         String domain = url;
@@ -375,10 +375,10 @@ public abstract class HttpUtils {
         @Override
         public String toString() {
             return "HostPort{" +
-                "host='" + host + '\'' +
-                ", port=" + port +
-                ", url='" + url + '\'' +
-                '}';
+                    "host='" + host + '\'' +
+                    ", port=" + port +
+                    ", url='" + url + '\'' +
+                    '}';
         }
     }
 

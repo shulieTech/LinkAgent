@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
@@ -76,7 +76,7 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
     private static Field keyField;
 
     private Object[] toArgs(Object[] args) {
-        List singularArguments = Reflect.on(args[2]).get("singularArguments");
+        List singularArguments = ReflectionUtils.get(args[2], "singularArguments");
         Object[] ret = new Object[singularArguments.size()];
         try {
             if (keyField == null) {

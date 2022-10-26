@@ -14,12 +14,17 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import org.redisson.RedissonObject;
 
 /**
  * @Description
@@ -39,9 +44,18 @@ public class RedissonTraceMethodInterceptor extends BaseRedissonTimeSeriesMethod
         record.setRemoteIp(getHost(target, methodName, args));
         record.setPort(getPort(target, methodName, args));
         record.setMiddlewareName(RedissonConstants.MIDDLEWARE_NAME);
-        record.setService(String.valueOf(getDatabase(target, methodName, args)));
-        record.setMethod(methodName);
-        record.setRequest(toArgs(args));
+        String service = target.getClass().getName() + "." + methodName;
+        record.setService(service);
+        record.setMethod(service);
+        if (target instanceof RedissonObject) {
+            String name = ((RedissonObject)target).getName();
+            List<Object> list = new ArrayList<Object>();
+            list.add(name);
+            list.addAll(Arrays.asList(args));
+            record.setRequest(list.toArray());
+        } else {
+            record.setRequest(toArgs(args));
+        }
         return record;
     }
 

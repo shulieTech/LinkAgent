@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.common.datasource.pressure;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceCallableStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTracePreparedStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceStatement;
+import com.pamirs.attach.plugin.common.datasource.utils.ProxyFlag;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
@@ -120,6 +121,7 @@ public class PressureConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public void abort(Executor arg0) throws SQLException {
         try {
             connection.abort(arg0);
@@ -352,6 +354,7 @@ public class PressureConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public int getNetworkTimeout() throws SQLException {
         try {
             return connection.getNetworkTimeout();
@@ -381,6 +384,7 @@ public class PressureConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public String getSchema() throws SQLException {
         try {
             return connection.getSchema();
@@ -463,8 +467,13 @@ public class PressureConnection implements Connection {
      */
     @Override
     public PreparedStatement prepareStatement(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
+            return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -477,8 +486,13 @@ public class PressureConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
+            return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -491,8 +505,13 @@ public class PressureConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
+            return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -505,8 +524,13 @@ public class PressureConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, String[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
+            return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -519,8 +543,13 @@ public class PressureConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2)
             throws SQLException {
-        arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1, arg2), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
+            return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1, arg2), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -533,8 +562,13 @@ public class PressureConnection implements Connection {
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2,
                                               int arg3) throws SQLException {
-        arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
-        return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1, arg2, arg3), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
+            return new CheckedTracePreparedStatement(new PressurePreparedStatement(connection.prepareStatement(arg0, arg1, arg2, arg3), this.connection, this.dbConnectionKey, this.dbType), arg0, this.url, this.username, this.dbType, true, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     /**
@@ -544,6 +578,7 @@ public class PressureConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public void setSchema(String arg0) throws SQLException {
         arg0 = SqlParser.replaceSchema(arg0, this.dbConnectionKey, this.dbType);
         try {
@@ -719,6 +754,7 @@ public class PressureConnection implements Connection {
      * <p>This constructor is public to permit tools that require a JavaBean
      * instance to operate.</p>
      */
+    @Override
     public void setNetworkTimeout(Executor arg0, int arg1) throws SQLException {
         try {
             connection.setNetworkTimeout(arg0, arg1);

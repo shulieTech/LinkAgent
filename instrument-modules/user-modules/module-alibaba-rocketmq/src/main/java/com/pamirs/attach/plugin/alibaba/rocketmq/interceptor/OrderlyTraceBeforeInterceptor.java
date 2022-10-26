@@ -1,14 +1,13 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
-import java.util.List;
-
 import com.alibaba.rocketmq.client.hook.ConsumeMessageContext;
 import com.alibaba.rocketmq.common.message.MessageExt;
-
 import com.pamirs.attach.plugin.alibaba.rocketmq.common.OrderlyTraceContexts;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.PushConsumeMessageHookImpl;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+
+import java.util.List;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -23,7 +22,15 @@ public class OrderlyTraceBeforeInterceptor extends AroundInterceptor {
             if (consumeMessageContext == null) {
                 return;
             }
-            List<MessageExt> messageExts = (List<MessageExt>)advice.getReturnObj();
+            if (consumeMessageContext.getMsgList() != null && !consumeMessageContext.getMsgList().isEmpty()) {
+                return;
+            }
+            List<MessageExt> messageExts;
+            if ("consumeMessage".equals(advice.getBehaviorName())) {
+                messageExts = (List<MessageExt>) advice.getParameterArray()[0];
+            } else {
+                messageExts = (List<MessageExt>) advice.getReturnObj();
+            }
             if (messageExts == null || messageExts.isEmpty()) {
                 return;
             }

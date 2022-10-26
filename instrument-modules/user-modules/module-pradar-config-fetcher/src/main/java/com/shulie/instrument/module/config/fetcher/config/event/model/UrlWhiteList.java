@@ -19,6 +19,8 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
+import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 
 import java.util.Set;
@@ -53,6 +55,9 @@ public class UrlWhiteList implements IChange<Set<MatchConfig>, ApplicationConfig
 //                && CollectionUtils.equals(urlWhiteList, newValue)) {
 //            return Boolean.FALSE;
 //        }
+        if (ConfigFetcherModule.shadowPreparationEnabled) {
+            return true;
+        }
         // 变更后配置更新到内存
         applicationConfig.setUrlWhiteList(newValue);
         GlobalConfig.getInstance().setUrlWhiteList(newValue);

@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.saturn.interceptor;
 
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -65,7 +66,7 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
             Pradar.startTrace(null, serviceName, methodNameS);
             Pradar.middlewareName(getPluginName());
             String jobParam = Reflect.on(jobConfigurationObj).get(jobParameter);
-            if (jobParam.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+            if (jobParam.contains(PradarService.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
                 Pradar.setClusterTest(true);
             }
         }

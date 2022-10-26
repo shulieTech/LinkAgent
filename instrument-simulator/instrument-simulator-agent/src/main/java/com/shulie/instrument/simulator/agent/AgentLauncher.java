@@ -125,6 +125,16 @@ public class AgentLauncher {
     private static final String KEY_ENV_CODE = "envCode";
     private static final String DEFAULT_ENV_CODE = "";
 
+    private static final String KEY_TENANT_CODE = "tenantCode";
+    private static final String DEFAULT_TENANT_CODE = "";
+
+
+    private static final String KEY_AGENT_MANAGER_URL = "agentManagerUrl";
+    private static final String DEFAULT_AGENT_MANAGER_URL = "";
+
+    private static final String KEY_SHADOW_PREPARATION_ENABLED = "shadowPreparationEnabled";
+    private static final String DEFAULT_SHADOW_PREPARATION_ENABLED = "false";
+
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
 
@@ -356,6 +366,7 @@ public class AgentLauncher {
         final Instrumentation inst,boolean isOnlySyncModule) {
 
         final String propertiesFilePath = getPropertiesFilePath(featureMap);
+        String config = System.getProperty("config");
         final String coreFeatureString = toFeatureString(featureMap);
         final String agentConfigFilePath = getAgentConfigFilePath(featureMap);
 
@@ -459,6 +470,11 @@ public class AgentLauncher {
 
                 }
             } finally {
+                if(config != null){
+                    System.setProperty("config",config);
+                }else{
+                    System.clearProperty("config");
+                }
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
 
@@ -599,6 +615,18 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_ENV_CODE, DEFAULT_ENV_CODE);
     }
 
+    private static String getTenantCode(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_TENANT_CODE, DEFAULT_TENANT_CODE);
+    }
+
+    private static String getAgentManagerUrl(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_AGENT_MANAGER_URL, DEFAULT_AGENT_MANAGER_URL);
+    }
+
+    private static String getShadowPreparationEnabled(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_SHADOW_PREPARATION_ENABLED, DEFAULT_SHADOW_PREPARATION_ENABLED);
+    }
+
     private static String getAppName(final Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_APP_NAME, DEFAULT_APP_NAME);
     }
@@ -649,7 +677,7 @@ public class AgentLauncher {
                     + "classloader_jars=%s;provider=%s;module_repository_mode=%s;"
                     + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
                     + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
-                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s",
+                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;shadow.preparation.enabled=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
                 getSimulatorConfigPath(simulatorHome),
@@ -687,7 +715,13 @@ public class AgentLauncher {
                 //TRO WEB
                 getTroWebUrl(featureMap),
                 // CURRENT ENV
-                getEnvCode(featureMap)
+                getEnvCode(featureMap),
+                // TENANT CODE
+                getTenantCode(featureMap),
+                // agent manager url
+                getAgentManagerUrl(featureMap),
+                // shadow.preparation.enabled
+                getShadowPreparationEnabled(featureMap)
             )
         );
 

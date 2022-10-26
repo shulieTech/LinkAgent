@@ -13,7 +13,7 @@
     <properties>
         <module-name>netty-time-wheel</module-name>
     </properties>
-    <version>2.0.0.0</version>
+    <version>2.0.0.1</version>
 
     <dependencies>
         <dependency>
@@ -29,10 +29,16 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-internal-bootstrap-api</artifactId>
+            <version>1.0.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

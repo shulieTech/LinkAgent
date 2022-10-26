@@ -563,8 +563,11 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         }
 
         Object ptInterceptors = Reflect.on(kafkaConsumer).get("interceptors");
-        List list = Reflect.on(ptInterceptors).get("interceptors");
-        if (list == null || list.isEmpty()) {
+        List list = null;
+        if(Reflect.on(ptInterceptors).existsField("interceptors")){
+            list = Reflect.on(ptInterceptors).get("interceptors");
+        }
+        if ((list == null || list.isEmpty()) && interceptors != null) {
             log.info("set kafka biz interceptors to pt consumer:{}", interceptors);
             Reflect.on(kafkaConsumer).set("interceptors", interceptors);
         }

@@ -46,10 +46,6 @@ public class ConfigUtils {
     private static String agentId = "";
     private static String appName = "";
 
-    //配置控制台地址
-    private static final String AGENT_CONFIG_URL = "/api/fast/agent/access/config/agentConfig";
-
-
     public static String doConfig(String url, Map<String, String> headers) {
         if (StringUtils.startsWith(url, "http://") || StringUtils.startsWith(url, "https://")) {
             return HttpUtils.doGet(url, headers);
@@ -92,40 +88,6 @@ public class ConfigUtils {
         return result;
     }
 
-    /**
-     * 获取控制台的固定配置信息
-     */
-    public static Map<String, Object> getFixedAgentConfigFromUrl(String troWebUrl, String appName, String configVersion,
-        Map<String, String> headers) {
-        return getAgentConfigFromUrl(troWebUrl, appName, configVersion, "0", headers);
-    }
-
-    /**
-     * 获取控制台的动态配置信息
-     */
-    public static Map<String, Object> getDynamicAgentConfigFromUrl(String troWebUrl, String appName,
-        String configVersion, Map<String, String> headers) {
-        return getAgentConfigFromUrl(troWebUrl, appName, configVersion, "1", headers);
-    }
-
-    private static Map<String, Object> getAgentConfigFromUrl(String troWebUrl, String appName, String configVersion,
-        String type, Map<String, String> headers) {
-        final StringBuilder url = new StringBuilder(troWebUrl).append(AGENT_CONFIG_URL);
-
-        Map<String, String> params = new HashMap<String, String>();
-        params.put("projectName", appName);
-        params.put("version", configVersion);
-        params.put("effectMechanism", type);//固定参数
-        HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), headers, JSON.toJSONString(params));
-        if (httpResult == null || !httpResult.isSuccess()) {
-            logger.error("获取控制台配置信息失败 url={}, result={}, 参数类型={}", url,
-                httpResult == null ? "null,接口请求异常" : httpResult.getResult(),
-                type.equals("1") ? "动态" : "固定");
-            return null;
-        }
-        return JSON.parseObject(httpResult.getResult(), Map.class);
-    }
-
     public static String getTenantAppKey() {
         return tenantAppKey;
     }
@@ -140,6 +102,7 @@ public class ConfigUtils {
 
     public static void setAgentId(String agentId) {
         ConfigUtils.agentId = agentId;
+        System.setProperty("simulator.agent.id",agentId);
     }
 
     public static String getAppName() {

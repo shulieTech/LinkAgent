@@ -25,6 +25,13 @@
         </dependency>
 
         <dependency>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-internal-bootstrap-api</artifactId>
+            <version>${simulator.internal.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <version>3.1.0</version>
@@ -58,6 +65,12 @@
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-servlet-common</artifactId>
             <version>${module.servlet.common.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-bootstrap-api</artifactId>
+            <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

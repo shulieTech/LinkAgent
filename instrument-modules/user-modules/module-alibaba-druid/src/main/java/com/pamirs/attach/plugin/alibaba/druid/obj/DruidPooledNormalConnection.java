@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -25,13 +25,13 @@ import com.pamirs.attach.plugin.common.datasource.normal.NormalStatment;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceCallableStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTracePreparedStatement;
 import com.pamirs.attach.plugin.common.datasource.trace.CheckedTraceStatement;
+import com.pamirs.attach.plugin.common.datasource.utils.ProxyFlag;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
 import com.pamirs.pradar.pressurement.datasource.util.SqlMetaData;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
 
 import javax.sql.ConnectionEventListener;
@@ -48,7 +48,7 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
     private DruidPooledConnection target;
 
     public DruidPooledNormalConnection(DruidPooledConnection connection, String dbConnectionKey, String url, String username,
-        String dbType, String midType, SqlMetaData sqlMetaData) {
+                                       String dbType, String midType, SqlMetaData sqlMetaData) {
         super(connection.getConnectionHolder());
         this.target = connection;
         this.dbConnectionKey = dbConnectionKey;
@@ -145,20 +145,20 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
     @Override
     public Statement createStatement() throws SQLException {
         return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+                midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public Statement createStatement(int arg0, int arg1) throws SQLException {
         return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+                midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
     public Statement createStatement(int arg0, int arg1, int arg2)
             throws SQLException {
         return new CheckedTraceStatement(new NormalStatment(new NormalCheckStatement(target.createStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
+                midType), this.url, this.username, this.dbType, false, false, sqlMetaData);
     }
 
     @Override
@@ -270,49 +270,79 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
 
     @Override
     public PreparedStatement prepareStatement(String arg0) throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0), dbType), this.conn, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, int[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, String[] arg1)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1), dbType), this.conn, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     @Override
     public PreparedStatement prepareStatement(String arg0, int arg1, int arg2)
             throws SQLException {
-        arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            arg0 = SqlParser.replaceTable(arg0, this.dbConnectionKey, this.dbType, this.midType);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(arg0, arg1, arg2), dbType), this.conn, this.dbConnectionKey, this.dbType,
+                    midType), arg0, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int arg1, int arg2,
                                               int arg3) throws SQLException {
-        sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType, this.midType);
-        return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(sql, arg1, arg2, arg3), dbType), this.conn, this.dbConnectionKey, this.dbType,
-            midType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        try {
+            ProxyFlag.enter();
+            sql = SqlParser.replaceTable(sql, this.dbConnectionKey, this.dbType, this.midType);
+            return new CheckedTracePreparedStatement(new NormalPreparedStatement(new NormalCheckPreparedStatement(target.prepareStatement(sql, arg1, arg2, arg3), dbType), this.conn, this.dbConnectionKey, this.dbType,
+                    midType), sql, this.url, this.username, this.dbType, false, false, sqlMetaData);
+        } finally {
+            ProxyFlag.exit();
+        }
     }
 
     @Override
@@ -519,8 +549,8 @@ public class DruidPooledNormalConnection extends DruidPooledConnection {
     @Override
     public void transactionRecord(String sql) throws SQLException {
         try {
-            Reflect.on(target).call("transactionRecord", sql).get();
-        } catch (ReflectException e) {
+            ReflectionUtils.invoke(target, "transactionRecord", sql);
+        } catch (Exception e) {
             throw new SQLException(e);
         }
     }

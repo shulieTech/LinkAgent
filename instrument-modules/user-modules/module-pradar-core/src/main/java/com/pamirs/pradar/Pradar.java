@@ -244,7 +244,6 @@ public final class Pradar {
     /**
      * http 请求时统一的压测后缀
      */
-    public static final String PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX = "PerfomanceTest";
     static public final char ENTRY_SEPARATOR = (char)0x12;
     static public final char KV_SEPARATOR = (char)0x1;   // METAQ 不允许使用的分隔符，不能在 UserData 中使用
     static public final char KV_SEPARATOR2 = (char)0x14;
@@ -898,7 +897,7 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarTenantKey() {
+    public static final String getPradarTenantKey() {
         return getSystemProperty(Pradar.TENANT_APP_KEY);
     }
 
@@ -907,7 +906,7 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarUserId() {
+    public static final String getPradarUserId() {
         return getSystemProperty("pradar.user.id");
     }
 
@@ -916,7 +915,7 @@ public final class Pradar {
      *
      * @return 当前环境变量
      */
-    static final String getEnvCode() {
+    public static final String getEnvCode() {
         return getSystemProperty(Pradar.ENV_CODE);
     }
 

@@ -52,7 +52,7 @@ public class BaseHandlerInjector extends AroundInterceptor {
 
     private boolean isClusterTest(ServerWebExchange exchange) {
         List<String> ua = exchange.getRequest().getHeaders().get(PradarService.PRADAR_HTTP_CLUSTER_TEST_KEY);
-        if (CollectionUtils.isNotEmpty(ua) && ua.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+        if (CollectionUtils.isNotEmpty(ua) && ua.contains(PradarService.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
             return true;
         }
 

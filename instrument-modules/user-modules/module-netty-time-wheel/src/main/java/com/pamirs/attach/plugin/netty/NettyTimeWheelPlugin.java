@@ -14,13 +14,16 @@
  */
 package com.pamirs.attach.plugin.netty;
 
+import com.pamirs.attach.plugin.netty.interceptor.HashedWheelTimeoutTaskInterceptor;
 import com.pamirs.attach.plugin.netty.interceptor.HashedWheelTimerNewTimeoutInterceptor;
+import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 
 @MetaInfServices(ExtensionModule.class)
@@ -35,6 +38,15 @@ public class NettyTimeWheelPlugin extends ModuleLifecycleAdapter implements Exte
             public void doEnhance(InstrumentClass target) {
                 target.getDeclaredMethods("newTimeout")
                     .addInterceptor(Listeners.of(HashedWheelTimerNewTimeoutInterceptor.class));
+            }
+
+        });
+
+        this.enhanceTemplate.enhance(this, "io.netty.util.HashedWheelTimer$HashedWheelTimeout", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("task")
+                        .addInterceptor(Listeners.of(HashedWheelTimeoutTaskInterceptor.class));
             }
 
         });

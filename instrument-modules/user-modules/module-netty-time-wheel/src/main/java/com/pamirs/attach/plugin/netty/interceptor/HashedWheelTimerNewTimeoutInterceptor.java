@@ -19,8 +19,8 @@ public class HashedWheelTimerNewTimeoutInterceptor extends ParametersWrapperInte
         if (args[0].getClass().getName().equals("org.asynchttpclient.netty.timeout.RequestTimeoutTimerTask")) {
             return args;
         }
-        TimerTask BUSTimerTask = (TimerTask)args[0];
-        TraceTimerTask ptTimerTask = new TraceTimerTask(BUSTimerTask, Pradar.getInvokeContextMap());
+        TimerTask bizTimerTask = (TimerTask)args[0];
+        TraceTimerTask ptTimerTask = new TraceTimerTask(bizTimerTask, Pradar.getInvokeContextMap());
         args[0] = ptTimerTask;
         return args;
     }

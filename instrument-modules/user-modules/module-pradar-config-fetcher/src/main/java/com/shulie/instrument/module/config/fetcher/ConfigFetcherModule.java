@@ -16,6 +16,7 @@ package com.shulie.instrument.module.config.fetcher;
 
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.PradarInternalService;
+import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
 import com.shulie.instrument.module.config.fetcher.config.SimulatorDetail;
@@ -57,6 +58,8 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
     private ConfigManager configManager;
 
+    // 是否允许使用影子资源准备模块, 如果允许使用则很多配置信息从准备模块里拉取，不走控制台
+    public static boolean shadowPreparationEnabled;
 
     /**
      * 获取simulator配置的接口，目前只获取静默开关状态
@@ -66,7 +69,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     @Command("getSimulatorDetail")
     public CommandResponse<Object> getSimulatorDetail(Map<String, String> args){
         SimulatorDetail simulatorDetail = new SimulatorDetail();
-        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() == true ? 1 : 0);
+        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() ? 1 : 0);
         CommandResponse<Object> commandResponse = new CommandResponse<Object>();
         commandResponse.setSuccess(true);
         commandResponse.setResult(simulatorDetail);
@@ -105,6 +108,8 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
         }, 10, TimeUnit.SECONDS);
 
         PradarInternalService.registerConfigFetcher(new DefaultConfigFetcher());
+
+        shadowPreparationEnabled = PropertyUtil.isShadowPreparationEnabled();
         return true;
     }
 

@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.apache.dubbo.interceptor;
 import com.google.gson.Gson;
 import com.pamirs.attach.plugin.apache.dubbo.DubboConstants;
 import com.pamirs.attach.plugin.apache.dubbo.utils.ClassTypeUtils;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.interceptor.ContextTransfer;
@@ -32,7 +33,6 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.dubbo.common.utils.NetUtils;
@@ -92,13 +92,10 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                 public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
 
                     MatchConfig config = (MatchConfig) params;
-                    if (config.getScriptContent().contains("return")) {
-                        return null;
-                    }
                     RpcInvocation invocation = (RpcInvocation) config.getArgs().get("invocation");
                     try {
                         //for 2.8.4
-                        return Reflect.on("org.apache.dubbo.rpc.RpcResult").create(config.getScriptContent()).get();
+                        return ReflectionUtils.newInstance("org.apache.dubbo.rpc.RpcResult", config.getScriptContent());
                     } catch (Exception e) {
                         if (logger.isInfoEnabled()) {
                             logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
@@ -106,17 +103,16 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                         //
                     }
                     try {
-                        Reflect reflect = Reflect.on("org.apache.dubbo.rpc.AsyncRpcResult");
                         try {
                             //for 2.7.5
                             java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
                             future.complete(new AppResponse(getResultByType(invocation.getReturnType(),config.getScriptContent())));
-                            Reflect result = reflect.create(future, invocation);
-                            ProcessController.returnImmediately(returnType, result.get());
+                            Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", future, invocation);
+                            ProcessController.returnImmediately(returnType, result);
                         } catch (ReflectException e) {
                             //for 2.7.3
-                            Reflect result = reflect.create(invocation);
-                            ProcessController.returnImmediately(returnType, result.get());
+                            Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", invocation);
+                            ProcessController.returnImmediately(returnType, result);
                         }
                     } catch (ProcessControlException pe) {
                         throw pe;
@@ -192,7 +188,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
             public Object call(Object param) {
                 try {
                     //for 2.8.4
-                    return Reflect.on("org.apache.dubbo.rpc.RpcResult").create(param).get();
+                    return ReflectionUtils.newInstance("org.apache.dubbo.rpc.RpcResult", param);
                 } catch (Exception e) {
                     if (logger.isInfoEnabled()) {
                         logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
@@ -200,17 +196,16 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                     //
                 }
                 try {
-                    Reflect reflect = Reflect.on("org.apache.dubbo.rpc.AsyncRpcResult");
                     try {
                         //for 2.7.5
                         java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
                         future.complete(new AppResponse(param));
-                        Reflect result = reflect.create(future, invocation);
-                        return result.get();
+                        Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", future, invocation);
+                        return result;
                     } catch (ReflectException e) {
                         //for 2.7.3
-                        Reflect result = reflect.create(invocation);
-                        return result.get();
+                        Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", invocation);
+                        return result;
                     }
                 } catch (Exception e) {
                     logger.error("fail to load dubbo 2.7.x class org.apache.dubbo.rpc.AsyncRpcResult", e);

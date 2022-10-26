@@ -19,6 +19,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.flag.GuavaCacheSkipFlag;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
@@ -32,6 +33,10 @@ public class CacheOperationGetAllResInterceptor extends ParametersWrapperInterce
 
     @Override
     protected Object[] getParameter0(Advice advice) throws Throwable {
+        if (GuavaCacheSkipFlag.skip.get()) {
+            return advice.getParameterArray();
+        }
+
         /**
          * 压测状态为关闭,如果当前为压测流量则直接报错
          */

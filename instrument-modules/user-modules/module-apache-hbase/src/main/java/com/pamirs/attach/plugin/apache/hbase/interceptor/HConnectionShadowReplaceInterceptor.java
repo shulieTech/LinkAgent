@@ -3,6 +3,7 @@ package com.pamirs.attach.plugin.apache.hbase.interceptor;
 import com.pamirs.attach.plugin.apache.hbase.interceptor.shadowserver.HbaseMediatorConnection;
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder;
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder.Supplier;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -10,7 +11,6 @@ import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
@@ -63,8 +63,8 @@ public class HConnectionShadowReplaceInterceptor extends CutoffInterceptorAdapto
                     if (ptConfiguration != null) {
                         try {
                             Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration,
-                                (ExecutorService)Reflect.on(busClusterConnection).get("batchPool"),
-                                (User)Reflect.on(busClusterConnection).get("user"));
+                                (ExecutorService)ReflectionUtils.get(busClusterConnection,"batchPool"),
+                                (User)ReflectionUtils.get(busClusterConnection,"user"));
                             return (ClusterConnection)prefConnection;
                         } catch (IOException e) {
                             throw new RuntimeException("[hbase] create shadow connection fail!", e);

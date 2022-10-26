@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -158,13 +158,26 @@ public class Listeners {
 
 
     private static int toListenerTag(Class<?> clazz) {
-        ListenerBehavior listenerBehavior = clazz.getAnnotation(ListenerBehavior.class);
+        ListenerBehavior listenerBehavior = getListenerBehavior(clazz);
         if (listenerBehavior == null) {
             return 0;
         }
         return TagUtil.toTag(listenerBehavior.isFilterClusterTest(),
                 listenerBehavior.isFilterBusinessData(),
-                listenerBehavior.isNoSilence());
+                listenerBehavior.isNoSilence(),
+                listenerBehavior.isExecuteWithClusterTestDisable());
+    }
+
+    private static ListenerBehavior getListenerBehavior(Class<?> clazz) {
+        ListenerBehavior listenerBehavior;
+        if (clazz == null) {
+            return null;
+        }
+        listenerBehavior = clazz.getAnnotation(ListenerBehavior.class);
+        if (listenerBehavior == null) {
+            listenerBehavior = getListenerBehavior(clazz.getSuperclass());
+        }
+        return listenerBehavior;
     }
 
     public String getClassName() {

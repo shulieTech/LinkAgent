@@ -16,10 +16,12 @@ package com.pamirs.attach.plugin.apache.rocketmq;
 
 import com.pamirs.attach.plugin.apache.rocketmq.common.ConsumerRegistry;
 import com.pamirs.attach.plugin.apache.rocketmq.interceptor.*;
+import com.pamirs.attach.plugin.apache.rocketmq.listener.RocketMQShadowPreCheckEventListener;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -43,6 +45,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
+        addListener();
         return addHookRegisterInterceptor();
     }
 
@@ -80,14 +83,14 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         shutdownMethod.addInterceptor(Listeners.of(DefaultPushConsumerShutdownInterceptor.class));
                     }
                 });
-
-        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
-                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
-            }
-        });
+//
+//        this.enhanceTemplate.enhance(this, "org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl", new EnhanceCallback() {
+//            @Override
+//            public void doEnhance(InstrumentClass target) {
+//                final InstrumentMethod hasHookMethod = target.getDeclaredMethod("hasHook");
+//                hasHookMethod.addInterceptor(Listeners.of(DefaultMQPushConsumerImplHasHookListener.class));
+//            }
+//        });
 
         this.enhanceTemplate.enhance(this,
                 "org.apache.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl", new EnhanceCallback() {
@@ -151,6 +154,17 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     public void doEnhance(InstrumentClass target) {
                         InstrumentMethod enhanceMethod = target.getDeclaredMethods("run");
                         enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceContextInterceptor.class));
+                    }
+                });
+
+
+        //--for orderly
+        this.enhanceTemplate.enhanceWithInterface(this,
+                "org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly", new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod enhanceMethod = target.getDeclaredMethods("consumeMessage");
+                        enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
                     }
                 });
 
@@ -231,4 +245,10 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
         thread.setName("apache-rocketmq-init-shadownConsumer-thread");
         thread.start();
     }
+
+    private void addListener() {
+        EventRouter.router()
+                .addListener(new RocketMQShadowPreCheckEventListener());
+    }
+
 }

@@ -15,7 +15,6 @@
 package com.shulie.instrument.module.register.register.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.HttpUtils.HttpResult;
@@ -29,7 +28,6 @@ import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.register.NodeRegisterModule;
 import com.shulie.instrument.module.register.register.Register;
 import com.shulie.instrument.module.register.register.RegisterOptions;
-import com.shulie.instrument.module.register.utils.ConfigUtils;
 import com.shulie.instrument.module.register.utils.SimulatorStatus;
 import com.shulie.instrument.module.register.zk.ZkClient;
 import com.shulie.instrument.module.register.zk.ZkHeartbeatNode;
@@ -124,8 +122,6 @@ public class ZookeeperRegister implements Register {
         map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
         map.put("moduleLoadDetail",
                 JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
-        //参数比较
-        map.put("simulatorFileConfigsCheck", JSON.toJSONString(checkConfigs()));
         String str = JSON.toJSONString(map);
         try {
             return str.getBytes("UTF-8");
@@ -147,52 +143,6 @@ public class ZookeeperRegister implements Register {
         excludeCheckConfig.add("trace.samplingInterval");
         excludeCheckConfig.add("trace.mustsamplingInterval");
         excludeCheckConfig.add("pradar.sampling.interval");
-    }
-
-    /**
-     * 校验配置文件参数
-     *
-     * @return
-     */
-    private Map<String, String> checkConfigs() {
-        Map<String, String> result = new HashMap<String, String>(32, 1);
-        Map<String, String> allConfigs = new HashMap<String, String>(
-                simulatorConfig.getSimulatorFileConfigs().size() + simulatorConfig.getAgentFileConfigs().size(), 1);
-        allConfigs.putAll(simulatorConfig.getSimulatorFileConfigs());
-        allConfigs.putAll(simulatorConfig.getAgentFileConfigs());
-        Map<String, Object> simulatorConfigFromUrl =
-                ConfigUtils.getFixedSimulatorConfigFromUrl(PropertyUtil.getTroControlWebUrl(), simulatorConfig.getAppName(),
-                        simulatorConfig.getAgentVersion());
-        if (simulatorConfigFromUrl == null || simulatorConfigFromUrl.get("success") == null || !Boolean.parseBoolean(
-                simulatorConfigFromUrl.get("success").toString())) {
-            result.put("status", "false");
-            result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
-            return result;
-        }
-        boolean status = true;
-        JSONObject jsonObject = (JSONObject) simulatorConfigFromUrl.get("data");
-        StringBuilder unEqualConfigs = new StringBuilder();
-        for (Map.Entry<String, String> entry : allConfigs.entrySet()) {
-            if (excludeCheckConfig.contains(entry.getKey())) {
-                continue;
-            }
-            String value = (String) jsonObject.get(entry.getKey());
-            if (entry.getValue().equals(value)) {
-                result.put(entry.getKey(), "true");
-            } else {
-                status = false;
-                result.put(entry.getKey(), "false");
-                unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
-                        entry.getValue())
-                        .append(",").append("远程参数值:").append(value).append(",");
-            }
-        }
-        result.put("status", String.valueOf(result));
-        if (!status) {
-            result.put("errorMsg", unEqualConfigs.toString());
-        }
-        return result;
-
     }
 
     private boolean getModuleLoadResult() {

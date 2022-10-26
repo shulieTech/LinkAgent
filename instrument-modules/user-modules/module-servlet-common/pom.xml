@@ -14,7 +14,7 @@
     <properties>
         <module-name>servlet-common</module-name>
     </properties>
-    <version>2.0.0.0</version>
+    <version>${module.servlet.common.version}</version>
 
     <dependencies>
 

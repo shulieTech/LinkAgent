@@ -14,7 +14,7 @@
     <properties>
         <module-name>log-data-pusher</module-name>
     </properties>
-    <version>2.0.1.0</version>
+    <version>${module.log.data.pusher}</version>
 
     <dependencies>
         <dependency>

@@ -38,6 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.pamirs.attach.plugin.apache.rocketmq.RocketmqConstants.NAME_SERVER_ADDRESS;
+
 public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceConstants {
     private final static Logger LOGGER = LoggerFactory.getLogger(PullConsumeMessageHookImpl.class.getName());
     public static final String RETRYSTR = "%RETRY%";
@@ -88,15 +90,18 @@ public class PullConsumeMessageHookImpl implements ConsumeMessageHook, MQTraceCo
                 traceBean.setBornHost(StringUtils.substring(msg.getBornHost().toString(), 1));
                 String storeHost = "";
                 String port = "";
-                if (msg.getStoreHost() != null && msg.getStoreHost() instanceof InetSocketAddress) {
-                    InetSocketAddress address = (InetSocketAddress) msg.getStoreHost();
-                    storeHost = address.getAddress() == null ? null : address.getAddress().getHostAddress();
-                    port = String.valueOf(address.getPort());
-                } else {
-                    storeHost = StringUtils.substring(msg.getStoreHost().toString(), 1);
+                storeHost = msg.getProperty(NAME_SERVER_ADDRESS);
+                if (storeHost == null) {
+                    if (msg.getStoreHost() != null && msg.getStoreHost() instanceof InetSocketAddress) {
+                        InetSocketAddress address = (InetSocketAddress) msg.getStoreHost();
+                        storeHost = address.getAddress() == null ? null : address.getAddress().getHostAddress();
+                        port = String.valueOf(address.getPort());
+                    } else {
+                        storeHost = StringUtils.substring(msg.getStoreHost().toString(), 1);
+                    }
                 }
                 traceBean.setStoreHost(storeHost);
-                traceBean.setPort(port);
+//                traceBean.setPort(port);
                 traceBean.setStoreTime(msg.getStoreTimestamp());
                 traceBean.setBrokerName(context.getMq().getBrokerName());
                 traceBean.setQueueId(msg.getQueueId());

@@ -1,7 +1,7 @@
-package com.pamirs.attach.plugin.shadow.preparation.constants;
+package com.pamirs.attach.plugin.shadow.preparation.jdbc.constants;
 
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.JdbcTableColumnInfos;
-import com.pamirs.attach.plugin.shadow.preparation.utils.JdbcConnectionUtils;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.JdbcTableColumnInfos;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcConnectionUtils;
 
 import java.sql.Connection;
 import java.util.List;
@@ -12,28 +12,28 @@ public enum JdbcTypeEnum {
     MYSQL() {
         @Override
         public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return JdbcConnectionUtils.fetchTablesStructures(connection, tables);
+            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, MYSQL);
         }
     },
 
     ORACLE() {
         @Override
         public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return null;
+            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, ORACLE);
         }
     },
 
     SQLSERVER() {
         @Override
         public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return null;
+            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, SQLSERVER);
         }
     },
 
     GBASE() {
         @Override
         public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return JdbcConnectionUtils.fetchTablesStructures(connection, tables);
+            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, GBASE);
         }
     };
 

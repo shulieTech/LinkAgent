@@ -2,12 +2,13 @@ package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
 import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand;
-import com.pamirs.attach.plugin.shadow.preparation.entity.jdbc.DataSourceConfig;
+import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceActiveEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceDisableEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceActiveEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceDisableEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
@@ -25,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 
 public class JdbcConfigPushCommandProcessor {
@@ -37,6 +39,7 @@ public class JdbcConfigPushCommandProcessor {
         LOGGER.info("[shadow-preparation] accept shadow datasource push command, content:{}", config.getParam());
         //先刷新数据源
         JdbcDataSourceFetcher.refreshDataSources();
+        MongoClientsFetcher.refreshClients();
         ConfigAck ack = new ConfigAck();
         ack.setType(config.getType());
         ack.setVersion(config.getVersion());
@@ -49,6 +52,7 @@ public class JdbcConfigPushCommandProcessor {
             ack.setResultCode(ConfigResultEnum.FAIL.getCode());
             ack.setResultDesc("解析数据源下发命令失败");
             callback.accept(ack);
+            return;
         }
         if (CollectionUtils.isEmpty(cmd.getData())) {
             ack.setResultCode(ConfigResultEnum.FAIL.getCode());
@@ -59,6 +63,14 @@ public class JdbcConfigPushCommandProcessor {
 
         final List<ShadowDatabaseConfig> configs = toShadowDatabaseConfig(cmd.getData());
         GlobalConfig.getInstance().setShadowDatabaseConfigs(toMap(configs), true);
+
+        // mongo的配置不和jdbc的一起处理
+        List<ShadowDatabaseConfig> mongoConfigs = configs.stream().filter(config1 -> config1.getUrl().startsWith("mongodb://")).collect(Collectors.toList());
+        if (!mongoConfigs.isEmpty()) {
+            configs.removeAll(mongoConfigs);
+            // mongo生效不需要额外操作，但修改配置时需要关闭影子数据源，清除缓存
+            MongoConfigPushCommandProcessor.processConfigPushCommand(mongoConfigs);
+        }
 
         Object[] compareResult = compareShadowDataSource(configs);
         Set<String> needClosed = (Set<String>) compareResult[0];
@@ -140,7 +152,7 @@ public class JdbcConfigPushCommandProcessor {
      */
     private static Object[] compareShadowDataSource(List<ShadowDatabaseConfig> data) {
         // 需要被关闭的影子数据源
-        Set<String> needClosed = new HashSet<String>(JdbcDataSourceFetcher.getShadowKeys());
+        Set<String> needClosed = JdbcDataSourceFetcher.getShadowKeys();
         // 新增的数据源
         Set<ShadowDatabaseConfig> needAdd = new HashSet<ShadowDatabaseConfig>();
 
@@ -160,7 +172,7 @@ public class JdbcConfigPushCommandProcessor {
         // 遇到特殊情况, 多个业务数据源的影子数据源是一样的, 需要禁用其中一个
         if (needClosed.isEmpty() && data.size() < JdbcDataSourceFetcher.getShadowDataSourceNum()) {
             // 因为没有保存业务数据源和影子数据源的映射关系，所以清除所有影子数据源，重新构建
-            return new Object[]{new HashSet<String>(JdbcDataSourceFetcher.getShadowKeys()), data};
+            return new Object[]{JdbcDataSourceFetcher.getShadowKeys(), data};
         }
         return new Object[]{needClosed, needAdd};
     }

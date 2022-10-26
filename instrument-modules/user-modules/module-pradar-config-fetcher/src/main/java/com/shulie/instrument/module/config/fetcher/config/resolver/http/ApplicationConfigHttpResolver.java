@@ -343,8 +343,10 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
          */
         getShadowRedisServerConfig(troControlWebUrl, applicationConfig);
 
+//        if(!ConfigFetcherModule.shadowPreparationEnabled){
         getShadowEsServerConfig(troControlWebUrl, applicationConfig);
         getHbaseShadowConfig(troControlWebUrl, applicationConfig);
+//        }
 
         /**
          * 获取 trace 规则入口配置
@@ -359,11 +361,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         /**
          * 拉取mq影子消费者信息
          */
+//        if(!ConfigFetcherModule.shadowPreparationEnabled ){
         isSuccess = fetchMqShadowConsumer(troControlWebUrl, applicationConfig);
         if (!isSuccess) {
             PradarSwitcher.turnConfigSyncSwitchOff();
             logger.error("[pradar] get shadow consumer from server failed");
         }
+//        }
 
         if (PradarSwitcher.configSyncSwitchOn()
                 || (ApplicationConfig.getWhiteList && ApplicationConfig.getPressureTable4AccessSimple

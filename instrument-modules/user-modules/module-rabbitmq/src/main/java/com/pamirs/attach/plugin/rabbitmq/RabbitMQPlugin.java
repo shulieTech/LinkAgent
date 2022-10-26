@@ -15,17 +15,8 @@
 package com.pamirs.attach.plugin.rabbitmq;
 
 import com.pamirs.attach.plugin.rabbitmq.destroy.ShadowConsumerDisableListenerImpl;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.AMQConnectionInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNAckInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicCancelInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicGetInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNBasicPublishInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.ChannelNProcessDeliveryInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.NotifyConsumerOfShutdownInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.QueueingConsumerHandleInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringBlockingQueueConsumerDeliveryInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.SpringRabbitRabbitAdminDeclareQueueInterceptor;
-import com.pamirs.attach.plugin.rabbitmq.interceptor.StrictExceptionHandlerInterceptor;
+import com.pamirs.attach.plugin.rabbitmq.interceptor.*;
+import com.pamirs.attach.plugin.rabbitmq.listener.RabbitMQShadowPreCheckEventHandler;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -48,9 +39,9 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
-        final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
-        EventRouter.router().addListener(shadowConsumerDisableListener);
-
+        EventRouter.router()
+                .addListener(new ShadowConsumerDisableListenerImpl())
+                .addListener(new RabbitMQShadowPreCheckEventHandler(simulatorConfig));
         return addHookRegisterInterceptor();
     }
 
@@ -118,6 +109,18 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     final InstrumentMethod basicCancelMethod = target.getDeclaredMethod("basicCancel", "java.lang.String");
                     basicCancelMethod
                         .addInterceptor(Listeners.of(ChannelNBasicCancelInterceptor.class));
+
+                    final InstrumentMethod exchangeDeclareMethod = target.getDeclaredMethod("exchangeDeclare", "java.lang.String", "java.lang.String", "boolean", "boolean", "boolean", "java.util.Map");
+                    exchangeDeclareMethod.
+                            addInterceptor(Listeners.of(ChannelNExchangeDeclareInterceptor.class));
+
+                    final InstrumentMethod queueDeclareMethod = target.getDeclaredMethod("queueDeclare", "java.lang.String", "boolean", "boolean", "boolean", "java.util.Map");
+                    queueDeclareMethod.
+                            addInterceptor(Listeners.of(ChannelNQueueDeclareInterceptor.class));
+
+                    final InstrumentMethod queueBindMethod = target.getDeclaredMethod("queueBind", "java.lang.String", "java.lang.String", "java.lang.String", "java.util.Map");
+                    queueBindMethod.
+                            addInterceptor(Listeners.of(ChannelNQueueBindInterceptor.class));
 
                     addAckInterceptor(target);
                 }
@@ -205,5 +208,6 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
             .addInterceptor(Listeners.of(ChannelNAckInterceptor.class, "ack",
                 ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK, new Object[] {simulatorConfig}));
     }
+
 
 }

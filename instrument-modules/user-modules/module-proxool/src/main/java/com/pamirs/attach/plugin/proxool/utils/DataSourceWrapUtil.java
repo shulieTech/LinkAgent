@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DataSourceWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(DataSourceWrapUtil.class.getName());
+    private final static Object lock = new Object();
 
     public static final ConcurrentHashMap<DataSourceMeta, ProxoolMediaDataSource> pressureDataSources
             = new ConcurrentHashMap<DataSourceMeta, ProxoolMediaDataSource>();
@@ -110,31 +111,20 @@ public class DataSourceWrapUtil {
         if (isPerformanceDataSource(target)) {
             return;
         }
-        if (!validate(target)) {
-            logger.error("[proxool] No configuration found for datasource, url: " + target.getDriverUrl());
-            //没有配置对应的影子表或影子库
-            ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0002")
-                    .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
-                    .report();
-
-            ProxoolMediaDataSource dbMediatorDataSource = new ProxoolMediaDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (logger.isInfoEnabled()) {
-                    logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
-                            target.getDriverUrl(), target.getUser());
-                }
-                old.close();
+        synchronized (lock) {
+            if (pressureDataSources.containsKey(dataSourceMeta) && pressureDataSources.get(dataSourceMeta) != null) {
+                return;
             }
-            return;
-        }
-        if (shadowTable(target)) {
-            //影子表
-            try {
+            if (!validate(target)) {
+                logger.error("[proxool] No configuration found for datasource, url: " + target.getDriverUrl());
+                //没有配置对应的影子表或影子库
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.DataSource)
+                        .setErrorCode("datasource-0002")
+                        .setMessage("没有配置对应的影子表或影子库！")
+                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
+                        .report();
+
                 ProxoolMediaDataSource dbMediatorDataSource = new ProxoolMediaDataSource();
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
@@ -145,50 +135,66 @@ public class DataSourceWrapUtil {
                     }
                     old.close();
                 }
-            } catch (Throwable e) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0002")
-                        .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
-                logger.error("[proxool] init datasource err!", e);
+                return;
             }
-        } else {
-            //影子库
-            try {
-                ProxoolMediaDataSource dataSource = new ProxoolMediaDataSource();
-                /**
-                 * 如果没有配置则为null
-                 */
-                ProxoolDataSource ptDataSource = copy(target);
-                dataSource.setDataSourcePerformanceTest(ptDataSource);
-                dataSource.setDataSourceBusiness(target);
-                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
-                if (old != null) {
-                    if (logger.isInfoEnabled()) {
-                        logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
-                                target.getDriverUrl(), target.getUser());
+            if (shadowTable(target)) {
+                //影子表
+                try {
+                    ProxoolMediaDataSource dbMediatorDataSource = new ProxoolMediaDataSource();
+                    dbMediatorDataSource.setDataSourceBusiness(target);
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                    if (old != null) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
+                                    target.getDriverUrl(), target.getUser());
+                        }
+                        old.close();
                     }
-                    old.close();
+                } catch (Throwable e) {
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0002")
+                            .setMessage("没有配置对应的影子表或影子库！")
+                            .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
+                    logger.error("[proxool] init datasource err!", e);
                 }
-                if (logger.isInfoEnabled()) {
-                    logger.info(
-                            "[proxool] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},"
-                                    + "shadow-username:{}",
-                            target.hashCode(), target.getDriverUrl(), target.getUser(), ptDataSource.getDriverUrl(),
-                            ptDataSource.getUser());
+            } else {
+                //影子库
+                try {
+                    ProxoolMediaDataSource dataSource = new ProxoolMediaDataSource();
+                    /**
+                     * 如果没有配置则为null
+                     */
+                    ProxoolDataSource ptDataSource = copy(target);
+                    dataSource.setDataSourcePerformanceTest(ptDataSource);
+                    dataSource.setDataSourceBusiness(target);
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
+                    if (old != null) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("[proxool] destroyed shadow table datasource success. url:{} ,username:{}",
+                                    target.getDriverUrl(), target.getUser());
+                        }
+                        old.close();
+                    }
+                    if (logger.isInfoEnabled()) {
+                        logger.info(
+                                "[proxool] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},"
+                                        + "shadow-username:{}",
+                                target.hashCode(), target.getDriverUrl(), target.getUser(), ptDataSource.getDriverUrl(),
+                                ptDataSource.getUser());
+                    }
+                } catch (Throwable t) {
+                    logger.error("[proxool] init datasource err!", t);
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0003")
+                            .setMessage("影子库初始化失败！")
+                            .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
                 }
-            } catch (Throwable t) {
-                logger.error("[proxool] init datasource err!", t);
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子库初始化失败！")
-                        .setDetail("proxool:DataSourceWrapUtil:业务库配置:::url: " + target.getDriverUrl() + "; username: " + target.getUser())
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
             }
         }
     }

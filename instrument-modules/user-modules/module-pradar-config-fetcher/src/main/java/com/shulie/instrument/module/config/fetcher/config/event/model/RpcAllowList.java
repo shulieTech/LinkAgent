@@ -19,6 +19,7 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,9 @@ public class RpcAllowList implements IChange<Set<MatchConfig>, ApplicationConfig
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig config, Set<MatchConfig> newValue) {
+        if (ConfigFetcherModule.shadowPreparationEnabled) {
+            return true;
+        }
         config.setRpcNameWhiteList(newValue);
         GlobalConfig.getInstance().setRpcNameWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.RPC_WHITE_LIST);

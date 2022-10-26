@@ -16,7 +16,10 @@ package com.pamirs.attach.plugin.c3p0;
 
 import com.pamirs.attach.plugin.c3p0.interceptor.DataSourceGetConnectionArgsCutoffInterceptor;
 import com.pamirs.attach.plugin.c3p0.interceptor.DataSourceGetConnectionCutoffInterceptor;
+import com.pamirs.attach.plugin.c3p0.listener.C3p0ShadowActiveEventListener;
+import com.pamirs.attach.plugin.c3p0.listener.C3p0ShadowDisableEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -53,6 +56,13 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
 
             }
         });
+        addListener();
         return true;
+    }
+
+    private void addListener() {
+        EventRouter.router()
+                .addListener(new C3p0ShadowDisableEventListener())
+                .addListener(new C3p0ShadowActiveEventListener());
     }
 }

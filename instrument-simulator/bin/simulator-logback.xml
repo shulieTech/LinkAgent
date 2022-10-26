@@ -70,7 +70,7 @@
         </rollingPolicy>
         <encoder>
 <!--            <pattern>%msg%n</pattern>-->
-            <pattern>%m%replace(%ex{full}){"[\r\n]+", "nextline"}"%nopex%n</pattern>
+            <pattern>%replace(%msg){"[\r\n]+", "nextline"}%nopex%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>

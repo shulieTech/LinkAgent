@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -19,6 +19,8 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -174,12 +176,12 @@ public class ErrorReporter {
 
         @Override
         public String toString() {
-            return "{"
-                + "\"errorCode\":" + "\"" + errorCode + "\","
-                + "\"message\":" + "\"" + message + "\","
-                + "\"detail\":" + "\"" + detail + "\","
-                + "\"occurTime\":" + "\"" + occurTime + "\""
-                + "}";
+            ErrorReportPojo errorReportPojo = new ErrorReportPojo();
+            errorReportPojo.setErrorCode(errorCode);
+            errorReportPojo.setOccurTime(occurTime);
+            errorReportPojo.setDetail(detail);
+            errorReportPojo.setMessage(message);
+            return JSON.toJSONString(errorReportPojo);
         }
 
         public void report() {
@@ -187,7 +189,7 @@ public class ErrorReporter {
             PradarSwitcher.setErrorMsg(message);
             this.occurTime = FormatUtils.formatTimeRange(new Date());
             ErrorReporter.getInstance()
-                .addError(this.errorType.getErrorCnDesc() + ":" + this.toString().hashCode(), this.toString());
+                    .addError(this.errorType.getErrorCnDesc() + ":" + this.toString().hashCode(), this.toString());
             if (this.isClosePradar) {
                 LOGGER.error("close cluster switch!error msg:{}", this.toString());
                 // 需要关闭全局压测开关
@@ -210,14 +212,53 @@ public class ErrorReporter {
                 return;
             }
             String builder = "traceId:" + Pradar.getTraceId() + "|"
-                + "rpcId:" + Pradar.getInvokeId() + "|"
-                + "isPressure:" + Pradar.isClusterTest() + "|"
-                + "errorType:" + errorType + "|"
-                + "errorCode:" + errorCode + "|"
-                + "message:" + message + "|"
-                + "detail:" + detail + "|";
+                    + "rpcId:" + Pradar.getInvokeId() + "|"
+                    + "isPressure:" + Pradar.isClusterTest() + "|"
+                    + "errorType:" + errorType + "|"
+                    + "errorCode:" + errorCode + "|"
+                    + "message:" + message + "|"
+                    + "detail:" + detail + "|";
             DebugHelper.addDebugInfo("ERROR", builder);
         }
 
+    }
+
+    static class ErrorReportPojo {
+        private String errorCode;
+        private String message;
+        private String detail;
+        private String occurTime;
+
+        public String getErrorCode() {
+            return errorCode;
+        }
+
+        public void setErrorCode(String errorCode) {
+            this.errorCode = errorCode;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        public String getDetail() {
+            return detail;
+        }
+
+        public void setDetail(String detail) {
+            this.detail = detail;
+        }
+
+        public String getOccurTime() {
+            return occurTime;
+        }
+
+        public void setOccurTime(String occurTime) {
+            this.occurTime = occurTime;
+        }
     }
 }

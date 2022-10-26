@@ -109,18 +109,13 @@
             <version>4.1.70.Final</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.shulie.takin</groupId>
-            <artifactId>takin-common-sdk</artifactId>
-            <version>common-1.7.5</version>
-        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>io.shulie.tro</groupId>-->
 <!--            <artifactId>tro-sdk</artifactId>-->
 <!--            <version>1.15.0</version>-->
 <!--        </dependency>-->
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>

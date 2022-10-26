@@ -28,7 +28,7 @@ public class SyncObjectFetchInterceptor extends AdviceListener {
         String key = getKey(advice.getTarget().getClass(), advice.getBehaviorName());
         logger.info("success save sync object from : {}", key);
         SyncObjectService.saveSyncObject(key, new SyncObject()
-                .addData(new SyncObjectData(advice.getTarget(),advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj())));
+                .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj())));
     }
 
     private synchronized void initKeys() {
@@ -40,10 +40,15 @@ public class SyncObjectFetchInterceptor extends AdviceListener {
     }
 
     private String getKey(Class clazz, String method) {
-        if (clazz == null || StringUtil.isEmpty(method)) {
+        if (clazz == null) {
             return "";
         }
-        String key = clazz.getName() + "#" + method;
+        String key = clazz.getName();
+        //<init>是切构造函数时的方法名称
+        if ((StringUtil.isEmpty(method) || "<init>".equals(method)) && keys.contains(key)) {
+            return key;
+        }
+        key = key + "#" + method;
         if (keys.contains(key)) {
             return key;
         }

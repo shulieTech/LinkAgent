@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -44,6 +44,8 @@ public class DataSourceWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(DataSourceWrapUtil.class.getName());
 
     public static final ConcurrentHashMap<DataSourceMeta, HikariMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, HikariMediaDataSource>();
+
+    private final static Object lock = new Object();
 
     public static void destroy() {
         Iterator<Map.Entry<DataSourceMeta, HikariMediaDataSource>> it = pressureDataSources.entrySet().iterator();
@@ -110,28 +112,19 @@ public class DataSourceWrapUtil {
         if (isPerformanceDataSource(target)) {
             return;
         }
-        if (!validate(target)) {
-            //没有配置对应的影子表或影子库
-            ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0002")
-                    .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("业务库配置:::url: " + target.getJdbcUrl()  + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：hikari")
-                    .report();
-            HikariMediaDataSource dbMediatorDataSource = new HikariMediaDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (logger.isInfoEnabled()) {
-                    logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
-                }
-                old.close();
+        // 解决高并发情况下获取到 close 的连接
+        synchronized (lock) {
+            if (pressureDataSources.get(dataSourceMeta) != null) {
+                return;
             }
-            return;
-        }
-        if (shadowTable(target)) {
-            //影子表
-            try {
+            if (!validate(target)) {
+                //没有配置对应的影子表或影子库
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.DataSource)
+                        .setErrorCode("datasource-0002")
+                        .setMessage("没有配置对应的影子表或影子库！")
+                        .setDetail("业务库配置:::url: " + target.getJdbcUrl() + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：hikari")
+                        .report();
                 HikariMediaDataSource dbMediatorDataSource = new HikariMediaDataSource();
                 dbMediatorDataSource.setDataSourceBusiness(target);
                 DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
@@ -141,41 +134,56 @@ public class DataSourceWrapUtil {
                     }
                     old.close();
                 }
-            } catch (Throwable e) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0002")
-                        .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("业务库配置:::url: " + target.getJdbcUrl() + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：hikari" + Throwables.getStackTraceAsString(e))
-                        .report();
-                logger.error("[hikariCP] init datasource err!", e);
+                return;
             }
-        } else {
-            //影子库
-            try {
-                HikariMediaDataSource dataSource = new HikariMediaDataSource();
-                HikariDataSource ptDataSource = copy(target);
-                dataSource.setDataSourcePerformanceTest(ptDataSource);
-                dataSource.setDataSourceBusiness(target);
-                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
-                if (old != null) {
-                    if (logger.isInfoEnabled()) {
-                        logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+            if (shadowTable(target)) {
+                //影子表
+                try {
+                    HikariMediaDataSource dbMediatorDataSource = new HikariMediaDataSource();
+                    dbMediatorDataSource.setDataSourceBusiness(target);
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                    if (old != null) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                        }
+                        old.close();
                     }
-                    old.close();
+                } catch (Throwable e) {
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0002")
+                            .setMessage("没有配置对应的影子表或影子库！")
+                            .setDetail("业务库配置:::url: " + target.getJdbcUrl() + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：hikari" + Throwables.getStackTraceAsString(e))
+                            .report();
+                    logger.error("[hikariCP] init datasource err!", e);
                 }
-                if (logger.isInfoEnabled()) {
-                    logger.info("[hikariCP] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUsername(), ptDataSource.getJdbcUrl(), ptDataSource.getUsername());
+            } else {
+                //影子库
+                try {
+                    HikariMediaDataSource dataSource = new HikariMediaDataSource();
+                    HikariDataSource ptDataSource = copy(target);
+                    dataSource.setDataSourcePerformanceTest(ptDataSource);
+                    dataSource.setDataSourceBusiness(target);
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
+                    if (old != null) {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("[hikariCP] destroyed shadow table datasource success. url:{} ,username:{}", target.getJdbcUrl(), target.getUsername());
+                        }
+                        old.close();
+                    }
+                    if (logger.isInfoEnabled()) {
+                        logger.info("[hikariCP] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getJdbcUrl(), target.getUsername(), ptDataSource.getJdbcUrl(), ptDataSource.getUsername());
+                    }
+                } catch (Throwable t) {
+                    logger.error("[hikariCP] init datasource err!", t);
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0003")
+                            .setMessage("影子库配置异常，无法由配置正确生成影子库！")
+                            .setDetail("url: " + target.getJdbcUrl() + Throwables.getStackTraceAsString(t))
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
                 }
-            } catch (Throwable t) {
-                logger.error("[hikariCP] init datasource err!", t);
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子库配置异常，无法由配置正确生成影子库！")
-                        .setDetail("url: " + target.getJdbcUrl() + Throwables.getStackTraceAsString(t))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
             }
         }
     }
@@ -196,6 +204,10 @@ public class DataSourceWrapUtil {
         if (ptDataSourceConf == null) {
             return null;
         }
+        return generate(sourceDatasource, ptDataSourceConf);
+    }
+
+    public static HikariDataSource generate(HikariDataSource sourceDatasource, ShadowDatabaseConfig ptDataSourceConf) {
         String url = ptDataSourceConf.getShadowUrl();
         String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
         String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());

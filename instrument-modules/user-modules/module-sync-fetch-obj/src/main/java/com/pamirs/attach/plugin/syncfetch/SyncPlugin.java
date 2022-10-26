@@ -1,12 +1,12 @@
 package com.pamirs.attach.plugin.syncfetch;
 
+import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectFetchInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectFetchInterceptor;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

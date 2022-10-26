@@ -20,7 +20,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
@@ -33,7 +33,7 @@
         </dependency>
 
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>
@@ -42,7 +42,7 @@
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>druid</artifactId>
-            <version>1.2.5.8</version>
+            <version>1.2.5.9</version>
         </dependency>
 
         <dependency>

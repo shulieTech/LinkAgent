@@ -114,32 +114,13 @@ public class BizClassLoaderHolder {
             classLoader = stack.getClassLoader();
         }
         //防止不在我们的插件范围内去执行的时候， 比如业务代码（注册filter等方式），拿不到业务类加载器的情况
-        ClassLoader bizClassLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
-        if (SimulatorClassUtils.isSimulatorClassLoader(bizClassLoader)) {
+        classLoader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
+        if (SimulatorClassUtils.isSimulatorClassLoader(classLoader)) {
             return null;
         }
         return classLoader;
     }
 
-    /**
-     * 业务类加载器节点，由这些节点组成链表结构
-     * 对应每一个调用层级为一个节点
-     */
-    static class ClassLoaderNode {
-        SoftReference<ClassLoader> classLoader;
-        ClassLoaderNode parent;
-
-        ClassLoaderNode(ClassLoader classLoader, ClassLoaderNode parent) {
-            if (classLoader != null) {
-                this.classLoader = new SoftReference<ClassLoader>(classLoader);
-            }
-            this.parent = parent;
-        }
-
-        ClassLoader getClassLoader() {
-            return classLoader == null ? null : classLoader.get();
-        }
-    }
 
     static {
         BizClassLoaderService.register(new IBizClassLoaderService() {

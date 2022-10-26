@@ -17,7 +17,9 @@ package com.pamirs.attach.plugin.apache.kafka;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.header.ProducerConfigProvider;
 import com.pamirs.attach.plugin.apache.kafka.interceptor.*;
+import com.pamirs.attach.plugin.apache.kafka.listener.KafkaShadowPreCheckEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -50,6 +52,8 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 //        final ShadowConsumerDisableListenerImpl shadowConsumerDisableListener = new ShadowConsumerDisableListenerImpl();
 //        EventRouter.router().addListener(shadowConsumerDisableListener);
 //        return addConsumerRegisterInterceptor();
+
+        addListener();
         return addConsumerTraceInterceptor();
     }
 
@@ -271,6 +275,11 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                         SpringKafkaProcessSeeksInterceptor.class));
             }
         });
+    }
+
+    private void addListener() {
+        EventRouter.router()
+                .addListener(new KafkaShadowPreCheckEventListener());
     }
 
     @Override

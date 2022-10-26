@@ -23,6 +23,7 @@ import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisable
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerEnableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
@@ -60,6 +61,9 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Set<String> newValue) {
+        /*if (ConfigFetcherModule.shadowPreparationEnabled) {
+            return true;
+        }*/
         final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(newValue);
         EventRouter.router().publish(mqWhiteListConfigEvent);
         Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();

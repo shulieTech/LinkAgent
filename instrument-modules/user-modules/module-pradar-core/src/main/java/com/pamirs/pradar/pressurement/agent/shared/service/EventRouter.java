@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -76,11 +76,6 @@ public final class EventRouter {
                     if (event == null) {
                         continue;
                     }
-                    StringBuilder sb = new StringBuilder();
-                    for (PradarEventListener listener : listeners) {
-                        sb.append(listener).append(",");
-                    }
-                    LOGGER.info("execute event {} with listeners: {}", event, sb.toString());
                     for (PradarEventListener listener : listeners) {
                         try {
                             EventResult result = listener.onEvent(event);
@@ -141,12 +136,20 @@ public final class EventRouter {
         return INSTANCE;
     }
 
+    // 目前已经使用的order: -1 0 6
+    // 数据源： 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26
+    // mq:      30 31 32
+    // es:      35 36 37
+    // 99
     private Set<PradarEventListener> listeners = new TreeSet<PradarEventListener>(new Comparator<PradarEventListener>() {
         @Override
         public int compare(PradarEventListener o1, PradarEventListener o2) {
             int r = o1.order() - o2.order() > 0 ? 1 : (o1.order() - o2.order() < 0 ? -1 : 0);
             if (r == 0) {
-                LOGGER.warn("listener order 一致 o1 is :{}, o2 is :{}", o1.getClass().getName(), o2.getClass().getName());
+                r = o1.hashCode() - o2.hashCode();
+                if (r == 0) {
+                    LOGGER.warn("listener order 一致 o1 is :{}, o2 is :{}", o1.getClass().getName(), o2.getClass().getName());
+                }
             }
             return r;
         }

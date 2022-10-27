@@ -15,7 +15,7 @@
     <properties>
         <module-name>datasource-common</module-name>
     </properties>
-    <version>2.0.0.0</version>
+    <version>${module.datasource.common.version}</version>
 
     <dependencies>
         <dependency>

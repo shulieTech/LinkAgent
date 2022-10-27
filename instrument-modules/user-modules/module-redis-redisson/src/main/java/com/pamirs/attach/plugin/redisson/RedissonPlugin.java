@@ -226,7 +226,7 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
                 method0.addInterceptor(Listeners.of(ShadowDbMethodInterceptor.class, "ShadowDbMethodInterceptor", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
                 InstrumentMethod shutdownMethod = target.getDeclaredMethod("shutdown");
-                shutdownMethod.addInterceptor(Listeners.of(ShutdownMethodInterceptor.class), ExecutionPolicy.BOUNDARY);
+                shutdownMethod.addInterceptor(Listeners.of(ShadowDbMethodInterceptor.class, "ShadowDbMethodInterceptor", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
     }

@@ -39,7 +39,7 @@ public class HeartRequestUtil {
 
     public static String getUpgradeFileTempSaveDir() {
         return new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                .getParent();
+                .getParentFile().getParent();
     }
 
 
@@ -55,8 +55,8 @@ public class HeartRequestUtil {
         heartRequest.setAgentVersion(agentConfig.getAgentVersion());
         heartRequest.setSimulatorVersion(HeartCommandUtils.SIMULATOR_VERSION);
         if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())) {
-            String agentBasePath = getUpgradeFileTempSaveDir().replace("core", "");
-            File localFile = new File(agentBasePath + "agent/simulator_-1");
+            String agentBasePath = getUpgradeFileTempSaveDir();
+            File localFile = new File(agentBasePath , "agent/simulator_-1");
             if (!localFile.exists()) {
                 heartRequest.setDependencyInfo(HeartCommandUtils.allModuleVersionDetail);
             }

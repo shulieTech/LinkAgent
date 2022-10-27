@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -37,6 +37,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AtomikosNonXADataSourceBeanWrapUtil {
     private static Logger logger = LoggerFactory.getLogger(AtomikosNonXADataSourceBeanWrapUtil.class.getName());
     private static final boolean isInfoEnabled = logger.isInfoEnabled();
+
+    private final static Object lock = new Object();
 
     public static final ConcurrentHashMap<DataSourceMeta, AtomikosNonXADataSourceBeanMediaDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, AtomikosNonXADataSourceBeanMediaDataSource>();
 
@@ -105,30 +107,19 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
         if (isPerformanceDataSource(target)) {
             return;
         }
-        if (!validate(target)) {
-            //没有配置对应的影子表或影子库
-            ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0002")
-                    .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("[atomikos] DataSourceWrapUtil:业务库配置::url: " + target.getUrl()  + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：other")
-                    .report();
-
-            AtomikosNonXADataSourceBeanMediaDataSource dbMediatorDataSource = new AtomikosNonXADataSourceBeanMediaDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (isInfoEnabled) {
-                    logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
-                }
-                old.close();
+        synchronized (lock) {
+            if (pressureDataSources.containsKey(dataSourceMeta) && pressureDataSources.get(dataSourceMeta) != null) {
+                return;
             }
-            return;
-        }
-        if (shadowTable(target)) {
-            //影子表
-            try {
+            if (!validate(target)) {
+                //没有配置对应的影子表或影子库
+                ErrorReporter.buildError()
+                        .setErrorType(ErrorTypeEnum.DataSource)
+                        .setErrorCode("datasource-0002")
+                        .setMessage("没有配置对应的影子表或影子库！")
+                        .setDetail("[atomikos] DataSourceWrapUtil:业务库配置::url: " + target.getUrl() + "; username：" + dataSourceMeta.getUsername() + "; 中间件类型：other")
+                        .report();
+
                 AtomikosNonXADataSourceBeanMediaDataSource dbMediatorDataSource = new AtomikosNonXADataSourceBeanMediaDataSource();
                 dbMediatorDataSource.setDataSourceBusiness(target);
 
@@ -139,43 +130,59 @@ public class AtomikosNonXADataSourceBeanWrapUtil {
                     }
                     old.close();
                 }
-            } catch (Throwable e) {
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子表设置初始化异常！")
-                        .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(e))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
-                logger.error("[atomikos] init datasource err!", e);
+                return;
             }
-        } else {
-            //影子库
-            try {
-                AtomikosNonXADataSourceBeanMediaDataSource dataSource = new AtomikosNonXADataSourceBeanMediaDataSource();
-                AtomikosNonXADataSourceBean ptDataSource = copy(target);
-                dataSource.setDataSourcePerformanceTest(ptDataSource);
-                dataSource.setDataSourceBusiness(target);
+            if (shadowTable(target)) {
+                //影子表
+                try {
+                    AtomikosNonXADataSourceBeanMediaDataSource dbMediatorDataSource = new AtomikosNonXADataSourceBeanMediaDataSource();
+                    dbMediatorDataSource.setDataSourceBusiness(target);
 
-                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
-                if (old != null) {
-                    if (isInfoEnabled) {
-                        logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                    if (old != null) {
+                        if (isInfoEnabled) {
+                            logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                        }
+                        old.close();
                     }
-                    old.close();
+                } catch (Throwable e) {
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0003")
+                            .setMessage("影子表设置初始化异常！")
+                            .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(e))
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
+                    logger.error("[atomikos] init datasource err!", e);
                 }
-                if (isInfoEnabled) {
-                    logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUser(), ptDataSource.getUrl(), ptDataSource.getUser());
+            } else {
+                //影子库
+                try {
+                    AtomikosNonXADataSourceBeanMediaDataSource dataSource = new AtomikosNonXADataSourceBeanMediaDataSource();
+                    AtomikosNonXADataSourceBean ptDataSource = copy(target);
+                    dataSource.setDataSourcePerformanceTest(ptDataSource);
+                    dataSource.setDataSourceBusiness(target);
+
+                    DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dataSource);
+                    if (old != null) {
+                        if (isInfoEnabled) {
+                            logger.info("[atomikos] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUser());
+                        }
+                        old.close();
+                    }
+                    if (isInfoEnabled) {
+                        logger.info("[atomikos] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUser(), ptDataSource.getUrl(), ptDataSource.getUser());
+                    }
+                } catch (Throwable t) {
+                    logger.error("[atomikos] init datasource err!", t);
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0003")
+                            .setMessage("影子库设置初始化异常！")
+                            .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(t))
+                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                            .report();
                 }
-            } catch (Throwable t) {
-                logger.error("[atomikos] init datasource err!", t);
-                ErrorReporter.buildError()
-                        .setErrorType(ErrorTypeEnum.DataSource)
-                        .setErrorCode("datasource-0003")
-                        .setMessage("影子库设置初始化异常！")
-                        .setDetail("[atomikos] DataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "|||" + Throwables.getStackTraceAsString(t))
-                        .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                        .report();
             }
         }
     }

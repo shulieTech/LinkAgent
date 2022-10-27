@@ -16,7 +16,10 @@ package com.pamirs.attach.plugin.dbcp2;
 
 import com.pamirs.attach.plugin.dbcp2.interceptor.DataSourceGetConnectionCutoffArgsInterceptor;
 import com.pamirs.attach.plugin.dbcp2.interceptor.DataSourceGetConnectionCutoffInterceptor;
+import com.pamirs.attach.plugin.dbcp2.listener.Dbcp2ShadowActiveEventListener;
+import com.pamirs.attach.plugin.dbcp2.listener.Dbcp2ShadowDisableEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -51,6 +54,13 @@ public class Dbcp2Plugin extends ModuleLifecycleAdapter implements ExtensionModu
 
             }
         });
+        addListener();
         return true;
+    }
+
+    private void addListener() {
+        EventRouter.router()
+                .addListener(new Dbcp2ShadowDisableEventListener())
+                .addListener(new Dbcp2ShadowActiveEventListener());
     }
 }

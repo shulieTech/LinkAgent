@@ -158,6 +158,16 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+        // 目前使用这种方式不支持影子库
+        enhanceTemplate.enhance(this, "org.springframework.data.redis.connection.jedis.JedisClientUtils", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod sendCommand = target.getDeclaredMethods("sendProtocolCommand");
+                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendProtocolCommandTraceInterceptor.class));
+                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendProtocolCommandInterceptor.class));
+            }
+        });
+
 
         return true;
     }

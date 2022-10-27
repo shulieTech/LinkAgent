@@ -1,5 +1,7 @@
 package com.pamirs.pradar.bean;
 
+import java.lang.ref.WeakReference;
+
 /**
  * @author Licey
  * @date 2022/5/16
@@ -12,10 +14,10 @@ public class SyncObjectData {
 
     private Class[] paramTypes;
 
-    private Object target;
+    private WeakReference<Object> target;
 
     public SyncObjectData(Object target, String method, Object[] args, Class[] paramTypes, Object returnObj) {
-        this.target = target;
+        this.target = new WeakReference<Object>(target);
         this.args = args;
         this.returnObj = returnObj;
         this.method = method;
@@ -39,11 +41,7 @@ public class SyncObjectData {
     }
 
     public Object getTarget() {
-        return target;
-    }
-
-    public void setTarget(Object target) {
-        this.target = target;
+        return target.get();
     }
 
     public Object[] getArgs() {

@@ -41,11 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -263,5 +260,56 @@ public class ShadowEsClientHolder {
     public static void release() {
         transportClientMapping.clear();
         restClientMapping.clear();
+    }
+
+    /**
+     * 通过影子node字符串来关闭影子client
+     *
+     * @param shadowHosts
+     */
+    public static void closeShadowClient(Set<String> shadowHosts) {
+        for (String host : shadowHosts) {
+            List<String> nodes = Arrays.asList(host.split(","));
+            for (Entry<TransportClient, TransportClient> entry : transportClientMapping.entrySet()) {
+                List<String> nodesAddressAsString = getNodesAddressAsString(entry.getValue());
+                if (matchNodes(nodesAddressAsString, nodes)) {
+                    TransportClient transportClient = transportClientMapping.remove(entry.getKey());
+                    if (transportClient != null) {
+                        transportClient.close();
+                    }
+                }
+            }
+            for (Entry<RestClient, RestClient> entry : restClientMapping.entrySet()) {
+                List<String> nodesAddressAsString = getNodesAddressAsString(entry.getValue());
+                if (matchNodes(nodesAddressAsString, nodes)) {
+                    RestClient restClient = restClientMapping.remove(entry.getKey());
+                    if (restClient != null) {
+                        try {
+                            restClient.close();
+                        } catch (IOException e) {
+                            LOGGER.error("shadow restClient close fail!", e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean matchNodes(List<String> nodesAsString, List<String> businessNodes) {
+        String[] nodeArray = sort(nodesAsString);
+        String[] businessNodeArray = sort(businessNodes);
+        return Arrays.equals(nodeArray, businessNodeArray);
+    }
+
+    private static String[] sort(List<String> list) {
+        String[] array = new String[list.size()];
+        list.toArray(array);
+        Arrays.sort(array, new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return o1.compareTo(o2);
+            }
+        });
+        return array;
     }
 }

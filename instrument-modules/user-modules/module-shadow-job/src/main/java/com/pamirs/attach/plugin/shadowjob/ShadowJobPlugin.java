@@ -288,8 +288,17 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         enhanceTemplate.enhance(this, "org.springframework.scheduling.config.ScheduledTaskRegistrar", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod declaredMethods = target.getDeclaredMethods("scheduleCronTask", "scheduleFixedRateTask", "scheduleFixedDelayTask");
+                InstrumentMethod declaredMethods = target.getDeclaredMethods("scheduleTriggerTask", "scheduleCronTask",
+                        "scheduleFixedRateTask", "scheduleFixedDelayTask");
                 declaredMethods.addInterceptor(Listeners.of(ScheduledTaskRegistrarInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "org.springframework.scheduling.concurrent.ReschedulingRunnable", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("run");
+                getMethod.addInterceptor(Listeners.of(ReschedulingRunnableInterceptor.class));
             }
         });
 

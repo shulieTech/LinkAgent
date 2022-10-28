@@ -6,7 +6,6 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExec
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
-import io.shulie.instrument.module.messaging.exception.MessagingRuntimeException;
 import io.shulie.instrument.module.spring.kafka.consumer.util.SpringKafkaUtil;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.slf4j.Logger;
@@ -15,11 +14,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.KafkaMessageListenerContainer;
-import org.springframework.kafka.support.TopicPartitionOffset;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * @author Licey
@@ -54,7 +51,11 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
             config.setConsumerFactory(consumerFactory);
             config.setContainerProperties(containerProperties);
             config.setBizTopic(topic);
-            config.setBizGroupId(bizContainer.getGroupId());
+            String groupId = containerProperties.getGroupId() == null
+                    ? (String) consumerFactory.getConfigurationProperties().get(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG)
+                    : containerProperties.getGroupId();
+
+            config.setBizGroupId(groupId);
             list.add(config);
         }
         return list;
@@ -115,23 +116,6 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
             }
         }
         return containerProperties;
-    }
-
-    private TopicPartitionOffset[] addClusterTest(TopicPartitionOffset[] topicPartitions) {
-        TopicPartitionOffset[] offsets = new TopicPartitionOffset[topicPartitions.length];
-        for (int i = 0; i < topicPartitions.length; i++) {
-            String topic = addClusterTest(topicPartitions[i].getTopic());
-            int partition = topicPartitions[i].getPartition();
-            TopicPartitionOffset.SeekPosition position = topicPartitions[i].getPosition();
-            Long offset = topicPartitions[i].getOffset();
-            offsets[i] = new TopicPartitionOffset(topic, partition, offset, position);
-            offsets[i].setRelativeToCurrent(topicPartitions[i].isRelativeToCurrent());
-        }
-        return offsets;
-    }
-
-    private Pattern addClusterTest(Pattern topicPattern) {
-        throw new MessagingRuntimeException("not support topicPattern!");
     }
 
     private String[] addClusterTest(String[] data) {

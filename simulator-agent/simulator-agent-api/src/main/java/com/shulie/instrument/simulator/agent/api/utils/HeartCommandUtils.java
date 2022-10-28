@@ -51,26 +51,26 @@ public class HeartCommandUtils {
                 = new File(HeartCommandUtils.class.getProtectionDomain().getCodeSource().getLocation().getFile())
                 .getParentFile().getParent();
 
-        File agentModulePropertiesFile = new File(defaultAgentHome , "module.properties");
-        File simulatorModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/module.properties");
-        File userModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/modules/module.properties");
+//        File agentModulePropertiesFile = new File(defaultAgentHome , "module.properties");
+//        File simulatorModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/module.properties");
+//        File userModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/modules/module.properties");
         File simulatorVersionFile = new File(defaultAgentHome , "agent/simulator/config/version");
-        if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
-                || !userModulePropertiesFile.exists()) {
-            throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");
-        } else {
-            List<String> agentModulePropertiesLines = readFile(agentModulePropertiesFile);
-            List<String> simulatorModulePropertiesLines = readFile(simulatorModulePropertiesFile);
-            List<String> userModulePropertiesLines = readFile(userModulePropertiesFile);
-            agentModulePropertiesLines.addAll(simulatorModulePropertiesLines);
-            agentModulePropertiesLines.addAll(userModulePropertiesLines);
-            Collections.sort(agentModulePropertiesLines);
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String s : agentModulePropertiesLines) {
-                stringBuilder.append(s).append(";");
-            }
-            allModuleVersionDetail = stringBuilder.toString();
-        }
+//        if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
+//                || !userModulePropertiesFile.exists()) {
+//            throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");
+//        } else {
+//            List<String> agentModulePropertiesLines = readFile(agentModulePropertiesFile);
+//            List<String> simulatorModulePropertiesLines = readFile(simulatorModulePropertiesFile);
+//            List<String> userModulePropertiesLines = readFile(userModulePropertiesFile);
+//            agentModulePropertiesLines.addAll(simulatorModulePropertiesLines);
+//            agentModulePropertiesLines.addAll(userModulePropertiesLines);
+//            Collections.sort(agentModulePropertiesLines);
+//            StringBuilder stringBuilder = new StringBuilder();
+//            for (String s : agentModulePropertiesLines) {
+//                stringBuilder.append(s).append(";");
+//            }
+//            allModuleVersionDetail = stringBuilder.toString();
+//        }
         if (!simulatorVersionFile.exists()) {
             throw new IllegalArgumentException("agent/simulator/config/version 文件不存在，请检查探针包是否完整");
         } else {

@@ -11,32 +11,32 @@ public enum JdbcTypeEnum {
 
     MYSQL() {
         @Override
-        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, MYSQL);
+        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, String database, List<String> tables) throws Exception {
+            return JdbcConnectionUtils.fetchTablesStructures(connection, database, tables, MYSQL);
         }
     },
 
     ORACLE() {
         @Override
-        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, ORACLE);
+        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, String database, List<String> tables) throws Exception {
+            return JdbcConnectionUtils.fetchTablesStructures(connection, database, tables, ORACLE);
         }
     },
 
     SQLSERVER() {
         @Override
-        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, SQLSERVER);
+        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, String database, List<String> tables) throws Exception {
+            return JdbcConnectionUtils.fetchTablesStructures(connection, database, tables, SQLSERVER);
         }
     },
 
     GBASE() {
         @Override
-        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception {
-            return JdbcConnectionUtils.fetchTablesStructures(connection, tables, GBASE);
+        public Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, String database, List<String> tables) throws Exception {
+            return JdbcConnectionUtils.fetchTablesStructures(connection, database, tables, GBASE);
         }
     };
 
-    public abstract Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, List<String> tables) throws Exception;
+    public abstract Map<String, List<JdbcTableColumnInfos>> fetchTablesStructures(Connection connection, String database, List<String> tables) throws Exception;
 
 }

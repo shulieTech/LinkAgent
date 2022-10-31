@@ -323,7 +323,8 @@ public class JdbcPreCheckCommandProcessor {
             ack.setResponse(JSON.toJSONString(result));
             callback.accept(ack);
         }
-        Map<String, List<JdbcTableColumnInfos>> structures = typeEnum.fetchTablesStructures(connection, tables);
+        String database = extractDatabaseFromUrl(entity.getUrl());
+        Map<String, List<JdbcTableColumnInfos>> structures = typeEnum.fetchTablesStructures(connection, database, tables);
         return structures;
     }
 
@@ -426,7 +427,7 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     private static boolean compareColumn(JdbcTableColumnInfos b, JdbcTableColumnInfos s) {
-        return compareString(b.getColumnSize(), s.getColumnSize()) && compareString(b.getNullable(), s.getNullable()) && compareString(b.getTypeName(), s.getTypeName());
+        return compareString(b.getColumnSize(), s.getColumnSize()) && compareString(b.getNullable(), s.getNullable()) && compareString(b.getTypeName(), s.getTypeName()) && compareString(b.getColumnType(), s.getColumnType());
     }
 
     private static boolean compareString(String b, String s) {
@@ -452,6 +453,14 @@ public class JdbcPreCheckCommandProcessor {
         info.put("user", entity.getUserName());
         info.put("password", entity.getPassword());
         return (Connection) ReflectionUtils.invokeMethod(method, null, entity.getUrl(), info, clazz);
+    }
+
+    private static String extractDatabaseFromUrl(String url) {
+        String database = url.substring(url.lastIndexOf("/") + 1);
+        if (database.contains("?")) {
+            database = database.substring(0, database.indexOf("?"));
+        }
+        return database;
     }
 
 }

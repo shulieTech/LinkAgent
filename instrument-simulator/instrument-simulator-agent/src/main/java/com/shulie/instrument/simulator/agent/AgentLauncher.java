@@ -135,6 +135,36 @@ public class AgentLauncher {
     private static final String KEY_SHADOW_PREPARATION_ENABLED = "shadowPreparationEnabled";
     private static final String DEFAULT_SHADOW_PREPARATION_ENABLED = "false";
 
+    private static final String KEY_NACOS_TIMEOUT = "nacosTimeout";
+    private static final String DEFAULT_NACOS_TIMEOUT = "";
+
+    private static final String KEY_NACOS_SERVER_DDR = "nacosServerAddr";
+    private static final String DEFAULT_NACOS_SERVER_DDR = "";
+
+    private static final String KEY_NACOS_APP_DATA_ID = "nacosAppDataId";
+    private static final String DEFAULT_NACOS_APP_DATA_ID = "";
+
+    private static final String KEY_NACOS_APP_GROUP = "nacosAppGroup";
+    private static final String DEFAULT_NACOS_APP_GROUP = "";
+
+    private static final String KEY_NACOS_GLOBAL_DATA_ID = "nacosGlobalDataId";
+    private static final String DEFAULT_NACOS_GLOBAL_DATA_ID = "";
+
+    private static final String KEY_NACOS_GLOBAL_GROUP = "nacosGlobalGroup";
+    private static final String DEFAULT_NACOS_GLOBAL_GROUP = "";
+
+    private static final String KEY_NACOS_MANAGEMENT_DATA_ID = "nacosManagementDataId";
+    private static final String DEFAULT_NACOS_MANAGEMENT_DATA_ID = "";
+
+    private static final String KEY_NACOS_MANAGEMENT_GROUP = "nacosManagementGroup";
+    private static final String DEFAULT_NACOS_MANAGEMENT_GROUP = "";
+
+    private static final String KEY_NACOS_SWITCH_DATA_ID = "nacosSwitchDataId";
+    private static final String DEFAULT_NACOS_SWITCH_DATA_ID = "";
+
+    private static final String KEY_NACOS_SWITCH_GROUP = "nacosSwitchGroup";
+    private static final String DEFAULT_NACOS_SWITCH_GROUP = "";
+
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
 
@@ -623,6 +653,46 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_AGENT_MANAGER_URL, DEFAULT_AGENT_MANAGER_URL);
     }
 
+    private static String getNacosTimeout(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_TIMEOUT, DEFAULT_NACOS_TIMEOUT);
+    }
+
+    private static String getNacosServerAddr(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_SERVER_DDR, DEFAULT_NACOS_SERVER_DDR);
+    }
+
+    private static String getNacosAppDataId(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_APP_DATA_ID, DEFAULT_NACOS_APP_DATA_ID);
+    }
+
+    private static String getNacosAppGroup(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_APP_GROUP, DEFAULT_NACOS_APP_GROUP);
+    }
+
+    private static String getNacosGlobalDataId(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_GLOBAL_DATA_ID, DEFAULT_NACOS_GLOBAL_DATA_ID);
+    }
+
+    private static String getNacosGlobalGroup(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_GLOBAL_GROUP, DEFAULT_NACOS_GLOBAL_GROUP);
+    }
+
+    private static String getNacosManagementDataId(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_MANAGEMENT_DATA_ID, DEFAULT_NACOS_MANAGEMENT_DATA_ID);
+    }
+
+    private static String getNacosManagementGroup(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_MANAGEMENT_GROUP, DEFAULT_NACOS_MANAGEMENT_GROUP);
+    }
+
+    private static String getNacosSwitchDataId(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_SWITCH_DATA_ID, DEFAULT_NACOS_SWITCH_DATA_ID);
+    }
+
+    private static String getNacosSwitchGroup(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_SWITCH_GROUP, DEFAULT_NACOS_SWITCH_GROUP);
+    }
+
     private static String getShadowPreparationEnabled(Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_SHADOW_PREPARATION_ENABLED, DEFAULT_SHADOW_PREPARATION_ENABLED);
     }
@@ -677,7 +747,10 @@ public class AgentLauncher {
                     + "classloader_jars=%s;provider=%s;module_repository_mode=%s;"
                     + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
                     + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
-                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;shadow.preparation.enabled=%s",
+                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;"
+                    + "shadow.preparation.enabled=%s;nacos.timeout=%s;nacos.serverAddr=%s;nacos.app.dataId=%s;nacos.app.group=%s;"
+                    + "nacos.global.dataId=%s;nacos.global.group=%s;nacos.management.dataId=%s;nacos.management.group=%s;"
+                    + "nacos.switch.dataId=%s;nacos.switch.group=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
                 getSimulatorConfigPath(simulatorHome),
@@ -721,7 +794,27 @@ public class AgentLauncher {
                 // agent manager url
                 getAgentManagerUrl(featureMap),
                 // shadow.preparation.enabled
-                getShadowPreparationEnabled(featureMap)
+                getShadowPreparationEnabled(featureMap),
+                // nacos.timeout
+                getNacosTimeout(featureMap),
+                // nacos.serverAddr
+                getNacosServerAddr(featureMap),
+                // nacos.app.dataId
+                getNacosAppDataId(featureMap),
+                // nacos.app.group
+                getNacosAppGroup(featureMap),
+                // nacos.global.dataId
+                getNacosGlobalDataId(featureMap),
+                // nacos.global.group
+                getNacosGlobalGroup(featureMap),
+                // nacos.management.dataId
+                getNacosManagementDataId(featureMap),
+                // nacos.management.group
+                getNacosManagementGroup(featureMap),
+                // nacos.switch.dataId
+                getNacosSwitchDataId(featureMap),
+                // nacos.switch.group
+                getNacosSwitchGroup(featureMap)
             )
         );
 

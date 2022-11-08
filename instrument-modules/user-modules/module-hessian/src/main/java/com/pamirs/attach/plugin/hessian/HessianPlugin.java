@@ -57,7 +57,7 @@ public class HessianPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod serviceMethod = target.getDeclaredMethod("service", "javax.servlet.ServletRequest", "javax.servlet.ServletResponse");
                 serviceMethod.addInterceptor(Listeners.of(HessianServletServiceInterceptor.class));
-                serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
+//                serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
             }
         });
 
@@ -66,7 +66,7 @@ public class HessianPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod serviceMethod = target.getDeclaredMethod("service", "javax.servlet.ServletRequest", "javax.servlet.ServletResponse");
                 serviceMethod.addInterceptor(Listeners.of(BurlapServletServiceInterceptor.class));
-                serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
+//                serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
             }
         });
 
@@ -76,7 +76,7 @@ public class HessianPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
                 InstrumentMethod serviceMethod = target.getDeclaredMethod("handleRequest", "javax.servlet.http.HttpServletRequest", "javax.servlet.http.HttpServletResponse");
                 serviceMethod.addInterceptor(Listeners.of(HessianServiceExporterHandleRequestInterceptor.class));
-                serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
+//                serviceMethod.addInterceptor(Listeners.of(HessianServletWrapperRequestInterceptor.class));
             }
         });
         return true;

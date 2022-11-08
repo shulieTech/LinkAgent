@@ -14,14 +14,10 @@
  */
 package com.pamirs.attach.plugin.hessian.interceptor;
 
-import com.caucho.hessian.io.AbstractHessianInput;
 import com.caucho.hessian.io.HessianFactory;
 import com.caucho.hessian.io.HessianInputFactory;
-import com.caucho.hessian.io.SerializerFactory;
 import com.caucho.hessian.server.HessianServlet;
-import com.caucho.hessian.server.HessianSkeleton;
 import com.pamirs.attach.plugin.hessian.HessianConstants;
-import com.pamirs.attach.plugin.hessian.common.WrapperRequest;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -32,10 +28,7 @@ import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.util.Map;
 
 /**
  * @Description
@@ -77,104 +70,20 @@ public class HessianServletServiceInterceptor extends TraceInterceptorAdaptor {
             return null;
         }
 
-        WrapperRequest request = (WrapperRequest) args[0];
+        HttpServletRequest request = (HttpServletRequest) args[0];
         if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
 
         String method = request.getHeader(HessianConstants.METHOD_HEADER);
         HessianServlet hessianServlet = (HessianServlet) target;
-        String objectId = request.getParameter("id");
-        if (objectId == null) {
-            objectId = request.getParameter("ejbid");
-        }
-        HessianSkeleton hessianSkeleton = null;
-        try {
-            hessianSkeleton = Reflect.on(hessianServlet).get(HessianConstants.DYNAMIC_FIELD_OBJECT_SKELETON);
-        } catch (ReflectException e) {
-            try {
-                hessianSkeleton = Reflect.on(hessianServlet).get(HessianConstants.DYNAMIC_FIELD_HOME_SKELETON);
-            } catch (ReflectException reflectException) {
-            }
-        }
-        Object[] result = getMethodArgs(request.getInputStream(), hessianServlet.getSerializerFactory(), hessianSkeleton);
-        Object[] arguments = (Object[]) result[1];
-        if (method == null) {
-            method = (String) result[0];
-        }
-
         Class<?> clazz = hessianServlet.getAPIClass();
 
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setService(clazz.getName());
         spanRecord.setMethod(method);
-        spanRecord.setRequest(arguments);
         return spanRecord;
 
-    }
-
-
-    public Object[] getMethodArgs(InputStream is,
-                                  SerializerFactory serializerFactory, HessianSkeleton hessianSkeleton) {
-        try {
-            HessianInputFactory.HeaderType header = _inputFactory.readHeader(is);
-            AbstractHessianInput in;
-            switch (header) {
-                case CALL_1_REPLY_1:
-                    in = _hessianFactory.createHessianInput(is);
-                    break;
-                case CALL_1_REPLY_2:
-                    in = _hessianFactory.createHessianInput(is);
-                    break;
-                case HESSIAN_2:
-                    in = _hessianFactory.createHessian2Input(is);
-                    in.readCall();
-                    break;
-
-                default:
-                    throw new IllegalStateException(header + " is an unknown Hessian call");
-            }
-
-            if (serializerFactory != null) {
-                in.setSerializerFactory(serializerFactory);
-            }
-
-            in.skipOptionalCall();
-            while ((in.readHeader()) != null) {
-                in.readObject();
-            }
-
-            String methodName = in.readMethod();
-            int argLength = in.readMethodArgLength();
-            Method method = null;
-
-            if (hessianSkeleton != null) {
-                try {
-                    Map map = Reflect.on(hessianSkeleton).get(HessianConstants.DYNAMIC_FIELD_METHOD_MAP);
-                    method = (Method) map.get(methodName + "__" + argLength);
-                } catch (ReflectException e) {
-                }
-            }
-            if ("_hessian_getAttribute".equals(methodName)) {
-                String attrName = in.readString();
-                in.completeCall();
-                return new Object[]{"_hessian_getAttribute", new Object[0]};
-            }
-
-            Class<?>[] args = method == null ? null : method.getParameterTypes();
-            if (args == null || (argLength != args.length && argLength >= 0)) {
-                return EMPTY_ARGS;
-            }
-
-            Object[] values = new Object[args.length];
-            for (int i = 0; i < args.length; i++) {
-                values[i] = in.readObject(args[i]);
-            }
-            in.completeCall();
-            return new Object[]{methodName, args};
-        } catch (IOException e) {
-            return EMPTY_ARGS;
-        }
     }
 
     private Class<?> getType(Object target, Object[] args) {

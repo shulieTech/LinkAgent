@@ -17,7 +17,7 @@
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
-        <simulator.major.version>5.5.4</simulator.major.version>
+        <simulator.major.version>5.5.5</simulator.major.version>
         <simulator.minor.version>0</simulator.minor.version>
     </properties>
 

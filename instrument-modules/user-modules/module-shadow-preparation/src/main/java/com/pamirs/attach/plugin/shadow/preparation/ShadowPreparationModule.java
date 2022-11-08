@@ -10,13 +10,17 @@ import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import io.shulie.agent.management.client.AgentManagementClient;
 import io.shulie.agent.management.client.constant.AgentSpecification;
+import io.shulie.agent.management.client.constant.NacosConfigConstants;
 import io.shulie.agent.management.client.listener.CommandListener;
 import io.shulie.agent.management.client.listener.ConfigListener;
+import io.shulie.agent.management.client.listener.EventAckHandler;
 import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -55,8 +59,8 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         properties.setAgentSpecification(AgentSpecification.SIMULATOR_AGENT);
         properties.setVersion(simulatorConfig.getAgentVersion());
         properties.setAgentId(simulatorConfig.getAgentId());
-        AgentManagementClient client = new AgentManagementClient(PropertyUtil.getAgentManagerUrl(), properties);
 
+        AgentManagementClient client = new AgentManagementClient(properties);
         // 数据源
         client.register("pressure_database", new ConfigListener() {
             @Override
@@ -106,6 +110,14 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             @Override
             public void receive(Config config, Consumer<ConfigAck> consumer) {
                 EsConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
+            }
+        });
+
+        // 命令ack处理器
+        client.registerEventAckHandler(new EventAckHandler() {
+            @Override
+            public boolean handlerAck(EventAck eventAck) {
+                return false;
             }
         });
 

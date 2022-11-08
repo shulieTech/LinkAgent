@@ -40,13 +40,6 @@
         </dependency>
 
         <dependency>
-            <groupId>io.shulie.instrument.simulator</groupId>
-            <artifactId>simulator-agent-api</artifactId>
-            <version>${simulator.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>agent-management-client</artifactId>
             <version>5.0.0-SNAPSHOT</version>

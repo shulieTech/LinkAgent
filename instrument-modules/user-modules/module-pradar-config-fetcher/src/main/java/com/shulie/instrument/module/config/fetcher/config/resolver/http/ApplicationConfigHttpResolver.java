@@ -317,23 +317,23 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             } else {
                 ApplicationConfig.getPressureTable4AccessSimple = Boolean.TRUE;
             }
-
-            /**
-             * 获取影子job配置
-             */
-            isSuccess = getShadowJobConfig(troControlWebUrl, applicationConfig);
-            if (!isSuccess) {
-                PradarSwitcher.turnConfigSyncSwitchOff();
-                logger.error("SIMULATOR: get shadow job config from server failed");
-            } else {
-                ApplicationConfig.getShadowJobConfig = Boolean.TRUE;
-            }
-
-            /**
-             * 上报错误的影子job配置,如果失败则可以忽略
-             */
-            reportErrorShadowJobConfig(troControlWebUrl);
         }
+        /**
+         * 获取影子job配置
+         */
+        isSuccess = getShadowJobConfig(troControlWebUrl, applicationConfig);
+        if (!isSuccess) {
+            PradarSwitcher.turnConfigSyncSwitchOff();
+            logger.error("SIMULATOR: get shadow job config from server failed");
+        } else {
+            ApplicationConfig.getShadowJobConfig = Boolean.TRUE;
+        }
+
+        /**
+         * 上报错误的影子job配置,如果失败则可以忽略
+         */
+        reportErrorShadowJobConfig(troControlWebUrl);
+
 
         Set<MockConfig> mockConfigs = getMockSet(troControlWebUrl);
         applicationConfig.setMockConfigs(mockConfigs);

@@ -274,9 +274,12 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                 MODULE_LOAD_ERROR,
                                 String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId));
                     }
-                    try {
 
+                    ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();;
+                    try {
+                        Thread.currentThread().setContextClassLoader(coreModule.getClassLoaderFactory().getClassLoader(null));
                         boolean result = moduleLifecycle.onActive();
+
                         if (result) {
                             moduleLoadInfo.setStatus(ModuleLoadStatusEnum.LOAD_SUCCESS);
                         } else {
@@ -290,6 +293,8 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                         logger.error("fail to active module :{}", moduleId, throwable);
                         moduleLoadInfo.setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
+                    }finally {
+                        Thread.currentThread().setContextClassLoader(threadClassLoader);
                     }
                     break;
                 }

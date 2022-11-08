@@ -19,7 +19,6 @@ import com.caucho.burlap.server.BurlapServlet;
 import com.caucho.burlap.server.BurlapSkeleton;
 import com.caucho.hessian.io.HessianInputFactory;
 import com.pamirs.attach.plugin.hessian.HessianConstants;
-import com.pamirs.attach.plugin.hessian.common.WrapperRequest;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -31,7 +30,6 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Map;
 
@@ -42,8 +40,6 @@ import java.util.Map;
  * @Date 2020/7/16 9:56 上午
  */
 public class BurlapServletServiceInterceptor extends TraceInterceptorAdaptor {
-    private HessianInputFactory _inputFactory = new HessianInputFactory();
-    private final static Object[] EMPTY_ARGS = new Object[]{null, null};
 
     @Override
     protected boolean isClient(Advice advice) {
@@ -74,24 +70,13 @@ public class BurlapServletServiceInterceptor extends TraceInterceptorAdaptor {
             return null;
         }
 
-        WrapperRequest request = (WrapperRequest) args[0];
+        HttpServletRequest request = (HttpServletRequest) args[0];
         if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
 
         String method = request.getHeader(HessianConstants.METHOD_HEADER);
         BurlapServlet burlapServlet = (BurlapServlet) target;
-        BurlapSkeleton hessianSkeleton = null;
-        try {
-            hessianSkeleton = Reflect.on(burlapServlet).get(HessianConstants.DYNAMIC_FIELD_SKELETON);
-        } catch (ReflectException e) {
-        }
-
-        Object[] result = getMethodArgs(request.getInputStream(), hessianSkeleton);
-        Object[] arguments = (Object[]) result[1];
-        if (method == null) {
-            method = (String) result[0];
-        }
 
         Class<?> clazz = null;
         try {
@@ -101,53 +86,9 @@ public class BurlapServletServiceInterceptor extends TraceInterceptorAdaptor {
         SpanRecord spanRecord = new SpanRecord();
         spanRecord.setService(clazz == null ? null : clazz.getName());
         spanRecord.setMethod(method);
-        spanRecord.setRequest(arguments);
         spanRecord.setPort(request.getRemotePort());
         return spanRecord;
 
-    }
-
-
-    public Object[] getMethodArgs(InputStream is, BurlapSkeleton burlapSkeleton) {
-        try {
-            BurlapInput in = new BurlapInput(is);
-            HessianInputFactory.HeaderType header = _inputFactory.readHeader(is);
-            while ((in.readHeader()) != null) {
-                in.readObject();
-            }
-
-            String methodName = in.readMethod();
-            int argLength = in.readMethodArgLength();
-            Method method = null;
-            try {
-                Map map = Reflect.on(burlapSkeleton).get(HessianConstants.DYNAMIC_FIELD_METHOD_MAP);
-                method = (Method) map.get(methodName + "__" + argLength);
-            } catch (ReflectException e) {
-            }
-            if (method != null) {
-
-            } else if ("_hessian_getAttribute".equals(methodName)) {
-                String attrName = in.readString();
-                in.completeCall();
-            } else if (method == null) {
-
-            }
-
-            Class<?>[] args = method.getParameterTypes();
-
-            if (argLength != args.length && argLength >= 0) {
-                return null;
-            }
-
-            Object[] values = new Object[args.length];
-            for (int i = 0; i < args.length; i++) {
-                values[i] = in.readObject(args[i]);
-            }
-            in.completeCall();
-            return new Object[]{methodName, args};
-        } catch (IOException e) {
-            return EMPTY_ARGS;
-        }
     }
 
     private Class<?> getType(Object target, Object[] args) {

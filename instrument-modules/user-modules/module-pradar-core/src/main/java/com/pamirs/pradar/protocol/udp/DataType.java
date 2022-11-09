@@ -23,4 +23,9 @@ public class DataType {
      * agent日志
      */
     public final static byte AGENT_LOG = 4;
+
+    /**
+     * agent-manage命令
+     */
+    public final static byte AGENT_MANAGE = 5;
 }

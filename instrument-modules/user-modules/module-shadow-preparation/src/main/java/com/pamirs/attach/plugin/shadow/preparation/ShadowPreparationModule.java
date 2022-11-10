@@ -126,6 +126,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
             client.start();
             return;
         }
+
         String udpAddress = simulatorConfig.getProperty("pradar.data.pusher.pinpoint.collector.address");
         if (StringUtils.isBlank(udpAddress)) {
             LOGGER.error("[shadow-preparation] use udp protocol for log pusher but can`t find udp address config :{}", "pradar.data.pusher.pinpoint.collector.address");

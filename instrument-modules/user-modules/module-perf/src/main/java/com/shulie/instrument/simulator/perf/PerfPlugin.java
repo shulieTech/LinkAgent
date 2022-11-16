@@ -17,8 +17,6 @@ package com.shulie.instrument.simulator.perf;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
-import com.pamirs.pradar.common.KafkaSendBuilder;
-import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.CommandResponse;
@@ -33,16 +31,15 @@ import com.shulie.instrument.simulator.module.model.memory.MemoryInfo;
 import com.shulie.instrument.simulator.module.model.thread.ThreadInfo;
 import com.shulie.instrument.simulator.perf.builder.PerfResponseBuilder;
 import com.shulie.instrument.simulator.perf.entity.PerfResponse;
+import io.shulie.takin.sdk.kafka.HttpSender;
 import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
-import io.shulie.takin.sdk.kafka.impl.PinpointSendServiceImpl;
-import org.apache.commons.lang.StringUtils;
+import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.HashMap;
@@ -68,9 +65,6 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     private ModuleCommandInvoker moduleCommandInvoker;
 
     private ScheduledFuture future;
-
-    @Resource
-    private KafkaSendBuilder kafkaSendBuilder;
 
     /**
      * 获取 thread 信息的参数，使用公共变量
@@ -151,27 +145,29 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         push(response);
     }
 
-    private void push(PerfResponse response) {
-        MessageSendService messageSendService = kafkaSendBuilder.getMessageSendService();
-        if (messageSendService != null) {
-            messageSendService.send(PUSH_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(response), null, new MessageSendCallBack() {
-                @Override
-                public void success() {
-                }
-
-                @Override
-                public void fail(String errorMessage) {
-                    logger.error("Perf: push perf info to tro error, {}", errorMessage);
-                }
-            });
-        } else {
-            String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
-            HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, JSON.toJSONString(response));
-            //TODO
-            if (!result.isSuccess()) {
-                logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());
+    private void push(final PerfResponse response) {
+        final String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
+        MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+        messageSendService.send(PUSH_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(response), new MessageSendCallBack() {
+            @Override
+            public void success() {
             }
-        }
+
+            @Override
+            public void fail(String errorMessage) {
+                logger.error("Perf: push perf info to tro error, errorMessage: {}", errorMessage);
+            }
+        }, new HttpSender() {
+            @Override
+            public void sendMessage() {
+                HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, JSON.toJSONString(response));
+                //TODO
+                if (!result.isSuccess()) {
+                    logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());
+                }
+            }
+        });
+
     }
 
     @Command("info")

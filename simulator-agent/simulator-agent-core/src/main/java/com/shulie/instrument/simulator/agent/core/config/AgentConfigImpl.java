@@ -210,7 +210,15 @@ public class AgentConfigImpl implements AgentConfig {
     public String getNacosServerAddr() {
         return coreConfig.getNacosServerAddr();
     }
+    @Override
+    public String getKafkaSdkSwitch() {
+        return coreConfig.getKafkaSdkSwitch();
+    }
 
+    @Override
+    public String getPinpointCollectorAddress() {
+        return coreConfig.getPinpointCollectorAddress();
+    }
     /**
      * 获取 agent版本号
      *

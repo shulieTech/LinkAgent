@@ -20,7 +20,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
-import com.pamirs.pradar.common.KafkaSendBuilder;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
@@ -31,7 +30,6 @@ import com.pamirs.pradar.pressurement.agent.event.impl.WhiteListSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.*;
-import com.pamirs.pradar.pressurement.base.custominterface.AppInterfaceDomain;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.pamirs.pradar.pressurement.mock.ForwardStrategy;
@@ -45,8 +43,10 @@ import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
+import io.shulie.takin.sdk.kafka.HttpSender;
 import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
+import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
@@ -212,7 +212,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     public ApplicationConfigHttpResolver(SwitcherManager switcherManager, int interval, TimeUnit timeUnit) {
         super("application-config-fetch-scheduled", interval, timeUnit);
         this.switcherManager = switcherManager;
-        messageSendService = new KafkaSendBuilder().getMessageSendService();
+        messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
         EventRouter.router().addListener(new PradarEventListener() {
 
             @Override
@@ -883,33 +883,34 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      *
      * @param troWebUrl
      */
-    private void uploadAppInfo(String troWebUrl) {
+    private void uploadAppInfo(final String troWebUrl) {
         final String projectName = AppNameUtils.appName();
-        if (messageSendService != null){
-            Map<String,String> body = new HashMap<String, String>();
-            body.put("appName",projectName);
-            body.put("agentVersion",getAgentVersion());
-            body.put("pradarVersion",getSimulatorVersion());
-            messageSendService.send(AGENT_VERSION, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(body), null, new MessageSendCallBack() {
-                @Override
-                public void success() {}
-
-                @Override
-                public void fail(String errorMessage) {
-                    logger.error("upload agent version info failed. url={},错误信息:{}", AGENT_VERSION, errorMessage);
-                }
-            });
-        } else {
-
-            final StringBuilder uploadAgentVersion = new StringBuilder().append(troWebUrl).append(AGENT_VERSION)
-                    .append("?appName=").append(projectName).append("&agentVersion=")
-                    .append(getAgentVersion()).append("&pradarVersion=").append(getSimulatorVersion());
-            try {
-                HttpUtils.doGet(uploadAgentVersion.toString());
-            } catch (Throwable e) {
-                logger.error("upload agent version info failed. url={}", uploadAgentVersion.toString(), e);
+        Map<String,String> body = new HashMap<String, String>();
+        body.put("appName",projectName);
+        body.put("agentVersion",getAgentVersion());
+        body.put("pradarVersion",getSimulatorVersion());
+        messageSendService.send(AGENT_VERSION, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(body), new MessageSendCallBack() {
+            @Override
+            public void success() {
             }
-        }
+
+            @Override
+            public void fail(String errorMessage) {
+                logger.error("upload agent version info failed. url={},错误信息:{}", AGENT_VERSION, errorMessage);
+            }
+        }, new HttpSender() {
+            @Override
+            public void sendMessage() {
+                final StringBuilder uploadAgentVersion = new StringBuilder().append(troWebUrl).append(AGENT_VERSION)
+                        .append("?appName=").append(projectName).append("&agentVersion=")
+                        .append(getAgentVersion()).append("&pradarVersion=").append(getSimulatorVersion());
+                try {
+                    HttpUtils.doGet(uploadAgentVersion.toString());
+                } catch (Throwable e) {
+                    logger.error("upload agent version info failed. url={}", uploadAgentVersion.toString(), e);
+                }
+            }
+        });
 
     }
 
@@ -940,32 +941,33 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     /**
      * 上传入口规则,只上传一次成功即可
      */
-    private void uploadEntranceRule(String troWeb) {
+    private void uploadEntranceRule(final String troWeb) {
         if (!uploadEntranceRule) {
             Set<String> apis = GlobalConfig.getInstance().getApis();
             if (apis == null || apis.size() == 0) {
                 return;
             }
-            Map<String, Set<String>> register = new HashMap<String, Set<String>>();
+            final Map<String, Set<String>> register = new HashMap<String, Set<String>>();
             register.put(AppNameUtils.appName(), apis);
 
-            if (messageSendService != null){
-                messageSendService.send(REGISTER_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(JSON.toJSONString(register)), null, new MessageSendCallBack() {
-                    @Override
-                    public void success() {
-                        uploadEntranceRule = true;
-                    }
+            messageSendService.send(REGISTER_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(JSON.toJSONString(register)), new MessageSendCallBack() {
+                @Override
+                public void success() {
+                    uploadEntranceRule = true;
+                }
 
-                    @Override
-                    public void fail(String errorMessage) {
-                        logger.error("上传入口规则失败:{}",errorMessage);
-                    }
-                });
-            } else {
-                final String url = new StringBuilder(troWeb).append(REGISTER_URL).toString();
-                HttpUtils.HttpResult httpResult = HttpUtils.doPost(url, JSON.toJSONString(register));
-                uploadEntranceRule = httpResult.isSuccess();
-            }
+                @Override
+                public void fail(String errorMessage) {
+                    logger.error("上传入口规则失败:{}",errorMessage);
+                }
+            }, new HttpSender() {
+                @Override
+                public void sendMessage() {
+                    final String url = new StringBuilder(troWeb).append(REGISTER_URL).toString();
+                    HttpUtils.HttpResult httpResult = HttpUtils.doPost(url, JSON.toJSONString(register));
+                    uploadEntranceRule = httpResult.isSuccess();
+                }
+            });
         }
     }
 
@@ -974,7 +976,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      *
      * @param troWeb
      */
-    private void uploadAccessStatus(String troWeb) {
+    private void uploadAccessStatus(final String troWeb) {
         Map<String, Object> errorList = ErrorReporter.getInstance().getErrors();
         if (errorList.isEmpty()) {
             return;
@@ -984,38 +986,39 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         result.put("agentId", Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
         result.put("applicationName", AppNameUtils.appName());
         result.put("switchErrorMap", errorList);
-        if (messageSendService != null) {
-            messageSendService.send(UPLOAD_ACCESS_STATUS, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(result), null, new MessageSendCallBack() {
-                @Override
-                public void success() {
-                    if (isInfoEnabled) {
-                        logger.info("上传应用接入状态成功. url={}, param={}", UPLOAD_ACCESS_STATUS, JSON.toJSONString(result));
-                    }
+        messageSendService.send(UPLOAD_ACCESS_STATUS, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(result), new MessageSendCallBack() {
+            @Override
+            public void success() {
+                if (isInfoEnabled) {
+                    logger.info("上传应用接入状态成功. url={}, param={}", UPLOAD_ACCESS_STATUS, JSON.toJSONString(result));
                 }
-
-                @Override
-                public void fail(String errorMessage) {
-                    logger.warn("上传应用接入状态失败. url={}, errorMessage={}, param={}", UPLOAD_ACCESS_STATUS, errorMessage,
-                            JSON.toJSONString(result));
-                }
-            });
-        } else {
-            final StringBuilder url = new StringBuilder(troWeb).append(UPLOAD_ACCESS_STATUS);
-            try {
-                HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(result));
-                if (!httpResult.isSuccess()) {
-                    logger.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
-                            JSON.toJSONString(result));
-                } else {
-                    if (isInfoEnabled) {
-                        logger.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
-                                JSON.toJSONString(result));
-                    }
-                }
-            } catch (Throwable e) {
-                logger.warn("上传应用接入状态信息报错. url={}", url.toString(), e);
             }
-        }
+
+            @Override
+            public void fail(String errorMessage) {
+                logger.warn("上传应用接入状态失败. url={}, errorMessage={}, param={}", UPLOAD_ACCESS_STATUS, errorMessage,
+                        JSON.toJSONString(result));
+            }
+        }, new HttpSender() {
+            @Override
+            public void sendMessage() {
+                final StringBuilder url = new StringBuilder(troWeb).append(UPLOAD_ACCESS_STATUS);
+                try {
+                    HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(result));
+                    if (!httpResult.isSuccess()) {
+                        logger.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
+                                JSON.toJSONString(result));
+                    } else {
+                        if (isInfoEnabled) {
+                            logger.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
+                                    JSON.toJSONString(result));
+                        }
+                    }
+                } catch (Throwable e) {
+                    logger.warn("上传应用接入状态信息报错. url={}", url.toString(), e);
+                }
+            }
+        });
         // TODO 存在一个隐患，去除了清空内存中异常信息，改为agent全量发送异常数据
         // 内存消耗会加重，等tro控制台调整异常展示时同步调整
         ErrorReporter.getInstance().clear(errorList);
@@ -1071,23 +1074,24 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 params.put("id", shaDowJob.getId());
                 params.put("active", shaDowJob.getActive());
                 params.put("message", shaDowJob.getErrorMessage());
-                if (messageSendService != null){
-                    messageSendService.send(TRO_REPORT_ERROR_SHADOW_JOB_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(params), null, new MessageSendCallBack() {
-                        @Override
-                        public void success() {
-                        }
-
-                        @Override
-                        public void fail(String errorMessage) {
-                            logger.warn("上报错误的影子 job 失败. url={}, errorMessage={}", TRO_REPORT_ERROR_SHADOW_JOB_URL, errorMessage);
-                        }
-                    });
-                }else {
-                    HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
-                    if (!httpResult.isSuccess()) {
-                        logger.warn("上报错误的影子 job 失败. url={}, result={}", url, httpResult.getResult());
+                messageSendService.send(TRO_REPORT_ERROR_SHADOW_JOB_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(params), new MessageSendCallBack() {
+                    @Override
+                    public void success() {
                     }
-                }
+
+                    @Override
+                    public void fail(String errorMessage) {
+                        logger.warn("上报错误的影子 job 失败. url={}, errorMessage={}", TRO_REPORT_ERROR_SHADOW_JOB_URL, errorMessage);
+                    }
+                }, new HttpSender() {
+                    @Override
+                    public void sendMessage() {
+                        HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
+                        if (!httpResult.isSuccess()) {
+                            logger.warn("上报错误的影子 job 失败. url={}, result={}", url, httpResult.getResult());
+                        }
+                    }
+                });
             }
         } catch (Throwable e) {
             logger.error("SIMULATOR: Report Error Shadow job failed. url={}", url, e);

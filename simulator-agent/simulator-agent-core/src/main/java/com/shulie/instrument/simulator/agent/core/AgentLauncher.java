@@ -416,6 +416,12 @@ public class AgentLauncher {
         if (StringUtils.isNotBlank(this.agentConfig.getNacosServerAddr())) {
             builder.append(";nacosServerAddr=").append(this.agentConfig.getNacosServerAddr());
         }
+        if (StringUtils.isNotBlank(this.agentConfig.getKafkaSdkSwitch())) {
+            builder.append(";kafkaSdkSwitch=").append(this.agentConfig.getKafkaSdkSwitch());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getPinpointCollectorAddress())) {
+            builder.append(";pinpointCollectorAddress=").append(this.agentConfig.getPinpointCollectorAddress());
+        }
         /**
          * 指定simulator配置文件的获取地址
          */

@@ -253,4 +253,7 @@ public interface AgentConfig {
 
     String getNacosServerAddr();
 
+    String getKafkaSdkSwitch();
+
+    String getPinpointCollectorAddress();
 }

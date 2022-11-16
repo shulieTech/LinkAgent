@@ -19,7 +19,6 @@ import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.HttpUtils;
-import com.pamirs.pradar.common.KafkaSendBuilder;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;

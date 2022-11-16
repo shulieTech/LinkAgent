@@ -481,6 +481,13 @@ public class CoreConfig {
         return getProperty("shadow.preparation.enabled");
     }
 
+    public String getKafkaSdkSwitch() {
+        return getProperty("pradar.data.pusher.pinpoint.collector.address");
+    }
+
+    public String getPinpointCollectorAddress() {
+        return getProperty("kafka.sdk.switch");
+    }
     /**
      * 获取发起http请求中必须包含的head
      *

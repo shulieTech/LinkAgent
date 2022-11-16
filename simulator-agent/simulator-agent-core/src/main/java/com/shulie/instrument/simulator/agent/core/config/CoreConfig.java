@@ -477,38 +477,6 @@ public class CoreConfig {
         return getProperty("nacos.serverAddr");
     }
 
-    public String getNacosAppDataId(){
-        return getProperty("nacos.app.dataId");
-    }
-
-    public String getNacosAppGroup(){
-        return getProperty("nacos.app.group");
-    }
-
-    public String getNacosGlobalDataId(){
-        return getProperty("nacos.global.dataId");
-    }
-
-    public String getNacosGlobalGroup(){
-        return getProperty("nacos.global.group");
-    }
-
-    public String getNacosManagementDataId(){
-        return getProperty("nacos.management.dataId");
-    }
-
-    public String getNacosManagementGroup(){
-        return getProperty("nacos.management.group");
-    }
-
-    public String getNacosSwitchDataId(){
-        return getProperty("nacos.switch.dataId");
-    }
-
-    public String getNacosSwitchGroup(){
-        return getProperty("nacos.switch.group");
-    }
-
     public String getShadowPreparationEnable(){
         return getProperty("shadow.preparation.enabled");
     }

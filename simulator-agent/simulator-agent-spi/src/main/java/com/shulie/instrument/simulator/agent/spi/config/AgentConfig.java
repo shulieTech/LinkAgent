@@ -253,19 +253,4 @@ public interface AgentConfig {
 
     String getNacosServerAddr();
 
-    String getNacosAppDataId();
-
-    String getNacosAppGroup();
-
-    String getNacosGlobalDataId();
-
-    String getNacosGlobalGroup();
-
-    String getNacosManagementDataId();
-
-    String getNacosManagementGroup();
-
-    String getNacosSwitchDataId();
-
-    String getNacosSwitchGroup();
 }

@@ -416,30 +416,6 @@ public class AgentLauncher {
         if (StringUtils.isNotBlank(this.agentConfig.getNacosServerAddr())) {
             builder.append(";nacosServerAddr=").append(this.agentConfig.getNacosServerAddr());
         }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosAppDataId())) {
-            builder.append(";nacosAppDataId=").append(this.agentConfig.getNacosAppDataId());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosAppGroup())) {
-            builder.append(";nacosAppGroup=").append(this.agentConfig.getNacosAppGroup());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosGlobalDataId())) {
-            builder.append(";nacosGlobalDataId=").append(this.agentConfig.getNacosGlobalDataId());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosGlobalGroup())) {
-            builder.append(";nacosGlobalGroup=").append(this.agentConfig.getNacosGlobalGroup());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosManagementDataId())) {
-            builder.append(";nacosManagementDataId=").append(this.agentConfig.getNacosManagementDataId());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosManagementGroup())) {
-            builder.append(";nacosManagementGroup=").append(this.agentConfig.getNacosManagementGroup());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosSwitchDataId())) {
-            builder.append(";nacosSwitchDataId=").append(this.agentConfig.getNacosSwitchDataId());
-        }
-        if (StringUtils.isNotBlank(this.agentConfig.getNacosSwitchGroup())) {
-            builder.append(";nacosSwitchGroup=").append(this.agentConfig.getNacosSwitchGroup());
-        }
         /**
          * 指定simulator配置文件的获取地址
          */

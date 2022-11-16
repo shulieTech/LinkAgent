@@ -211,46 +211,6 @@ public class AgentConfigImpl implements AgentConfig {
         return coreConfig.getNacosServerAddr();
     }
 
-    @Override
-    public String getNacosAppDataId() {
-        return coreConfig.getNacosAppDataId();
-    }
-
-    @Override
-    public String getNacosAppGroup() {
-        return coreConfig.getNacosAppGroup();
-    }
-
-    @Override
-    public String getNacosGlobalDataId() {
-        return coreConfig.getNacosGlobalDataId();
-    }
-
-    @Override
-    public String getNacosGlobalGroup() {
-        return coreConfig.getNacosGlobalGroup();
-    }
-
-    @Override
-    public String getNacosManagementDataId() {
-        return coreConfig.getNacosManagementDataId();
-    }
-
-    @Override
-    public String getNacosManagementGroup() {
-        return coreConfig.getNacosManagementGroup();
-    }
-
-    @Override
-    public String getNacosSwitchDataId() {
-        return coreConfig.getNacosSwitchDataId();
-    }
-
-    @Override
-    public String getNacosSwitchGroup() {
-        return coreConfig.getNacosSwitchGroup();
-    }
-
     /**
      * 获取 agent版本号
      *

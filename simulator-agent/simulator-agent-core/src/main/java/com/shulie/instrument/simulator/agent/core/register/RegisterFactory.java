@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.agent.core.register;
 
 
+import com.shulie.instrument.simulator.agent.core.register.impl.KafkaRegister;
 import com.shulie.instrument.simulator.agent.core.register.impl.ZookeeperRegister;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 
@@ -38,7 +39,9 @@ public class RegisterFactory {
             return;
         }
         Register zkRegister = new ZookeeperRegister(agentConfig);
+        Register kafkaRegister = new KafkaRegister(agentConfig);
         registers.put(zkRegister.getName(), zkRegister);
+        registers.put(kafkaRegister.getName(), kafkaRegister);
     }
 
     /**

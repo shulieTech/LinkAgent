@@ -98,7 +98,7 @@ public class NodeRegisterModule extends ModuleLifecycleAdapter implements Extens
         registerOptions.setSimulatorConfig(simulatorConfig);
         registerOptions.setAppName(AppNameUtils.appName());
         registerOptions.setRegisterBasePath(simulatorConfig.getHeartbeatPath());
-        registerOptions.setRegisterName("zookeeper");
+        registerOptions.setRegisterName("kafka");
         registerOptions.setZkServers(simulatorConfig.getZkServers());
         registerOptions.setConnectionTimeoutMillis(simulatorConfig.getZkConnectionTimeout());
         registerOptions.setSessionTimeoutMillis(simulatorConfig.getZkSessionTimeout());

@@ -475,7 +475,7 @@ public class ZookeeperRegister implements Register {
             messageSendService.send(PUSH_MIDDLEWARE_URL, HttpUtils.getHttpMustHeaders(), body, new MessageSendCallBack() {
                 @Override
                 public void success() {
-                    LOGGER.info(String.format("中间件信息上报成功,body:%s", finalBody);
+                    LOGGER.info(String.format("中间件信息上报成功,body:%s", finalBody));
                 }
 
                 @Override

@@ -1066,11 +1066,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
      * @param troControlWebUrl
      */
     private void reportErrorShadowJobConfig(String troControlWebUrl) {
-        StringBuilder url = new StringBuilder(troControlWebUrl)
+        final StringBuilder url = new StringBuilder(troControlWebUrl)
                 .append(TRO_REPORT_ERROR_SHADOW_JOB_URL);
         try {
             for (ShadowJob shaDowJob : GlobalConfig.getInstance().getErrorRegisterJobs()) {
-                Map<String, Object> params = new HashMap<String, Object>(5, 1);
+                final Map<String, Object> params = new HashMap<String, Object>(5, 1);
                 params.put("id", shaDowJob.getId());
                 params.put("active", shaDowJob.getActive());
                 params.put("message", shaDowJob.getErrorMessage());

@@ -477,16 +477,20 @@ public class CoreConfig {
         return getProperty("nacos.serverAddr");
     }
 
+    public String getClusterName(){
+        return getProperty("cluster.name");
+    }
+
     public String getShadowPreparationEnable(){
         return getProperty("shadow.preparation.enabled");
     }
 
     public String getKafkaSdkSwitch() {
-        return getProperty("pradar.data.pusher.pinpoint.collector.address");
+        return getProperty("kafka.sdk.switch");
     }
 
     public String getPinpointCollectorAddress() {
-        return getProperty("kafka.sdk.switch");
+        return getProperty("pradar.data.pusher.pinpoint.collector.address");
     }
     /**
      * 获取发起http请求中必须包含的head

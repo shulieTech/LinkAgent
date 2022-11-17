@@ -525,6 +525,13 @@ public class HttpAgentScheduler implements AgentScheduler {
             } catch (InterruptedException ignore) {
             }
         }
+        if(startCommandPacket == null){
+            startCommandPacket = new CommandPacket();
+            // 启动
+            startCommandPacket.setId(HeartCommandConstants.startCommandId);
+            // 使用本地探针包
+            startCommandPacket.getExtras().put(HeartCommandConstants.PATH_TYPE_KEY, HeartCommandConstants.PATH_TYPE_LOCAL_VALUE);
+        }
         install(startCommandPacket);
     }
 

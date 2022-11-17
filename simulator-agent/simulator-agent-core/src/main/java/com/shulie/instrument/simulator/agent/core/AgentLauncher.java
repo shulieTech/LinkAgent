@@ -422,6 +422,9 @@ public class AgentLauncher {
         if (StringUtils.isNotBlank(this.agentConfig.getPinpointCollectorAddress())) {
             builder.append(";pinpointCollectorAddress=").append(this.agentConfig.getPinpointCollectorAddress());
         }
+        if (StringUtils.isNotBlank(this.agentConfig.getClusterName())) {
+            builder.append(";clusterName=").append(this.agentConfig.getClusterName());
+        }
         /**
          * 指定simulator配置文件的获取地址
          */

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -26,8 +26,6 @@ import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig;
-import io.shulie.takin.sdk.kafka.MessageSendCallBack;
-import io.shulie.takin.sdk.kafka.MessageSendService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,16 +117,16 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(url);
             if (!httpResult.isSuccess()) {
                 LOGGER.warn(
-                        "SIMULATOR: [FetchConfig] White list switcher status response error. status: {}, result: {}! tro "
-                                + "url is {}",
-                        httpResult.getStatus(), httpResult.getResult(), url);
+                    "SIMULATOR: [FetchConfig] White list switcher status response error. status: {}, result: {}! tro "
+                        + "url is {}",
+                    httpResult.getStatus(), httpResult.getResult(), url);
                 clusterTestConfig.setWhiteListSwitchOn(PradarSwitcher.whiteListSwitchOn());
                 return;
             }
             Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
-            Map<String, Object> map = (Map<String, Object>) resultMap.get("data");
+            Map<String, Object> map = (Map<String, Object>)resultMap.get("data");
             if (map != null && map.get(SWITCH_STATUS) != null) {
-                String status = (String) map.get(SWITCH_STATUS);
+                String status = (String)map.get(SWITCH_STATUS);
                 clusterTestConfig.setWhiteListSwitchOn(!CLOSE.equals(status));
             }
         } catch (Throwable e) {
@@ -155,19 +153,19 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             HttpUtils.HttpResult httpResult = HttpUtils.doGet(url);
             if (!httpResult.isSuccess()) {
                 LOGGER.warn(String.format(
-                        "SIMULATOR: [FetchConfig] Admin console http response error. status: %s, result: %s! tro url is %s",
-                        httpResult.getStatus(), httpResult.getResult(), url));
+                    "SIMULATOR: [FetchConfig] Admin console http response error. status: %s, result: %s! tro url is %s",
+                    httpResult.getStatus(), httpResult.getResult(), url));
                 return;
             }
             Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
-            Map<String, Object> map = (Map<String, Object>) resultMap.get("data");
+            Map<String, Object> map = (Map<String, Object>)resultMap.get("data");
             if (map != null && map.get(SWITCH_STATUS) != null) {
-                String status = (String) map.get(SWITCH_STATUS);
+                String status = (String)map.get(SWITCH_STATUS);
                 clusterTestConfig.setGlobalSwitchOn(!CLOSE.equals(status));
             }
             if (map != null && map.get(SILENCE_SWITCH_STATUS) != null) {
                 //全局静默开关
-                String status = (String) map.get(SILENCE_SWITCH_STATUS);
+                String status = (String)map.get(SILENCE_SWITCH_STATUS);
                 clusterTestConfig.setSilenceSwitchOn(!CLOSE.equals(status));
             }
 
@@ -176,7 +174,6 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             clusterTestConfig.setGlobalSwitchOn(PradarSwitcher.clusterTestSwitchOn());
             clusterTestConfig.setSilenceSwitchOn(PradarSwitcher.silenceSwitchOn());
         } finally {
-            MessageSendService messageSendService = new KafkaSendBuilder().getMessageSendService();
             /**
              * 静默状态配置变更callback,不关心成功or失败
              *  后面配置多了再抽出来做个统一的配置上报
@@ -192,19 +189,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             param.put("applicationName", AppNameUtils.appName());
             param.put("agentId", Pradar.getAgentId(false));
             param.put("globalConf", configList);
-            if (messageSendService != null) {
-                messageSendService.send(APP_CONFIG_CALLBACK, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(param), null, new MessageSendCallBack() {
-                    @Override
-                    public void success() {
-                    }
-
-                    @Override
-                    public void fail(String errorMessage) {
-                    }
-                });
-            } else {
-                HttpUtils.doPost(callbackUrl, JSON.toJSONString(param));
-            }
+            HttpUtils.doPost(callbackUrl, JSON.toJSONString(param));
         }
     }
 

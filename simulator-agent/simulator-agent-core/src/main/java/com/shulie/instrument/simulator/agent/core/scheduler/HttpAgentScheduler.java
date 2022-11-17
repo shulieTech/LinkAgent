@@ -529,8 +529,10 @@ public class HttpAgentScheduler implements AgentScheduler {
             startCommandPacket = new CommandPacket();
             // 启动
             startCommandPacket.setId(HeartCommandConstants.startCommandId);
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put(HeartCommandConstants.PATH_TYPE_KEY, HeartCommandConstants.PATH_TYPE_LOCAL_VALUE);
             // 使用本地探针包
-            startCommandPacket.getExtras().put(HeartCommandConstants.PATH_TYPE_KEY, HeartCommandConstants.PATH_TYPE_LOCAL_VALUE);
+            startCommandPacket.setExtras(extras);
         }
         install(startCommandPacket);
     }

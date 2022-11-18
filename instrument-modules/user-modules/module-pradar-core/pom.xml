@@ -145,7 +145,7 @@
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-message-sdk-pinpoint</artifactId>
-            <version>2.0.4.2</version>
+            <version>2.0.4.3</version>
         </dependency>
     </dependencies>
 

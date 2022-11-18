@@ -461,6 +461,10 @@ public class CoreConfig {
         return getProperty("pradar.env.code");
     }
 
+    public String getAgentExpand() {
+        return getProperty("shulie.agent.expand");
+    }
+
     public String getTenantCode(){
         return getProperty("shulie.agent.tenant.code");
     }
@@ -504,7 +508,7 @@ public class CoreConfig {
         headerMap.put("tenantAppKey", getTenantAppKey());
         headerMap.put("userId", getUserId());
         headerMap.put("envCode", getEnvCode());
-
+        headerMap.put("agentExpand", getAgentExpand());
         return headerMap;
     }
 

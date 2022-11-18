@@ -331,6 +331,8 @@ public abstract class HttpUtils {
 
     private final static String PRADAR_USER_APP_KEY = "user.app.key";
 
+    private final static String SHULIE_AGENT_EXPAND = "shulie.agent.expand";
+
     private static String getProperty(String key) {
         String val = System.getProperty(key);
         if (StringUtil.isEmpty(val)) {
@@ -355,6 +357,7 @@ public abstract class HttpUtils {
         headers.put("userAppKey", getProperty(PRADAR_USER_APP_KEY, getProperty(TENANT_APP_KEY_STR)));
         headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR, getProperty(PRADAR_USER_APP_KEY)));
         headers.put("userId", getProperty(PRADAR_USER_ID_STR));
+        headers.put("agentExpand", getProperty(SHULIE_AGENT_EXPAND));
         headers.put("envCode", envCode);
         return headers;
     }

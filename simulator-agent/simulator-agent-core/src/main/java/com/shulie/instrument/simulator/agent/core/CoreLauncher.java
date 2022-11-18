@@ -214,11 +214,11 @@ public class CoreLauncher {
                     ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
                     applicationUploader.checkAndGenerateApp();
 
-                    /*Register register = RegisterFactory.getRegister(
-                            agentConfig.getProperty("register.name", "kafka"));
+                    Register register = RegisterFactory.getRegister(
+                            agentConfig.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
-                    register.start();*/
+                    register.start();
 
 
                     agentScheduler.setAgentConfig(agentConfig);

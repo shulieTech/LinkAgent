@@ -52,6 +52,10 @@ public class CommandChannelPlugin extends ModuleLifecycleAdapter implements Exte
     public boolean onActive() throws Throwable {
         // 启动时，注册zk
         // zk配置命令参数
+        String property = simulatorConfig.getProperty("register.name","zookeeper");
+        if(!"zookeeper".equals(property)){
+            return true;
+        }
         ZkClientConfig config = new ZkClientConfig();
         config.setZkServers(simulatorConfig.getZkServers());
         // 实例化客户端通道

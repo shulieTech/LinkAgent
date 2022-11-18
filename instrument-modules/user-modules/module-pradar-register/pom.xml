@@ -87,5 +87,11 @@
             <artifactId>fastjson</artifactId>
             <version>2.0.6</version>
         </dependency>
+
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-message-sdk-pinpoint</artifactId>
+            <version>2.0.4.2</version>
+        </dependency>
     </dependencies>
 </project>

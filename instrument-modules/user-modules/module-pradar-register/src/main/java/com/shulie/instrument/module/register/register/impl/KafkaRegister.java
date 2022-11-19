@@ -47,7 +47,7 @@ public class KafkaRegister implements Register {
      */
     private ScheduledExecutorService executorService;
 
-    private Map<String,String> getHeartbeatDatas() {
+    private Map<String, String> getHeartbeatDatas() {
         Map<String, String> map = new HashMap<String, String>();
         map.put("address", PradarCoreUtils.getLocalAddress());
         map.put("host", PradarCoreUtils.getHostName());
@@ -181,7 +181,7 @@ public class KafkaRegister implements Register {
         try {
             this.jars = loadAllJars();
             this.pushMiddlewareJarInfo();
-            executorService.schedule(new Runnable() {
+            executorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
                     Map<String, String> heartbeatDatas = getHeartbeatDatas();
@@ -201,7 +201,7 @@ public class KafkaRegister implements Register {
                         }
                     });
                 }
-            }, 60, TimeUnit.SECONDS);
+            }, 60, 60, TimeUnit.SECONDS);
             if (LOGGER.isInfoEnabled()) {
                 LOGGER.info("[pradar-register] start kafkaRegister successful. {}", Pradar.AGENT_ID_CONTAIN_USER_INFO);
             }

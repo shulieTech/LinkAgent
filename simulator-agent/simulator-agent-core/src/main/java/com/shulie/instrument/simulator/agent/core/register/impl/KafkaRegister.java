@@ -171,6 +171,7 @@ public class KafkaRegister implements Register {
         }
 
         if (registerOptions == null) {
+
             throw new NullPointerException("RegisterOptions is null");
         }
         this.basePath = registerOptions.getRegisterBasePath();
@@ -197,7 +198,7 @@ public class KafkaRegister implements Register {
 
     @Override
     public void start() {
-        executorService.schedule(new Runnable() {
+        executorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 Map<String, String> heartbeatDatas = getHeartbeatDatas();
@@ -217,7 +218,7 @@ public class KafkaRegister implements Register {
                     }
                 });
             }
-        }, 60, TimeUnit.SECONDS);
+        }, 60,60, TimeUnit.SECONDS);
     }
 
     @Override

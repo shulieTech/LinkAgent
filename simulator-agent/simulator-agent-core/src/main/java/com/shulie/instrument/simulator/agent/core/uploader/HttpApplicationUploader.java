@@ -57,14 +57,17 @@ public class HttpApplicationUploader implements ApplicationUploader {
     @Override
     public void checkAndGenerateApp() {
         String webUrl = agentConfig.getTroWebUrl();
-        if (StringUtils.isBlank(webUrl)) {
-            logger.error("AGENT: tro.web.url is not assigned.");
-            return;
-        }
+        String register = agentConfig.getProperty("register.name", "zookeeper");
+        if(register.equals("zookeeper")){
+            if (StringUtils.isBlank(webUrl)) {
+                logger.error("AGENT: tro.web.url is not assigned.");
+                return;
+            }
 
-        if (StringUtils.isBlank(webUrl)) {
-            logger.error("AGENT: user.app.key is not assigned.");
-            return;
+            if (StringUtils.isBlank(webUrl)) {
+                logger.error("AGENT: user.app.key is not assigned.");
+                return;
+            }
         }
 
         String appName = agentConfig.getAppName();
@@ -75,7 +78,7 @@ public class HttpApplicationUploader implements ApplicationUploader {
 
         final Map<String, Object> map = new HashMap<String, Object>();
         map.put(APP_COLUMN_APPLICATION_NAME, appName);
-        map.put(CLUSTER_NAME, System.getProperty("cluster.name"));
+        map.put(CLUSTER_NAME, agentConfig.getProperty("cluster.name", null));
         map.put(APP_COLUMN_DDL_PATH, appName + "/ddl.sh");
         map.put(APP_COLUMN_CLEAN_PATH, appName + "/clean.sh");
         map.put(APP_COLUMN_READY_PATH, appName + "/ready.sh");

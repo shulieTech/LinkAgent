@@ -517,7 +517,11 @@ public class HttpAgentScheduler implements AgentScheduler {
             try {
                 time ++;
                 if(time == 20){
-                    logger.error("经过10s尝试启动simulator失败, 请确认控制台是否正常");
+                    String defaultRegister = "zookeeper";
+                    String register = agentConfig.getProperty("register.name", defaultRegister);
+                    if(defaultRegister.equals(register)){
+                        logger.error("经过10s尝试启动simulator失败, 请确认控制台是否正常");
+                    }
                     break;
                 }
                 logger.error("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");

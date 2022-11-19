@@ -58,7 +58,7 @@ public class HttpApplicationUploader implements ApplicationUploader {
     public void checkAndGenerateApp() {
         String webUrl = agentConfig.getTroWebUrl();
         String register = agentConfig.getProperty("register.name", "zookeeper");
-        if(register.equals("zookeeper")){
+        if (register.equals("zookeeper")) {
             if (StringUtils.isBlank(webUrl)) {
                 logger.error("AGENT: tro.web.url is not assigned.");
                 return;
@@ -84,7 +84,7 @@ public class HttpApplicationUploader implements ApplicationUploader {
         map.put(APP_COLUMN_READY_PATH, appName + "/ready.sh");
         map.put(APP_COLUMN_BASIC_PATH, appName + "/basic.sh");
         map.put(APP_COLUMN_CACHE_PATH, appName + "/cache.sh");
-        final StringBuilder url = new StringBuilder(webUrl).append(APP_INSERT_URL);
+        final StringBuilder url = new StringBuilder(webUrl != null ? webUrl : "").append(APP_INSERT_URL);
         try {
             MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
             messageSendService.send(APP_INSERT_URL, agentConfig.getHttpMustHeaders(), JSON.toJSONString(map), new MessageSendCallBack() {

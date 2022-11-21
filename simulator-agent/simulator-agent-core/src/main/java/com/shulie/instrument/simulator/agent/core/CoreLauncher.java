@@ -213,8 +213,14 @@ public class CoreLauncher {
                     applicationUploader.checkAndGenerateApp();
 
                     Properties properties = readSimulatorConfigs();
-                    System.setProperty("pradar.data.pusher.pinpoint.collector.address", properties.getProperty("pradar.data.pusher.pinpoint.collector.address"));
-                    System.setProperty("kafka.sdk.switch", properties.getProperty("kafka.sdk.switch"));
+                    String key = "pradar.data.pusher.pinpoint.collector.address";
+                    if(properties.containsKey(key)){
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+                    key = "kafka.sdk.switch";
+                    if(properties.containsKey(key)){
+                        System.setProperty(key, properties.getProperty(key));
+                    }
                     System.setProperty("register.name", properties.getProperty("register.name","zookeeper"));
 
 
@@ -370,4 +376,5 @@ public class CoreLauncher {
         }
         return properties;
     }
+
 }

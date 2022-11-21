@@ -1,1 +1,1 @@
-指定影子表前缀配置字段修改为大写 PT_PRESSURE_TABLE_PREFIX 适应环境变量 
+2.0.2.0 pradar-core引入kafka心跳机制

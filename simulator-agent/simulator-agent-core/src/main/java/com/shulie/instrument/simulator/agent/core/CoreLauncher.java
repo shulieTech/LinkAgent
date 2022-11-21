@@ -42,16 +42,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.io.File;
-import java.io.FileFilter;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -71,6 +67,7 @@ public class CoreLauncher {
     private final Instrumentation instrumentation;
     private final ClassLoader classLoader;
     private final String tagName;
+    private final String agentHome;
 
     /**
      * agent 默认延迟时间设置5分钟
@@ -86,6 +83,7 @@ public class CoreLauncher {
 
     public CoreLauncher(String agentHome, long attachId, String attachName, String tagName,
                         Instrumentation instrumentation, ClassLoader classLoader) {
+        this.agentHome = agentHome;
         this.coreConfig = new CoreConfig(agentHome);
         this.instrumentation = instrumentation;
         this.classLoader = classLoader;
@@ -214,8 +212,14 @@ public class CoreLauncher {
                     ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
                     applicationUploader.checkAndGenerateApp();
 
+                    Properties properties = readSimulatorConfigs();
+                    System.setProperty("pradar.data.pusher.pinpoint.collector.address", properties.getProperty("pradar.data.pusher.pinpoint.collector.address"));
+                    System.setProperty("kafka.sdk.switch", properties.getProperty("kafka.sdk.switch"));
+                    System.setProperty("register.name", properties.getProperty("register.name","zookeeper"));
+
+
                     Register register = RegisterFactory.getRegister(
-                            agentConfig.getProperty("register.name", "zookeeper"));
+                            properties.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
                     register.start();
@@ -330,7 +334,7 @@ public class CoreLauncher {
         return syncEnable;
     }
 
-    private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {
+    private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) throws Exception {
         RegisterOptions registerOptions = new RegisterOptions();
         registerOptions.setAppName(agentConfig.getAppName());
         registerOptions.setRegisterBasePath(
@@ -351,5 +355,19 @@ public class CoreLauncher {
         if (this.unit != null) {
             this.unit = unit;
         }
+    }
+
+    private Properties readSimulatorConfigs() throws Exception {
+        Properties properties = null;
+        String path = this.agentHome + File.separatorChar + "agent" + File.separator + "simulator" + File.separator + "config" + File.separator + "simulator.properties";
+        try {
+            InputStream in = new BufferedInputStream(new FileInputStream(path));
+            properties = new Properties();
+            properties.load(in);
+        } catch (Exception e) {
+            LOGGER.error("Read simulator.properties occur exception", e);
+            throw e;
+        }
+        return properties;
     }
 }

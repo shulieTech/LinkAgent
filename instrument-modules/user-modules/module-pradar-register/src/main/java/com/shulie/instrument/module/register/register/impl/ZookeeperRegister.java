@@ -38,10 +38,6 @@ import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadStatusEnum;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
-import io.shulie.takin.sdk.kafka.HttpSender;
-import io.shulie.takin.sdk.kafka.MessageSendCallBack;
-import io.shulie.takin.sdk.kafka.MessageSendService;
-import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -458,10 +454,10 @@ public class ZookeeperRegister implements Register {
     private static final String PUSH_MIDDLEWARE_URL = "/agent/push/application/middleware";
 
     private void pushMiddlewareJarInfo() {
-        MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+
         String body = "";
         try {
-            final String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
+            String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
             LOGGER.info(String.format("中间件管理：jars：%s", jars));
             final Set<String> jarInfoSet = ScanJarPomUtils.scanByJarPaths(jars);
             final ArrayList<MiddlewareRequest> middlewareList = new ArrayList<MiddlewareRequest>();
@@ -471,29 +467,13 @@ public class ZookeeperRegister implements Register {
             }
             final PushMiddlewareVO pushMiddlewareVO = new PushMiddlewareVO(AppNameUtils.appName(), middlewareList);
             body = JSON.toJSONString(pushMiddlewareVO);
-            final String finalBody = body;
-            messageSendService.send(PUSH_MIDDLEWARE_URL, HttpUtils.getHttpMustHeaders(), body, new MessageSendCallBack() {
-                @Override
-                public void success() {
-                    LOGGER.info(String.format("中间件信息上报成功,body:%s", finalBody));
-                }
-
-                @Override
-                public void fail(String errorMessage) {
-                    LOGGER.info(String.format("中间件信息上报失败,body:%s,失败信息：%s", finalBody, errorMessage));
-                }
-            }, new HttpSender() {
-                @Override
-                public void sendMessage() {
-                    final HttpResult httpResult = HttpUtils.doPost(troControlWebUrl + PUSH_MIDDLEWARE_URL,
-                            finalBody);
-                    if (httpResult.isSuccess()) {
-                        LOGGER.info(String.format("中间件信息上报成功,body:%s,返回结果：%s", finalBody, httpResult.getResult()));
-                    } else {
-                        LOGGER.info(String.format("中间件信息上报失败,body:%s,失败信息：%s", finalBody, httpResult.getResult()));
-                    }
-                }
-            });
+            final HttpResult httpResult = HttpUtils.doPost(troControlWebUrl + PUSH_MIDDLEWARE_URL,
+                    body);
+            if (httpResult.isSuccess()) {
+                LOGGER.info(String.format("中间件信息上报成功,body:%s,返回结果：%s", body, httpResult.getResult()));
+            } else {
+                LOGGER.info(String.format("中间件信息上报失败,body:%s,失败信息：%s", body, httpResult.getResult()));
+            }
         } catch (Exception e) {
             LOGGER.error(String.format("中间件信息上报异常。body:%s", body), e);
         }

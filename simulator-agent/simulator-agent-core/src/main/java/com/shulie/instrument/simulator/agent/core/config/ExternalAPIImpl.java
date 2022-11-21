@@ -36,6 +36,10 @@ import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
+import io.shulie.takin.sdk.kafka.HttpSender;
+import io.shulie.takin.sdk.kafka.MessageSendCallBack;
+import io.shulie.takin.sdk.kafka.MessageSendService;
+import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,42 +152,56 @@ public class ExternalAPIImpl implements ExternalAPI {
     }
 
     @Override
-    public List<CommandPacket> sendHeart(HeartRequest heartRequest) {
+    public List<CommandPacket> sendHeart(final HeartRequest heartRequest) {
         HeartRequestUtil.configHeartRequest(heartRequest, agentConfig);
         String webUrl = agentConfig.getTroWebUrl();
         if (StringUtils.isBlank(webUrl)) {
             logger.warn("AGENT: tro.web.url is not assigned.");
             return null;
         }
-        String agentHeartUrl = joinUrl(webUrl, HEART_URL);
+        final String agentHeartUrl = joinUrl(webUrl, HEART_URL);
 
-        HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(),
-            JSON.toJSONString(heartRequest));
+        MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
 
-        if (null == resp) {
-            logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
-            return null;
-        }
-
-        if (StringUtils.isBlank(resp.getResult())) {
-            logger.warn("AGENT: sendHeart got response empty . {}", agentHeartUrl);
-            return null;
-        }
-
-        try {
-            Type type = new TypeReference<Result<List<CommandPacket>>>() {}.getType();
-            Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
-            if (!response.isSuccess()) {
-                throw new RuntimeException(response.getError());
+        messageSendService.send(HEART_URL, agentConfig.getHttpMustHeaders(), JSON.toJSONString(heartRequest), new MessageSendCallBack() {
+            @Override
+            public void success() {
             }
-            return response.getData();
-        } catch (Throwable e) {
-            logger.error("AGENT: parse command err." + resp, e);
-            if (200 == resp.getStatus()) {
-                return Collections.emptyList();
+
+            @Override
+            public void fail(String errorMessage) {
+                logger.warn("AGENT: sendHeart got a err response. errorMessage{}", errorMessage);
             }
-            return null;
-        }
+        }, new HttpSender() {
+            @Override
+            public void sendMessage() {
+                HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(),
+                        JSON.toJSONString(heartRequest));
+
+                if (null == resp) {
+                    logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
+                    return;
+                }
+
+                if (StringUtils.isBlank(resp.getResult())) {
+                    logger.warn("AGENT: sendHeart got response empty . {}", agentHeartUrl);
+                    return;
+                }
+                try {
+                    Type type = new TypeReference<Result<List<CommandPacket>>>() {}.getType();
+                    Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
+                    if (!response.isSuccess()) {
+                        throw new RuntimeException(response.getError());
+                    }
+                    return;
+                } catch (Throwable e) {
+                    logger.error("AGENT: parse command err." + resp, e);
+                    return;
+                }
+            }
+        });
+
+        return null;
     }
 
     @Override

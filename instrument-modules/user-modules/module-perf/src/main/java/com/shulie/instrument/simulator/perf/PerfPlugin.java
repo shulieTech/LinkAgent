@@ -31,6 +31,10 @@ import com.shulie.instrument.simulator.module.model.memory.MemoryInfo;
 import com.shulie.instrument.simulator.module.model.thread.ThreadInfo;
 import com.shulie.instrument.simulator.perf.builder.PerfResponseBuilder;
 import com.shulie.instrument.simulator.perf.entity.PerfResponse;
+import io.shulie.takin.sdk.kafka.HttpSender;
+import io.shulie.takin.sdk.kafka.MessageSendCallBack;
+import io.shulie.takin.sdk.kafka.MessageSendService;
+import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,13 +145,29 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         push(response);
     }
 
-    private void push(PerfResponse response) {
-        String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
-        HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, JSON.toJSONString(response));
-        //TODO
-        if (!result.isSuccess()) {
-            logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());
-        }
+    private void push(final PerfResponse response) {
+        final String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
+        MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+        messageSendService.send(PUSH_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(response), new MessageSendCallBack() {
+            @Override
+            public void success() {
+            }
+
+            @Override
+            public void fail(String errorMessage) {
+                logger.error("Perf: push perf info to tro error, errorMessage: {}", errorMessage);
+            }
+        }, new HttpSender() {
+            @Override
+            public void sendMessage() {
+                HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, JSON.toJSONString(response));
+                //TODO
+                if (!result.isSuccess()) {
+                    logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());
+                }
+            }
+        });
+
     }
 
     @Command("info")

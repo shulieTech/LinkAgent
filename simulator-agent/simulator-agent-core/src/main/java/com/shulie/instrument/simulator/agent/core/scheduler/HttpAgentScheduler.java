@@ -517,13 +517,26 @@ public class HttpAgentScheduler implements AgentScheduler {
             try {
                 time ++;
                 if(time == 20){
-                    logger.error("经过10s尝试启动simulator失败, 请确认控制台是否正常");
+                    String defaultRegister = "zookeeper";
+                    String register = agentConfig.getProperty("register.name", defaultRegister);
+                    if(defaultRegister.equals(register)){
+                        logger.error("经过10s尝试启动simulator失败, 请确认控制台是否正常");
+                    }
                     break;
                 }
                 logger.error("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");
                 Thread.sleep(500 );
             } catch (InterruptedException ignore) {
             }
+        }
+        if(startCommandPacket == null){
+            startCommandPacket = new CommandPacket();
+            // 启动
+            startCommandPacket.setId(HeartCommandConstants.startCommandId);
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put(HeartCommandConstants.PATH_TYPE_KEY, HeartCommandConstants.PATH_TYPE_LOCAL_VALUE);
+            // 使用本地探针包
+            startCommandPacket.setExtras(extras);
         }
         install(startCommandPacket);
     }

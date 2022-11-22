@@ -201,6 +201,31 @@ public class AgentConfigImpl implements AgentConfig {
         return Collections.unmodifiableMap(coreConfig.getAgentFileConfigs());
     }
 
+    @Override
+    public String getNacosTimeout() {
+        return coreConfig.getNacosTimeout();
+    }
+
+    @Override
+    public String getNacosServerAddr() {
+        return coreConfig.getNacosServerAddr();
+    }
+
+    @Override
+    public String getClusterName() {
+        return coreConfig.getClusterName();
+    }
+
+    @Override
+    public String getKafkaSdkSwitch() {
+        return coreConfig.getKafkaSdkSwitch();
+    }
+
+    @Override
+    public String getPinpointCollectorAddress() {
+        return coreConfig.getPinpointCollectorAddress();
+    }
+
     /**
      * 获取 agent版本号
      *

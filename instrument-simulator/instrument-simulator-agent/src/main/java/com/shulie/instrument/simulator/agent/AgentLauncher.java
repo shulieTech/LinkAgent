@@ -135,6 +135,21 @@ public class AgentLauncher {
     private static final String KEY_SHADOW_PREPARATION_ENABLED = "shadowPreparationEnabled";
     private static final String DEFAULT_SHADOW_PREPARATION_ENABLED = "false";
 
+    private static final String KEY_NACOS_TIMEOUT = "nacosTimeout";
+    private static final String DEFAULT_NACOS_TIMEOUT = "";
+
+    private static final String KEY_NACOS_SERVER_ADDR = "nacosServerAddr";
+    private static final String DEFAULT_NACOS_SERVER_ADDR = "";
+
+    private static final String KEY_CLUSTER_NAME = "clusterName";
+    private static final String DEFAULT_CLUSTER_NAME = "";
+
+    private static final String KEY_PINPOINT_COLLECTOR_ADDRESS = "pradar.data.pusher.pinpoint.collector.address";
+    private static final String DEFAULT_PINPOINT_COLLECTOR_ADDRESS = "";
+
+    private static final String KEY_KAFKA_SDK_SWITCH = "kafka.sdk.switch";
+    private static final String DEFAULT_KAFKA_SDK_SWITCH = "false";
+
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
 
@@ -623,6 +638,25 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_AGENT_MANAGER_URL, DEFAULT_AGENT_MANAGER_URL);
     }
 
+    private static String getNacosTimeout(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_TIMEOUT, DEFAULT_NACOS_TIMEOUT);
+    }
+
+    private static String getNacosServerAddr(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_SERVER_ADDR, DEFAULT_NACOS_SERVER_ADDR);
+    }
+
+    private static String getClusterName(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_CLUSTER_NAME, DEFAULT_CLUSTER_NAME);
+    }
+    private static String getKafkaSdkSwitch(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_KAFKA_SDK_SWITCH, DEFAULT_KAFKA_SDK_SWITCH);
+    }
+
+    private static String getPinpointCollectorAddress(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_PINPOINT_COLLECTOR_ADDRESS, DEFAULT_PINPOINT_COLLECTOR_ADDRESS);
+    }
+
     private static String getShadowPreparationEnabled(Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_SHADOW_PREPARATION_ENABLED, DEFAULT_SHADOW_PREPARATION_ENABLED);
     }
@@ -677,7 +711,8 @@ public class AgentLauncher {
                     + "classloader_jars=%s;provider=%s;module_repository_mode=%s;"
                     + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
                     + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
-                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;shadow.preparation.enabled=%s",
+                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;"
+                    + "shadow.preparation.enabled=%s;nacos.timeout=%s;nacos.serverAddr=%s;cluster.name=%s;kafka.sdk.switch=%s;pradar.data.pusher.pinpoint.collector.address=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
                 getSimulatorConfigPath(simulatorHome),
@@ -721,7 +756,17 @@ public class AgentLauncher {
                 // agent manager url
                 getAgentManagerUrl(featureMap),
                 // shadow.preparation.enabled
-                getShadowPreparationEnabled(featureMap)
+                getShadowPreparationEnabled(featureMap),
+                // nacos.timeout
+                getNacosTimeout(featureMap),
+                // nacos.serverAddr
+                getNacosServerAddr(featureMap),
+                // cluster.name
+                getClusterName(featureMap),
+                //kafka sdk开关
+                getKafkaSdkSwitch(featureMap),
+                //pinpoint地址
+                getPinpointCollectorAddress(featureMap)
             )
         );
 

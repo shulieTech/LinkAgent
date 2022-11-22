@@ -14,6 +14,8 @@ import io.shulie.agent.management.client.listener.CommandListener;
 import io.shulie.agent.management.client.listener.ConfigListener;
 import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -21,6 +23,8 @@ import java.util.function.Consumer;
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "shadow-preparation", version = "1.0.0", author = "jiangjibo@shulie.io", description = "影子资源准备工作，包括创建，校验，生效")
 public class ShadowPreparationModule extends ModuleLifecycleAdapter implements ExtensionModule {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(ShadowPreparationModule.class);
 
     @Override
     public boolean onActive() throws Throwable {
@@ -30,15 +34,18 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         ExecutorServiceFactory.getFactory().schedule(new Runnable() {
             @Override
             public void run() {
-                registerAgentManagerListener();
+                try {
+                    registerAgentManagerListener();
+                } catch (Exception e) {
+                    LOGGER.error("[shadow-preparation] new agent management client instance occur exception", e);
+                }
             }
         }, 1, TimeUnit.MINUTES);
-
 
         return true;
     }
 
-    private void registerAgentManagerListener() {
+    private void registerAgentManagerListener() throws Exception {
         ConfigProperties properties = new ConfigProperties();
         properties.setAppName(AppNameUtils.appName());
         properties.setTenantCode(PropertyUtil.getAgentManagerTenantCode());
@@ -47,8 +54,8 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         properties.setAgentSpecification(AgentSpecification.SIMULATOR_AGENT);
         properties.setVersion(simulatorConfig.getAgentVersion());
         properties.setAgentId(simulatorConfig.getAgentId());
-        AgentManagementClient client = new AgentManagementClient(PropertyUtil.getAgentManagerUrl(), properties);
 
+        AgentManagementClient client = new AgentManagementClient(properties);
         // 数据源
         client.register("pressure_database", new ConfigListener() {
             @Override
@@ -100,6 +107,8 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
                 EsConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
             }
         });
+
+        client.start();
     }
 
 }

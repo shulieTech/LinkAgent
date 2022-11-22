@@ -37,13 +37,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>2.0.6</version>
-        </dependency>
-
-
-        <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-register</artifactId>
             <version>${pradar.register.version}</version>
@@ -109,11 +102,6 @@
             <version>4.1.70.Final</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>io.shulie.tro</groupId>-->
-<!--            <artifactId>tro-sdk</artifactId>-->
-<!--            <version>1.15.0</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>

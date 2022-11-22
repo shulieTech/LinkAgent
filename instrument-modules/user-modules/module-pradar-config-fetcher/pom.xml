@@ -102,11 +102,6 @@
             <version>4.1.70.Final</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>io.shulie.tro</groupId>-->
-<!--            <artifactId>tro-sdk</artifactId>-->
-<!--            <version>1.15.0</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>

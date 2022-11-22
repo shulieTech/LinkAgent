@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,14 +15,10 @@
 package com.pamirs.attach.plugin.alibaba.rocketmq.interceptor;
 
 import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
-import com.alibaba.rocketmq.client.producer.DefaultMQProducer;
-import java.util.Map;
-
-import com.alibaba.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import com.alibaba.rocketmq.client.producer.SendCallback;
 import com.alibaba.rocketmq.client.producer.SendResult;
 import com.alibaba.rocketmq.common.message.Message;
-
+import com.alibaba.rocketmq.common.message.MessageQueue;
 import com.pamirs.attach.plugin.alibaba.rocketmq.hook.SendMessageHookImpl;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -44,10 +40,10 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) {
-        if (advice.getTarget() instanceof DefaultMQProducerImpl && !((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
-            synchronized (lock){
-                if (!((DefaultMQProducerImpl)advice.getTarget()).hasSendMessageHook()){
-                    ((DefaultMQProducerImpl)advice.getTarget()).registerSendMessageHook(new SendMessageHookImpl());
+        if (advice.getTarget() instanceof DefaultMQProducerImpl && !((DefaultMQProducerImpl) advice.getTarget()).hasSendMessageHook()) {
+            synchronized (lock) {
+                if (!((DefaultMQProducerImpl) advice.getTarget()).hasSendMessageHook()) {
+                    ((DefaultMQProducerImpl) advice.getTarget()).registerSendMessageHook(new SendMessageHookImpl());
                     LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
                 }
             }
@@ -58,11 +54,19 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
         if (PradarSwitcher.isClusterTestEnabled()) {
             if (Pradar.isClusterTest()) {
                 String topic = msg.getTopic();
+                String testTopic = Pradar.addClusterTestPrefix(topic);
                 if (topic != null
-                    && !Pradar.isClusterTestPrefix(topic)) {
-                    msg.setTopic(Pradar.addClusterTestPrefix(topic));
+                        && !Pradar.isClusterTestPrefix(topic)) {
+                    msg.setTopic(testTopic);
                 }
                 msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
+                // 设置messageQueue
+                if (args.length > 1 && args[1] instanceof MessageQueue) {
+                    MessageQueue queue = (MessageQueue) args[1];
+                    if (!Pradar.isClusterTestPrefix(queue.getTopic())) {
+                        queue.setTopic(testTopic);
+                    }
+                }
             }
         }
 

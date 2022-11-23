@@ -84,11 +84,14 @@ public class DataSourceWrapUtil {
         return new String[]{url, user};
     }
 
-    private static Object extractDefinition(ProxoolDataSource sourceDataSource) throws ClassNotFoundException {
-        Class clazz = sourceDataSource.getClass().getClassLoader().loadClass("org.logicalcobwebs.proxool.ConnectionPoolManager");
+    public static Object extractDefinition(ProxoolDataSource sourceDataSource) throws ClassNotFoundException {
+        return extractDefinition(sourceDataSource.getClass(), ReflectionUtils.<String>get(sourceDataSource, "alias"));
+    }
+
+    public static Object extractDefinition(Class bizClass, String alias) throws ClassNotFoundException {
+        Class clazz = bizClass.getClassLoader().loadClass("org.logicalcobwebs.proxool.ConnectionPoolManager");
         Object manager = ReflectionUtils.getStatic(clazz, "connectionPoolManager");
         Map connectionPoolMap = ReflectionUtils.getField(ReflectionUtils.findField(clazz, "connectionPoolMap"), manager);
-        String alias = ReflectionUtils.get(sourceDataSource, "alias");
         Object connectionPool = connectionPoolMap.get(alias);
         return ReflectionUtils.get(connectionPool, "definition");
     }
@@ -277,28 +280,28 @@ public class DataSourceWrapUtil {
         if (checkoutTimeout != null) {
             target.setFatalSqlExceptionsAsString(checkoutTimeout);
         } else {
-            target.setFatalSqlExceptionsAsString(applySource ? sourceDatasource.getFatalSqlExceptionsAsString() : ReflectionUtils.<String>get(sourceDatasource, "fatalSqlExceptionsAsString"));
+            target.setFatalSqlExceptionsAsString(applySource ? sourceDatasource.getFatalSqlExceptionsAsString() : ReflectionUtils.<String>get(definition, "fatalSqlExceptionsAsString"));
         }
 
         String fatalSqlExceptionWrapperClass = ptDataSourceConf.getProperty("fatal-sql-exception-wrapper-class");
         if (fatalSqlExceptionWrapperClass != null) {
             target.setFatalSqlExceptionWrapperClass(fatalSqlExceptionWrapperClass);
         } else {
-            target.setFatalSqlExceptionWrapperClass(applySource ? sourceDatasource.getFatalSqlExceptionWrapperClass() : ReflectionUtils.<String>get(sourceDatasource, "fatalSqlExceptionWrapperClass"));
+            target.setFatalSqlExceptionWrapperClass(applySource ? sourceDatasource.getFatalSqlExceptionWrapperClass() : ReflectionUtils.<String>get(definition, "fatalSqlExceptionWrapper"));
         }
 
         Integer houseKeepingSleepTime = ptDataSourceConf.getIntProperty("house-keeping-sleep-time");
         if (houseKeepingSleepTime != null) {
             target.setHouseKeepingSleepTime(houseKeepingSleepTime);
         } else {
-            target.setHouseKeepingSleepTime(applySource ? (int)sourceDatasource.getHouseKeepingSleepTime() : ReflectionUtils.<Long>get(sourceDatasource, "houseKeepingSleepTime").intValue());
+            target.setHouseKeepingSleepTime(applySource ? (int)sourceDatasource.getHouseKeepingSleepTime() : ReflectionUtils.<Long>get(definition, "houseKeepingSleepTime").intValue());
         }
 
         String houseKeepingTestSql = ptDataSourceConf.getProperty("house-keeping-test-sql");
         if (houseKeepingTestSql != null) {
             target.setHouseKeepingTestSql(houseKeepingTestSql);
         } else {
-            target.setHouseKeepingTestSql(applySource ? sourceDatasource.getHouseKeepingTestSql() : ReflectionUtils.<String>get(sourceDatasource, "houseKeepingTestSql"));
+            target.setHouseKeepingTestSql(applySource ? sourceDatasource.getHouseKeepingTestSql() : ReflectionUtils.<String>get(definition, "houseKeepingTestSql"));
         }
 
         Boolean jmx = ptDataSourceConf.getBooleanProperty("jmx");

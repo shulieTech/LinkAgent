@@ -18,6 +18,7 @@ package com.pamirs.attach.plugin.alibaba.rocketmqv2.producer.proxy;
 import com.alibaba.rocketmq.client.producer.SendCallback;
 import com.alibaba.rocketmq.client.producer.SendResult;
 import com.alibaba.rocketmq.common.message.Message;
+import com.alibaba.rocketmq.common.message.MessageQueue;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import io.shulie.instrument.module.isolation.proxy.impl.ModifyParamShadowMethodProxy;
@@ -38,6 +39,10 @@ public class SendProxy extends ModifyParamShadowMethodProxy {
         String topic = msg.getTopic();
         if (topic != null && !Pradar.isClusterTestPrefix(topic)) {
             msg.setTopic(Pradar.addClusterTestPrefix(topic));
+        }
+        if (args.length > 0 && args[1] instanceof MessageQueue) {
+            MessageQueue queue = (MessageQueue) args[1];
+            queue.setTopic(msg.getTopic());
         }
         msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
 

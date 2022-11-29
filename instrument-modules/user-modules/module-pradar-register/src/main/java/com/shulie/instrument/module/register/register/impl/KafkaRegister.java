@@ -73,9 +73,9 @@ public class KafkaRegister implements Register {
         }
         map.put("agentLanguage", "JAVA");
         map.put("userId", Pradar.PRADAR_USER_ID);
-        map.put("jars", toJarFileString(jars));
-        map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
-        map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
+//        map.put("jars", toJarFileString(jars));
+//        map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
+//        map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
 
         if (!SimulatorStatus.statusCalculated()) {
             boolean moduleLoadResult = getModuleLoadResult();
@@ -93,8 +93,8 @@ public class KafkaRegister implements Register {
         map.put("tenantAppKey", Pradar.PRADAR_TENANT_KEY);
         map.put("envCode", Pradar.PRADAR_ENV_CODE);
         map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
-        map.put("moduleLoadDetail",
-                JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+//        map.put("moduleLoadDetail",
+//                JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
         return map;
     }
 

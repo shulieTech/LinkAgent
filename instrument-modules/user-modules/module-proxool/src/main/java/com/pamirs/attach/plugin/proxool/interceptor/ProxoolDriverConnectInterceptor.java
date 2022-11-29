@@ -84,8 +84,9 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
         String password = null;
         String url = null;
         Properties definitionProperties = null;
+        Object definition = null;
         try {
-            Object definition = DataSourceWrapUtil.extractDefinition(advice.getTargetClass(), alias);
+            definition = DataSourceWrapUtil.extractDefinition(advice.getTargetClass(), alias);
             url = ReflectionUtils.get(definition, "url");
             definitionProperties = ReflectionUtils.get(definition, "delegateProperties");
             username = definitionProperties.getProperty("user");
@@ -109,7 +110,8 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
         ptUrl.append(ProxoolConstants.ALIAS_DELIMITER);
         ptUrl.append(Pradar.CLUSTER_TEST_PREFIX + alias);
         ptUrl.append(ProxoolConstants.URL_DELIMITER);
-        ptUrl.append(shadowDatabaseConfig.getShadowDriverClassName());
+        String driverClassName = shadowDatabaseConfig.getShadowDriverClassName();
+        ptUrl.append(driverClassName != null ? driverClassName : ReflectionUtils.get(definition, "driver"));
         ptUrl.append(ProxoolConstants.URL_DELIMITER);
         ptUrl.append(shadowDatabaseConfig.getShadowUrl());
 

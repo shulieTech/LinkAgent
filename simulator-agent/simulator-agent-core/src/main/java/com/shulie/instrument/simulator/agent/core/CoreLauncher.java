@@ -222,6 +222,11 @@ public class CoreLauncher {
                     }
                     System.setProperty("register.name", properties.getProperty("register.name","zookeeper"));
 
+                    key = "shulie.agent.expand";
+                    if (properties.containsKey(key)){
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
                     applicationUploader.checkAndGenerateApp();
 
                     Register register = RegisterFactory.getRegister(

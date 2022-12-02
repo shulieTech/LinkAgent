@@ -410,6 +410,21 @@ public class AgentLauncher {
         if (StringUtils.isNotBlank(this.agentConfig.getShadowPreparationEnable())) {
             builder.append(";shadowPreparationEnabled=").append(this.agentConfig.getShadowPreparationEnable());
         }
+        if (StringUtils.isNotBlank(this.agentConfig.getNacosTimeout())) {
+            builder.append(";nacosTimeout=").append(this.agentConfig.getNacosTimeout());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getNacosServerAddr())) {
+            builder.append(";nacosServerAddr=").append(this.agentConfig.getNacosServerAddr());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getKafkaSdkSwitch())) {
+            builder.append(";kafkaSdkSwitch=").append(this.agentConfig.getKafkaSdkSwitch());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getPinpointCollectorAddress())) {
+            builder.append(";pinpointCollectorAddress=").append(this.agentConfig.getPinpointCollectorAddress());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getClusterName())) {
+            builder.append(";clusterName=").append(this.agentConfig.getClusterName());
+        }
         /**
          * 指定simulator配置文件的获取地址
          */

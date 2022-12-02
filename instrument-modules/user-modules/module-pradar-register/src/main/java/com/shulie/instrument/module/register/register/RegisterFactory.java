@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.module.register.register;
 
+import com.shulie.instrument.module.register.register.impl.KafkaRegister;
 import com.shulie.instrument.module.register.register.impl.ZookeeperRegister;
 
 import java.util.HashMap;
@@ -33,7 +34,9 @@ public class RegisterFactory {
 
     private static void init() {
         Register zkRegister = new ZookeeperRegister();
+        Register kafkaRegister = new KafkaRegister();
         registers.put(zkRegister.getName(), zkRegister);
+        registers.put(kafkaRegister.getName(), kafkaRegister);
     }
 
     public static void release() {

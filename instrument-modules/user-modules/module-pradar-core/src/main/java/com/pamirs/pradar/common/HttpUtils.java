@@ -331,6 +331,8 @@ public abstract class HttpUtils {
 
     private final static String PRADAR_USER_APP_KEY = "user.app.key";
 
+    private final static String SHULIE_AGENT_EXPAND = "shulie.agent.expand";
+
     private static String getProperty(String key) {
         String val = System.getProperty(key);
         if (StringUtil.isEmpty(val)) {
@@ -348,13 +350,14 @@ public abstract class HttpUtils {
         return value == null ? defaultValue : value;
     }
 
-    private static Map<String, String> getHttpMustHeaders() {
+    public static Map<String, String> getHttpMustHeaders() {
         Map<String, String> headers = new HashMap<String, String>();
         String envCode = getProperty(PRADAR_ENV_CODE_STR);
         // 新探针兼容老版本的控制台，所以userAppKey和tenantAppKey都传
         headers.put("userAppKey", getProperty(PRADAR_USER_APP_KEY, getProperty(TENANT_APP_KEY_STR)));
         headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR, getProperty(PRADAR_USER_APP_KEY)));
         headers.put("userId", getProperty(PRADAR_USER_ID_STR));
+        headers.put("agentExpand", getProperty(SHULIE_AGENT_EXPAND));
         headers.put("envCode", envCode);
         return headers;
     }

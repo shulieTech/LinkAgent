@@ -461,6 +461,10 @@ public class CoreConfig {
         return getProperty("pradar.env.code");
     }
 
+    public String getAgentExpand() {
+        return getProperty("shulie.agent.expand");
+    }
+
     public String getTenantCode(){
         return getProperty("shulie.agent.tenant.code");
     }
@@ -469,10 +473,29 @@ public class CoreConfig {
         return getProperty("shulie.agent.manager.url");
     }
 
+    public String getNacosTimeout(){
+        return getProperty("nacos.timeout");
+    }
+
+    public String getNacosServerAddr(){
+        return getProperty("nacos.serverAddr");
+    }
+
+    public String getClusterName(){
+        return getProperty("cluster.name");
+    }
+
     public String getShadowPreparationEnable(){
         return getProperty("shadow.preparation.enabled");
     }
 
+    public String getKafkaSdkSwitch() {
+        return getProperty("kafka.sdk.switch");
+    }
+
+    public String getPinpointCollectorAddress() {
+        return getProperty("pradar.data.pusher.pinpoint.collector.address");
+    }
     /**
      * 获取发起http请求中必须包含的head
      *
@@ -485,7 +508,7 @@ public class CoreConfig {
         headerMap.put("tenantAppKey", getTenantAppKey());
         headerMap.put("userId", getUserId());
         headerMap.put("envCode", getEnvCode());
-
+        headerMap.put("agentExpand", getAgentExpand());
         return headerMap;
     }
 

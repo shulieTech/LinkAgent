@@ -120,6 +120,11 @@
             <artifactId>commons-net</artifactId>
             <version>3.8.0</version>
         </dependency>
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-message-sdk-pinpoint</artifactId>
+            <version>2.0.4.3</version>
+        </dependency>
     </dependencies>
 
     <build>

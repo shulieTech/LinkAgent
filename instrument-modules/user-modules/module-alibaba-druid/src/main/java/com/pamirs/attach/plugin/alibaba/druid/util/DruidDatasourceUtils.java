@@ -14,7 +14,16 @@
  */
 package com.pamirs.attach.plugin.alibaba.druid.util;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import com.alibaba.druid.filter.Filter;
+import com.alibaba.druid.filter.config.ConfigFilter;
 import com.alibaba.druid.pool.DruidDataSource;
+
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.DatabaseUtils;
@@ -23,34 +32,34 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-
 /**
  * Create by xuyh at 2020/3/12 21:33.
  */
 public class DruidDatasourceUtils {
     private static Logger logger = LoggerFactory.getLogger(DruidDatasourceUtils.class.getName());
 
-    public static DruidDataSource generateDatasourceFromConfiguration(DruidDataSource sourceDatasource, Map<String, ShadowDatabaseConfig> shadowDbConfigurations) {
+    public static DruidDataSource generateDatasourceFromConfiguration(DruidDataSource sourceDatasource,
+        Map<String, ShadowDatabaseConfig> shadowDbConfigurations) {
         if (shadowDbConfigurations == null) {
             return null;
         }
-        ShadowDatabaseConfig ptDataSourceConf = selectMatchPtDataSourceConfiguration(sourceDatasource, shadowDbConfigurations);
+        ShadowDatabaseConfig ptDataSourceConf = selectMatchPtDataSourceConfiguration(sourceDatasource,
+            shadowDbConfigurations);
         if (ptDataSourceConf == null) {
             return null;
         }
         return generateDatasourceFromConfiguration(sourceDatasource, ptDataSourceConf);
     }
 
-    public static DruidDataSource generateDatasourceFromConfiguration(DruidDataSource sourceDatasource, ShadowDatabaseConfig ptDataSourceConf){
+    public static DruidDataSource generateDatasourceFromConfiguration(DruidDataSource sourceDatasource,
+        ShadowDatabaseConfig ptDataSourceConf) {
         String url = ptDataSourceConf.getShadowUrl();
         String username = ptDataSourceConf.getShadowUsername(sourceDatasource.getUsername());
         String password = ptDataSourceConf.getShadowPassword(sourceDatasource.getPassword());
         if (StringUtils.isBlank(url) || StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
-            logger.error("[druid] shadow datasource config is invalid. [url/username/password] one in them or more is blank. url:{} username:{} password:{}", url, username, password);
+            logger.error(
+                "[druid] shadow datasource config is invalid. [url/username/password] one in them or more is blank. "
+                    + "url:{} username:{} password:{}", url, username, password);
             return null;
         }
 
@@ -114,7 +123,8 @@ public class DruidDatasourceUtils {
                 target.setTestWhileIdle(sourceDatasource.isTestWhileIdle());
             }
 
-            Integer maxPoolPrepareStatementPerConnectionSize = ptDataSourceConf.getIntProperty("maxPoolPrepareStatementPerConnectionSize");
+            Integer maxPoolPrepareStatementPerConnectionSize = ptDataSourceConf.getIntProperty(
+                "maxPoolPrepareStatementPerConnectionSize");
             if (maxPoolPrepareStatementPerConnectionSize != null) {
                 target.setMaxPoolPreparedStatementPerConnectionSize(maxPoolPrepareStatementPerConnectionSize);
             } else {
@@ -135,11 +145,13 @@ public class DruidDatasourceUtils {
                 target.setTestOnReturn(sourceDatasource.isTestOnReturn());
             }
 
-            Integer maxPoolPreparedStatementPerConnectionSize = ptDataSourceConf.getIntProperty("maxPoolPreparedStatementPerConnectionSize");
+            Integer maxPoolPreparedStatementPerConnectionSize = ptDataSourceConf.getIntProperty(
+                "maxPoolPreparedStatementPerConnectionSize");
             if (maxPoolPreparedStatementPerConnectionSize != null) {
                 target.setMaxPoolPreparedStatementPerConnectionSize(maxPoolPreparedStatementPerConnectionSize);
             } else {
-                target.setMaxPoolPreparedStatementPerConnectionSize(sourceDatasource.getMaxPoolPreparedStatementPerConnectionSize());
+                target.setMaxPoolPreparedStatementPerConnectionSize(
+                    sourceDatasource.getMaxPoolPreparedStatementPerConnectionSize());
             }
 
             String connectionProperties = ptDataSourceConf.getProperty("connectionProperties");
@@ -244,7 +256,6 @@ public class DruidDatasourceUtils {
                 }
             }
 
-
             String connectionInitSqls = ptDataSourceConf.getProperty("connectionInitSqls");
             if (StringUtils.isNotBlank(connectionInitSqls)) {
                 String[] initSqls = StringUtils.split(connectionInitSqls, ';');
@@ -317,7 +328,8 @@ public class DruidDatasourceUtils {
                 target.setValidationQueryTimeout(sourceDatasource.getValidationQueryTimeout());
             }
 
-            Boolean accessToUnderlyingConnectionAllowed = ptDataSourceConf.getBooleanProperty("accessToUnderlyingConnectionAllowed");
+            Boolean accessToUnderlyingConnectionAllowed = ptDataSourceConf.getBooleanProperty(
+                "accessToUnderlyingConnectionAllowed");
             if (accessToUnderlyingConnectionAllowed != null) {
                 target.setAccessToUnderlyingConnectionAllowed(accessToUnderlyingConnectionAllowed);
             } else {
@@ -381,15 +393,30 @@ public class DruidDatasourceUtils {
             }
 
             target.setBreakAfterAcquireFailure(true);
-            target.setProxyFilters(sourceDatasource.getProxyFilters());
+            List<Filter> proxyFilters = removeConfigFilter(sourceDatasource.getProxyFilters());
+            target.setProxyFilters(proxyFilters);
         } catch (Throwable e) {
             logger.warn("init druid datasource failed.", e);
         }
         return target;
     }
 
+    private static List<Filter> removeConfigFilter(List<Filter> proxyFilters) {
+        if (proxyFilters == null || proxyFilters.size() == 0) {
+            return Collections.emptyList();
+        }
+        List<Filter> result = new ArrayList<Filter>();
+        for (Filter proxyFilter : proxyFilters) {
+            if (!(proxyFilter instanceof ConfigFilter)) {
+                result.add(proxyFilter);
+            }
+        }
+        return result;
+    }
+
     @SuppressWarnings("unchecked")
-    private static ShadowDatabaseConfig selectMatchPtDataSourceConfiguration(DruidDataSource source, Map<String, ShadowDatabaseConfig> shadowDbConfigurations) {
+    private static ShadowDatabaseConfig selectMatchPtDataSourceConfiguration(DruidDataSource source,
+        Map<String, ShadowDatabaseConfig> shadowDbConfigurations) {
         DruidDataSource dataSource = source;
         String key = DbUrlUtils.getKey(dataSource.getUrl(), dataSource.getUsername());
         ShadowDatabaseConfig shadowDatabaseConfig = shadowDbConfigurations.get(key);
@@ -404,7 +431,8 @@ public class DruidDatasourceUtils {
         try {
             String url = sourceDataSource.getUrl();
             String username = sourceDataSource.getUsername();
-            boolean contains = GlobalConfig.getInstance().containsShadowDatabaseConfig(DbUrlUtils.getKey(url, username));
+            boolean contains = GlobalConfig.getInstance().containsShadowDatabaseConfig(
+                DbUrlUtils.getKey(url, username));
             if (!contains) {
                 return GlobalConfig.getInstance().containsShadowDatabaseConfig(DbUrlUtils.getKey(url, null));
             }

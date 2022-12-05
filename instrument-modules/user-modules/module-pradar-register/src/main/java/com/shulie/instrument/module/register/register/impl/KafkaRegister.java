@@ -180,6 +180,7 @@ public class KafkaRegister implements Register {
 
         try {
             this.jars = loadAllJars();
+            getHeartbeatDatas();
             this.pushMiddlewareJarInfo();
             executorService.scheduleAtFixedRate(new Runnable() {
                 @Override

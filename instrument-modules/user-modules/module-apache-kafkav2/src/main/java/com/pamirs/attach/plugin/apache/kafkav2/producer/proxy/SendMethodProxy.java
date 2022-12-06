@@ -22,8 +22,10 @@ public class SendMethodProxy implements ShadowMethodProxy {
         if (args != null && args.length > 0) {
             KafkaProducer kafkaProducer = (KafkaProducer) shadowTarget;
             ProducerRecord bizRecord = (ProducerRecord) args[0];
+            String topic = bizRecord.topic();
+            topic = Pradar.isClusterTestPrefix(topic) ? topic : Pradar.addClusterTestPrefix(topic);
             ProducerRecord shadowProducerRecord = new ProducerRecord(
-                    Pradar.addClusterTestPrefix(bizRecord.topic()),
+                    topic,
                     null,
                     null,
                     bizRecord.key(),

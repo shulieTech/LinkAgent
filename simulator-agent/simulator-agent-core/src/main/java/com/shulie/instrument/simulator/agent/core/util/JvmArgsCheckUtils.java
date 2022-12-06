@@ -117,7 +117,7 @@ public class JvmArgsCheckUtils {
         }
         Map<String, String> result = new HashMap<String, String>();
         //1、校验     * 1、transmittable-thread-local-2.10.2.jar参数是否放在所有agent参数前校验
-        boolean transmittableResult = transmittableCheck(result, transmittableIndex, maxJavaagentIndex);
+        boolean transmittableResult = transmittableCheck(agentConfig, result, transmittableIndex, maxJavaagentIndex);
         //2     * 2、JDK7及以下参数是否配置-XX:PermSize=256M -XX:MaxPermSize=512M校验，参数值大小暂不校验
         boolean permSizeValueCheckResult = permSizeValueCheck(result, jdkVersion, permSizeValue);
         //3       * 3、JDK8及以上参数是否配置-XX:MetaspaceSize=256M -XX:MaxMetaspaceSize=256M参数，
@@ -133,7 +133,7 @@ public class JvmArgsCheckUtils {
         //6     * 7、-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar参数校验，包是否存在（tro端校验）
 //        boolean checkToolsJarPathResult = checkToolsJarPath(result, toolsJarPath);
         //7.-javaagent:/Users/angju/Downloads/deploy-agent/simulator-agent/simulator-launcher-instrument.jar 需要放在最后
-        boolean checkSimulatorLauncherInstrumentResult = checkSimulatorLauncherInstrument(result,
+        boolean checkSimulatorLauncherInstrumentResult = checkSimulatorLauncherInstrument(agentConfig, result,
                 simulatorLauncherInstrumentIndex, minJavaagentIndex);
 
         Map<String, Object> r = new HashMap<String, Object>(2, 1);
@@ -154,8 +154,12 @@ public class JvmArgsCheckUtils {
         return agentConfig.getBooleanProperty("simulator.agent.skip.jvmArgsCheck", false);
     }
 
-    private static boolean checkSimulatorLauncherInstrument(Map<String, String> result,
+    private static boolean checkSimulatorLauncherInstrument(AgentConfig agentConfig, Map<String, String> result,
                                                             int simulatorLauncherInstrumentIndex, int minJavaagentIndex) {
+        String ignore = agentConfig.getProperty("ignore.simulator.check", "false");
+        if (ignore.equals("true")) {
+            return true;
+        }
         if (simulatorLauncherInstrumentIndex != minJavaagentIndex) {
             result.put(JvmArgsConstants.simulatorLauncherInstrumentNotLastCode,
                     JvmArgsConstants.simulatorLauncherInstrumentNotLastErrorMsg_1);
@@ -258,8 +262,12 @@ public class JvmArgsCheckUtils {
         return true;
     }
 
-    private static boolean transmittableCheck(Map<String, String> result, int transmittableIndex,
+    private static boolean transmittableCheck(AgentConfig agentConfig, Map<String, String> result, int transmittableIndex,
                                               int maxJavaagentIndex) {
+        String ignore = agentConfig.getProperty("ignore.simulator.check", "false");
+        if (ignore.equals("true")) {
+            return true;
+        }
         if (transmittableIndex == -1) {
             result.put(JvmArgsConstants.transmittableCheckCode, JvmArgsConstants.transmittableCheckErrorMsg_1);
             return false;

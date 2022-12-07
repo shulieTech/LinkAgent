@@ -427,7 +427,22 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
 
     private ZookeeperRegistryCenter getRegisterConter() {
         try {
-            return PradarSpringUtil.getBeanFactory().getBean(ZookeeperRegistryCenter.class);
+            DefaultListableBeanFactory beanFactory = PradarSpringUtil.getBeanFactory();
+            String[] beanNamesForType = beanFactory.getBeanNamesForType(ZookeeperRegistryCenter.class);
+
+            if (beanNamesForType == null || beanNamesForType.length == 0) {
+                throw new NoSuchBeanDefinitionException("zookeeperRegistryCenter");
+            } else if (beanNamesForType.length == 1) {
+                return beanFactory.getBean(beanNamesForType[0], ZookeeperRegistryCenter.class);
+            } else {
+                for (String beanName : beanNamesForType) {
+                    if (beanName.equals("zookeeperRegistryCenter")) {
+                        return beanFactory.getBean(beanName, ZookeeperRegistryCenter.class);
+                    }
+                }
+                logger.warn("spring bean factory has more than one ZookeeperRegistryCenter bean instances, beanNames:{}, but not exists 'zookeeperRegistryCenter', use the first bean:{} for candidate", beanNamesForType, beanNamesForType[0]);
+                return beanFactory.getBean(beanNamesForType[0], ZookeeperRegistryCenter.class);
+            }
         } catch (NoSuchBeanDefinitionException t) {
             ElasticJobAutoConfiguration elasticJobAutoConfiguration =
                     PradarSpringUtil.getBeanFactory().getBean(ElasticJobAutoConfiguration.class);

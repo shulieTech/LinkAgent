@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.hessian.interceptor;
 
 import com.pamirs.attach.plugin.hessian.HessianConstants;
-import com.pamirs.attach.plugin.hessian.common.WrapperRequest;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -108,7 +107,7 @@ public class HessianServiceExporterHandleRequestInterceptor extends TraceInterce
             return null;
         }
 
-        HttpServletRequest request = (WrapperRequest) args[0];
+        HttpServletRequest request = (HttpServletRequest) args[0];
         if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }
@@ -139,7 +138,7 @@ public class HessianServiceExporterHandleRequestInterceptor extends TraceInterce
             return null;
         }
 
-        HttpServletRequest request = (WrapperRequest) args[0];
+        HttpServletRequest request = (HttpServletRequest) args[0];
         if (!request.getMethod().equals("POST") && !request.getMethod().equals("post")) {
             return null;
         }

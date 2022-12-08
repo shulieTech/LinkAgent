@@ -1,1 +1,1 @@
-2.0.0.1 不读取request内容，trace忽略请求参数
+2.0.0.2 修复打印trace时request类型转换问题

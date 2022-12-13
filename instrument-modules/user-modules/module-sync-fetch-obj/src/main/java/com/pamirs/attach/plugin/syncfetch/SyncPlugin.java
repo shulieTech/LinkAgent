@@ -1,6 +1,7 @@
 package com.pamirs.attach.plugin.syncfetch;
 
-import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectFetchInterceptor;
+import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectAfterFetchInterceptor;
+import com.pamirs.attach.plugin.syncfetch.interceptor.SyncObjectBeforeFetchInterceptor;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -24,32 +25,48 @@ public class SyncPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     public boolean onActive() throws Throwable {
         String values = System.getProperty("simulator.inner.module.syncfetch");
         logger.info("start to enhance target with : {}", values);
-        if (values != null) {
-            for (String s : values.split(",")) {
-                String data = s.trim();
-                if (!data.isEmpty()) {
-                    if (data.contains("#")) {
-                        final String[] split = data.split("#");
-                        if (split.length == 2) {
-                            enhanceTemplate.enhance(this, split[0], new EnhanceCallback() {
-                                @Override
-                                public void doEnhance(InstrumentClass target) {
-                                    target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(SyncObjectFetchInterceptor.class));
-                                }
-                            });
-                        } else {
-                            logger.error("can not sync fetch target:{}", data);
-                        }
-                    } else {
-                      enhanceTemplate.enhance(this, data, new EnhanceCallback() {
-                          @Override
-                          public void doEnhance(InstrumentClass target) {
-                              target.getConstructors().addInterceptor(Listeners.of(SyncObjectFetchInterceptor.class));
-                          }
-                      });
-                    }
-                }
+        if (values == null) {
+            return true;
+        }
+        for (String s : values.split(",")) {
+            String data = s.trim();
+            if (data == null || data.isEmpty()) {
+                continue;
             }
+            if (!data.contains("#")) {
+                enhanceTemplate.enhance(this, data, new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        target.getConstructors().addInterceptor(Listeners.of(SyncObjectAfterFetchInterceptor.class));
+                    }
+                });
+                continue;
+            }
+
+            final String[] split = data.split("#");
+            if (split.length == 2) {
+                enhanceTemplate.enhance(this, split[0], new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(SyncObjectAfterFetchInterceptor.class));
+                    }
+                });
+                continue;
+            }
+            // 支持class#method#before, 这样在before里保存对象, 可以支持方法内部死循环情景，比如方法内部kafka循环消费
+            if (split.length == 3) {
+                String orderFlag = split[2];
+                final Class clazz = "before".equals(orderFlag) ? SyncObjectBeforeFetchInterceptor.class : SyncObjectAfterFetchInterceptor.class;
+                enhanceTemplate.enhance(this, split[0], new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(clazz));
+                    }
+                });
+                continue;
+            }
+            logger.error("can not sync fetch target:{}", data);
+
         }
         return true;
     }

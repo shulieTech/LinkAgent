@@ -7,7 +7,7 @@
         <groupId>io.shulie.instrument.module</groupId>
         <version>1.0.0</version>
     </parent>
-    <version>2.0.0.1</version>
+    <version>2.0.0.3</version>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>module-sync-fetch-obj</artifactId>

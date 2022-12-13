@@ -8,7 +8,7 @@ import java.util.*;
  */
 public class SyncObject {
     //切初始化方法的应该至少次数非常少， 这里用数量来控制
-    private static int maxNum = 500;
+    private static int maxNum = 1000;
     private List<SyncObjectData> datas = new Vector<SyncObjectData>();
 
     public SyncObject addData(SyncObjectData data) {

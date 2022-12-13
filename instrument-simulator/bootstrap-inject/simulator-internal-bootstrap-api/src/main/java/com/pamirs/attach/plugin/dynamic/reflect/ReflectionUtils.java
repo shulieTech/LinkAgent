@@ -89,6 +89,17 @@ public abstract class ReflectionUtils {
         return findField(clazz, name, null);
     }
 
+    public static <T> T getStatic(Class<?> clazz, String name) {
+        Field field = findField(clazz, name, null);
+        try {
+            return (T) field.get(null);
+        }catch (IllegalAccessException ex) {
+            handleReflectionException(ex);
+            throw new IllegalStateException(
+                    "Unexpected reflection exception - " + ex.getClass().getName() + ": " + ex.getMessage());
+        }
+    }
+
     public static Field findField(Class<?> clazz, String name, Class<?> type) {
         Assert.notNull(clazz, "Class must not be null");
         Assert.isTrue(name != null || type != null, "Either name or type of the field must be specified");

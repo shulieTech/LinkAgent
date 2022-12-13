@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,9 +17,11 @@ package com.pamirs.attach.plugin.proxool.interceptor;
 import com.pamirs.attach.plugin.common.datasource.TraceConnection;
 import com.pamirs.attach.plugin.common.datasource.biz.BizConnection;
 import com.pamirs.attach.plugin.common.datasource.pressure.PressureConnection;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.proxool.ProxoolConst;
 import com.pamirs.attach.plugin.proxool.destroy.ProxoolDestroy;
 import com.pamirs.attach.plugin.proxool.utils.ConnectionPoolUtils;
+import com.pamirs.attach.plugin.proxool.utils.DataSourceWrapUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.ModificationInterceptorAdaptor;
@@ -31,6 +33,7 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.logicalcobwebs.proxool.ProxoolConstants;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,25 +84,13 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
         String password = null;
         String url = null;
         Properties definitionProperties = null;
+        Object definition = null;
         try {
-            if (getDefinitionMethod == null) {
-                getDefinitionMethod = ConnectionPoolUtils.getConnectionPoolMap().get(alias).getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_DEFINITION_METHOD);
-                getDefinitionMethod.setAccessible(true);
-            }
-            Object definition = getDefinitionMethod.invoke(ConnectionPoolUtils.getConnectionPoolMap().get(alias));
-            getUrlMethod = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_URL_METHOD);
-            getUserMethod = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_USER_METHOD);
-            getPasswordMethod = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_PASSWORD_METHOD);
-
-            Method getCompleteInfo = definition.getClass().getDeclaredMethod(ProxoolConst.REFLECT_GET_COMPLETE_INFO_METHOD);
-            getUrlMethod.setAccessible(true);
-            getUserMethod.setAccessible(true);
-            getPasswordMethod.setAccessible(true);
-            getCompleteInfo.setAccessible(true);
-            url = (String) getUrlMethod.invoke(definition);
-            username = (String) getUserMethod.invoke(definition);
-            password = (String) getPasswordMethod.invoke(definition);
-            definitionProperties = (Properties) getCompleteInfo.invoke(definition);
+            definition = DataSourceWrapUtil.extractDefinition(advice.getTargetClass(), alias);
+            url = ReflectionUtils.get(definition, "url");
+            definitionProperties = ReflectionUtils.get(definition, "delegateProperties");
+            username = definitionProperties.getProperty("user");
+            password = definitionProperties.getProperty("password");
         } catch (Exception e) {
             logger.error("proxool init getDefinitionMethod and definition error.", e);
         }
@@ -119,7 +110,8 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
         ptUrl.append(ProxoolConstants.ALIAS_DELIMITER);
         ptUrl.append(Pradar.CLUSTER_TEST_PREFIX + alias);
         ptUrl.append(ProxoolConstants.URL_DELIMITER);
-        ptUrl.append(shadowDatabaseConfig.getShadowDriverClassName());
+        String driverClassName = shadowDatabaseConfig.getShadowDriverClassName();
+        ptUrl.append(driverClassName != null ? driverClassName : ReflectionUtils.get(definition, "driver"));
         ptUrl.append(ProxoolConstants.URL_DELIMITER);
         ptUrl.append(shadowDatabaseConfig.getShadowUrl());
 
@@ -127,7 +119,9 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
             Class connectionPoolDefinitionClass = Thread.currentThread().getContextClassLoader().loadClass("org.logicalcobwebs.proxool.ConnectionPoolDefinition");
             Constructor connectionPoolDefinitionOfConstructor = connectionPoolDefinitionClass.getDeclaredConstructor(String.class, Properties.class, boolean.class);
             connectionPoolDefinitionOfConstructor.setAccessible(true);
-            Object ptConnectionPoolDefinitionOfInstance = connectionPoolDefinitionOfConstructor.newInstance(ptUrl.toString(), buildPtProperties(definitionProperties, shadowDatabaseConfig, username, password), true);
+
+            Properties properties = buildPtProperties(definitionProperties, shadowDatabaseConfig, username, password);
+            Object ptConnectionPoolDefinitionOfInstance = connectionPoolDefinitionOfConstructor.newInstance(ptUrl.toString(), properties, true);
 
             Class connectionPoolClass = Thread.currentThread().getContextClassLoader().loadClass("org.logicalcobwebs.proxool.ConnectionPool");
             Constructor connectionPoolOfConstructor = connectionPoolClass.getDeclaredConstructors()[0];
@@ -136,6 +130,8 @@ public class ProxoolDriverConnectInterceptor extends ModificationInterceptorAdap
             Method startMethod = connectionPoolClass.getDeclaredMethod("start");
             startMethod.setAccessible(true);
             startMethod.invoke(connectionPoolOfInstance);
+
+            ProxoolFacade.registerConnectionPool(ptUrl.toString(), properties);
 
             ConnectionPoolUtils.getConnectionPoolMap().put(Pradar.CLUSTER_TEST_PREFIX + alias, connectionPoolOfInstance);
             ConnectionPoolUtils.getConnectionPools().add(connectionPoolOfInstance);

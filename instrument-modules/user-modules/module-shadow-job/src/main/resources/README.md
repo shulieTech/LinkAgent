@@ -1,1 +1,1 @@
-2.0.0.3 修复ealstic-job注册影子任务时如果存在多个注册中心会失败问题
+2.0.0.4 支持elastic-job使用new JobScheduler(...).init()形式使用，不需要注册spring bean

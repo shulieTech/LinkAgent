@@ -247,14 +247,14 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         });
 
 
-        //
-//        enhanceTemplate.enhance(this, "org.springframework.scheduling.quartz.QuartzJobBean", new EnhanceCallback() {
-//            @Override
-//            public void doEnhance(InstrumentClass target) {
-//                InstrumentMethod getMethod = target.getDeclaredMethod("execute", "org.quartz.JobExecutionContext");
-//                getMethod.addInterceptor(Listeners.of(QuartzJobBeanExecuteInterceptor.class));
-//            }
-//        });
+
+        enhanceTemplate.enhance(this, "org.springframework.scheduling.quartz.QuartzJobBean", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("execute", "org.quartz.JobExecutionContext");
+                getMethod.addInterceptor(Listeners.of(QuartzJobBeanExecuteInterceptor.class));
+            }
+        });
 
 
         enhanceTemplate.enhance(this, "org.quartz.JobExecutionContext", new EnhanceCallback() {

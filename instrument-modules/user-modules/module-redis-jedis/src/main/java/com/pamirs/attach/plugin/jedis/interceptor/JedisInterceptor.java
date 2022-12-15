@@ -80,6 +80,20 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
                 ret[i] = arg;
             }
         }
+        if (!Pradar.isClusterTest()) {
+            return ret;
+        }
+        Object keys = ret[0];
+        if (keys instanceof String) {
+            if (!Pradar.isClusterTestPrefix((String) keys)) {
+                ret[0] = Pradar.addClusterTestPrefix((String) keys);
+            }
+        } else if (keys instanceof String[]) {
+            String[] ks = (String[]) keys;
+            for (int i = 0; i < ks.length; i++) {
+                ks[i] = Pradar.isClusterTestPrefix(ks[i]) ? ks[i] : Pradar.addClusterTestPrefix(ks[i]);
+            }
+        }
         return ret;
     }
 

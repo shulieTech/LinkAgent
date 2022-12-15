@@ -1,1 +1,1 @@
-2.0.0.4 放开spring-quartz
+2.0.0.4 支持elastic-job使用new JobScheduler(...).init()形式使用，不需要注册spring bean

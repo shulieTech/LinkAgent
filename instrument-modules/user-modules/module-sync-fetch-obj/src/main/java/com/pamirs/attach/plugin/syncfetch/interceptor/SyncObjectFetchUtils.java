@@ -20,9 +20,6 @@ public class SyncObjectFetchUtils {
             return "";
         }
         String key = clazz.getName();
-        if (key.contains("$$")) {
-            key = key.substring(0, key.indexOf("$$"));
-        }
         //<init>是切构造函数时的方法名称
         if ((StringUtil.isEmpty(method) || "<init>".equals(method)) && keys.contains(key)) {
             return key;

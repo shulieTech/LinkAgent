@@ -28,6 +28,8 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.*;
 import redis.clients.jedis.commands.ProtocolCommand;
 
@@ -40,6 +42,9 @@ import java.lang.reflect.Field;
 @Destroyable(JedisDestroyed.class)
 @ListenerBehavior(isFilterBusinessData = true)
 public class JedisInterceptor extends TraceInterceptorAdaptor {
+
+    protected final static Logger LOGGER = LoggerFactory.getLogger(JedisInterceptor.class.getName());
+
     Model model = Model.INSTANCE();
     private static ConcurrentWeakHashMap<Class, Field> pipelineClientFieldCache = new ConcurrentWeakHashMap<Class, Field>();
 
@@ -84,6 +89,33 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
             return ret;
         }
         Object keys = ret[0];
+        boolean needAddPrefix = false;
+        if (keys instanceof String) {
+            if (!Pradar.isClusterTestPrefix((String) keys)) {
+                needAddPrefix = true;
+            }
+        } else if (keys instanceof String[]) {
+            String[] ks = (String[]) keys;
+            for (int i = 0; i < ks.length; i++) {
+                if (Pradar.isClusterTestPrefix(ks[i])) {
+                    needAddPrefix = true;
+                    break;
+                }
+            }
+        }
+        if (needAddPrefix) {
+            addClusterTestPrefix(ret);
+        }
+        return ret;
+    }
+
+    /**
+     * 便于排查问题
+     *
+     * @param ret
+     */
+    private void addClusterTestPrefix(Object[] ret) {
+        Object keys = ret[0];
         if (keys instanceof String) {
             if (!Pradar.isClusterTestPrefix((String) keys)) {
                 ret[0] = Pradar.addClusterTestPrefix((String) keys);
@@ -94,7 +126,6 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
                 ks[i] = Pradar.isClusterTestPrefix(ks[i]) ? ks[i] : Pradar.addClusterTestPrefix(ks[i]);
             }
         }
-        return ret;
     }
 
     void attachment(Advice advice, int stage) {
@@ -248,6 +279,16 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
 
         record.setRequest(toArgs(args));
         record.setMiddlewareName(RedisConstants.MIDDLEWARE_NAME);
+
+        if ("setex".equals(advice.getBehaviorName())) {
+            String key = args[0] instanceof byte[] ? new String((byte[]) args[0]) : (String) args[0];
+            if (!key.startsWith("PT_")) {
+                Exception e = new IllegalStateException("setex方法没有对key加压测标");
+                e.printStackTrace();
+                LOGGER.error("setex方法没有对key加压测标", e);
+            }
+        }
+
         return record;
     }
 

@@ -14,7 +14,11 @@ public class SyncObjectBeforeFetchInterceptor extends AdviceListener {
 
     @Override
     public void before(Advice advice) throws Throwable {
-        String key = String.format("%s#%s", advice.getTarget().getClass().getName(), advice.getBehaviorName());
+        String className = advice.getTargetClass().getName();
+        if (className.contains("$$")) {
+            className = className.substring(0, className.indexOf("$$"));
+        }
+        String key = String.format("%s#%s", className, advice.getBehaviorName());
         logger.info("success save sync object before invoke from : {}", key);
         SyncObjectService.saveSyncObject(key, new SyncObject()
                 .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj())));

@@ -280,15 +280,6 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
         record.setRequest(toArgs(args));
         record.setMiddlewareName(RedisConstants.MIDDLEWARE_NAME);
 
-        if ("setex".equals(advice.getBehaviorName())) {
-            String key = args[0] instanceof byte[] ? new String((byte[]) args[0]) : (String) args[0];
-            if (!key.startsWith("PT_")) {
-                Exception e = new IllegalStateException("setex方法没有对key加压测标");
-                e.printStackTrace();
-                LOGGER.error("setex方法没有对key加压测标", e);
-            }
-        }
-
         return record;
     }
 

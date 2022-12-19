@@ -263,9 +263,12 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         interceptorApplied.set(true);
 
+
         Object[] args = advice.getParameterArray();
         String methodName = advice.getBehaviorName();
         Object target = advice.getTarget();
+
+        printInvokeEnvs("trace", methodName, args);
 
         SpanRecord record = new SpanRecord();
         record.setService(methodName);
@@ -335,5 +338,31 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
             throw new PressureMeasureError("target is not support: " + target.getClass());
         }
         return client;
+    }
+
+    private void printInvokeEnvs(String order, String method, Object[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        }
+        Object[] params = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof String) {
+                params[i] = args[i];
+            } else if (args[i] instanceof String[]) {
+                params[i] = args[i];
+            } else if (args[i] instanceof byte[]) {
+                params[i] = new String((byte[]) args[i]);
+            } else if (args[i] instanceof byte[][]) {
+                byte[][] bts = (byte[][]) args[i];
+                String[] strings = new String[bts.length];
+                for (int i1 = 0; i1 < bts.length; i1++) {
+                    strings[i] = new String(bts[i]);
+                }
+                params[i] = strings;
+            }else if(args[i] instanceof Number){
+                params[i] = ((Number)args[i]).toString();
+            }
+        }
+        LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());
     }
 }

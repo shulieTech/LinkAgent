@@ -42,16 +42,22 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
     @Override
     public SpanRecord beforeTrace(Advice advice) {
 
-        if(JedisInterceptor.interceptorApplied.get()){
+        Object[] args = advice.getParameterArray();
+        String method = ((Protocol.Command) advice.getParameterArray()[0]).name().toLowerCase();
+
+        printInvokeEnvs("trace_before", method, args);
+
+        if (JedisInterceptor.interceptorApplied.get()) {
             return null;
         }
 
-        Object[] args = advice.getParameterArray();
         Client client = (Client) advice.getTarget();
-        String method = ((Protocol.Command) advice.getParameterArray()[0]).name().toLowerCase();
         if (!METHOD_KEYS.contains(method)) {
             return null;
         }
+
+        printInvokeEnvs("trace_after", method, args);
+
         SpanRecord record = new SpanRecord();
         record.setService(method);
         record.setMethod(method);
@@ -65,7 +71,7 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        if(JedisInterceptor.interceptorApplied.get()){
+        if (JedisInterceptor.interceptorApplied.get()) {
             return null;
         }
         Protocol.Command command = (Protocol.Command) advice.getParameterArray()[0];
@@ -85,7 +91,7 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
-        if(JedisInterceptor.interceptorApplied.get()){
+        if (JedisInterceptor.interceptorApplied.get()) {
             return null;
         }
         String method = ((Protocol.Command) advice.getParameterArray()[0]).name().toLowerCase();
@@ -136,6 +142,32 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
                 .setDatabase(db)
         );
         Pradar.getInvokeContext().setExt(ext);
+    }
+
+    private void printInvokeEnvs(String order, String method, Object[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        }
+        Object[] params = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof String) {
+                params[i] = args[i];
+            } else if (args[i] instanceof String[]) {
+                params[i] = args[i];
+            } else if (args[i] instanceof byte[]) {
+                params[i] = new String((byte[]) args[i]);
+            } else if (args[i] instanceof byte[][]) {
+                byte[][] bts = (byte[][]) args[i];
+                String[] strings = new String[bts.length];
+                for (int i1 = 0; i1 < bts.length; i1++) {
+                    strings[i] = new String(bts[i]);
+                }
+                params[i] = strings;
+            }else if(args[i] instanceof Number){
+                params[i] = ((Number)args[i]).toString();
+            }
+        }
+        LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());
     }
 
 }

@@ -9,6 +9,8 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Protocol;
 
 import java.util.Collection;
@@ -25,11 +27,15 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
 
     private static final Set<String> METHOD_KEYS = RedisUtils.get().keySet();
 
+    protected final static Logger LOGGER = LoggerFactory.getLogger(JedisInterceptor.class.getName());
+
     @Override
     public Object[] getParameter0(Advice advice) {
         ClusterTestUtils.validateClusterTest();
 
         Object[] args = advice.getParameterArray();
+
+        printInvokeEnvs("before", advice.getBehaviorName(), args);
 
         if (JedisInterceptor.interceptorApplied.get()) {
             return args;
@@ -37,6 +43,7 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
         if (args == null || args.length < 2) {
             return args;
         }
+
 
         if (!Pradar.isClusterTest()) {
             return args;
@@ -105,7 +112,35 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
         System.arraycopy(args, 0, array, 0, args.length);
         values[1] = array;
 
+        printInvokeEnvs("after", advice.getBehaviorName(), values);
+
         return values;
+    }
+
+    private void printInvokeEnvs(String order, String method, Object[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        }
+        Object[] params = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof String) {
+                params[i] = args[i];
+            } else if (args[i] instanceof String[]) {
+                params[i] = args[i];
+            } else if (args[i] instanceof byte[]) {
+                params[i] = new String((byte[]) args[i]);
+            } else if (args[i] instanceof byte[][]) {
+                byte[][] bts = (byte[][]) args[i];
+                String[] strings = new String[bts.length];
+                for (int i1 = 0; i1 < bts.length; i1++) {
+                    strings[i] = new String(bts[i]);
+                }
+                params[i] = strings;
+            }else if(args[i] instanceof Number){
+                params[i] = ((Number)args[i]).toString();
+            }
+        }
+        LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());
     }
 
 }

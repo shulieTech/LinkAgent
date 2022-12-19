@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -27,7 +27,6 @@ import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
-import redis.clients.jedis.commands.ProtocolCommand;
 
 import java.util.*;
 
@@ -77,6 +76,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return args;
         }
 
+        printInvokeEnvs("before", advice.getBehaviorName(), args);
+
         if (RedisClientMediator.isShadowDb()) {
             return args;
         }
@@ -89,7 +90,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
 
         Collection<String> whiteList = GlobalConfig.getInstance().getCacheKeyWhiteList();
         boolean canMatchWhiteList = false;
-        if (readMethod.contains(methodName)){
+        if (readMethod.contains(methodName)) {
             canMatchWhiteList = true;
         }
 
@@ -115,18 +116,22 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return processXReadGroup(args, whiteList);
         }
 
-        if ("mset".equals(advice.getBehaviorName())||"msetnx".equals(advice.getBehaviorName())) {
+        if ("mset".equals(advice.getBehaviorName()) || "msetnx".equals(advice.getBehaviorName())) {
             return processMset(args, whiteList, canMatchWhiteList);
         }
 
-        return process(args, whiteList, canMatchWhiteList);
+        Object[] process = process(args, whiteList, canMatchWhiteList);
+
+        printInvokeEnvs("after", advice.getBehaviorName(), process);
+
+        return process;
     }
 
     protected Object[] processMset(Object[] args, Collection<String> whiteList, boolean canMatchWhiteList) {
         Object params = args[0];
         if (params instanceof String[]) {
             String[] data = (String[]) params;
-            for (int i = 0; i < data.length; i=i+2) {
+            for (int i = 0; i < data.length; i = i + 2) {
                 data[i] = fetchKeyString(data[i], whiteList, canMatchWhiteList);
             }
             return args;
@@ -357,7 +362,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         continue;
                     }
                     boolean contains = false;
-                    if (canMatchWhiteList){
+                    if (canMatchWhiteList) {
                         for (String white : whiteList) {
                             if (key.startsWith(white)) {
                                 contains = true;
@@ -395,7 +400,7 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                         continue;
                     }
                     boolean contains = false;
-                    if (canMatchWhiteList){
+                    if (canMatchWhiteList) {
                         for (String white : whiteList) {
                             if (key.startsWith(white)) {
                                 contains = true;
@@ -656,5 +661,31 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             str = Pradar.addClusterTestPrefix(str);
         }
         return str.getBytes();
+    }
+
+    private void printInvokeEnvs(String order, String method, Object[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        }
+        Object[] params = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof String) {
+                params[i] = args[i];
+            } else if (args[i] instanceof String[]) {
+                params[i] = args[i];
+            } else if (args[i] instanceof byte[]) {
+                params[i] = new String((byte[]) args[i]);
+            } else if (args[i] instanceof byte[][]) {
+                byte[][] bts = (byte[][]) args[i];
+                String[] strings = new String[bts.length];
+                for (int i1 = 0; i1 < bts.length; i1++) {
+                    strings[i] = new String(bts[i]);
+                }
+                params[i] = strings;
+            }else if(args[i] instanceof Number){
+                params[i] = ((Number)args[i]).toString();
+            }
+        }
+        LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());
     }
 }

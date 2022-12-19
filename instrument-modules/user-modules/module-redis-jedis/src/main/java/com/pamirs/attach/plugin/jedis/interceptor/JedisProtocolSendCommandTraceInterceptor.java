@@ -45,6 +45,8 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         Object[] args = advice.getParameterArray();
         String method = new String((byte[]) args[1]);
 
+        toArgs(args);
+
         printInvokeEnvs("trace_before", method, args);
 
         if (JedisInterceptor.interceptorApplied.get()) {
@@ -102,20 +104,27 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
     }
 
     private Object[] toArgs(Object[] args) {
-        if (args.length == 2) {
+        if (args.length <= 2) {
             return null;
         }
         Object[] ret = new Object[args.length - 2];
-        for (int i = 2; i < args.length - 1; i++) {
-            Object arg = args[i + 1];
+        for (int i = 2; i < args.length; i++) {
+            Object arg = args[i];
             if (arg instanceof String) {
-                ret[i] = arg;
+                ret[i - 2] = arg;
             } else if (arg instanceof byte[]) {
-                ret[i] = new String((byte[]) arg);
+                ret[i - 2] = new String((byte[]) arg);
             } else if (arg instanceof char[]) {
-                ret[i] = new String((char[]) arg);
+                ret[i - 2] = new String((char[]) arg);
+            } else if (arg instanceof byte[][]) {
+                byte[][] bts = (byte[][]) arg;
+                String[] strings = new String[bts.length];
+                for (int i1 = 0; i1 < bts.length; i1++) {
+                    strings[i1] = new String(bts[i1]);
+                }
+                ret[i - 2] = strings;
             } else {
-                ret[i] = arg;
+                ret[i - 2] = arg;
             }
         }
         return ret;

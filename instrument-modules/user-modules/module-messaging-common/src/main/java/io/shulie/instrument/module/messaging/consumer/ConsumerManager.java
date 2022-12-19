@@ -148,7 +148,7 @@ public class ConsumerManager {
                                     continue;
                                 }
                                 Object bizTarget = objectData.getTarget();
-                                String keyOfObj = bizTarget.getClass() + "#" + Objects.hashCode(bizTarget);
+                                String keyOfObj = bizTarget.getClass() + "#" + Objects.hashCode(bizTarget) + "#" + consumerConfig.keyOfConfig();
                                 enhanceIsolationBytecode(consumerRegisterModule, bizTarget);
                                 addShadowServerModule(keyOfObj, consumerConfig, shadowConsumerExecute, bizTarget);
                             }

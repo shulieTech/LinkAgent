@@ -22,7 +22,7 @@ public class SyncObjectAfterFetchInterceptor extends AdviceListener {
 
     @Override
     public void after(Advice advice) throws Throwable {
-        String key = SyncObjectFetchUtils.getKey(advice.getTarget().getClass(), advice.getBehaviorName());
+        String key = SyncObjectFetchUtils.getKey(advice.getTargetClass(), advice.getBehaviorName());
         logger.info("success save sync object after invoked from : {}", key);
         SyncObjectService.saveSyncObject(key, new SyncObject()
                 .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj())));

@@ -356,7 +356,7 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
                 byte[][] bts = (byte[][]) args[i];
                 String[] strings = new String[bts.length];
                 for (int i1 = 0; i1 < bts.length; i1++) {
-                    strings[i] = new String(bts[i]);
+                    strings[i1] = new String(bts[i1]);
                 }
                 params[i] = strings;
             }else if(args[i] instanceof Number){

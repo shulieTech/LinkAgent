@@ -133,11 +133,13 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
                 byte[][] bts = (byte[][]) args[i];
                 String[] strings = new String[bts.length];
                 for (int i1 = 0; i1 < bts.length; i1++) {
-                    strings[i] = new String(bts[i]);
+                    strings[i1] = new String(bts[i1]);
                 }
                 params[i] = strings;
             }else if(args[i] instanceof Number){
                 params[i] = ((Number)args[i]).toString();
+            }else if(args[i] instanceof Protocol.Command){
+                params[i] = ((Protocol.Command)args[i]).name();
             }
         }
         LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());

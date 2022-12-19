@@ -32,6 +32,7 @@ import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperConfiguration;
 import com.dangdang.ddframe.job.reg.zookeeper.ZookeeperRegistryCenter;
 import com.dangdang.elasticjob.lite.annotation.ElasticSimpleJob;
 import com.dangdang.elasticjob.lite.autoconfigure.ElasticJobAutoConfiguration;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadowjob.cache.ElasticJobCache;
 import com.pamirs.attach.plugin.shadowjob.common.ElasticJobConfig;
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
@@ -41,6 +42,9 @@ import com.pamirs.attach.plugin.shadowjob.destory.JobDestroy;
 import com.pamirs.attach.plugin.shadowjob.obj.PtDataflowJob;
 import com.pamirs.attach.plugin.shadowjob.obj.PtElasticJobSimpleJob;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.SyncObjectService;
+import com.pamirs.pradar.bean.SyncObject;
+import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowJob;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -184,6 +188,32 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 return true;
             }
         }
+
+        SyncObject syncObject = SyncObjectService.getSyncObject("com.dangdang.ddframe.job.lite.api.JobScheduler#init");
+        if (syncObject == null || syncObject.getDatas().isEmpty()) {
+            return registered.contains(shadowJob.getClassName());
+        }
+        for (SyncObjectData syncObjectData : syncObject.getDatas()) {
+            JobScheduler target = (JobScheduler) syncObjectData.getTarget();
+            if (target instanceof SpringJobScheduler) {
+                continue;
+            }
+
+            LiteJobConfiguration liteJobConfig = ReflectionUtils.get(target, "liteJobConfig");
+            JobTypeConfiguration typeConfig = ReflectionUtils.get(liteJobConfig, "typeConfig");
+            JobType jobType = typeConfig.getJobType();
+
+            String ptJobName;
+            if (jobType == JobType.SIMPLE) {
+                ptJobName = PtElasticJobSimpleJob.class.getName() + shadowJob.getClassName();
+            } else {
+                ptJobName = PtDataflowJob.class.getName() + shadowJob.getClassName();
+            }
+            if (ptJobName.equals(typeConfig.getJobClass())) {
+                return true;
+            }
+        }
+
         return registered.contains(shadowJob.getClassName());
     }
 
@@ -198,12 +228,19 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             if (checkRegistered(shadowJob)) {
                 return true;
             }
-            boolean found = false;
+
+            boolean found;
             Map<String, JobScheduler> schedulerMap = PradarSpringUtil.getBeanFactory().getBeansOfType(JobScheduler.class);
-            for (Map.Entry<String, JobScheduler> s : schedulerMap.entrySet()) {
+            Set<JobScheduler> values = new HashSet<JobScheduler>(schedulerMap.values());
 
-                JobScheduler jobScheduler = s.getValue();
+            SyncObject syncObject = SyncObjectService.getSyncObject("com.dangdang.ddframe.job.lite.api.JobScheduler#init");
+            if(syncObject != null && !syncObject.getDatas().isEmpty()){
+                for (SyncObjectData data : syncObject.getDatas()) {
+                    values.add((JobScheduler) data.getTarget());
+                }
+            }
 
+            for (JobScheduler jobScheduler : values) {
                 LiteJobConfiguration liteJobConfiguration =
                         Reflect.on(jobScheduler).get("liteJobConfig");
                 JobTypeConfiguration jobTypeConfiguration = liteJobConfiguration.getTypeConfig();
@@ -359,8 +396,6 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             }
         }
         return null;
-
-
     }
 
 

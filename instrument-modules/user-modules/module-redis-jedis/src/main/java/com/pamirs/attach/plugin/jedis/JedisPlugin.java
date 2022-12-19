@@ -149,9 +149,16 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod sendCommand = target.getDeclaredMethods("sendCommand");
-                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandTraceInterceptor.class));
                 sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandInterceptor.class));
                 sendCommand.addInterceptor(Listeners.of(JedisSingleClientCutOffInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "redis.clients.jedis.Protocol", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod sendCommand = target.getDeclaredMethod("sendCommand", "redis.clients.util.RedisOutputStream", "byte[]", "byte[][]");
+                sendCommand.addInterceptor(Listeners.of(JedisProtocolSendCommandTraceInterceptor.class));
             }
         });
 

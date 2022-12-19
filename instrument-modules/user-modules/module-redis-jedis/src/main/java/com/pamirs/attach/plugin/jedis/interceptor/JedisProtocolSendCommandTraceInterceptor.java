@@ -25,7 +25,7 @@ import java.util.Set;
  */
 @Destroyable(JedisDestroyed.class)
 @ListenerBehavior(isFilterBusinessData = true)
-public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptorAdaptor {
+public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAdaptor {
 
     private static final Set<String> METHOD_KEYS = RedisUtils.get().keySet();
 
@@ -43,7 +43,7 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
     public SpanRecord beforeTrace(Advice advice) {
 
         Object[] args = advice.getParameterArray();
-        String method = ((Protocol.Command) advice.getParameterArray()[0]).name().toLowerCase();
+        String method = new String((byte[]) args[1]);
 
         printInvokeEnvs("trace_before", method, args);
 
@@ -74,15 +74,11 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
         if (JedisInterceptor.interceptorApplied.get()) {
             return null;
         }
-        Protocol.Command command = (Protocol.Command) advice.getParameterArray()[0];
-        String method = command.name().toLowerCase();
+        String method = new String((byte[]) advice.getParameterArray()[1]);
         if (!METHOD_KEYS.contains(method)) {
             return null;
         }
         SpanRecord record = new SpanRecord();
-        Client client = (Client) advice.getTarget();
-        // 写返回值需要拷贝流, 对性能有影响
-//        record.setResponse(client.getOne());
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setMiddlewareName(RedisConstants.MIDDLEWARE_NAME);
         attachment(advice);
@@ -106,11 +102,11 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
     }
 
     private Object[] toArgs(Object[] args) {
-        if (args.length == 1) {
+        if (args.length == 2) {
             return null;
         }
-        Object[] ret = new Object[args.length - 1];
-        for (int i = 0; i < args.length - 1; i++) {
+        Object[] ret = new Object[args.length - 2];
+        for (int i = 2; i < args.length - 1; i++) {
             Object arg = args[i + 1];
             if (arg instanceof String) {
                 ret[i] = arg;
@@ -145,28 +141,29 @@ public class JedisConnectionSendCommandTraceInterceptor extends TraceInterceptor
     }
 
     private void printInvokeEnvs(String order, String method, Object[] args) {
-        if (args == null || args.length == 0) {
+        if (args == null || args.length < 2) {
             return;
         }
-        Object[] params = new Object[args.length];
-        for (int i = 0; i < args.length; i++) {
-            if (args[i] instanceof String) {
-                params[i] = args[i];
-            } else if (args[i] instanceof String[]) {
-                params[i] = args[i];
-            } else if (args[i] instanceof byte[]) {
-                params[i] = new String((byte[]) args[i]);
-            } else if (args[i] instanceof byte[][]) {
-                byte[][] bts = (byte[][]) args[i];
+        Object[] params = new Object[args.length - 2];
+        for (int i = 0; i < args.length - 2; i++) {
+            int x = i + 2;
+            if (args[x] instanceof String) {
+                params[i] = args[x];
+            } else if (args[x] instanceof String[]) {
+                params[i] = args[x];
+            } else if (args[x] instanceof byte[]) {
+                params[i] = new String((byte[]) args[x]);
+            } else if (args[x] instanceof byte[][]) {
+                byte[][] bts = (byte[][]) args[x];
                 String[] strings = new String[bts.length];
                 for (int i1 = 0; i1 < bts.length; i1++) {
                     strings[i1] = new String(bts[i1]);
                 }
                 params[i] = strings;
-            }else if(args[i] instanceof Number){
-                params[i] = ((Number)args[i]).toString();
-            }else if(args[i] instanceof Protocol.Command){
-                params[i] = ((Protocol.Command)args[i]).name();
+            } else if (args[x] instanceof Number) {
+                params[i] = ((Number) args[i]).toString();
+            } else if (args[x] instanceof Protocol.Command) {
+                params[i] = ((Protocol.Command) args[i]).name();
             }
         }
         LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());

@@ -13,14 +13,10 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Client;
-import redis.clients.jedis.Protocol;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author jiangjibo
@@ -30,8 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Destroyable(JedisDestroyed.class)
 @ListenerBehavior(isFilterBusinessData = true)
 public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAdaptor {
-
-    Logger logger = LoggerFactory.getLogger(JedisProtocolSendCommandTraceInterceptor.class);
 
     private static final Set<String> METHOD_KEYS = new HashSet<String>(RedisUtils.get().keySet());
 
@@ -64,8 +58,6 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         Object[] args = advice.getParameterArray();
         String method = new String((byte[]) args[1]).toLowerCase();
 
-        printInvokeEnvs("trace_before", method, args);
-
         if (JedisInterceptor.interceptorApplied.get()) {
             return null;
         }
@@ -73,13 +65,6 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         Client client = (Client) advice.getTarget();
         if (!METHOD_KEYS.contains(method)) {
             return null;
-        }
-
-        printInvokeEnvs("trace_after", method, args);
-
-        if ("setex".equalsIgnoreCase(method)) {
-            Exception e = new IllegalStateException();
-            logger.info("send command setex 堆栈信息", e);
         }
 
         SpanRecord record = new SpanRecord();
@@ -171,35 +156,6 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
                 .setDatabase(db)
         );
         Pradar.getInvokeContext().setExt(ext);
-    }
-
-    private void printInvokeEnvs(String order, String method, Object[] args) {
-        if (args == null || args.length < 2) {
-            return;
-        }
-        Object[] params = new Object[args.length - 2];
-        for (int i = 0; i < args.length - 2; i++) {
-            int x = i + 2;
-            if (args[x] instanceof String) {
-                params[i] = args[x];
-            } else if (args[x] instanceof String[]) {
-                params[i] = args[x];
-            } else if (args[x] instanceof byte[]) {
-                params[i] = new String((byte[]) args[x]);
-            } else if (args[x] instanceof byte[][]) {
-                byte[][] bts = (byte[][]) args[x];
-                String[] strings = new String[bts.length];
-                for (int i1 = 0; i1 < bts.length; i1++) {
-                    strings[i1] = new String(bts[i1]);
-                }
-                params[i] = strings;
-            } else if (args[x] instanceof Number) {
-                params[i] = ((Number) args[i]).toString();
-            } else if (args[x] instanceof Protocol.Command) {
-                params[i] = ((Protocol.Command) args[i]).name();
-            }
-        }
-        LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());
     }
 
 }

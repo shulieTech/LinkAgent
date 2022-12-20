@@ -35,8 +35,6 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
 
         Object[] args = advice.getParameterArray();
 
-        printInvokeEnvs("before", advice.getBehaviorName(), args);
-
         if (JedisInterceptor.interceptorApplied.get()) {
             return args;
         }
@@ -112,37 +110,8 @@ public class JedisConnectionSendCommandInterceptor extends MJedisInterceptor {
         System.arraycopy(args, 0, array, 0, args.length);
         values[1] = array;
 
-        printInvokeEnvs("after", advice.getBehaviorName(), values);
-
         return values;
     }
 
-    private void printInvokeEnvs(String order, String method, Object[] args) {
-        if (args == null || args.length == 0) {
-            return;
-        }
-        Object[] params = new Object[args.length];
-        for (int i = 0; i < args.length; i++) {
-            if (args[i] instanceof String) {
-                params[i] = args[i];
-            } else if (args[i] instanceof String[]) {
-                params[i] = args[i];
-            } else if (args[i] instanceof byte[]) {
-                params[i] = new String((byte[]) args[i]);
-            } else if (args[i] instanceof byte[][]) {
-                byte[][] bts = (byte[][]) args[i];
-                String[] strings = new String[bts.length];
-                for (int i1 = 0; i1 < bts.length; i1++) {
-                    strings[i1] = new String(bts[i1]);
-                }
-                params[i] = strings;
-            }else if(args[i] instanceof Number){
-                params[i] = ((Number)args[i]).toString();
-            }else if(args[i] instanceof Protocol.Command){
-                params[i] = ((Protocol.Command)args[i]).name();
-            }
-        }
-        LOGGER.info("[redis-jedis], class:{},  order:{}, method:{}, params:{}, nanno time:{}", this.getClass().getSimpleName(), order, method, params, System.nanoTime());
-    }
 
 }

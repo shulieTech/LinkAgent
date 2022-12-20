@@ -13,10 +13,14 @@ import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Client;
 import redis.clients.jedis.Protocol;
 
+import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author jiangjibo
@@ -27,7 +31,23 @@ import java.util.Set;
 @ListenerBehavior(isFilterBusinessData = true)
 public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAdaptor {
 
-    private static final Set<String> METHOD_KEYS = RedisUtils.get().keySet();
+    Logger logger = LoggerFactory.getLogger(JedisProtocolSendCommandTraceInterceptor.class);
+
+    private static final Set<String> METHOD_KEYS = new HashSet<String>(RedisUtils.get().keySet());
+
+    static {
+        // Command命令的name大部分都是大写
+        Set<String> lowerCasedKeys = new HashSet<String>();
+        for (String key : METHOD_KEYS) {
+            lowerCasedKeys.add(key.toLowerCase());
+        }
+        METHOD_KEYS.addAll(lowerCasedKeys);
+        Set<String> upperCasedKeys = new HashSet<String>();
+        for (String key : METHOD_KEYS) {
+            upperCasedKeys.add(key.toUpperCase());
+        }
+        METHOD_KEYS.addAll(upperCasedKeys);
+    }
 
     @Override
     public String getPluginName() {
@@ -41,11 +61,8 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
 
     @Override
     public SpanRecord beforeTrace(Advice advice) {
-
         Object[] args = advice.getParameterArray();
-        String method = new String((byte[]) args[1]);
-
-        toArgs(args);
+        String method = new String((byte[]) args[1]).toLowerCase();
 
         printInvokeEnvs("trace_before", method, args);
 
@@ -59,6 +76,11 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         }
 
         printInvokeEnvs("trace_after", method, args);
+
+        if ("setex".equalsIgnoreCase(method)) {
+            Exception e = new IllegalStateException();
+            logger.info("send command setex 堆栈信息", e);
+        }
 
         SpanRecord record = new SpanRecord();
         record.setService(method);

@@ -83,15 +83,18 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         this.enhanceTemplate.enhance(this, "redis.clients.jedis.BinaryJedisCluster", jedisClusterEnhanceCallback);
         this.enhanceTemplate.enhance(this, "redis.clients.jedis.JedisCluster", jedisClusterEnhanceCallback);
 
-        //redis.clients.jedis.PipelineBase
-        enhanceTemplate.enhanceWithSuperClass(this, "redis.clients.jedis.PipelineBase", new EnhanceCallback() {
+        EnhanceCallback callback = new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 String[] methodName = {"append", "brpop", "blpop", "decr", "decrBy", "del", "echo", "exists", "expire", "expireAt", "get", "getbit", "bitpos", "bitpos", "getrange", "getSet", "getrange", "hdel", "hexists", "hget", "hgetAll", "hincrBy", "hkeys", "hlen", "hmget", "hmset", "hset", "hsetnx", "hvals", "incr", "incrBy", "lindex", "linsert", "llen", "lpop", "lpush", "lpushx", "lrange", "lrem", "lset", "ltrim", "move", "persist", "rpop", "rpush", "rpushx", "sadd", "scard", "set", "setbit", "setex", "setnx", "setrange", "sismember", "smembers", "sort", "sort", "spop", "spop", "srandmember", "srandmember", "srem", "strlen", "substr", "ttl", "type", "zadd", "zadd", "zcard", "zcount", "zincrby", "zrange", "zrangeByScore", "zrangeByScoreWithScores", "zrevrangeByScore", "zrevrangeByScoreWithScores", "zrangeWithScores", "zrank", "zrem", "zremrangeByRank", "zremrangeByScore", "zrevrange", "zrevrangeWithScores", "zrevrank", "zscore", "zlexcount", "zrangeByLex", "zrevrangeByLex", "bitcount", "dump", "migrate", "objectRefcount", "objctRefcount", "objectEncoding", "objectIdletime", "pexpire", "pexpireAt", "pttl", "restore", "incrByFloat", "psetex", "set", "hincrByFloat", "eval", "evalsha", "pfadd", "pfcount", "geoadd", "geodist", "geohash", "geopos", "georadius", "georadiusByMember", "bitfield", "xread"};
                 InstrumentMethod declaredMethod = target.getDeclaredMethods(methodName);
                 declaredMethod.addInterceptor(Listeners.of(JedisPipelineBaseInterceptor.class));
             }
-        });
+        };
+
+        //redis.clients.jedis.PipelineBase
+        enhanceTemplate.enhance(this, "redis.clients.jedis.PipelineBase", callback);
+        enhanceTemplate.enhanceWithSuperClass(this, "redis.clients.jedis.PipelineBase", callback);
 
         //兜底
         enhanceTemplate.enhance(this, "redis.clients.jedis.Client", new EnhanceCallback() {

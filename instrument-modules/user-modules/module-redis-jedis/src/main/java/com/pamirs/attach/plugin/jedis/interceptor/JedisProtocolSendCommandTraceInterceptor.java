@@ -86,8 +86,10 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         record.setService(method);
         record.setMethod(method);
         record.setRequestSize(0);
-        record.setRemoteIp(client.getHost());
-        record.setPort(client.getPort());
+        if (client != null) {
+            record.setRemoteIp(client.getHost());
+            record.setPort(client.getPort());
+        }
         record.setRequest(toArgs(args));
         record.setMiddlewareName(RedisConstants.MIDDLEWARE_NAME);
         return record;
@@ -114,7 +116,7 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         if (JedisInterceptor.interceptorApplied.get()) {
             return null;
         }
-        String method = ((Protocol.Command) advice.getParameterArray()[0]).name().toLowerCase();
+        String method = new String((byte[]) advice.getParameterArray()[1]);
         if (!METHOD_KEYS.contains(method)) {
             return null;
         }

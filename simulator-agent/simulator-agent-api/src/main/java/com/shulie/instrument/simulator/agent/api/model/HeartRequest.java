@@ -93,11 +93,6 @@ public class HeartRequest {
     private String simulatorVersion;
 
     /**
-     * simulator版本
-     */
-    private String simulatorVersion;
-
-    /**
      * 模块版本信息
      */
     private String dependencyInfo;

@@ -76,6 +76,11 @@ public final class EventRouter {
                     if (event == null) {
                         continue;
                     }
+                    StringBuilder sb = new StringBuilder();
+                    for (PradarEventListener listener : listeners) {
+                        sb.append(listener).append(",");
+                    }
+                    LOGGER.info("execute event {} with listeners: {}", event, sb.toString());
                     for (PradarEventListener listener : listeners) {
                         try {
                             EventResult result = listener.onEvent(event);

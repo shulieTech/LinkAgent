@@ -210,9 +210,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("plugin." + getPluginName() + ".trace.enabled", true)) {
-            return;
-        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {
@@ -593,9 +590,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doAfter(Advice advice) throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("plugin." + getPluginName() + ".trace.enabled", true)) {
-            return;
-        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {
@@ -657,9 +651,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public final void doException(Advice advice) throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("plugin." + getPluginName() + ".trace.enabled", true)) {
-            return;
-        }
         Throwable throwable = null;
         try {
             exceptionFirst(advice);

@@ -299,7 +299,7 @@ public class ChannelNProcessDeliveryInterceptor extends TraceInterceptorAdaptor 
                 String queue = consumerMetaData.getQueue();
                 if (!GlobalConfig.getInstance().getMqWhiteList().contains(queue + "#")
                     && !GlobalConfig.getInstance().getMqWhiteList().contains("#" + queue)) {
-                    logger.warn("[RabbitMQ] SIMULATOR: {} is not in whitelist. ignore it", queue);
+//                    logger.warn("[RabbitMQ] SIMULATOR: {} is not in whitelist. ignore it", queue);
                     //todo need retry？
                     retry();
                     return;

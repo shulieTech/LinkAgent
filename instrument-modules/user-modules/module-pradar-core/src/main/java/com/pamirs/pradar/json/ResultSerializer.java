@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,7 +14,6 @@
  */
 package com.pamirs.pradar.json;
 
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.ToStringStyle;
 
 import java.io.PrintWriter;
@@ -653,52 +652,6 @@ public abstract class ResultSerializer {
 
     public static String serializeRequest(Object request, long maxRequestSize) {
         return request == null ? null : toStr(request, maxRequestSize);
-    }
-
-    public static String serializeRequest(String middleware, String method, Object request, long maxRequestSize) {
-        if (middleware.equals("redis-jedis") && method.equals("setex")) {
-            Object[] args = (Object[]) request;
-            Object keys = args[0];
-            boolean needAddPrefix = false;
-            if (keys instanceof String) {
-                if (!Pradar.isClusterTestPrefix((String) keys)) {
-                    needAddPrefix = true;
-                }
-            } else if (keys instanceof String[]) {
-                String[] ks = (String[]) keys;
-                for (int i = 0; i < ks.length; i++) {
-                    if (Pradar.isClusterTestPrefix(ks[i])) {
-                        needAddPrefix = true;
-                        break;
-                    }
-                }
-            }
-            if (needAddPrefix) {
-                addClusterTestPrefix(args);
-            }
-        }
-        return request == null ? null : toStr(request, maxRequestSize);
-    }
-
-    /**
-     * 便于排查问题
-     *
-     * @param ret
-     */
-    private static void addClusterTestPrefix(Object[] ret) {
-//        LOGGER.info("[redis-jedis] unexpected condition for cluster without PT prefix, params:{}", ret);
-        Object keys = ret[0];
-        if (keys instanceof String) {
-            if (!Pradar.isClusterTestPrefix((String) keys)) {
-                ret[0] = Pradar.addClusterTestPrefix((String) keys);
-            }
-        } else if (keys instanceof String[]) {
-            String[] ks = (String[]) keys;
-            for (int i = 0; i < ks.length; i++) {
-                ks[i] = Pradar.isClusterTestPrefix(ks[i]) ? ks[i] : Pradar.addClusterTestPrefix(ks[i]);
-            }
-        }
-//        LOGGER.info("[redis-jedis] after add PT prefix, params:{}", ret);
     }
 
     public static String serializeResponse(Object response, long maxResponseSize) {

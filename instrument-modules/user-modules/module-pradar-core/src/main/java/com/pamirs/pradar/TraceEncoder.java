@@ -72,12 +72,12 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                 .append(PradarCoreUtils.makeLogSafe(AppNameUtils.appName())).append('|')
                 .append(ctx.getLogTime() - ctx.getStartTime()).append('|')
                 .append(PradarCoreUtils.makeLogSafe(ctx.getMiddlewareName() == null ? "" : ctx.getMiddlewareName())).append(
-                        '|')
+                '|')
                 .append(PradarCoreUtils.makeLogSafe(ctx.getServiceName() == null ? "" : ctx.getServiceName())).append('|')
                 .append(PradarCoreUtils.makeLogSafe(ctx.getMethodName() == null ? "" : ctx.getMethodName())).append('|')
                 .append(ctx.getResultCode() == null ? "" : ctx.getResultCode()).append('|')
                 .append(PradarCoreUtils.makeLogSafe(
-                        ResultSerializer.serializeRequest(ctx.getMiddlewareName(), ctx.getMethodName(), ctx.getRequest() == null ? "" : ctx.getRequest(),
+                        ResultSerializer.serializeRequest(ctx.getRequest() == null ? "" : ctx.getRequest(),
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(PradarCoreUtils.makeLogSafe(
                         ResultSerializer.serializeRequest(ctx.getResponse() == null ? "" : ctx.getResponse(),
@@ -88,7 +88,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                 .append("|")
                 .append(PradarCoreUtils.makeLogSafe(ctx.getCallBackMsg() == null ? "" : ctx.getCallBackMsg()));
         int samplingInterval;
-        if (ctx.isClusterTest()) {
+        if (ctx.isClusterTest()){
             samplingInterval = PradarSwitcher.getClusterTestSamplingInterval();
         } else {
             samplingInterval = PradarSwitcher.getSamplingInterval();

@@ -85,27 +85,6 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
                 ret[i] = arg;
             }
         }
-        if (!Pradar.isClusterTest()) {
-            return ret;
-        }
-        Object keys = ret[0];
-        boolean needAddPrefix = false;
-        if (keys instanceof String) {
-            if (!Pradar.isClusterTestPrefix((String) keys)) {
-                needAddPrefix = true;
-            }
-        } else if (keys instanceof String[]) {
-            String[] ks = (String[]) keys;
-            for (int i = 0; i < ks.length; i++) {
-                if (Pradar.isClusterTestPrefix(ks[i])) {
-                    needAddPrefix = true;
-                    break;
-                }
-            }
-        }
-        if (needAddPrefix) {
-            addClusterTestPrefix(ret);
-        }
         return ret;
     }
 

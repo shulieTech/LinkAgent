@@ -33,7 +33,7 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
         Object[] args = advice.getParameterArray();
         Object target = advice.getTarget();
         SpanRecord spanRecord = new SpanRecord();
-        appendEndPoint(target, spanRecord);
+//        appendEndPoint(target, spanRecord);
         spanRecord.setService(((ProtocolKeyword)args[0]).name());
         spanRecord.setMethod(getMethodNameExt(args));
         spanRecord.setRequest(toArgs(args));

@@ -247,7 +247,6 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         });
 
 
-        //已废弃
         /*enhanceTemplate.enhance(this, "org.springframework.scheduling.quartz.QuartzJobBean", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

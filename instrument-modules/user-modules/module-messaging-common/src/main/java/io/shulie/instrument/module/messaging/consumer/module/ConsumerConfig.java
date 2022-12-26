@@ -26,6 +26,15 @@ public abstract class ConsumerConfig {
         return keyOfServer() + "[" + keyOfConfig() + "]";
     }
 
+    /**
+     * 是否允许一个consumer订阅多个topic
+     *
+     * @return
+     */
+    public boolean canSubscribeMultiTopics() {
+        return true;
+    }
+
     @Override
     public int hashCode() {
         return key().hashCode();

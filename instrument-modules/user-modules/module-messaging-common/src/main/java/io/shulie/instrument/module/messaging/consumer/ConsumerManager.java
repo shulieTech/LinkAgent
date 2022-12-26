@@ -148,7 +148,11 @@ public class ConsumerManager {
                                     continue;
                                 }
                                 Object bizTarget = objectData.getTarget();
-                                String keyOfObj = bizTarget.getClass() + "#" + Objects.hashCode(bizTarget) + "#" + consumerConfig.keyOfConfig();
+                                String keyOfObj = bizTarget.getClass() + "#" + Objects.hashCode(bizTarget);
+                                // 如果一个消费者只能订阅一个topic
+                                if (!consumerConfig.canSubscribeMultiTopics()) {
+                                    keyOfObj = keyOfObj + "#" + consumerConfig.keyOfConfig();
+                                }
                                 enhanceIsolationBytecode(consumerRegisterModule, bizTarget);
                                 addShadowServerModule(keyOfObj, consumerConfig, shadowConsumerExecute, bizTarget);
                             }

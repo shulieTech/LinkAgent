@@ -20,6 +20,7 @@ import com.pamirs.attach.plugin.common.datasource.hbaseserver.InvokeSwitcher;
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.dynamic.template.HbaseTemplate;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -97,12 +99,12 @@ public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
 
             Configuration ptConfiguration = (Configuration) mediatorConnection.matching(configuration);
             if (null != ptConfiguration) {
-                if(Pradar.isClusterTest()){
+                if (Pradar.isClusterTest()) {
                     // 影子流量同步创建链接,防止因为影子链接创建失败导致业务阻塞
                     Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration, (ExecutorService) args[1], (User) args[2]);
                     ShadowConnectionHolder.setShadowConnection(prefConnection);
                     mediatorConnection.setPerformanceTestConnection(prefConnection);
-                }else{
+                } else {
                     // 业务流量异步创建影子链接
                     service.submit(new HbaseShadowDbCreateConnectionTask((User) args[2], (ExecutorService) args[1], ptConfiguration, mediatorConnection));
                 }
@@ -155,15 +157,22 @@ public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
 
         @Override
         public void run() {
-            if (mediatorConnection.getPerformanceTestConnection() != null) {
-                return;
-            }
             Connection prefConnection;
-            try {
-                prefConnection = ConnectionFactory.createConnection(ptConfiguration, executorService, user);
-            } catch (IOException e) {
-                logger.error("[hbase] create shadow connection occur exception", e);
-                return;
+            while (true) {
+                try {
+                    if (user == null) {
+                        UserProvider provider = UserProvider.instantiate(ptConfiguration);
+                        user = provider.getCurrent();
+                    }
+                    prefConnection = ReflectionUtils.invokeStatic(ConnectionFactory.class, "createConnection", ptConfiguration, false, executorService, user);
+                    break;
+                } catch (IOException e) {
+                    logger.error("[hbase] create shadow connection occur exception, sleep 3s then try it again.", e);
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException ex) {
+                    }
+                }
             }
             // 如果查询影子库配置则使用影子库模式，否则未影子表模式
             ShadowConnectionHolder.setShadowConnection(prefConnection);

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -22,6 +22,7 @@ import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
 import com.pamirs.attach.plugin.dynamic.template.HbaseTemplate;
 import com.pamirs.pradar.CutOffResult;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -30,8 +31,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.security.User;
+import org.slf4j.Logger;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -39,6 +45,13 @@ import java.util.concurrent.ExecutorService;
  * @Date 2021/4/18 8:34 下午
  */
 public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
+
+    private ExecutorService service = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "[hbase-shadow-db-create-connection]");
+        }
+    });
 
     void attachment(Advice advice) {
         try {
@@ -62,7 +75,8 @@ public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
     }
 
     @Override
-    protected Object getResult0(Advice advice) { Object[] args = advice.getParameterArray();
+    protected Object getResult0(Advice advice) {
+        Object[] args = advice.getParameterArray();
         Object result = advice.getReturnObj();
         if (InvokeSwitcher.status()) {
             return CutOffResult.passed();
@@ -83,10 +97,15 @@ public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
 
             Configuration ptConfiguration = (Configuration) mediatorConnection.matching(configuration);
             if (null != ptConfiguration) {
-                Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration, (ExecutorService) args[1], (User) args[2]);
-                // 如果查询影子库配置则使用影子库模式，否则未影子表模式
-                ShadowConnectionHolder.setShadowConnection(prefConnection);
-                mediatorConnection.setPerformanceTestConnection(prefConnection);
+                if(Pradar.isClusterTest()){
+                    // 影子流量同步创建链接,防止因为影子链接创建失败导致业务阻塞
+                    Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration, (ExecutorService) args[1], (User) args[2]);
+                    ShadowConnectionHolder.setShadowConnection(prefConnection);
+                    mediatorConnection.setPerformanceTestConnection(prefConnection);
+                }else{
+                    // 业务流量异步创建影子链接
+                    service.submit(new HbaseShadowDbCreateConnectionTask((User) args[2], (ExecutorService) args[1], ptConfiguration, mediatorConnection));
+                }
             }
             mediatorConnection.setArgs(args);
             mediatorConnection.setConfiguration(args[0]);
@@ -116,6 +135,40 @@ public class ConnectionShadowInterceptor extends ResultInterceptorAdaptor {
             key = key.concat(username);
         }
         return key;
+    }
+
+    private static class HbaseShadowDbCreateConnectionTask implements Runnable {
+
+        private final Logger logger = org.slf4j.LoggerFactory.getLogger(HbaseShadowDbCreateConnectionTask.class);
+
+        private User user;
+        private ExecutorService executorService;
+        private Configuration ptConfiguration;
+        private HbaseMediatorConnection mediatorConnection;
+
+        public HbaseShadowDbCreateConnectionTask(User user, ExecutorService executorService, Configuration ptConfiguration, HbaseMediatorConnection mediatorConnection) {
+            this.user = user;
+            this.executorService = executorService;
+            this.ptConfiguration = ptConfiguration;
+            this.mediatorConnection = mediatorConnection;
+        }
+
+        @Override
+        public void run() {
+            if (mediatorConnection.getPerformanceTestConnection() != null) {
+                return;
+            }
+            Connection prefConnection;
+            try {
+                prefConnection = ConnectionFactory.createConnection(ptConfiguration, executorService, user);
+            } catch (IOException e) {
+                logger.error("[hbase] create shadow connection occur exception", e);
+                return;
+            }
+            // 如果查询影子库配置则使用影子库模式，否则未影子表模式
+            ShadowConnectionHolder.setShadowConnection(prefConnection);
+            mediatorConnection.setPerformanceTestConnection(prefConnection);
+        }
     }
 
 }

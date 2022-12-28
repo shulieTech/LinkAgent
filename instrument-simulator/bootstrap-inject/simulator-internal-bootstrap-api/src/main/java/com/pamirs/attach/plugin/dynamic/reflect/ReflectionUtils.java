@@ -2,12 +2,10 @@ package com.pamirs.attach.plugin.dynamic.reflect;
 
 import com.pamirs.attach.plugin.dynamic.utils.Assert;
 import com.pamirs.attach.plugin.dynamic.utils.ConcurrentReferenceHashMap;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 
 import java.lang.reflect.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +26,7 @@ public abstract class ReflectionUtils {
     private static final Map<Class<?>, Field[]> declaredFieldsCache =
             new ConcurrentReferenceHashMap<Class<?>, Field[]>(256);
 
-    public static <T> T invoke(Object target, String methodName){
+    public static <T> T invoke(Object target, String methodName) {
         Method method = findMethod(target.getClass(), methodName);
         return (T) invokeMethod(method, target);
     }
@@ -43,11 +41,10 @@ public abstract class ReflectionUtils {
         return (T) invokeMethod(method, target, args);
     }
 
-    public static <T> T  invokeStatic(Class clazz, String methodName, Object... args) {
+    public static <T> T invokeStatic(Class clazz, String methodName, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
+            paramTypes[i] = args[i] == null ? NULL.class : args[i].getClass();
         }
         Method method = findMethod(clazz, methodName, paramTypes);
         return (T) invokeMethod(method, null, args);
@@ -58,12 +55,12 @@ public abstract class ReflectionUtils {
         return (T) getField(field, target);
     }
 
-    public static void set(Object target, String fieldName, Object value){
+    public static void set(Object target, String fieldName, Object value) {
         Field field = findField(target.getClass(), fieldName);
         setField(field, target, value);
     }
 
-    public static <T> T newInstance(String className, Object... args){
+    public static <T> T newInstance(String className, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
             Assert.notNull(args[i], "reflect invoke method args cant has null elements");
@@ -78,7 +75,7 @@ public abstract class ReflectionUtils {
         }
     }
 
-    public static <T> T getFieldValues(Object object, String... filedNames){
+    public static <T> T getFieldValues(Object object, String... filedNames) {
         for (String filedName : filedNames) {
             object = get(object, filedName);
         }
@@ -93,7 +90,7 @@ public abstract class ReflectionUtils {
         Field field = findField(clazz, name, null);
         try {
             return (T) field.get(null);
-        }catch (IllegalAccessException ex) {
+        } catch (IllegalAccessException ex) {
             handleReflectionException(ex);
             throw new IllegalStateException(
                     "Unexpected reflection exception - " + ex.getClass().getName() + ": " + ex.getMessage());
@@ -138,15 +135,14 @@ public abstract class ReflectionUtils {
         }
     }
 
-    public static boolean existsMethod(Class<?> clazz, String methodName){
+    public static boolean existsMethod(Class<?> clazz, String methodName) {
         return existsMethod(clazz, methodName, new Object[0]);
     }
 
-    public static boolean existsMethod(Class<?> clazz, String methodName, Object... args){
+    public static boolean existsMethod(Class<?> clazz, String methodName, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
+            paramTypes[i] = args[i] == null ? NULL.class : args[i].getClass();
         }
         return findMethod(clazz, methodName, paramTypes) != null;
     }
@@ -165,7 +161,7 @@ public abstract class ReflectionUtils {
             Method[] methods = (searchType.isInterface() ? searchType.getMethods() : getDeclaredMethods(searchType));
             for (Method method : methods) {
                 if (name.equals(method.getName()) &&
-                        (paramTypes == null || Arrays.equals(paramTypes, method.getParameterTypes()))) {
+                        (paramTypes == null || classesEquals(paramTypes, method.getParameterTypes()))) {
                     method.setAccessible(true);
                     return method;
                 }
@@ -318,8 +314,7 @@ public abstract class ReflectionUtils {
                 boolean knownSignature = false;
                 Method methodBeingOverriddenWithCovariantReturnType = null;
                 for (Method existingMethod : methods) {
-                    if (method.getName().equals(existingMethod.getName()) &&
-                            Arrays.equals(method.getParameterTypes(), existingMethod.getParameterTypes())) {
+                    if (method.getName().equals(existingMethod.getName()) && classesEquals(method.getParameterTypes(), existingMethod.getParameterTypes())) {
                         // Is this a covariant return type situation?
                         if (existingMethod.getReturnType() != method.getReturnType() &&
                                 existingMethod.getReturnType().isAssignableFrom(method.getReturnType())) {
@@ -470,5 +465,64 @@ public abstract class ReflectionUtils {
             return !(Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers()));
         }
     };
+
+    private static boolean classesEquals(Class[] cls1, Class[] cls2) {
+        if (cls1 == cls2)
+            return true;
+        if (cls1 == null || cls2 == null)
+            return false;
+
+        int length = cls1.length;
+        if (cls2.length != length)
+            return false;
+
+        for (int i = 0; i < length; i++) {
+            Class c1 = cls1[i];
+            Class c2 = cls2[i];
+            if (c1 == NULL.class || c2 == NULL.class) {
+                continue;
+            }
+            if (c1.equals(c2) || c1.isAssignableFrom(c2) || c2.isAssignableFrom(c1)) {
+                continue;
+            }
+            if (castToWrapperClass(c1) == castToWrapperClass(c2)) {
+                continue;
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    private static Class castToWrapperClass(Class clazz) {
+        if (clazz == boolean.class) {
+            return Boolean.class;
+        }
+        if (clazz == byte.class) {
+            return Byte.class;
+        }
+        if (clazz == int.class) {
+            return Integer.class;
+        }
+        if (clazz == long.class) {
+            return Long.class;
+        }
+        if (clazz == double.class) {
+            return Double.class;
+        }
+        if (clazz == float.class) {
+            return Float.class;
+        }
+        if (clazz == short.class) {
+            return Short.class;
+        }
+        if (clazz == char.class) {
+            return Character.class;
+        }
+        return clazz;
+    }
+
+    private static class NULL {
+    }
 
 }

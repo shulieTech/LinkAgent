@@ -71,9 +71,6 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
                 throws ProcessControlException {
 
                 MatchConfig config = (MatchConfig)params;
-                if (null == config.getArgs().get("futureCallback")) {
-                    return new ProcessControlException(ProcessControlException.THROWS_IMMEDIATELY, "json mock script args must contains param 'futureCallback'");
-                }
                 //现在先暂时注释掉因为只有jdk8以上才能用
                 FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get(
                     "futureCallback");
@@ -86,7 +83,9 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
                     response.setEntity(entity);
                     java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
                     future.complete(response);
-                    futureCallback.completed(response);
+                    if(futureCallback != null){
+                        futureCallback.completed(response);
+                    }
                     ProcessController.returnImmediately(returnType, future);
                 } catch (ProcessControlException pe) {
                     throw pe;
@@ -228,11 +227,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
             new ExecutionCall() {
                 @Override
                 public Object call(Object param) {
-                    if (null == config.getArgs().get("futureCallback")) {
-                        return null;
-                    }
-                    FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get(
-                        "futureCallback");
+                    FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get("futureCallback");
                     StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
                     try {
                         HttpEntity entity = null;
@@ -243,7 +238,9 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
                         }
                         BasicHttpResponse response = new BasicHttpResponse(statusline);
                         response.setEntity(entity);
-                        futureCallback.completed(response);
+                        if(futureCallback != null){
+                            futureCallback.completed(response);
+                        }
                         java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
                         future.complete(response);
                         return future;

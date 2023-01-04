@@ -21,6 +21,7 @@ import com.alibaba.fastjson.JSONObject;
 
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
+import com.pamirs.attach.plugin.httpclient.utils.HttpClientFixJsonStrategies;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -63,37 +64,6 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
         }
         return url + path;
     }
-
-    private static ExecutionStrategy fixJsonStrategy =
-        new JsonMockStrategy() {
-            @Override
-            public Object processBlock(Class returnType, ClassLoader classLoader, Object params)
-                throws ProcessControlException {
-
-                MatchConfig config = (MatchConfig)params;
-                //现在先暂时注释掉因为只有jdk8以上才能用
-                FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>)config.getArgs().get(
-                    "futureCallback");
-                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
-                try {
-                    HttpEntity entity = null;
-                    entity = new StringEntity(config.getScriptContent());
-
-                    BasicHttpResponse response = new BasicHttpResponse(statusline);
-                    response.setEntity(entity);
-                    java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
-                    future.complete(response);
-                    if(futureCallback != null){
-                        futureCallback.completed(response);
-                    }
-                    ProcessController.returnImmediately(returnType, future);
-                } catch (ProcessControlException pe) {
-                    throw pe;
-                } catch (Exception e) {
-                }
-                return null;
-            }
-        };
 
     @Override
     public void doBefore(final Advice advice) throws ProcessControlException {
@@ -221,7 +191,7 @@ public class AsyncHttpClientv4MethodInterceptor2 extends AroundInterceptor {
             config.addArgs("futureCallback", args[2]);
         }
         if (config.getStrategy() instanceof JsonMockStrategy) {
-            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+            HttpClientFixJsonStrategies.HTTPCLIENT4_FIX_JSON_STRATEGY.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
         config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
             new ExecutionCall() {

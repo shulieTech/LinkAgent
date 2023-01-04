@@ -21,17 +21,20 @@ import java.util.Map;
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
-import com.pamirs.attach.plugin.httpclient.utils.HttpClientFixJsonStrategies;
+import com.pamirs.attach.plugin.httpclient.utils.HttpClientAsyncFixJsonStrategies;
+import com.pamirs.attach.plugin.httpclient.utils.HttpClientAsyncMockStrategies;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
+import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.StringUtils;
@@ -174,15 +177,20 @@ public class AsyncHttpClientv5MethodInterceptor extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
+        Object[] args = advice.getParameterArray();
+        config.addArgs("futureCallback", args[args.length - 1]);
 
-        if (config.getStrategy() instanceof JsonMockStrategy) {
-            Object[] args = advice.getParameterArray();
-            config.addArgs("futureCallback", args[args.length - 1]);
-            HttpClientFixJsonStrategies.HTTPCLIENT5_FIX_JSON_STRATEGY.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        ExecutionStrategy strategy = config.getStrategy();
+
+        if (strategy instanceof JsonMockStrategy) {
+            HttpClientAsyncFixJsonStrategies.HTTPCLIENT5_FIX_JSON_STRATEGY.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        }
+        if(strategy instanceof MockStrategy){
+            HttpClientAsyncMockStrategies.HTTPCLIENT5_MOCK_STRATEGY.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
 
         try {
-            config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
+            strategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
                     new ExecutionCall() {
                         @Override
                         public Object call(Object param) {

@@ -259,4 +259,8 @@ public interface AgentConfig {
 
     String getPinpointCollectorAddress();
 
+    public String getPradarTraceFileSize();
+
+    public String getPradarMonitorFileSize();
+
 }

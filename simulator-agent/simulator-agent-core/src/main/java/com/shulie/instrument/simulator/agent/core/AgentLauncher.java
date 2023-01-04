@@ -425,6 +425,12 @@ public class AgentLauncher {
         if (StringUtils.isNotBlank(this.agentConfig.getClusterName())) {
             builder.append(";clusterName=").append(this.agentConfig.getClusterName());
         }
+        if (StringUtils.isNotBlank(this.agentConfig.getPradarTraceFileSize())) {
+            builder.append(";traceFileSize=").append(this.agentConfig.getPradarTraceFileSize());
+        }
+        if (StringUtils.isNotBlank(this.agentConfig.getPradarMonitorFileSize())) {
+            builder.append(";monitorFileSize=").append(this.agentConfig.getPradarMonitorFileSize());
+        }
         /**
          * 指定simulator配置文件的获取地址
          */

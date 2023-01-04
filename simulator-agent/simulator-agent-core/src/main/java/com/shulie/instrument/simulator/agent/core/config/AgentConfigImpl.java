@@ -226,6 +226,16 @@ public class AgentConfigImpl implements AgentConfig {
         return coreConfig.getPinpointCollectorAddress();
     }
 
+    @Override
+    public String getPradarTraceFileSize() {
+        return coreConfig.getPradarTraceFileSize();
+    }
+
+    @Override
+    public String getPradarMonitorFileSize() {
+        return coreConfig.getPradarMonitorFileSize();
+    }
+
     /**
      * 获取 agent版本号
      *

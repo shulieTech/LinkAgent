@@ -496,6 +496,15 @@ public class CoreConfig {
     public String getPinpointCollectorAddress() {
         return getProperty("pradar.data.pusher.pinpoint.collector.address");
     }
+
+    public String getPradarTraceFileSize(){
+        return getProperty("pradar.trace.max.file.size");
+    }
+
+    public String getPradarMonitorFileSize(){
+        return getProperty("pradar.monitor.max.file.size");
+    }
+
     /**
      * 获取发起http请求中必须包含的head
      *

@@ -150,6 +150,12 @@ public class AgentLauncher {
     private static final String KEY_KAFKA_SDK_SWITCH = "kafka.sdk.switch";
     private static final String DEFAULT_KAFKA_SDK_SWITCH = "false";
 
+    private static final String KEY_TRACE_MAX_FILE_SIZE = "traceFileSize";
+    private static final String DEFAULT_TRACE_MAX_FILE_SIZE = "";
+
+    private static final String KEY_MONITOR_MAX_FILE_SIZE = "monitorFileSize";
+    private static final String DEFAULT_MONITOR_MAX_FILE_SIZE = "";
+
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
 
@@ -657,6 +663,14 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_PINPOINT_COLLECTOR_ADDRESS, DEFAULT_PINPOINT_COLLECTOR_ADDRESS);
     }
 
+    private static String getTraceMaxFileSize(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_TRACE_MAX_FILE_SIZE, DEFAULT_TRACE_MAX_FILE_SIZE);
+    }
+
+    private static String getMonitorMaxFileSize(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_MONITOR_MAX_FILE_SIZE, DEFAULT_MONITOR_MAX_FILE_SIZE);
+    }
+
     private static String getShadowPreparationEnabled(Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_SHADOW_PREPARATION_ENABLED, DEFAULT_SHADOW_PREPARATION_ENABLED);
     }
@@ -712,7 +726,8 @@ public class AgentLauncher {
                     + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
                     + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
                     + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;"
-                    + "shadow.preparation.enabled=%s;nacos.timeout=%s;nacos.serverAddr=%s;cluster.name=%s;kafka.sdk.switch=%s;pradar.data.pusher.pinpoint.collector.address=%s",
+                    + "shadow.preparation.enabled=%s;nacos.timeout=%s;nacos.serverAddr=%s;cluster.name=%s;kafka.sdk.switch=%s;pradar.data.pusher.pinpoint.collector.address=%s;"
+                    + "pradar.trace.max.file.size=%s;pradar.monitor.max.file.size=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
                 getSimulatorConfigPath(simulatorHome),
@@ -766,7 +781,11 @@ public class AgentLauncher {
                 //kafka sdk开关
                 getKafkaSdkSwitch(featureMap),
                 //pinpoint地址
-                getPinpointCollectorAddress(featureMap)
+                getPinpointCollectorAddress(featureMap),
+                //获取trace文件大小
+                getTraceMaxFileSize(featureMap),
+                //获取monitor文件大小
+                getMonitorMaxFileSize(featureMap)
             )
         );
 

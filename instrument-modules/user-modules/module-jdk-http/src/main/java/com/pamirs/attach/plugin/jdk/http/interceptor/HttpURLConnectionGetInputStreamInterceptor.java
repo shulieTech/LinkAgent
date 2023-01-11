@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.jdk.http.interceptor;
 
+import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
@@ -7,9 +8,14 @@ import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.pressurement.mock.MockStrategy;
+import com.pamirs.pradar.script.ScriptEvaluator;
+import com.pamirs.pradar.script.ScriptManager;
 import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -19,6 +25,31 @@ import java.net.URL;
  * @description:
  */
 public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectionInterceptor {
+
+    private static ExecutionStrategy fixJsonStrategy = new JsonMockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            MatchConfig config = (MatchConfig) params;
+            String ret = config.getScriptContent();
+            ProcessController.returnImmediately(new ByteArrayInputStream(ret.getBytes()));
+            return null;
+        }
+    };
+
+    private static ExecutionStrategy mockStrategy = new MockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            MatchConfig config = (MatchConfig) params;
+            String scriptContent = config.getScriptContent();
+            ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
+            Object result = evaluator.evaluate(scriptContent, config.getArgs());
+            if (result.getClass().isAssignableFrom(InputStream.class)) {
+                ProcessController.returnImmediately(result);
+            }
+            ProcessController.returnImmediately(new ByteArrayInputStream(JSON.toJSONBytes(result)));
+            return null;
+        }
+    };
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
@@ -44,6 +75,13 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
         config.addArgs("request", request);
         config.addArgs("method", "url");
         config.addArgs("isInterface", Boolean.FALSE);
-        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+
+        if (strategy instanceof JsonMockStrategy) {
+            strategy = fixJsonStrategy;
+        }
+        if (strategy instanceof MockStrategy) {
+            strategy = mockStrategy;
+        }
+        strategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
     }
 }

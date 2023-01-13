@@ -60,11 +60,15 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
                     msg.setTopic(testTopic);
                 }
                 msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
+
                 // 设置messageQueue
-                if (args.length > 1 && args[1] instanceof MessageQueue) {
-                    MessageQueue queue = (MessageQueue) args[1];
-                    if (!Pradar.isClusterTestPrefix(queue.getTopic())) {
-                        queue.setTopic(testTopic);
+                for (Object arg : args) {
+                    if (arg instanceof MessageQueue) {
+                        MessageQueue queue = (MessageQueue) args[1];
+                        if (!Pradar.isClusterTestPrefix(queue.getTopic())) {
+                            queue.setTopic(testTopic);
+                            break;
+                        }
                     }
                 }
             }

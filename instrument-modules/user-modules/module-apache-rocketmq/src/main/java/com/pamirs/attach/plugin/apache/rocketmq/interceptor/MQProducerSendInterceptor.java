@@ -25,6 +25,7 @@ import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageQueue;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -58,15 +59,28 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
         Object[] args = advice.getParameterArray();
         Message msg = (Message) args[0];
         if (PradarSwitcher.isClusterTestEnabled()) {
+            String topic = msg.getTopic();
+            String testTopic = Pradar.addClusterTestPrefix(topic);
+
             if (Pradar.isClusterTest()) {
-                String topic = msg.getTopic();
-                if (topic != null
-                        && !Pradar.isClusterTestPrefix(topic)) {
+                if (topic != null && !Pradar.isClusterTestPrefix(topic)) {
                     msg.setTopic(Pradar.addClusterTestPrefix(topic));
                 }
                 msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
             }
+
+            // 设置messageQueue
+            for (Object arg : args) {
+                if (arg instanceof MessageQueue) {
+                    MessageQueue queue = (MessageQueue) args[1];
+                    if (!Pradar.isClusterTestPrefix(queue.getTopic())) {
+                        queue.setTopic(testTopic);
+                        break;
+                    }
+                }
+            }
         }
+
 
         for (int i = 0, len = args.length; i < len; i++) {
             if (!(args[i] instanceof SendCallback)) {

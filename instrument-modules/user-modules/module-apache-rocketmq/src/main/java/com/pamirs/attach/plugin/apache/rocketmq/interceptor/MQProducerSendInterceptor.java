@@ -20,6 +20,7 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
@@ -48,7 +49,7 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
             if (!registerHookSet.contains(defaultMQProducerImpl)) {
                 synchronized (this) {
                     if (!registerHookSet.contains(defaultMQProducerImpl)) {
-                        ((DefaultMQProducerImpl) defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
+                        (defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
                         registerHookSet.add(defaultMQProducerImpl);
                         LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
                     }
@@ -68,10 +69,10 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
                 }
                 msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
                 // 设置messageQueue
-                if (args.length > 1 && args[1].getClass().getName().equals("com.alibaba.rocketmq.common.message.MessageQueue")) {
-                    MessageQueue queue = (MessageQueue) args[1];
-                    if (!Pradar.isClusterTestPrefix(queue.getTopic())) {
-                        queue.setTopic(testTopic);
+                if (args.length > 1 && args[1].getClass().getSimpleName().equals("MessageQueue")) {
+                    String topic1 = Reflect.on(args[1]).get("topic");
+                    if (!Pradar.isClusterTestPrefix(topic1)) {
+                        Reflect.on(args[1]).set("topic", testTopic);
                     }
                 }
             }

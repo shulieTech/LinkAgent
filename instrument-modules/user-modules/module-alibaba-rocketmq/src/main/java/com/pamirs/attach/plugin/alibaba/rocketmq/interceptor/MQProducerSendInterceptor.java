@@ -70,6 +70,7 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
             }
         }
 
+
         for (int i = 0, len = args.length; i < len; i++) {
             if (!(args[i] instanceof SendCallback)) {
                 continue;

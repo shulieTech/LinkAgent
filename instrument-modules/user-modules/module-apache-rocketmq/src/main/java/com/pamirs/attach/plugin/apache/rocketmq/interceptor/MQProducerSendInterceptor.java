@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -20,11 +20,13 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.rocketmq.client.impl.producer.DefaultMQProducerImpl;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageQueue;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -38,16 +40,16 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
     public void doBefore(Advice advice) {
         DefaultMQProducerImpl defaultMQProducerImpl = null;
         if (advice.getTarget() instanceof DefaultMQProducer) {
-            defaultMQProducerImpl = ((DefaultMQProducer)advice.getTarget()).getDefaultMQProducerImpl();
+            defaultMQProducerImpl = ((DefaultMQProducer) advice.getTarget()).getDefaultMQProducerImpl();
         }
         if (advice.getTarget() instanceof DefaultMQProducerImpl) {
-            defaultMQProducerImpl = (DefaultMQProducerImpl)advice.getTarget();
+            defaultMQProducerImpl = (DefaultMQProducerImpl) advice.getTarget();
         }
         if (defaultMQProducerImpl != null) {
             if (!registerHookSet.contains(defaultMQProducerImpl)) {
                 synchronized (this) {
                     if (!registerHookSet.contains(defaultMQProducerImpl)) {
-                        ((DefaultMQProducerImpl)defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
+                        (defaultMQProducerImpl).registerSendMessageHook(new SendMessageHookImpl());
                         registerHookSet.add(defaultMQProducerImpl);
                         LOGGER.warn("MQProducerSendInterceptor 注册发送trace hook成功");
                     }
@@ -58,15 +60,25 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
         Object[] args = advice.getParameterArray();
         Message msg = (Message) args[0];
         if (PradarSwitcher.isClusterTestEnabled()) {
+            String topic = msg.getTopic();
+            String testTopic = Pradar.addClusterTestPrefix(topic);
+
             if (Pradar.isClusterTest()) {
-                String topic = msg.getTopic();
-                if (topic != null
-                        && !Pradar.isClusterTestPrefix(topic)) {
+                if (topic != null && !Pradar.isClusterTestPrefix(topic)) {
                     msg.setTopic(Pradar.addClusterTestPrefix(topic));
                 }
                 msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
+                // 设置messageQueue
+                if (args.length > 1 && args[1].getClass().getSimpleName().equals("MessageQueue")) {
+                    String topic1 = Reflect.on(args[1]).get("topic");
+                    if (!Pradar.isClusterTestPrefix(topic1)) {
+                        Reflect.on(args[1]).set("topic", testTopic);
+                    }
+                }
             }
+
         }
+
 
         for (int i = 0, len = args.length; i < len; i++) {
             if (!(args[i] instanceof SendCallback)) {

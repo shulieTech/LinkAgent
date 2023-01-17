@@ -25,6 +25,8 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -60,11 +62,12 @@ public class MQProducerSendInterceptor extends AroundInterceptor {
                     msg.setTopic(testTopic);
                 }
                 msg.putUserProperty(PradarService.PRADAR_CLUSTER_TEST_KEY, Boolean.TRUE.toString());
+
                 // 设置messageQueue
-                if (args.length > 1 && args[1] instanceof MessageQueue) {
-                    MessageQueue queue = (MessageQueue) args[1];
-                    if (!Pradar.isClusterTestPrefix(queue.getTopic())) {
-                        queue.setTopic(testTopic);
+                if (args.length > 1 && args[1].getClass().getSimpleName().equals("MessageQueue")) {
+                    String topic1 = Reflect.on(args[1]).get("topic");
+                    if (!Pradar.isClusterTestPrefix(topic1)) {
+                        Reflect.on(args[1]).set("topic", testTopic);
                     }
                 }
             }

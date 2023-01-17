@@ -108,13 +108,14 @@ public class ConsumerHolder {
     }
 
     public static ConsumerMetaData getConsumerMetaData(KafkaConsumer consumer) {
-        ConsumerMetaData consumerMetaData = cache.get(consumer);
+        int hashCode = System.identityHashCode(consumer);
+        ConsumerMetaData consumerMetaData = cache.get(hashCode);
         if (consumerMetaData == null) {
             synchronized (cache) {
-                consumerMetaData = cache.get(consumer);
+                consumerMetaData = cache.get(hashCode);
                 if (consumerMetaData == null) {
                     consumerMetaData = ConsumerMetaData.build(consumer);
-                    cache.put(System.identityHashCode(consumer), consumerMetaData);
+                    cache.put(hashCode, consumerMetaData);
                 }
             }
         }

@@ -1,14 +1,22 @@
 package com.pamirs.attach.plugin.async.http.client.plugin.utils;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
+import org.asynchttpclient.AsyncCompletionHandler;
 import org.asynchttpclient.ListenableFuture;
+import org.asynchttpclient.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 
-public class DefaultListenableFuture<V> implements ListenableFuture<V> {
+public class DefaultListenableFuture implements ListenableFuture {
 
-    private V result;
+    private final static Logger logger = LoggerFactory.getLogger(DefaultListenableFuture.class);
+
+    private Response result;
+    private AsyncCompletionHandler<Response> handler;
     private Map<Runnable, Executor> listeners = new HashMap<Runnable, Executor>();
 
     private static Executor executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
@@ -20,13 +28,21 @@ public class DefaultListenableFuture<V> implements ListenableFuture<V> {
         }
     });
 
-    public DefaultListenableFuture(V result) {
-        this.result = result;
+    public DefaultListenableFuture(Object result, AsyncCompletionHandler<Response> handler) {
+        this.result = new DefaultAsyncResponse(result);
+        this.handler = handler;
     }
 
     @Override
     public void done() {
         fireListeners();
+        if (handler != null) {
+            try {
+                handler.onCompleted(result);
+            } catch (Exception e) {
+                logger.error("[async-httpclient] invoke async handler onCompleted occur exception", e);
+            }
+        }
     }
 
     @Override
@@ -47,7 +63,9 @@ public class DefaultListenableFuture<V> implements ListenableFuture<V> {
 
     @Override
     public CompletableFuture toCompletableFuture() {
-        return new CompletableFuture(result);
+        CompletableFuture future = new CompletableFuture();
+        ReflectionUtils.set(future, "result", result);
+        return future;
     }
 
     @Override
@@ -66,12 +84,12 @@ public class DefaultListenableFuture<V> implements ListenableFuture<V> {
     }
 
     @Override
-    public V get() throws InterruptedException, ExecutionException {
+    public Response get() throws InterruptedException, ExecutionException {
         return result;
     }
 
     @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+    public Response get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         return result;
     }
 

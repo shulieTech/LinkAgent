@@ -45,12 +45,10 @@ public class DefaultListenableFuture implements ListenableFuture {
 
     @Override
     public void abort(Throwable t) {
-
     }
 
     @Override
     public void touch() {
-
     }
 
     @Override

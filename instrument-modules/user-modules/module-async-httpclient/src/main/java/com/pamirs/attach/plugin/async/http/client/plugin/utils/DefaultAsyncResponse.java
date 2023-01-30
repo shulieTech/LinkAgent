@@ -33,7 +33,7 @@ public class DefaultAsyncResponse implements Response {
 
     @Override
     public byte[] getResponseBodyAsBytes() {
-        return JSON.toJSONBytes(result);
+        return result instanceof String ? ((String) result).getBytes() : JSON.toJSONBytes(result);
     }
 
     @Override
@@ -43,7 +43,7 @@ public class DefaultAsyncResponse implements Response {
 
     @Override
     public InputStream getResponseBodyAsStream() {
-        return new ByteArrayInputStream(JSON.toJSONBytes(result));
+        return new ByteArrayInputStream(result instanceof String ? ((String) result).getBytes() : JSON.toJSONBytes(result));
     }
 
     @Override

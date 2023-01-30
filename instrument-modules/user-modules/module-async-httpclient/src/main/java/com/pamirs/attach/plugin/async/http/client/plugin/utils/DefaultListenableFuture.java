@@ -30,7 +30,11 @@ public class DefaultListenableFuture implements ListenableFuture {
 
     public DefaultListenableFuture(Object result, AsyncCompletionHandler<Response> handler) {
         this.result = new DefaultAsyncResponse(result);
-        this.handler = handler;
+        try {
+            handler.onCompleted(this.result);
+        } catch (Exception e) {
+            logger.error("[async-httpclient] invoke handler onCompleted method occur exception", e);
+        }
     }
 
     @Override

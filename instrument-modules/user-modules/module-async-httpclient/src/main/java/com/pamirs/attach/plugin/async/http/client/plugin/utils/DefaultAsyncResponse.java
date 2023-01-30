@@ -63,7 +63,7 @@ public class DefaultAsyncResponse implements Response {
 
     @Override
     public String getContentType() {
-        return "json";
+        return "application/json;charset=UTF-8";
     }
 
     @Override

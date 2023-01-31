@@ -16,7 +16,6 @@ public class DefaultListenableFuture implements ListenableFuture {
     private final static Logger logger = LoggerFactory.getLogger(DefaultListenableFuture.class);
 
     private Response result;
-    private AsyncCompletionHandler<Response> handler;
     private Map<Runnable, Executor> listeners = new HashMap<Runnable, Executor>();
 
     private static Executor executor = Executors.newFixedThreadPool(1, new ThreadFactory() {
@@ -30,29 +29,26 @@ public class DefaultListenableFuture implements ListenableFuture {
 
     public DefaultListenableFuture(Object result, AsyncCompletionHandler<Response> handler) {
         this.result = new DefaultAsyncResponse(result);
-        this.handler = handler;
-    }
-
-    @Override
-    public void done() {
-        fireListeners();
-        if (handler != null) {
+        if(handler != null){
             try {
-                handler.onCompleted(result);
+                handler.onCompleted(this.result);
             } catch (Exception e) {
-                logger.error("[async-httpclient] invoke async handler onCompleted occur exception", e);
+                logger.error("[async-httpclient] invoke handler onCompleted method occur exception", e);
             }
         }
     }
 
     @Override
-    public void abort(Throwable t) {
+    public void done() {
+        fireListeners();
+    }
 
+    @Override
+    public void abort(Throwable t) {
     }
 
     @Override
     public void touch() {
-
     }
 
     @Override

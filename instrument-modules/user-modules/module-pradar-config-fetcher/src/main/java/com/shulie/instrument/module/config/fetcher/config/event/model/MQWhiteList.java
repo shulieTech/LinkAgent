@@ -23,16 +23,13 @@ import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisable
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerEnableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.config.fetcher.config.utils.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @ClassName: RabbitWhiteList
@@ -43,6 +40,8 @@ import java.util.Set;
 public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
     private final static Logger LOGGER = LoggerFactory.getLogger(MQWhiteList.class);
     private static MQWhiteList INSTANCE;
+
+    private static final String shadow_flag = ">>";
 
     public static MQWhiteList getInstance() {
         if (INSTANCE == null) {
@@ -61,37 +60,24 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Set<String> newValue) {
-        /*if (ConfigFetcherModule.shadowPreparationEnabled) {
-            return true;
-        }*/
+
         final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(newValue);
         EventRouter.router().publish(mqWhiteListConfigEvent);
-        Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
-        if (ObjectUtils.equals(mqWhiteList.size(), newValue.size())
-                && mqWhiteList.containsAll(newValue)) {
+
+        Set<String> mqWhiteList = restoreMqWhitelist(GlobalConfig.getInstance().getMqWhiteList());
+        if (ObjectUtils.equals(mqWhiteList.size(), newValue.size()) && mqWhiteList.containsAll(newValue)) {
             return Boolean.FALSE;
         }
+
         // 仅对影子消费者禁用事件处理
         for (String s : mqWhiteList) {
-            List<ShadowConsumerDisableInfo> disableInfos = new ArrayList<ShadowConsumerDisableInfo>();
+            List<ShadowConsumerDisableInfo> disableList = new ArrayList<ShadowConsumerDisableInfo>();
             if (!newValue.contains(s)) {
-                ShadowConsumerDisableInfo disableInfo = new ShadowConsumerDisableInfo();
-                if (s.contains("@")) {//rabbitmq routing使用方式，配置为direct-exchange#queue1@queue1
-                    disableInfo.setTopic(s.split("@")[1]);
-                } else if (s.contains("#")) {
-                    String[] topicGroup = s.split("#", 2);
-                    if (StringUtils.isBlank(topicGroup[0])) {
-                        disableInfo.setTopic(topicGroup[1]);
-                    } else {
-                        disableInfo.setTopic(topicGroup[0]);
-                        disableInfo.setConsumerGroup(topicGroup[1]);
-                    }
-                }
-                disableInfos.add(disableInfo);
+                ShadowConsumerDisableInfo disableInfo = buildShadowInfo(s);
+                disableList.add(disableInfo);
             }
-
-            if (!disableInfos.isEmpty()) {
-                EventRouter.router().publish(new ShadowConsumerDisableEvent(disableInfos));
+            if (!disableList.isEmpty()) {
+                EventRouter.router().publish(new ShadowConsumerDisableEvent(disableList));
             }
         }
 
@@ -99,22 +85,9 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
         for (String s : newValue) {
             List<ShadowConsumerEnableInfo> enableList = new ArrayList<ShadowConsumerEnableInfo>();
             if (!mqWhiteList.contains(s)) {
-                ShadowConsumerEnableInfo enableInfo = new ShadowConsumerEnableInfo();
-                if (s.contains("@")) {
-                    //rabbitmq routing使用方式，配置为direct-exchange#queue1@queue1
-                    enableInfo.setTopic(s.split("@")[1]);
-                } else if (s.contains("#")) {
-                    String[] topicGroup = s.split("#", 2);
-                    if (StringUtils.isBlank(topicGroup[0])) {
-                        enableInfo.setTopic(topicGroup[1]);
-                    } else {
-                        enableInfo.setTopic(topicGroup[0]);
-                        enableInfo.setConsumerGroup(topicGroup[1]);
-                    }
-                }
+                ShadowConsumerEnableInfo enableInfo = buildShadowInfo(s);
                 enableList.add(enableInfo);
             }
-
             if (!enableList.isEmpty()) {
                 EventRouter.router().publish(new ShadowConsumerEnableEvent(enableList));
             }
@@ -122,11 +95,105 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
 
         currentValue.setMqList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.MQ_WHITE_LIST);
-        GlobalConfig.getInstance().setMqWhiteList(newValue);
+
+        Object[] objects = extractShadowConsumerInfos(newValue);
+        GlobalConfig.getInstance().setMqWhiteList((Set<String>) objects[0]);
+        GlobalConfig.getInstance().setShadowTopicMappings((Map<String, String>) objects[1]);
+        GlobalConfig.getInstance().setShadowGroupMappings((Map<String, String>) objects[2]);
 
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("publish mq whitelist config successful. config={}", newValue);
         }
         return Boolean.TRUE;
+    }
+
+    private ShadowConsumerDisableInfo buildShadowInfo(String topicGroup) {
+        ShadowConsumerDisableInfo enableInfo = new ShadowConsumerDisableInfo();
+        if (topicGroup.contains("@")) {
+            //rabbitmq routing使用方式，配置为direct-exchange#queue1@queue1
+            enableInfo.setTopic(topicGroup.split("@")[1]);
+        } else if (topicGroup.contains("#")) {
+            String[] topicGroups = topicGroup.split("#", 2);
+            String topic = topicGroups[0], group = topicGroups[1];
+            if (StringUtils.isBlank(topic)) {
+                enableInfo.setTopic(extractBizGroup(group));
+            } else {
+                enableInfo.setTopic(extractBizTopic(topic));
+                enableInfo.setConsumerGroup(extractBizGroup(group));
+            }
+        }
+        return enableInfo;
+    }
+
+    /**
+     * 把mqWhitelist恢复成从控制台拉取到的数据格式, bizTopic>>shadowTopic#bizGroup>>shadowGroup
+     *
+     * @param mqWhiteList
+     * @return
+     */
+    private Set<String> restoreMqWhitelist(Set<String> mqWhiteList) {
+        Set<String> rawWhitelist = new HashSet<String>();
+        Map<String, String> shadowTopicMappings = GlobalConfig.getInstance().getShadowTopicMappings();
+        Map<String, String> shadowGroupMappings = GlobalConfig.getInstance().getShadowGroupMappings();
+
+        for (String s : mqWhiteList) {
+            if (!s.contains("#")) {
+                rawWhitelist.add(s);
+                continue;
+            }
+            String[] split = s.split("#", 2);
+            String topic = split[0], group = split[1];
+            if (shadowTopicMappings.containsKey(topic)) {
+                topic = topic + shadow_flag + shadowTopicMappings.get(topic);
+            }
+            if (shadowGroupMappings.containsKey(group)) {
+                group = group + shadow_flag + shadowGroupMappings.get(group);
+            }
+            rawWhitelist.add(topic + "#" + group);
+        }
+        return rawWhitelist;
+    }
+
+    /**
+     * 提取自定义的影子消费者信息
+     *
+     * @param mqWhiteList
+     * @return
+     */
+    private Object[] extractShadowConsumerInfos(Set<String> mqWhiteList) {
+        Set<String> topicGroups = new HashSet<String>();
+        Map<String, String> shadowGroupMappings = new HashMap<String, String>(), shadowTopicMappings = new HashMap<String, String>();
+        for (String s : mqWhiteList) {
+            if (!s.contains("#")) {
+                topicGroups.add(s);
+                continue;
+            }
+            String[] split = s.split("#", 2);
+            String topic = split[0], group = split[1];
+            if (topic.contains(shadow_flag)) {
+                String[] topics = topic.split(shadow_flag, 2);
+                shadowTopicMappings.put(topics[0], topics[1]);
+                topic = topics[0];
+            }
+            if (group.contains(shadow_flag)) {
+                String[] groups = group.split(shadow_flag, 2);
+                shadowGroupMappings.put(groups[0], groups[1]);
+                group = groups[0];
+            }
+            topicGroups.add(topic + "#" + group);
+        }
+        return new Object[]{topicGroups, shadowTopicMappings, shadowGroupMappings};
+    }
+
+    private String extractBizTopic(String topic) {
+        return extractBizElement(topic);
+    }
+
+    private String extractBizGroup(String Group) {
+        return extractBizElement(Group);
+    }
+
+    private String extractBizElement(String topicOrGroup) {
+        return topicOrGroup.contains(shadow_flag) ? topicOrGroup.split(">>")[0] : topicOrGroup;
     }
 }

@@ -75,6 +75,16 @@ public final class GlobalConfig {
     private Set<String> mqWhiteList = new HashSet<String>();
 
     /**
+     * 业务topic >> 自定义影子topic 的映射
+     */
+    private Map<String, String> shadowTopicMappings = new HashMap<>();
+
+    /**
+     * 业务group >> 自定义影子group 的映射
+     */
+    private Map<String, String> shadowGroupMappings = new HashMap<>();
+
+    /**
      * 所有的入口规则
      */
     private Set<String> traceRules = new HashSet<String>();
@@ -91,7 +101,7 @@ public final class GlobalConfig {
     private Map<String, ShadowRedisConfig> shadowRedisConfigs = new ConcurrentHashMap<String, ShadowRedisConfig>();
     private Map<String, ShadowEsServerConfig> shadowEsServerConfigs = new ConcurrentHashMap<String, ShadowEsServerConfig>();
     public static Map<String, ShadowHbaseConfig> shadowHbaseServerConfigs
-        = new ConcurrentHashMap<String, ShadowHbaseConfig>();
+            = new ConcurrentHashMap<String, ShadowHbaseConfig>();
 
     //应用启动特定埋点状态信息，如数据库启动对应影子库数据源加入应用是否正常
     private Map<String, String> applicationAccessStatus = new ConcurrentHashMap<String, String>();
@@ -350,6 +360,23 @@ public final class GlobalConfig {
         this.mqWhiteList = mqWhiteList;
     }
 
+
+    public void setShadowTopicMappings(Map<String, String> shadowTopicMappings) {
+        this.shadowTopicMappings = shadowTopicMappings;
+    }
+
+    public Map<String, String> getShadowTopicMappings() {
+        return shadowTopicMappings;
+    }
+
+    public void setShadowGroupMappings(Map<String, String> shadowGroupMappings) {
+        this.shadowGroupMappings = shadowGroupMappings;
+    }
+
+    public Map<String, String> getShadowGroupMappings() {
+        return shadowGroupMappings;
+    }
+
     public Set<String> getContextPathBlockList() {
         return contextPathBlockList;
     }
@@ -387,7 +414,7 @@ public final class GlobalConfig {
     }
 
     public void setShadowEsServerConfigs(
-        Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
+            Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
         this.shadowEsServerConfigs = shadowEsServerConfigs;
     }
 
@@ -460,8 +487,8 @@ public final class GlobalConfig {
 
     public boolean allowTraceRequestResponse() {
         return (Pradar.isClusterTest() &&
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
-            || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig()
-            .isBusRequestResponseDataAllowTrace());
+                GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
+                || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig()
+                .isBusRequestResponseDataAllowTrace());
     }
 }

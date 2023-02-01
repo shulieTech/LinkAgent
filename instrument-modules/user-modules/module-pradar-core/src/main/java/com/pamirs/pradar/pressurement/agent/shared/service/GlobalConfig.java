@@ -75,14 +75,9 @@ public final class GlobalConfig {
     private Set<String> mqWhiteList = new HashSet<String>();
 
     /**
-     * 业务topic >> 自定义影子topic 的映射
+     * 业务topic#group >> 自定义影子topic#group 的映射
      */
-    private Map<String, String> shadowTopicMappings = new HashMap<>();
-
-    /**
-     * 业务group >> 自定义影子group 的映射
-     */
-    private Map<String, String> shadowGroupMappings = new HashMap<>();
+    private Map<String, String> shadowTopicGroupMappings = new HashMap<>();
 
     /**
      * 所有的入口规则
@@ -360,21 +355,12 @@ public final class GlobalConfig {
         this.mqWhiteList = mqWhiteList;
     }
 
-
-    public void setShadowTopicMappings(Map<String, String> shadowTopicMappings) {
-        this.shadowTopicMappings = shadowTopicMappings;
+    public Map<String, String> getShadowTopicGroupMappings() {
+        return shadowTopicGroupMappings;
     }
 
-    public Map<String, String> getShadowTopicMappings() {
-        return shadowTopicMappings;
-    }
-
-    public void setShadowGroupMappings(Map<String, String> shadowGroupMappings) {
-        this.shadowGroupMappings = shadowGroupMappings;
-    }
-
-    public Map<String, String> getShadowGroupMappings() {
-        return shadowGroupMappings;
+    public void setShadowTopicGroupMappings(Map<String, String> shadowTopicGroupMappings) {
+        this.shadowTopicGroupMappings = shadowTopicGroupMappings;
     }
 
     public Set<String> getContextPathBlockList() {

@@ -15,6 +15,7 @@
 package com.shulie.instrument.module.config.fetcher.config.event.model;
 
 import com.pamirs.pradar.ConfigNames;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.pressurement.agent.event.impl.MqWhiteListConfigEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowConsumerDisableEvent;
@@ -61,18 +62,20 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Set<String> newValue) {
 
-        final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(newValue);
+        Set<String> richMqWhitelist = enrichMqWhitelist(newValue);
+
+        final MqWhiteListConfigEvent mqWhiteListConfigEvent = new MqWhiteListConfigEvent(richMqWhitelist);
         EventRouter.router().publish(mqWhiteListConfigEvent);
 
         Set<String> mqWhiteList = restoreMqWhitelist(GlobalConfig.getInstance().getMqWhiteList());
-        if (ObjectUtils.equals(mqWhiteList.size(), newValue.size()) && mqWhiteList.containsAll(newValue)) {
+        if (ObjectUtils.equals(mqWhiteList.size(), richMqWhitelist.size()) && mqWhiteList.containsAll(richMqWhitelist)) {
             return Boolean.FALSE;
         }
 
         // 仅对影子消费者禁用事件处理
         for (String s : mqWhiteList) {
             List<ShadowConsumerDisableInfo> disableList = new ArrayList<ShadowConsumerDisableInfo>();
-            if (!newValue.contains(s)) {
+            if (!richMqWhitelist.contains(s)) {
                 ShadowConsumerDisableInfo disableInfo = buildShadowInfo(s);
                 disableList.add(disableInfo);
             }
@@ -82,7 +85,7 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
         }
 
         // 消费者启用也发出一个事件
-        for (String s : newValue) {
+        for (String s : richMqWhitelist) {
             List<ShadowConsumerEnableInfo> enableList = new ArrayList<ShadowConsumerEnableInfo>();
             if (!mqWhiteList.contains(s)) {
                 ShadowConsumerEnableInfo enableInfo = buildShadowInfo(s);
@@ -96,13 +99,12 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
         currentValue.setMqList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.MQ_WHITE_LIST);
 
-        Object[] objects = extractShadowConsumerInfos(newValue);
+        Object[] objects = extractShadowConsumerInfos(richMqWhitelist);
         GlobalConfig.getInstance().setMqWhiteList((Set<String>) objects[0]);
-        GlobalConfig.getInstance().setShadowTopicMappings((Map<String, String>) objects[1]);
-        GlobalConfig.getInstance().setShadowGroupMappings((Map<String, String>) objects[2]);
+        GlobalConfig.getInstance().setShadowTopicGroupMappings((Map<String, String>) objects[1]);
 
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("publish mq whitelist config successful. config={}", newValue);
+            LOGGER.info("publish mq whitelist config successful. config={}", richMqWhitelist);
         }
         return Boolean.TRUE;
     }
@@ -133,23 +135,26 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
      */
     private Set<String> restoreMqWhitelist(Set<String> mqWhiteList) {
         Set<String> rawWhitelist = new HashSet<String>();
-        Map<String, String> shadowTopicMappings = GlobalConfig.getInstance().getShadowTopicMappings();
-        Map<String, String> shadowGroupMappings = GlobalConfig.getInstance().getShadowGroupMappings();
+        Map<String, String> shadowTopicGroupMappings = GlobalConfig.getInstance().getShadowTopicGroupMappings();
 
-        for (String s : mqWhiteList) {
-            if (!s.contains("#")) {
-                rawWhitelist.add(s);
+        for (String topicGroup : mqWhiteList) {
+            if (!topicGroup.contains("#")) {
+                rawWhitelist.add(topicGroup);
                 continue;
             }
-            String[] split = s.split("#", 2);
+            String shadowTopicGroup = shadowTopicGroupMappings.get(topicGroup);
+            if (shadowTopicGroup == null) {
+                rawWhitelist.add(topicGroup);
+                continue;
+            }
+
+            String[] split = topicGroup.split("#", 2);
             String topic = split[0], group = split[1];
-            if (shadowTopicMappings.containsKey(topic)) {
-                topic = topic + shadow_flag + shadowTopicMappings.get(topic);
-            }
-            if (shadowGroupMappings.containsKey(group)) {
-                group = group + shadow_flag + shadowGroupMappings.get(group);
-            }
-            rawWhitelist.add(topic + "#" + group);
+
+            String[] shadowSplit = shadowTopicGroup.split("#", 2);
+            String shadowTopic = shadowSplit[0], shadowGroup = shadowSplit[1];
+
+            rawWhitelist.add(String.format("%s>>%s#%s>>%s", topic, shadowTopic, group, shadowGroup));
         }
         return rawWhitelist;
     }
@@ -162,27 +167,57 @@ public class MQWhiteList implements IChange<Set<String>, ApplicationConfig> {
      */
     private Object[] extractShadowConsumerInfos(Set<String> mqWhiteList) {
         Set<String> topicGroups = new HashSet<String>();
-        Map<String, String> shadowGroupMappings = new HashMap<String, String>(), shadowTopicMappings = new HashMap<String, String>();
+        Map<String, String> shadowTopicGroupMappings = new HashMap<String, String>();
         for (String s : mqWhiteList) {
             if (!s.contains("#")) {
                 topicGroups.add(s);
                 continue;
             }
             String[] split = s.split("#", 2);
-            String topic = split[0], group = split[1];
-            if (topic.contains(shadow_flag)) {
-                String[] topics = topic.split(shadow_flag, 2);
-                shadowTopicMappings.put(topics[0], topics[1]);
-                topic = topics[0];
+            String topics = split[0], groups = split[1];
+            String bizTopic = topics, bizGroup = groups, shadowTopic = null, shadowGroup = null;
+            if (topics.contains(shadow_flag)) {
+                String[] tpSplits = topics.split(shadow_flag, 2);
+                bizTopic = tpSplits[0];
+                shadowTopic = tpSplits[1];
             }
-            if (group.contains(shadow_flag)) {
-                String[] groups = group.split(shadow_flag, 2);
-                shadowGroupMappings.put(groups[0], groups[1]);
-                group = groups[0];
+            if (groups.contains(shadow_flag)) {
+                String[] gpSplits = groups.split(shadow_flag, 2);
+                bizGroup = gpSplits[0];
+                shadowGroup = gpSplits[1];
             }
-            topicGroups.add(topic + "#" + group);
+            String bizTopicGroup = bizTopic + "#" + bizGroup;
+            topicGroups.add(bizTopicGroup);
+
+            if (shadowTopic != null || shadowGroup != null) {
+                shadowTopic = shadowTopic != null ? shadowTopic : Pradar.addClusterTestPrefix(bizTopic);
+                shadowGroup = shadowGroup != null ? shadowGroup : Pradar.addClusterTestPrefix(bizGroup);
+                shadowTopicGroupMappings.put(bizTopicGroup, shadowTopic + "#" + shadowGroup);
+            }
         }
-        return new Object[]{topicGroups, shadowTopicMappings, shadowGroupMappings};
+        return new Object[]{topicGroups, shadowTopicGroupMappings};
+    }
+
+    /**
+     * 完善topic#groups, 类似topic>>PT_topic#group  转换成 topic>>PT_topic#group>>PT_group
+     *
+     * @param newValues
+     * @return
+     */
+    private Set<String> enrichMqWhitelist(Set<String> newValues) {
+        Set<String> mqWhitelist = new HashSet<String>();
+        for (String newValue : newValues) {
+            if (!newValue.contains(shadow_flag) || !newValue.contains("#")) {
+                mqWhitelist.add(newValue);
+                continue;
+            }
+            String[] topicGroups = newValue.split("#", 2);
+            String topics = topicGroups[0], groups = topicGroups[1];
+            topics = topics.contains(shadow_flag) ? topics : topics + shadow_flag + Pradar.addClusterTestPrefix(topics);
+            groups = groups.contains(shadow_flag) ? groups : groups + shadow_flag + Pradar.addClusterTestPrefix(groups);
+            mqWhitelist.add(topics + "#" + groups);
+        }
+        return mqWhitelist;
     }
 
     private String extractBizTopic(String topic) {

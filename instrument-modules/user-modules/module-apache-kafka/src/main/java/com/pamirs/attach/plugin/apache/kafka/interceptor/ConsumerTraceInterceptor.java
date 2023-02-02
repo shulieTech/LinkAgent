@@ -28,6 +28,7 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -100,7 +101,7 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
         spanRecord.setService(consumerRecord.topic());
         boolean clusterTestPrefix = Pradar.isClusterTestPrefix(topic);
         spanRecord.setMethod(
-                clusterTestPrefix ? consumerMetaData.getPtGroupId() : consumerMetaData.getGroupId());
+                clusterTestPrefix ? ShadowConsumerPrefixUtils.getShadowGroup(topic, consumerMetaData.getGroupId()) : consumerMetaData.getGroupId());
         return spanRecord;
     }
 

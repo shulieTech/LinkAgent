@@ -40,18 +40,11 @@ public class ConsumerMetaData {
 
     private final String groupId;
 
-    private final String ptGroupId;
-
     private final String bootstrapServers;
 
     public ConsumerMetaData(Set<String> topics, String groupId, String bootstrapServers) {
         this.topics = topics;
         this.groupId = groupId;
-        if (Pradar.isClusterTestPrefix(groupId)) {
-            this.ptGroupId = groupId;
-        } else {
-            this.ptGroupId = Pradar.addClusterTestPrefix(groupId);
-        }
         this.bootstrapServers = bootstrapServers;
     }
 
@@ -110,7 +103,7 @@ public class ConsumerMetaData {
     }
 
     public String getPtGroupId() {
-        return ptGroupId;
+        return null;
     }
 
     public String getBootstrapServers() {

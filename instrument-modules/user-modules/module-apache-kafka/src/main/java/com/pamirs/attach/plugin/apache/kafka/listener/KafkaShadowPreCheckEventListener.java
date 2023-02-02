@@ -1,7 +1,6 @@
 package com.pamirs.attach.plugin.apache.kafka.listener;
 
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
@@ -12,6 +11,7 @@ import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -107,8 +107,8 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
             return;
         }
 
-        String ptTopic = Pradar.addClusterTestPrefix(topic);
-        String ptGroup = Pradar.addClusterTestPrefix(group);
+        String ptTopic = ShadowConsumerPrefixUtils.getShadowTopic(topic, group);
+        String ptGroup = ShadowConsumerPrefixUtils.getShadowGroup(topic, group);
 
         Properties properties = new Properties();
         properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getBootstrapServers(consumer));
@@ -243,8 +243,8 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
         if (valueDeserializer != null) {
             config.put(org.apache.kafka.clients.consumer.ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getClass());
         }
-        config.put(org.apache.kafka.clients.consumer.ConsumerConfig.CLIENT_ID_CONFIG,
-                Pradar.addClusterTestPrefix(ReflectionUtils.get(bizConsumer, "clientId")));
+        String group = ReflectionUtils.get(bizConsumer, "clientId");
+        config.put(org.apache.kafka.clients.consumer.ConsumerConfig.CLIENT_ID_CONFIG, ShadowConsumerPrefixUtils.getShadowGroup(topic, group));
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getBootstrapServers(bizConsumer));
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (getAllowMaxLag() * 2 * 3) + "");
         config.put(org.apache.kafka.clients.consumer.ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
@@ -312,7 +312,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
 
         copyHeartbeatConfig(config, coordinator);
 
-        config.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, Pradar.addClusterTestPrefix(getGroup(bizConsumer)));
+        config.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, ShadowConsumerPrefixUtils.getShadowGroup(topic, getGroup(bizConsumer)));
         putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, coordinator, "sessionTimeoutMs");
         putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, coordinator, "autoCommitEnabled");
         putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, coordinator, "autoCommitIntervalMs");

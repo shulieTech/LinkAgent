@@ -36,6 +36,7 @@ abstract class ReversedTraceInterceptor extends TraceInterceptor {
 
     @Override
     public void doAfter(Advice advice) throws Throwable {
+        advice.setInvokeContext(null);
         super.doBefore(advice);
     }
 }

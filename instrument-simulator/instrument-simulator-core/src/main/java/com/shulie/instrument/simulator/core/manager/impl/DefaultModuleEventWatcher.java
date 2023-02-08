@@ -34,10 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
 
@@ -58,6 +55,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     // 观察ID序列生成器
     private final Sequencer watchIdSequencer = new Sequencer();
     private EventListenerHandler eventListenerHandler;
+    private final boolean isEnableReTransform = !"0".equals(System.getProperty("simulator.delay"));
+
 
 
     DefaultModuleEventWatcher(final Instrumentation inst,
@@ -102,7 +101,18 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
             final Progress progress) {
+
         reTransformClasses(watchId, waitingReTransformClasses, progress, false);
+
+        String pauseTime = System.getProperty("reTransform.pause.time.ms");
+        if(pauseTime == null){
+            return;
+        }
+        try {
+            Thread.sleep(Integer.parseInt(pauseTime));
+        }catch (Exception e){
+
+        }
     }
 
     /**
@@ -287,15 +297,20 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer 每个enhanceTemplate.enhance都是单独的一个transformer
         inst.addTransformer(proxy, true);
 
-        // 查找需要渲染的类集合
-        final List<Class<?>> waitingReTransformClasses = classDataSource.findForReTransform(matcher);
-        if (isInfoEnabled) {
-            logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
-                    watchId,
-                    coreModule.getModuleId(),
-                    waitingReTransformClasses.size()
-            );
+
+        List<Class<?>> waitingReTransformClassesTemp = Collections.emptyList();
+        if (isEnableReTransform) {
+            // 查找需要渲染的类集合
+            waitingReTransformClassesTemp = classDataSource.findForReTransform(matcher);
+            if (isInfoEnabled) {
+                logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
+                        watchId,
+                        coreModule.getModuleId(),
+                        waitingReTransformClassesTemp.size()
+                );
+            }
         }
+        final List<Class<?>> waitingReTransformClasses = waitingReTransformClassesTemp;
 
         int effectClassCount = 0, effectMethodCount = 0;
 

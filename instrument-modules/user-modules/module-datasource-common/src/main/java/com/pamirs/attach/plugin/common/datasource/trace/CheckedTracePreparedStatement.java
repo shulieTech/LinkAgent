@@ -107,6 +107,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
             isException = true;
             throw new SQLException(e);
         } finally {
+            boolean clusterTest = Pradar.isClusterTest();
             ProxyFlag.exit();
             try {
                 if (isStartSuccess) {
@@ -118,6 +119,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
                     Pradar.endClientInvoke(isException ? ResultCode.INVOKE_RESULT_FAILED : ResultCode.INVOKE_RESULT_SUCCESS, MiddlewareType.TYPE_DB);
                 }
             }
+            Pradar.setClusterTest(clusterTest);
             recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), ex, "executeLast");
         }
     }
@@ -156,6 +158,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
             isException = true;
             throw new SQLException(e);
         } finally {
+            boolean clusterTest = Pradar.isClusterTest();
             ProxyFlag.exit();
             try {
                 if (isStartSuccess) {
@@ -167,6 +170,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
                     Pradar.endClientInvoke(isException ? ResultCode.INVOKE_RESULT_FAILED : ResultCode.INVOKE_RESULT_SUCCESS, MiddlewareType.TYPE_DB);
                 }
             }
+            Pradar.setClusterTest(clusterTest);
             recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), ex, "executeQueryLast");
         }
     }
@@ -206,6 +210,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
             isException = true;
             throw new SQLException(e);
         } finally {
+            boolean clusterTest = Pradar.isClusterTest();
             ProxyFlag.exit();
             try {
                 if (isStartSuccess) {
@@ -217,6 +222,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
                     Pradar.endClientInvoke(isException ? ResultCode.INVOKE_RESULT_FAILED : ResultCode.INVOKE_RESULT_SUCCESS, MiddlewareType.TYPE_DB);
                 }
             }
+            Pradar.setClusterTest(clusterTest);
             recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), ex, "executeUpdateLast");
         }
     }

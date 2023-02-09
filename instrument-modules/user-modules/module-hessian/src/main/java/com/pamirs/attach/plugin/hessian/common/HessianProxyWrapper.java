@@ -96,7 +96,7 @@ public class HessianProxyWrapper extends HessianProxy {
     private Class<?> getType(Object target, Method method, Object[] args) {
         Class type = null;
         try {
-            type = Reflect.on(target).get(HessianConstants.DYNAMIC_FIELD_URL);
+            type = Reflect.on(target).get(HessianConstants.DYNAMIC_FIELD_TYPE);
         } catch (ReflectException e) {
             type = method.getDeclaringClass();
         }

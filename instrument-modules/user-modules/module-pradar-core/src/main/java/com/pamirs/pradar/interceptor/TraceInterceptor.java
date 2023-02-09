@@ -462,6 +462,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (record.getCallbackMsg() != null) {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
@@ -569,6 +573,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
             if (record.getCallbackMsg() != null) {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
+            }
+
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
             }
 
             if (isTrace) {
@@ -747,6 +755,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setPort(record.getPort());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (record.getMiddlewareName() != null) {
                 invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
@@ -787,6 +799,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
             Object response = record.getResponse();
             if (response != null && response instanceof Throwable) {
                 advice.attach(response);
+            }
+
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
             }
 
             if (Pradar.isExceptionOn()) {

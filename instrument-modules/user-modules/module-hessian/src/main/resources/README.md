@@ -1,1 +1,1 @@
-2.0.0.2 修复打印trace时request类型转换问题
+2.0.0.3 修复hessian获取trace是type不正确

@@ -1818,6 +1818,7 @@ public final class Pradar {
             }
             // 弹出当前 ctx
             InvokeContext.set(ctx.parentInvokeContext);
+            Pradar.setClusterTest(ctx.isClusterTest);
         } catch (Throwable re) {
             LOGGER.error("rpcClientRecv", re);
         }

@@ -14,7 +14,7 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
-import com.pamirs.attach.plugin.dynamic.resource.ConcurrentWeakHashMap;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.util.JedisCacheHandler;
@@ -27,11 +27,8 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import redis.clients.jedis.*;
 import redis.clients.jedis.commands.ProtocolCommand;
-
-import java.lang.reflect.Field;
 
 /**
  * @author vincent
@@ -41,7 +38,6 @@ import java.lang.reflect.Field;
 @ListenerBehavior(isFilterBusinessData = true)
 public class JedisInterceptor extends TraceInterceptorAdaptor {
     Model model = Model.INSTANCE();
-    private static ConcurrentWeakHashMap<Class, Field> pipelineClientFieldCache = new ConcurrentWeakHashMap<Class, Field>();
 
     /**
      * 防止{@link redis.clients.jedis.Client#set(byte[], byte[])}等方法和{@link redis.clients.jedis.Connection#sendCommand(ProtocolCommand)}增强方法重复执行
@@ -242,18 +238,7 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
         if (target == null) {
             return null;
         }
-        Field field = pipelineClientFieldCache.get(target.getClass());
-        if (field == null) {
-            Field oldField = pipelineClientFieldCache.putIfAbsent(target.getClass(), Reflect.on(target).field0("client"));
-            if (oldField != null) {
-                field = oldField;
-            }
-        }
-        try {
-            return (Client) field.get(target);
-        } catch (Throwable e) {
-            return Reflect.on(target).get("client");
-        }
+        return ReflectionUtils.get(target, "client");
     }
 
     @Override

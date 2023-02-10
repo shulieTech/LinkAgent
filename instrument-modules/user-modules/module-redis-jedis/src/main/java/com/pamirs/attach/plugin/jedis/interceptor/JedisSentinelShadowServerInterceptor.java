@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.attach.plugin.jedis.shadowserver.JedisSentinelFactory;
 import com.pamirs.attach.plugin.jedis.util.Model;
@@ -24,7 +25,6 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
@@ -58,9 +58,7 @@ public class JedisSentinelShadowServerInterceptor extends CutoffInterceptorAdapt
             }
             JedisSentinelPool pool = (JedisSentinelPool) object;
             Jedis client = pool.getResource();
-            return CutOffResult.cutoff(Reflect.on(client)
-                    .call(advice.getBehavior().getName()
-                            , advice.getParameterArray()).get());
+            return CutOffResult.cutoff(ReflectionUtils.invoke(client, advice.getBehavior().getName(), advice.getParameterArray()));
         } catch (PressureMeasureError e) {
             throw e;
         } catch (Throwable e) {

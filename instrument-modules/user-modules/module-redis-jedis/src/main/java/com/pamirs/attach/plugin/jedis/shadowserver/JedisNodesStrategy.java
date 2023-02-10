@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.BinaryJedis;
@@ -48,13 +48,11 @@ public class JedisNodesStrategy implements RedisServerNodesStrategy {
         }
         List<String> nodes = new ArrayList<String>();
         try {
-            Reflect reflect = Reflect.on(obj);
-            Client client = reflect.get("client");
-            Reflect clientRef = Reflect.on(client);
-            String password = clientRef.get("password");
-            String host = clientRef.get("host");
-            String port = String.valueOf(clientRef.get("port"));
-            String db = String.valueOf(clientRef.get("db"));
+            Client client = ReflectionUtils.get(obj, "client");
+            String password = ReflectionUtils.get(client, "password");
+            String host = ReflectionUtils.get(client, "host");
+            String port = String.valueOf(ReflectionUtils.get(client, "port"));
+            String db = String.valueOf(ReflectionUtils.get(client, "db"));
             nodes.add(getKey(host, port));
 
         } catch (Throwable e) {
@@ -73,10 +71,8 @@ public class JedisNodesStrategy implements RedisServerNodesStrategy {
             return null;
         }
         try {
-            Reflect reflect = Reflect.on(obj);
-            Client client = reflect.get("client");
-            Reflect clientRef = Reflect.on(client);
-            return clientRef.get("db");
+            Client client = ReflectionUtils.get(obj, "client");
+            return ReflectionUtils.get(client, "db");
 
         } catch (Throwable e) {
             LOGGER.error("", e);

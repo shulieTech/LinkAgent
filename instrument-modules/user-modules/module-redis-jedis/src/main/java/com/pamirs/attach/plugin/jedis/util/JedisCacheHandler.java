@@ -18,7 +18,7 @@ package com.pamirs.attach.plugin.jedis.util;
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import redis.clients.jedis.Client;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisSentinelPool;
@@ -44,7 +44,7 @@ public class JedisCacheHandler {
     public static Client getClientByJedis(Jedis jedis) {
         Client client = JedisClientCache.get(jedis);
         if (client == null) {
-            client = Reflect.on(jedis).get("client");
+            client = ReflectionUtils.get(jedis, "client");
             putData(JedisClientCache, jedis, client);
         }
         return client;
@@ -56,7 +56,7 @@ public class JedisCacheHandler {
     public static Object getDbByJedis(Jedis jedis) {
         Object db = JedisDbCache.get(jedis);
         if (db == null) {
-            db = Reflect.on(jedis).get("dataSource");
+            db = ReflectionUtils.get(jedis, "dataSource");
             putData(JedisDbCache, jedis, db);
         }
         return db;
@@ -68,18 +68,18 @@ public class JedisCacheHandler {
     public static Attachment getSentinelAttachment(JedisSentinelPool jedisSentinelPool) {
         Attachment ext = SentinelAttachmentCache.get(jedisSentinelPool);
         if (ext == null) {
-            String password = Reflect.on(jedisSentinelPool).get("password");
-            Integer database = Reflect.on(jedisSentinelPool).get("database");
-            Set set = Reflect.on(jedisSentinelPool).get("masterListeners");
+            ReflectionUtils.get(jedisSentinelPool, "masterListeners");
+            String password = ReflectionUtils.get(jedisSentinelPool, "password");
+            Integer database = ReflectionUtils.get(jedisSentinelPool, "database");
+            Set set = ReflectionUtils.get(jedisSentinelPool, "masterListeners");
             Iterator iterator = set.iterator();
             StringBuilder nodeBuilder = new StringBuilder();
             String masterName = null;
             while (iterator.hasNext()) {
                 Object t = iterator.next();
-                Reflect ref = Reflect.on(t);
-                masterName = ref.get("masterName");
-                String host = ref.get("host");
-                String port = String.valueOf(ref.get("port"));
+                masterName = ReflectionUtils.get(t, "masterName");
+                String host = ReflectionUtils.get(t, "host");
+                String port = String.valueOf(ReflectionUtils.get(t, "port"));
                 nodeBuilder.append(host.concat(":").concat(port))
                         .append(",");
 
@@ -105,8 +105,8 @@ public class JedisCacheHandler {
         Attachment ext = SingleAttachmentCache.get(client);
 
         if (ext == null) {
-            String password = Reflect.on(client).get("password");
-            int db = Integer.parseInt(String.valueOf(Reflect.on(client).get("db")));
+            String password = ReflectionUtils.get(client, "password");
+            int db = Integer.parseInt(String.valueOf(ReflectionUtils.get(client, "db")));
             String node = client.getHost().concat(":").concat(String.valueOf(client.getPort()));
             ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
                     new String[]{RedisConstants.MIDDLEWARE_NAME}

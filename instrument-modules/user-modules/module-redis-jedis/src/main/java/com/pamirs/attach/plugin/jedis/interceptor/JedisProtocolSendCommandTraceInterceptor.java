@@ -12,7 +12,7 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import redis.clients.jedis.Client;
 
 import java.util.HashSet;
@@ -146,8 +146,8 @@ public class JedisProtocolSendCommandTraceInterceptor extends TraceInterceptorAd
         Client client = (Client) advice.getTarget();
         //单机模式
         String node = client.getHost().concat(":").concat(String.valueOf(client.getPort()));
-        String password = Reflect.on(client).get("password");
-        int db = Integer.parseInt(String.valueOf(Reflect.on(client).get("db")));
+        String password = ReflectionUtils.get(client,"password");
+        int db = Integer.parseInt(String.valueOf(ReflectionUtils.get(client,"db")));
         Attachment ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
                 new String[]{RedisConstants.MIDDLEWARE_NAME}
                 , new RedisTemplate.JedisSingleTemplate()

@@ -17,7 +17,6 @@ package com.pamirs.attach.plugin.jedis.interceptor;
 import com.pamirs.attach.plugin.jedis.shadowserver.JedisFactory;
 import com.pamirs.attach.plugin.jedis.util.JedisConstant;
 import com.pamirs.attach.plugin.jedis.util.Model;
-import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -30,10 +29,6 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Client;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * @Auther: vernon

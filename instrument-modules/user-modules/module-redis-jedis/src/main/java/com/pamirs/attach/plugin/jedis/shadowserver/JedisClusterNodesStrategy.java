@@ -15,8 +15,8 @@
 package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.ThrowableUtils;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ public class JedisClusterNodesStrategy implements RedisServerNodesStrategy {
     public List<String> match(Object obj) {
         List<String> nodes = new ArrayList<String>();
         try {
-            HashMap nodeMap = Reflect.on(Reflect.on(obj).get("cache")).get("nodes");
+            HashMap nodeMap = ReflectionUtils.getFieldValues(obj,"cache","nodes");
             if (nodeMap == null) {
                 return new ArrayList<String>();
             }

@@ -16,11 +16,11 @@ package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.AbstractRedisServerFactory;
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.util.JedisConstant;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import redis.clients.jedis.BinaryJedis;
 import redis.clients.jedis.Jedis;
@@ -73,8 +73,8 @@ public class JedisFactory extends AbstractRedisServerFactory<JedisPool> {
          * 反射是为了兼容没有getDb的版本
          * 向下转为Integer是为了兼容Long类型的入参
          */
-        int bizDb = Integer.parseInt(String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("db")));
-        String bizPassword = String.valueOf(Reflect.on(Reflect.on(client).get("client")).get("password"));
+        int bizDb = Integer.parseInt(String.valueOf(ReflectionUtils.getFieldValues(client,"client","db")));
+        String bizPassword = String.valueOf(ReflectionUtils.getFieldValues(client,"client","password"));
         String shadowPassword = shadowConfig.getPassword(bizPassword);
         if (JedisConstant.JEDIS.equals(className)) {
             //单节点

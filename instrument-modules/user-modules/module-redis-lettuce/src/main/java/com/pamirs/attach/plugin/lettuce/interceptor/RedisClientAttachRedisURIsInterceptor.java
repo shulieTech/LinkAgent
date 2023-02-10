@@ -19,8 +19,8 @@ import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.cluster.RedisClusterClient;
@@ -50,7 +50,7 @@ public class RedisClientAttachRedisURIsInterceptor extends AroundInterceptor {
         Object result = advice.getReturnObj();
         if (target instanceof RedisClusterClient) {
             try {
-                Iterable<Object> initialUris = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_INITIAL_URIS);
+                Iterable<Object> initialUris = ReflectionUtils.get(target,LettuceConstants.REFLECT_FIELD_INITIAL_URIS);
                 List<Object> list = new ArrayList<Object>();
                 if (initialUris != null) {
                     Iterator<Object> it = initialUris.iterator();
@@ -64,7 +64,7 @@ public class RedisClientAttachRedisURIsInterceptor extends AroundInterceptor {
             }
         } else if (target instanceof RedisClient) {
             try {
-                Object redisURI = Reflect.on(target).get(LettuceConstants.REFLECT_FIELD_REDIS_URI);
+                Object redisURI = ReflectionUtils.get(target,LettuceConstants.REFLECT_FIELD_REDIS_URI);
                 manager.setDynamicField(result, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS, Arrays.asList(redisURI));
             } catch (ReflectException e) {
             }

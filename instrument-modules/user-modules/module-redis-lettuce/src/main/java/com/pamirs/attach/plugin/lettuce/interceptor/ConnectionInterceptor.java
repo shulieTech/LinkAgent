@@ -22,7 +22,7 @@ import com.pamirs.attach.plugin.lettuce.utils.Version;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.RedisClusterClient;
@@ -57,7 +57,7 @@ public class ConnectionInterceptor extends AroundInterceptor {
             if ("io.lettuce.core.masterreplica.MasterReplica".equals(advice.getTarget().getClass().getName())) {
                 Boolean isSentinel = false;
                 RedisURI redisUri = (RedisURI) advice.getParameterArray()[1];
-                isSentinel = Reflect.on(advice.getTargetClass()).call("isSentinel", redisUri).get();
+                isSentinel = ReflectionUtils.invokeStatic(advice.getTargetClass(), "isSentinel", redisUri);
                 if (isSentinel) {
                     List<String> indexes = new ArrayList<String>();
                     String masterId = redisUri.getSentinelMasterId();
@@ -90,7 +90,7 @@ public class ConnectionInterceptor extends AroundInterceptor {
                  * 集群模式
                  */
                 RedisClusterClient client = (RedisClusterClient) t;
-                Iterable<RedisURI> iterable = Reflect.on(client).get("initialUris");
+                Iterable<RedisURI> iterable = ReflectionUtils.get(client,"initialUris");
                 Iterator iterator = iterable.iterator();
 
                 List<String> indexes = new ArrayList<String>();
@@ -118,7 +118,7 @@ public class ConnectionInterceptor extends AroundInterceptor {
 
             } else if (RedisClient.class.isAssignableFrom(advice.getTarget().getClass())) {
                 RedisClient client = (RedisClient) t;
-                RedisURI redisURI = Reflect.on(client).get("redisURI");
+                RedisURI redisURI = ReflectionUtils.get(client,"redisURI");
                 nodes = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
                 String index = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
                 password = redisURI.getPassword() == null ? null : new String(redisURI.getPassword());

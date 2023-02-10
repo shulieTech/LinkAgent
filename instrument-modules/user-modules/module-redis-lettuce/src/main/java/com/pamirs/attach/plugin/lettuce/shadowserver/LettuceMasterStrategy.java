@@ -18,12 +18,10 @@ import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesSt
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import com.shulie.instrument.simulator.api.util.StringUtil;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.masterslave.StatefulRedisMasterSlaveConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,11 +53,11 @@ public class LettuceMasterStrategy implements RedisServerNodesStrategy {
                 Object resultObj = ((Advice) obj).getReturnObj();
                 String className = resultObj.getClass().getName();
                 if (className.equals("io.lettuce.core.masterslave.StatefulRedisMasterSlaveConnectionImpl")) {
-                    Object channelWriter = Reflect.on(resultObj).get(LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
-                    Object masterSlaveConnectionProvider = Reflect.on(channelWriter).get("masterSlaveConnectionProvider");
+                    Object channelWriter =  ReflectionUtils.get(resultObj, LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
+                    Object masterSlaveConnectionProvider = ReflectionUtils.get(channelWriter, "masterSlaveConnectionProvider");
                     RedisURI initialRedisUri = null;
                     try {
-                        initialRedisUri = Reflect.on(masterSlaveConnectionProvider).get("initialRedisUri");
+                        initialRedisUri = ReflectionUtils.get(masterSlaveConnectionProvider, "initialRedisUri");
                     } catch (Throwable t) {
 
                     }
@@ -77,9 +75,9 @@ public class LettuceMasterStrategy implements RedisServerNodesStrategy {
                         }
                         return result;
                     }
-                    List list = Reflect.on(masterSlaveConnectionProvider).get("knownNodes");
+                    List list =  ReflectionUtils.get(masterSlaveConnectionProvider, "knownNodes");
                     for (Object redisMasterSlaveNode : list) {
-                        RedisURI uri = Reflect.on(redisMasterSlaveNode).get("redisURI");
+                        RedisURI uri = ReflectionUtils.get(redisMasterSlaveNode, "redisURI");
                         result.add(uri.getHost() + ":" + uri.getPort());
                     }
                 } else {

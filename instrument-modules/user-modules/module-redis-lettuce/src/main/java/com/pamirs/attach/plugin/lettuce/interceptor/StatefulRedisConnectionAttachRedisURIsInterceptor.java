@@ -14,25 +14,17 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import com.shulie.instrument.simulator.api.util.ReflectionUtils;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.cluster.RedisClusterClient;
+
+import javax.annotation.Resource;
+import java.lang.reflect.Proxy;
+import java.util.List;
 
 /**
  * @Description

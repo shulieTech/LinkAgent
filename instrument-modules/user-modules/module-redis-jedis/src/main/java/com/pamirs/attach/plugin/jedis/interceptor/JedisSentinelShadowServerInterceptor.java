@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -24,7 +24,7 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
@@ -53,14 +53,12 @@ public class JedisSentinelShadowServerInterceptor extends CutoffInterceptorAdapt
         Object target = advice.getTarget();
         try {
             final Object object = JedisSentinelFactory.getFactory().getClient(target);
-            if(!(object instanceof JedisSentinelPool)){
+            if (!(object instanceof JedisSentinelPool)) {
                 return CutOffResult.PASSED;
             }
             JedisSentinelPool pool = (JedisSentinelPool) object;
             Jedis client = pool.getResource();
-            return CutOffResult.cutoff(Reflect.on(client)
-                    .call(advice.getBehavior().getName()
-                            , advice.getParameterArray()).get());
+            return CutOffResult.cutoff(ReflectionUtils.invoke(client, advice.getBehavior().getName(), advice.getParameterArray()));
         } catch (PressureMeasureError e) {
             throw e;
         } catch (Throwable e) {

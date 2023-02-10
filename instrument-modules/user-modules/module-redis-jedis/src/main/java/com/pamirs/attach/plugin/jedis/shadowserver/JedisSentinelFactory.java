@@ -20,7 +20,7 @@ import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.util.Model;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import redis.clients.jedis.Jedis;
@@ -74,16 +74,15 @@ public class JedisSentinelFactory extends AbstractRedisServerFactory<JedisSentin
         RedisClientMediator mediator = null;
         if (Jedis.class.isAssignableFrom(obj.getClass())) {
 
-
-            Object datasource = Reflect.on(obj).get("dataSource");
+            Object datasource = ReflectionUtils.get(obj,"dataSource");
             if (datasource != null && JedisSentinelPool.class.isAssignableFrom(datasource.getClass())) {
                 JedisSentinelPool pressureJedisPool = null;
 
-                String bizPassword = String.valueOf(Reflect.on(datasource).get("password"));
+                String bizPassword = String.valueOf(ReflectionUtils.get(datasource,"password"));
                 String masterName = shadowConfig.getMaster();
                 Set nodes = new HashSet(shadowConfig.getNodeNums());
                 String password = shadowConfig.getPassword(bizPassword);
-                GenericObjectPoolConfig poolConfig = Reflect.on(datasource).get("poolConfig");
+                GenericObjectPoolConfig poolConfig = ReflectionUtils.get(datasource,"poolConfig");
 
 
                 password = StringUtil.isEmpty(password) ? null : password;

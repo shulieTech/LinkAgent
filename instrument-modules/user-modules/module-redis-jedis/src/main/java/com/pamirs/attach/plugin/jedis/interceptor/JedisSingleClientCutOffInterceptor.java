@@ -26,7 +26,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ThrowableUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,12 +77,7 @@ public class JedisSingleClientCutOffInterceptor extends CutoffInterceptorAdaptor
                 || JedisConstant.BINARY_JEDIS.equals(className)) {
 
             try {
-                Object t = Reflect.on(
-                        JedisFactory.getFactory().getClient(advice.getTarget())
-                ).call(
-                        advice.getBehavior().getName()
-                        , advice.getParameterArray()
-                ).get();
+                Object t = ReflectionUtils.invoke(JedisFactory.getFactory().getClient(advice.getTarget()), advice.getBehavior().getName(), advice.getParameterArray());
                 return CutOffResult.cutoff(t);
             } catch (Throwable t) {
                 logger.error(ThrowableUtils.toString(t));

@@ -21,7 +21,7 @@ import java.util.Set;
 
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.internal.config.ShadowRedisConfig;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.BinaryJedis;
@@ -104,7 +104,7 @@ public class Model {
     public boolean isSentinelMode(Object jedis) {
         if (Jedis.class.getName().equals(jedis.getClass().getName())) {
             try {
-                Object dataSource = Reflect.on(jedis).get("dataSource");
+                Object dataSource = ReflectionUtils.get(jedis,"dataSource");
                 if (dataSource == null) {
                     return false;
                 }
@@ -128,7 +128,7 @@ public class Model {
         if (isSentinelMode(jedis)) {
             return false;
         }
-        Client client = Reflect.on(jedis).get("client");
+        Client client = ReflectionUtils.get(jedis,"client");
         String host = client.getHost();
         String port = String.valueOf(client.getPort());
         String node = host.concat(":").concat(String.valueOf(port));

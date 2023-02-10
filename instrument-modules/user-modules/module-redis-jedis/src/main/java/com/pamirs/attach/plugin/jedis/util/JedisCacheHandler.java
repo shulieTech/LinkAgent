@@ -68,7 +68,6 @@ public class JedisCacheHandler {
     public static Attachment getSentinelAttachment(JedisSentinelPool jedisSentinelPool) {
         Attachment ext = SentinelAttachmentCache.get(jedisSentinelPool);
         if (ext == null) {
-            ReflectionUtils.get(jedisSentinelPool, "masterListeners");
             String password = ReflectionUtils.get(jedisSentinelPool, "password");
             Integer database = ReflectionUtils.get(jedisSentinelPool, "database");
             Set set = ReflectionUtils.get(jedisSentinelPool, "masterListeners");

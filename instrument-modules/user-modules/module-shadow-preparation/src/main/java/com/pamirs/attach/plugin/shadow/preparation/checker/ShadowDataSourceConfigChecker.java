@@ -82,7 +82,7 @@ public class ShadowDataSourceConfigChecker {
         String basePath = "/api/link/ds/configs/check";
         String messageBody = JSON.toJSONString(resultList);
 
-        service.send(basePath, new HashMap<>(), messageBody,
+        service.send(basePath, HttpUtils.getHttpMustHeaders(), messageBody,
                 new MessageSendCallBack() {
 
                     @Override

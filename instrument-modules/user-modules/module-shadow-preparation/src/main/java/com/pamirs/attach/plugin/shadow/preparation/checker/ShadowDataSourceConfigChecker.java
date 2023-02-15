@@ -1,7 +1,7 @@
-package com.pamirs.attach.plugin.shadow.preparation.validator;
+package com.pamirs.attach.plugin.shadow.preparation.checker;
 
+import cn.hutool.log.Log;
 import com.alibaba.fastjson.JSON;
-import com.pamirs.attach.plugin.shadow.preparation.ShadowPreparationModule;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.ConfigPreCheckResult;
@@ -24,9 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ShadowDataSourceValidator {
+public class ShadowDataSourceConfigChecker {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(ShadowPreparationModule.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(ShadowDataSourceConfigChecker.class);
 
     public static SimulatorConfig simulatorConfig;
     public static String scheduleInterval;
@@ -71,6 +71,7 @@ public class ShadowDataSourceValidator {
                 JdbcPreCheckCommandProcessor.processPreCheckCommand(command, result);
                 result.setHostIp(InetAddress.getLocalHost().getHostAddress());
             } catch (Throwable e) {
+                LOGGER.error("[shadow-preparation] check shadow datasource config available occur exception", e);
                 result.setSuccess(false);
                 result.setErrorMsg(e.getMessage());
             }

@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
-import com.pamirs.attach.plugin.shadow.preparation.validator.ShadowDataSourceValidator;
+import com.pamirs.attach.plugin.shadow.preparation.checker.ShadowDataSourceConfigChecker;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -45,7 +45,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
      * 开始影子数据源校验定时任务
      */
     private void startDatasourceScheduling() {
-        ShadowDataSourceValidator.simulatorConfig = simulatorConfig;
+        ShadowDataSourceConfigChecker.simulatorConfig = simulatorConfig;
 
         String intervalString = "90s";
         int interval = 90, delay = 60;
@@ -65,7 +65,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] property 'shadow.datasource.check.interval' is not formatted! Use default schedule interval 90s");
         }
-        ShadowDataSourceValidator.scheduleInterval = intervalString;
+        ShadowDataSourceConfigChecker.scheduleInterval = intervalString;
 
         ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
@@ -80,7 +80,7 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
         Future future = pool.submit(new Runnable() {
             @Override
             public void run() {
-                ShadowDataSourceValidator.checkShadowDataSourceAvailable();
+                ShadowDataSourceConfigChecker.checkShadowDataSourceAvailable();
             }
         });
         try {

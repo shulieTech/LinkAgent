@@ -139,7 +139,7 @@ public class JdbcPreCheckCommandProcessor {
         }
 
         // 校验表结构
-        Map<String, String> compareResult = compareTableStructures(shadowType, bizInfos, shadowInfos);
+        Map<String, String> compareResult = compareTableStructures(shadowType, shadowInfos, bizInfos);
         if (!compareResult.isEmpty()) {
             checkedWithValues(compareResult, result);
             return;
@@ -159,7 +159,7 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     private static void checkedWithValues(Map<String, String> compareResult, ConfigPreCheckResult result) {
-        String errorMsg = compareResult.entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(Collectors.joining(";\r\n"));
+        String errorMsg = compareResult.entrySet().stream().map(entry -> entry.getKey() + ":" + entry.getValue()).collect(Collectors.joining("; "));
         result.setSuccess(false);
         result.setErrorMsg(errorMsg);
         LOGGER.error("[shadow-preparation] shadow datasource config check failed，result:> {}", errorMsg);
@@ -319,27 +319,27 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     /**
-     * 对比表结构
+     * 对比表结构, 只对比影子库内存在的表
      *
-     * @param bizInfos
      * @param shadowInfos
+     * @param bizInfos
      */
-    private static Map<String, String> compareTableStructures(Integer shadowType, Map<String, List<JdbcTableColumnInfos>> bizInfos, Map<String, List<JdbcTableColumnInfos>> shadowInfos) {
+    private static Map<String, String> compareTableStructures(Integer shadowType, Map<String, List<JdbcTableColumnInfos>> shadowInfos, Map<String, List<JdbcTableColumnInfos>> bizInfos) {
         Map<String, String> compareResult = new HashMap<String, String>();
 
-        for (Map.Entry<String, List<JdbcTableColumnInfos>> entry : bizInfos.entrySet()) {
-            String tableName = entry.getKey();
-            List<JdbcTableColumnInfos> bizColumns = entry.getValue();
-            String shadowTable = tableName;
-            if (shadowType > 0 && !Pradar.isClusterTestPrefix(tableName)) {
-                shadowTable = Pradar.addClusterTestPrefix(tableName);
+        for (Map.Entry<String, List<JdbcTableColumnInfos>> entry : shadowInfos.entrySet()) {
+            String shadowTable = entry.getKey();
+            List<JdbcTableColumnInfos> shadowColumns = entry.getValue();
+            String tableName = shadowTable;
+            if (shadowType > 0 && Pradar.isClusterTestPrefix(shadowTable)) {
+                tableName = shadowTable.substring(Pradar.getClusterTestPrefix().length());
             }
-            List<JdbcTableColumnInfos> shadowColumns = shadowInfos.get(shadowTable);
-            if (shadowColumns == null) {
-                compareResult.put(tableName, "影子表不存在");
+            List<JdbcTableColumnInfos> bizColumns = bizInfos.get(tableName);
+            if (bizColumns == null) {
+                compareResult.put(tableName, "业务表不存在");
                 continue;
             }
-            if (bizColumns.size() != shadowColumns.size()) {
+            if (shadowColumns.size() != bizColumns.size()) {
                 compareResult.put(tableName, "业务表字段和影子表字段个数不一致");
                 continue;
             }

@@ -14,14 +14,13 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.destroy;
 
+import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerMetaData;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
-import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
@@ -33,6 +32,7 @@ import com.pamirs.pradar.pressurement.agent.listener.ShadowConsumerDisableListen
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,10 +52,10 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
     public boolean disableBatch(List<ShadowConsumerDisableInfo> list) {
         boolean result = true;
         for (ShadowConsumerDisableInfo shadowConsumerDisableInfo : list) {
-            String springKey = Pradar.addClusterTestPrefix(shadowConsumerDisableInfo.getTopic()) +
-                    "#" + shadowConsumerDisableInfo.getConsumerGroup();
-            String originKey = shadowConsumerDisableInfo.getTopic() +
-                    "#" + shadowConsumerDisableInfo.getConsumerGroup();
+            String topic = shadowConsumerDisableInfo.getTopic(), group = shadowConsumerDisableInfo.getConsumerGroup();
+            String springKey = ShadowConsumerPrefixUtils.getShadowTopic(topic, group) +
+                    "#" + ShadowConsumerPrefixUtils.getShadowGroup(topic, group);
+            String originKey = topic + "#" + group;
             if (ShadowConsumerHolder.topicGroupBeanNameMap.containsKey(springKey)) {
                 disableBatchSpringKafka(springKey);
                 break;
@@ -76,8 +76,8 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
             ConsumerHolder.getProxyMapping().remove(code);
             ConsumerHolder.getCache().remove(code);
             for (Map.Entry<Integer, ConsumerMetaData> entry : ConsumerHolder.getCache().entrySet()) {
-                if (entry.getValue().getTopics().contains(Pradar.addClusterTestPrefix(topic)) &&
-                        entry.getValue().getGroupId().equals(Pradar.addClusterTestPrefix(group))) {
+                if (entry.getValue().getTopics().contains(ShadowConsumerPrefixUtils.getShadowTopic(topic,group)) &&
+                        entry.getValue().getGroupId().equals(ShadowConsumerPrefixUtils.getShadowGroup(topic,group))) {
                     ConsumerHolder.getCache().remove(entry.getKey());
                     break;
                 }

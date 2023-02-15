@@ -29,6 +29,7 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExec
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
+import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -229,7 +230,7 @@ public class KafkaExecute implements ShadowConsumerExecute {
 
         copyHeartbeatConfig(config, coordinator);
 
-        config.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, Pradar.addClusterTestPrefix(kafkaConfig.getGroupId()));
+        config.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, ShadowConsumerPrefixUtils.getShadowGroup(kafkaConfig.getTopic(), kafkaConfig.getGroupId()));
         putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, coordinator, "sessionTimeoutMs");
         putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, coordinator, "autoCommitEnabled");
         putSlience(config, org.apache.kafka.clients.consumer.ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, coordinator, "autoCommitIntervalMs");

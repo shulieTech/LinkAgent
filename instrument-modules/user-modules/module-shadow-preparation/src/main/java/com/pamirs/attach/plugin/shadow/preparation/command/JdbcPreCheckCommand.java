@@ -7,7 +7,6 @@ import java.util.List;
 public class JdbcPreCheckCommand {
 
     // 原始数据源类型 0:影子库 1:影子表 2:影子库+影子表
-    // 0-未设置 1-影子库 2-影子库/影子表 3-影子表
     private Integer shadowType;
     private List<String> tables;
     private DataSourceEntity bizDataSource;

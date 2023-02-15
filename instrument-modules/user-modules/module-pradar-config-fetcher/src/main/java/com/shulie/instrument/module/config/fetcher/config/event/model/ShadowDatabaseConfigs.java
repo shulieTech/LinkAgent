@@ -57,9 +57,6 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig,
         Map<String, ShadowDatabaseConfig> newValue) {
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
-            return true;
-        }
         Set<ShadowDatabaseConfig> needCloseDataSource = new HashSet<ShadowDatabaseConfig>();
         // 同名配置比对
         for (Map.Entry<String, ShadowDatabaseConfig> old : GlobalConfig.getInstance().getShadowDatasourceConfigs()

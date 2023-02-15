@@ -1,24 +1,16 @@
 package com.pamirs.attach.plugin.shadow.preparation;
 
-import com.pamirs.attach.plugin.shadow.preparation.command.processor.*;
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.Pradar;
+import com.pamirs.attach.plugin.shadow.preparation.validator.ShadowDataSourceValidator;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
-import io.shulie.agent.management.client.AgentManagementClient;
-import io.shulie.agent.management.client.constant.AgentSpecification;
-import io.shulie.agent.management.client.listener.CommandListener;
-import io.shulie.agent.management.client.listener.ConfigListener;
-import io.shulie.agent.management.client.model.*;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.concurrent.*;
 
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "shadow-preparation", version = "1.0.0", author = "jiangjibo@shulie.io", description = "影子资源准备工作，包括创建，校验，生效")
@@ -26,89 +18,78 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ShadowPreparationModule.class);
 
+    private ThreadPoolExecutor pool;
+
     @Override
     public boolean onActive() throws Throwable {
         if (!PropertyUtil.isShadowPreparationEnabled()) {
             return true;
         }
-        ExecutorServiceFactory.getFactory().schedule(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    registerAgentManagerListener();
-                } catch (Exception e) {
-                    LOGGER.error("[shadow-preparation] new agent management client instance occur exception", e);
-                }
-            }
-        }, 1, TimeUnit.MINUTES);
+
+        pool = new ThreadPoolExecutor(1, 4, 120L, TimeUnit.SECONDS, new ArrayBlockingQueue(10),
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread thread = new Thread(r);
+                        thread.setName("[shadow-preparation]");
+                        return thread;
+                    }
+                });
+
+        startDatasourceScheduling();
 
         return true;
     }
 
-    private void registerAgentManagerListener() throws Exception {
-        ConfigProperties properties = new ConfigProperties();
-        properties.setAppName(AppNameUtils.appName());
-        properties.setTenantCode(PropertyUtil.getAgentManagerTenantCode());
-        properties.setUserId(Pradar.getPradarUserId());
-        properties.setEnvCode(Pradar.getEnvCode());
-        properties.setAgentSpecification(AgentSpecification.SIMULATOR_AGENT);
-        properties.setVersion(simulatorConfig.getAgentVersion());
-        properties.setAgentId(simulatorConfig.getAgentId());
+    /**
+     * 开始影子数据源校验定时任务
+     */
+    private void startDatasourceScheduling() {
+        ShadowDataSourceValidator.simulatorConfig = simulatorConfig;
 
-        AgentManagementClient client = new AgentManagementClient(properties);
-        // 数据源
-        client.register("pressure_database", new ConfigListener() {
-            @Override
-            public void receive(Config config, Consumer<ConfigAck> consumer) {
-                JdbcConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
-            }
-        });
+        String intervalString = "90s";
+        int interval = 90, delay = 60;
+        TimeUnit timeUnit = TimeUnit.SECONDS;
 
-        client.register("pressure_database", new CommandListener() {
-            @Override
-            public void receive(Command command, Consumer<CommandAck> consumer) {
-                JdbcPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
+        try {
+            String property = simulatorConfig.getProperty("shadow.datasource.check.interval");
+            if (property != null) {
+                interval = Integer.parseInt(property.substring(0, property.length() - 1));
+                String unit = property.substring(property.length() - 1).toLowerCase();
+                if (unit.equals("m")) {
+                    timeUnit = TimeUnit.MINUTES;
+                    delay = 1;
+                }
+                intervalString = property;
             }
-        });
+        } catch (Exception e) {
+            LOGGER.error("[shadow-preparation] property 'shadow.datasource.check.interval' is not formatted! Use default schedule interval 90s");
+        }
+        ShadowDataSourceValidator.scheduleInterval = intervalString;
 
-        // 白名单
-        client.register("pressure_whitelist", new ConfigListener() {
+        ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override
-            public void receive(Config config, Consumer<ConfigAck> consumer) {
-                WhiteListPushCommandProcessor.processConfigPushCommand(config, consumer);
+            public void run() {
+                scheduleCheckShadowDatabaseAvailable();
             }
-        });
+        }, delay, interval, timeUnit);
 
-        // mq
-        client.register("pressure_mq", new CommandListener() {
-            @Override
-            public void receive(Command command, Consumer<CommandAck> consumer) {
-                MqPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
-            }
-        });
-
-        client.register("pressure_mq", new ConfigListener() {
-            @Override
-            public void receive(Config config, Consumer<ConfigAck> consumer) {
-                MqConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
-            }
-        });
-
-        //es
-        client.register("pressure_es", new CommandListener() {
-            @Override
-            public void receive(Command command, Consumer<CommandAck> consumer) {
-                EsPreCheckCommandProcessor.processPreCheckCommand(command, consumer);
-            }
-        });
-        client.register("pressure_es", new ConfigListener() {
-            @Override
-            public void receive(Config config, Consumer<ConfigAck> consumer) {
-                EsConfigPushCommandProcessor.processConfigPushCommand(config, consumer);
-            }
-        });
-
-        client.start();
     }
+
+    private void scheduleCheckShadowDatabaseAvailable() {
+        Future future = pool.submit(new Runnable() {
+            @Override
+            public void run() {
+                ShadowDataSourceValidator.checkShadowDataSourceAvailable();
+            }
+        });
+        try {
+            future.get(70, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            LOGGER.error("[shadow-preparation] check shadow datasource available occur exception, maybe called after 70s don`t has result returned!", e);
+            future.cancel(true);
+        }
+    }
+
 
 }

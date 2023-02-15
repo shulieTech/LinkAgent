@@ -58,9 +58,6 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
     private ConfigManager configManager;
 
-    // 是否允许使用影子资源准备模块, 如果允许使用则很多配置信息从准备模块里拉取，不走控制台
-    public static boolean shadowPreparationEnabled;
-
     /**
      * 获取simulator配置的接口，目前只获取静默开关状态
      * @param args
@@ -109,7 +106,6 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
         PradarInternalService.registerConfigFetcher(new DefaultConfigFetcher());
 
-        shadowPreparationEnabled = PropertyUtil.isShadowPreparationEnabled();
         return true;
     }
 

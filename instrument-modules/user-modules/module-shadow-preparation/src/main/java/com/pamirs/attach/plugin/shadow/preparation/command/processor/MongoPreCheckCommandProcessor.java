@@ -39,12 +39,11 @@ public class MongoPreCheckCommandProcessor {
         }
 
         boolean isMongoV4 = MongoClientsFetcher.isMongoV4();
-        Integer shadowType = command.getShadowType();
-        Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
+        Integer dsType = command.getShadowType();
         String shadowUrl = command.getShadowDataSource() == null ? null : command.getShadowDataSource().getUrl();
 
         if (dsType == null) {
-            LOGGER.error("[shadow-preparation] illegal shadow type:{} for url:{}", shadowType, bizDataSource.getUrl());
+            LOGGER.error("[shadow-preparation] illegal shadow type:{} for url:{}", dsType, bizDataSource.getUrl());
             result.setSuccess(false);
             result.setResponse("隔离类型不合法,只能为 0，1，2，3");
             ack.setResponse(JSON.toJSONString(result));

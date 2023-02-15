@@ -7,8 +7,10 @@ import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.ConfigPreCheckRes
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import io.shulie.takin.sdk.kafka.HttpSender;
 import io.shulie.takin.sdk.kafka.MessageSendCallBack;
@@ -77,9 +79,10 @@ public class ShadowDataSourceConfigChecker {
             resultList.add(result);
         }
 
-        String basePath = "";
+        String basePath = "/api/link/ds/configs/check";
+        String messageBody = JSON.toJSONString(resultList);
 
-        service.send(basePath, new HashMap<>(), JSON.toJSONString(resultList),
+        service.send(basePath, new HashMap<>(), messageBody,
                 new MessageSendCallBack() {
 
                     @Override
@@ -93,7 +96,8 @@ public class ShadowDataSourceConfigChecker {
                 }, new HttpSender() {
                     @Override
                     public void sendMessage() {
-
+                        final String postResultUrl = PropertyUtil.getTroControlWebUrl() + basePath;
+                        HttpUtils.doPost(postResultUrl, messageBody);
                     }
                 });
 

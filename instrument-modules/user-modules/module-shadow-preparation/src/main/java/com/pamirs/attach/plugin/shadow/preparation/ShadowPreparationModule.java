@@ -22,7 +22,8 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
 
     @Override
     public boolean onActive() throws Throwable {
-        if (!PropertyUtil.isShadowPreparationEnabled()) {
+        boolean moduleEnable = PropertyUtil.isShadowPreparationEnabled() || simulatorConfig.getBooleanProperty("shadow.preparation.enabled", false);
+        if (!moduleEnable) {
             return true;
         }
 

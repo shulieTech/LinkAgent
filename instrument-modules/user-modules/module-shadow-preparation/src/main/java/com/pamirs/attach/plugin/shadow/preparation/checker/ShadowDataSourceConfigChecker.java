@@ -1,6 +1,5 @@
 package com.pamirs.attach.plugin.shadow.preparation.checker;
 
-import cn.hutool.log.Log;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
@@ -29,7 +28,7 @@ public class ShadowDataSourceConfigChecker {
     private final static Logger LOGGER = LoggerFactory.getLogger(ShadowDataSourceConfigChecker.class);
 
     public static SimulatorConfig simulatorConfig;
-    public static String scheduleInterval;
+    public static int scheduleInterval;
 
     private static MessageSendService service = new PinpointSendServiceFactory().getKafkaMessageInstance();
 

@@ -19,9 +19,9 @@ public class ConfigPreCheckResult {
      */
     private Long checkTime;
     /**
-     * 校验间隔
+     * 校验间隔,单位秒
      */
-    private String checkInterval;
+    private int checkInterval;
 
     public String getConfigType() {
         return configType;
@@ -103,11 +103,11 @@ public class ConfigPreCheckResult {
         this.checkTime = checkTime;
     }
 
-    public String getCheckInterval() {
+    public int getCheckInterval() {
         return checkInterval;
     }
 
-    public void setCheckInterval(String checkInterval) {
+    public void setCheckInterval(int checkInterval) {
         this.checkInterval = checkInterval;
     }
 }

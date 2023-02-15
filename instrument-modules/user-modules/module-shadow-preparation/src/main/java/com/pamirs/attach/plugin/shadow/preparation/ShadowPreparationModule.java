@@ -47,7 +47,6 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
     private void startDatasourceScheduling() {
         ShadowDataSourceConfigChecker.simulatorConfig = simulatorConfig;
 
-        String intervalString = "90s";
         int interval = 90, delay = 60;
         TimeUnit timeUnit = TimeUnit.SECONDS;
 
@@ -60,12 +59,11 @@ public class ShadowPreparationModule extends ModuleLifecycleAdapter implements E
                     timeUnit = TimeUnit.MINUTES;
                     delay = 1;
                 }
-                intervalString = property;
             }
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] property 'shadow.datasource.check.interval' is not formatted! Use default schedule interval 90s");
         }
-        ShadowDataSourceConfigChecker.scheduleInterval = intervalString;
+        ShadowDataSourceConfigChecker.scheduleInterval = timeUnit == TimeUnit.MINUTES ? interval * 60 : interval;
 
         ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new Runnable() {
             @Override

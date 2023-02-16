@@ -14,12 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.rocketmq.hook;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.pamirs.attach.plugin.apache.rocketmq.RocketmqConstants;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceBean;
 import com.pamirs.attach.plugin.apache.rocketmq.common.MQTraceConstants;
@@ -39,6 +33,11 @@ import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 生产消息时的pradar埋点

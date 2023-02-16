@@ -48,5 +48,4 @@ public class ClassTypeUtils {
         return type2Code;
     }
 
-
 }

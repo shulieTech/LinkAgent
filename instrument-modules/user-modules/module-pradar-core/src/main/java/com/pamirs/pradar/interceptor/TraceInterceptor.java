@@ -210,9 +210,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("plugin." + getPluginName() + ".trace.enabled", true)) {
-            return;
-        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {
@@ -465,6 +462,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (record.getCallbackMsg() != null) {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
@@ -574,6 +575,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (isTrace) {
                 endTrace(record.getResultCode(), getPluginType(), advice);
             } else {
@@ -593,9 +598,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doAfter(Advice advice) throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("plugin." + getPluginName() + ".trace.enabled", true)) {
-            return;
-        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {
@@ -657,9 +659,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public final void doException(Advice advice) throws Throwable {
-        if (!simulatorConfig.getBooleanProperty("plugin." + getPluginName() + ".trace.enabled", true)) {
-            return;
-        }
         Throwable throwable = null;
         try {
             exceptionFirst(advice);
@@ -756,6 +755,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setPort(record.getPort());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (record.getMiddlewareName() != null) {
                 invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
@@ -796,6 +799,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
             Object response = record.getResponse();
             if (response != null && response instanceof Throwable) {
                 advice.attach(response);
+            }
+
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
             }
 
             if (Pradar.isExceptionOn()) {

@@ -1,1 +1,1 @@
-修复 org.apache.http.impl.client.CloseableHttpClient.execute(org.apache.http.client.methods.HttpUriRequest, org.apache.http.client.ResponseHandler<? extends T>) mock不支持问题
+2.0.0.3 支持asynchttpclient mock功能

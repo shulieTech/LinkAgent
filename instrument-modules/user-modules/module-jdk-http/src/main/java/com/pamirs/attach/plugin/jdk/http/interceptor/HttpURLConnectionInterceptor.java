@@ -90,7 +90,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         MatchConfig config = ClusterTestUtils.httpClusterTest(fullPath);
         ExecutionStrategy strategy = config.getStrategy();
         // mock不在connect里执行
-        if(strategy instanceof JsonMockStrategy || strategy instanceof MockStrategy){
+        if (strategy instanceof JsonMockStrategy || strategy instanceof MockStrategy) {
             return;
         }
         config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, whiteList);
@@ -192,6 +192,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
             }
             SpanRecord record = new SpanRecord();
             record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
+            record.setMethod(StringUtils.upperCase(((HttpURLConnection) advice.getTarget()).getRequestMethod()));
             InnerWhiteListCheckUtil.check();
             return record;
         } finally {
@@ -214,6 +215,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
             } else {
                 record.setResultCode(ResultCode.INVOKE_RESULT_FAILED);
             }
+            record.setMethod(StringUtils.upperCase(((HttpURLConnection) advice.getTarget()).getRequestMethod()));
             record.setResponse(advice.getThrowable());
             InnerWhiteListCheckUtil.check();
 

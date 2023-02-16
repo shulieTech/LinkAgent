@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -20,17 +20,23 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 
+import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
+import com.pamirs.attach.plugin.httpclient.utils.HttpClientAsyncFixJsonStrategies;
+import com.pamirs.attach.plugin.httpclient.utils.HttpClientAsyncMockStrategies;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
+import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.hc.client5.http.async.methods.SimpleHttpResponse;
@@ -59,13 +65,13 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
     public void doBefore(final Advice advice) throws ProcessControlException {
         Object[] args = advice.getParameterArray();
         //AsyncRequestProducer
-        BasicRequestProducer requestBasic = (BasicRequestProducer)args[0];
+        BasicRequestProducer requestBasic = (BasicRequestProducer) args[0];
         //这里应该有问题先用这个类定义，后面debug之后再做修改
         final HttpRequest request;
         try {
             Field field = requestBasic.getClass().getSuperclass().getDeclaredField("request");
             field.setAccessible(true);
-            request = (HttpRequest)field.get(requestBasic);
+            request = (HttpRequest) field.get(requestBasic);
         } catch (Exception e) {
             logger.error("获取request参数错误", e);
             return;
@@ -105,7 +111,7 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
                 String key = entry.getKey();
                 String value = entry.getValue();
                 if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
-                    request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                        request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
                     request.setHeader(key, value);
                 }
             }
@@ -122,10 +128,10 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
             @Override
             public void completed(Object result) {
                 Pradar.setInvokeContext(context);
-                ((FutureCallback)future).completed(result);
+                ((FutureCallback) future).completed(result);
                 try {
                     if (result instanceof SimpleHttpResponse) {
-                        afterTrace(request, (SimpleHttpResponse)result);
+                        afterTrace(request, (SimpleHttpResponse) result);
                     } else {
                         afterTrace(request, null);
                     }
@@ -138,7 +144,7 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
             @Override
             public void failed(Exception ex) {
                 Pradar.setInvokeContext(context);
-                ((FutureCallback)future).failed(ex);
+                ((FutureCallback) future).failed(ex);
                 try {
                     exceptionTrace(request, ex);
                 } catch (Throwable e) {
@@ -150,7 +156,7 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
             @Override
             public void cancelled() {
                 Pradar.setInvokeContext(context);
-                ((FutureCallback)future).cancelled();
+                ((FutureCallback) future).cancelled();
                 try {
                     exceptionTrace(request, null);
                 } catch (Throwable e) {
@@ -173,26 +179,36 @@ public class AsyncHttpClientv5MethodInterceptor2 extends AroundInterceptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
+        Object[] args = advice.getParameterArray();
+        config.addArgs("futureCallback", args[args.length - 1]);
+
         try {
+            ExecutionStrategy strategy = config.getStrategy();
+
+            if (strategy instanceof JsonMockStrategy) {
+                HttpClientAsyncFixJsonStrategies.HTTPCLIENT5_FIX_JSON_STRATEGY.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+            }
+            if(strategy instanceof MockStrategy){
+                HttpClientAsyncMockStrategies.HTTPCLIENT5_MOCK_STRATEGY.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+            }
+
             config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
-                new ExecutionCall() {
-                    @Override
-                    public Object call(Object param) {
-                        //现在先暂时注释掉因为只有jdk8以上才能用
-                        //java.util.concurrent.CompletableFuture<SimpleHttpResponse> future
-                        //    = new java.util.concurrent.CompletableFuture<SimpleHttpResponse>();
-                        //
-                        //SimpleHttpResponse response = null;
-                        //if (param instanceof String) {
-                        //    response = SimpleHttpResponse.create(200, (String)param);
-                        //} else {
-                        //    response = SimpleHttpResponse.create(200, JSONObject.toJSONBytes(param));
-                        //}
-                        //future.complete(response);
-                        //return future;
-                        return null;
-                    }
-                });
+                    new ExecutionCall() {
+                        @Override
+                        public Object call(Object param) {
+                            //现在先暂时注释掉因为只有jdk8以上才能用
+                            java.util.concurrent.CompletableFuture<SimpleHttpResponse> future = new java.util.concurrent.CompletableFuture<SimpleHttpResponse>();
+
+                            SimpleHttpResponse response = null;
+                            if (param instanceof String) {
+                                response = SimpleHttpResponse.create(200, (String) param);
+                            } else {
+                                response = SimpleHttpResponse.create(200, JSONObject.toJSONBytes(param));
+                            }
+                            future.complete(response);
+                            return future;
+                        }
+                    });
         } catch (PressureMeasureError e) {
             Pradar.response(e);
             Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, HttpClientConstants.PLUGIN_TYPE);

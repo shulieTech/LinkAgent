@@ -86,7 +86,7 @@ public class ConsumerPollInterceptor extends AroundInterceptor {
         if (consumerMetaData == null) {
             return;
         }
-        List<String> needReportTopic = new ArrayList<String>(consumerMetaData.getTopics());
+        List<String> needReportTopic = new ArrayList<String>();
         // 判断是否配置了白名单
         for (String topic : consumerMetaData.getTopics()) {
             if (!Pradar.isClusterTestPrefix(topic) && GlobalConfig.getInstance().getMqWhiteList().contains(topic + "#" + consumerMetaData.getGroupId())) {

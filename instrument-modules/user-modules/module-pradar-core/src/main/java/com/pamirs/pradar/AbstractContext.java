@@ -162,7 +162,10 @@ abstract class AbstractContext extends BaseContext {
         if (samplingInterval == 0) {
             samplingInterval = si;
         }
-        if (samplingInterval <= 1 || samplingInterval > 10000) {
+        if(samplingInterval <= 0){
+            return false;
+        }
+        if (samplingInterval == 1 || samplingInterval > 10000) {
             return true;
         }
         if (traceId.length() < 25) {

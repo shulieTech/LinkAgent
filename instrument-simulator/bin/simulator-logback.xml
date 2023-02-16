@@ -63,8 +63,8 @@
         <file>${SIMULATOR_LOG_PATH}/simulator-error.log</file>
         <!--        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
         <rollingPolicy class="com.shulie.instrument.simulator.core.logback.CustomerSizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator-agent-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <maxFileSize>100MB</maxFileSize>  <!-- 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB -->
+            <fileNamePattern>${SIMULATOR_LOG_PATH}/simulator-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>  <!-- 日志文件过大会使的编辑器打开非常慢，因此设置日志最大100MB -->
             <maxHistory>3</maxHistory>  <!-- 保存7天 -->
             <totalSizeCap>300MB</totalSizeCap>  <!-- 总日志大小 -->
         </rollingPolicy>

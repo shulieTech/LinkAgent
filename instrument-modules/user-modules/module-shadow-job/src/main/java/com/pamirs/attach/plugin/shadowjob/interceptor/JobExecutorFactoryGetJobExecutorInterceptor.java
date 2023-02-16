@@ -108,7 +108,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
         if (GlobalConfig.getInstance().getNeedStopJobs() != null &&
                 GlobalConfig.getInstance().getNeedStopJobs().containsKey(jobName) &&
                 GlobalConfig.getInstance().getRegisteredJobs().containsKey(jobName)) {
-            ShadowJob shadowJob = GlobalConfig.getInstance().getNeedRegisterJobs().get(jobName);
+            ShadowJob shadowJob = GlobalConfig.getInstance().getRegisteredJobs().get(jobName);
             boolean result = disableShaDowJob(shadowJob);
             if (result) {
                 GlobalConfig.getInstance().getNeedStopJobs().remove(jobName);

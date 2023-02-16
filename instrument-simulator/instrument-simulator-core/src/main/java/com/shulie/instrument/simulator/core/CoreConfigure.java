@@ -16,6 +16,9 @@ package com.shulie.instrument.simulator.core;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.core.util.FeatureCodec;
 import com.shulie.instrument.simulator.core.util.HttpUtils;
@@ -32,6 +35,8 @@ import java.lang.instrument.Instrumentation;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 内核启动配置
@@ -112,6 +117,14 @@ public class CoreConfigure {
     private Map<String, List<String>> bizClassLoaderInjectURLs;
 
     private final Instrumentation instrumentation;
+
+    private LoadingCache<String, Optional<String>> cachePropertiesBuilder = CacheBuilder.newBuilder()
+            .maximumSize(300).expireAfterAccess(3 * 60, TimeUnit.SECONDS).build(new CacheLoader<String, Optional<String>>() {
+                @Override
+                public Optional<String> load(String key) throws Exception {
+                    return Optional.ofNullable(getPropertyInternal(key));
+                }
+            });
 
     /**
      * md5值
@@ -810,15 +823,22 @@ public class CoreConfigure {
      * @return 返回配置值
      */
     public String getProperty(String key, String defaultValue) {
+        String value = null;
+        try {
+            value = cachePropertiesBuilder.get(key).orElse(defaultValue);
+        } catch (ExecutionException e) {
+            LOGGER.warn("read value fail!", e);
+        }
+        return value;
+    }
+
+    public String getPropertyInternal(String key){
         String value = System.getProperty(key);
         if (value == null) {
             value = featureMap.get(key);
         }
         if (value == null) {
             value = System.getenv(key);
-        }
-        if (value == null) {
-            return defaultValue;
         }
         return value;
     }

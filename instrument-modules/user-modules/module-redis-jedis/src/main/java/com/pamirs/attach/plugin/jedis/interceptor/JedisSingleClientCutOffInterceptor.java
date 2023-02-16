@@ -14,10 +14,10 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.jedis.shadowserver.JedisFactory;
 import com.pamirs.attach.plugin.jedis.util.JedisConstant;
 import com.pamirs.attach.plugin.jedis.util.Model;
-import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -27,13 +27,8 @@ import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ThrowableUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Client;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * @Auther: vernon
@@ -82,12 +77,7 @@ public class JedisSingleClientCutOffInterceptor extends CutoffInterceptorAdaptor
                 || JedisConstant.BINARY_JEDIS.equals(className)) {
 
             try {
-                Object t = Reflect.on(
-                        JedisFactory.getFactory().getClient(advice.getTarget())
-                ).call(
-                        advice.getBehavior().getName()
-                        , advice.getParameterArray()
-                ).get();
+                Object t = ReflectionUtils.invoke(JedisFactory.getFactory().getClient(advice.getTarget()), advice.getBehavior().getName(), advice.getParameterArray());
                 return CutOffResult.cutoff(t);
             } catch (Throwable t) {
                 logger.error(ThrowableUtils.toString(t));

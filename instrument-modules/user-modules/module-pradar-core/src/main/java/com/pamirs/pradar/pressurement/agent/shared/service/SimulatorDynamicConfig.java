@@ -54,6 +54,11 @@ public class SimulatorDynamicConfig {
             = "pradar.shadow.request.response.data.allow.trace";
     private static final String SECURITY_FIELD = "securityField";
 
+    /**
+     * 单个应用的静默开关
+     */
+    private static final String PRADAR_SINGLE_SILENCE_SWITCH_KEY = "pradar.single.silence.switch";
+
     private static final String FILED_CHECK_RULES_SWITCH = "filed.check.rules.switch";
     private static final String FILED_CHECK_RULES = "filed.check.rules";
     private static final String KAFKA_PT_CONSUMER_MAX_POLL_RATION_KEY = "kafka.pt.consumer.max.poll.ratio";
@@ -119,6 +124,11 @@ public class SimulatorDynamicConfig {
     private final boolean shadowRequestResponseDataAllowTrace;
 
     /**
+     * 单个应用的静默开关是否打开
+     */
+    private final boolean isSingleSilenceSwitchOn;
+
+    /**
      * kafka影子消费者poll最大比例
      */
     private final double kafkaPtConsumerPollMaxRatio;
@@ -163,6 +173,7 @@ public class SimulatorDynamicConfig {
         this.kafkaPtConsumerPollMaxRatio = getKafkaPtConsumerMaxPollRatio(config);
         this.perfThreadCollectInterval = getPerfThreadCollectInterval(config);
         this.closeKafkaPollReport = getCloseKafkaPollReport(config);
+        this.isSingleSilenceSwitchOn = getSingleSilenceSwitchStatus(config);
     }
 
     public String shadowDatasourceAccountPrefix() {
@@ -617,6 +628,26 @@ public class SimulatorDynamicConfig {
             LOGGER.error("getCloseKafkaPollReport error , use default false.", e);
             return false;
         }
+    }
+
+    private boolean getSingleSilenceSwitchStatus(Map<String, String> config){
+        try {
+            if (config == null) {
+                return false;
+            }
+            String data = getConfig(config, PRADAR_SINGLE_SILENCE_SWITCH_KEY);
+            if (data == null) {
+                return false;
+            }
+            return Boolean.parseBoolean(data);
+        } catch (Exception e) {
+            LOGGER.error("getSingleSilenceSwitchStatus error , use default false.", e);
+            return false;
+        }
+    }
+
+    public boolean isSingleSilenceSwitchOn() {
+        return isSingleSilenceSwitchOn;
     }
 
     public double getKafkaPtConsumerPollMaxRatio() {

@@ -39,8 +39,7 @@ public class AsyncHttpClientPlugin extends ModuleLifecycleAdapter implements Ext
             @Override
             public void doEnhance(InstrumentClass target) {
 
-                InstrumentMethod method = target.getDeclaredMethods("sendRequest"/*,
-                        "org.asynchttpclient.Request", "org.asynchttpclient.PradarAsyncHandler", "org.asynchttpclient.netty.NettyResponseFuture"*/);
+                InstrumentMethod method = target.getDeclaredMethods("sendRequest");
                 method.addInterceptor(Listeners.of(NettyRequestSenderSendRequestInterceptor.class));
             }
         });

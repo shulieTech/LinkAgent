@@ -86,6 +86,7 @@ public class HeartRequest {
      */
     private String agentVersion;
 
+
     /**
      * simulator版本
      */

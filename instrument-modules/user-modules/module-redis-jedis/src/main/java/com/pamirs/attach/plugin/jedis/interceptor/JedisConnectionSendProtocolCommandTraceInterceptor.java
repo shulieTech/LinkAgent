@@ -1,6 +1,7 @@
 package com.pamirs.attach.plugin.jedis.interceptor;
 
 import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
@@ -12,7 +13,6 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import redis.clients.jedis.Client;
 
 import java.util.Set;
@@ -123,8 +123,8 @@ public class JedisConnectionSendProtocolCommandTraceInterceptor extends TraceInt
         Client client = (Client) advice.getTarget();
         //单机模式
         String node = client.getHost().concat(":").concat(String.valueOf(client.getPort()));
-        String password = Reflect.on(client).get("password");
-        int db = Integer.parseInt(String.valueOf(Reflect.on(client).get("db")));
+        String password = ReflectionUtils.get(client,"password");
+        int db = Integer.parseInt(String.valueOf(ReflectionUtils.get(client,"db")));
         Attachment ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
                 new String[]{RedisConstants.MIDDLEWARE_NAME}
                 , new RedisTemplate.JedisSingleTemplate()

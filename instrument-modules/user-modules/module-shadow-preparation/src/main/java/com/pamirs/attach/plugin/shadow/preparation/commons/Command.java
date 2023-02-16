@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.shadow.preparation.utils;
+package com.pamirs.attach.plugin.shadow.preparation.commons;
 
 public class Command {
     private String id;

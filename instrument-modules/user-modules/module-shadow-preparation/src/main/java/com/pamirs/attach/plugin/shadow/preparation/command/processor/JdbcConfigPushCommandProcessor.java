@@ -5,8 +5,8 @@ import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.utils.Config;
-import com.pamirs.attach.plugin.shadow.preparation.utils.ConfigAck;
+import com.pamirs.attach.plugin.shadow.preparation.commons.Config;
+import com.pamirs.attach.plugin.shadow.preparation.commons.ConfigAck;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceActiveEvent;

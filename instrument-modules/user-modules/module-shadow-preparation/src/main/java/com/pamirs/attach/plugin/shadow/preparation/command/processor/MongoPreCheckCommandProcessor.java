@@ -5,10 +5,10 @@ import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.utils.CommandAck;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import io.shulie.agent.management.client.model.CommandAck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

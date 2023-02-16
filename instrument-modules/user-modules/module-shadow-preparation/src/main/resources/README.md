@@ -1,1 +1,1 @@
-2.0.0.4  自动校验影子数据源是否可用
+2.0.0.5  移除agent-management-client依赖

@@ -210,7 +210,6 @@ public class CoreLauncher {
                     RegisterFactory.init(agentConfig);
 
                     ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
-                    applicationUploader.checkAndGenerateApp();
 
                     Properties properties = readSimulatorConfigs();
                     String key = "pradar.data.pusher.pinpoint.collector.address";
@@ -223,6 +222,12 @@ public class CoreLauncher {
                     }
                     System.setProperty("register.name", properties.getProperty("register.name","zookeeper"));
 
+                    key = "shulie.agent.expand";
+                    if (properties.containsKey(key)){
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
+                    applicationUploader.checkAndGenerateApp();
 
                     Register register = RegisterFactory.getRegister(
                             properties.getProperty("register.name", "zookeeper"));

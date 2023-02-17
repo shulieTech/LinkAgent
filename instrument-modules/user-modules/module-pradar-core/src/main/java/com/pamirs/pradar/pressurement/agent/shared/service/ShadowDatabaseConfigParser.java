@@ -118,6 +118,9 @@ public class ShadowDatabaseConfigParser {
         final String url = StringUtils.trim(toString(map.get("url")));
         shadowDatabaseConfig.setUrl(url);
 
+        final String username = StringUtils.trim(toString(map.get("username")));
+        shadowDatabaseConfig.setUsername(username);
+
         if (StringUtils.isNotBlank(shadowTableConfig)) {
             String[] arr = StringUtils.split(shadowTableConfig, ',');
             if (arr != null && arr.length != 0) {

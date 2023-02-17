@@ -12,6 +12,7 @@ import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
+import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import io.shulie.takin.sdk.kafka.HttpSender;
 import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
@@ -77,6 +78,10 @@ public class ShadowDataSourceConfigChecker {
                 result.setErrorMsg(e.getMessage());
             }
             resultList.add(result);
+        }
+
+        if(CollectionUtils.isEmpty(resultList)){
+            return;
         }
 
         String basePath = "/api/link/ds/configs/check";

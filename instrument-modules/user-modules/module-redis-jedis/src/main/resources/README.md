@@ -1,1 +1,1 @@
-支持jedis的pipeline和transaction
+2.0.1.3 修复redis单机模式下重复获取connection的问题

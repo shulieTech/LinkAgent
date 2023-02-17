@@ -139,7 +139,7 @@ public class JdbcPreCheckCommandProcessor {
         }
 
         // 校验表结构
-        Map<String, String> compareResult = compareTableStructures(shadowType, shadowInfos, bizInfos);
+        Map<String, String> compareResult = shadowType == 0 ? compareTableStructuresForShadowDatabase(shadowInfos, bizInfos) : compareTableStructuresForShadowTable(bizInfos, shadowInfos);
         if (!compareResult.isEmpty()) {
             checkedWithValues(compareResult, result);
             return;
@@ -319,19 +319,19 @@ public class JdbcPreCheckCommandProcessor {
     }
 
     /**
-     * 对比表结构, 只对比影子库内存在的表
+     * 对比表结构, 针对影子库模式, 只对比影子库内存在的表
      *
      * @param shadowInfos
      * @param bizInfos
      */
-    private static Map<String, String> compareTableStructures(Integer shadowType, Map<String, List<JdbcTableColumnInfos>> shadowInfos, Map<String, List<JdbcTableColumnInfos>> bizInfos) {
+    private static Map<String, String> compareTableStructuresForShadowDatabase(Map<String, List<JdbcTableColumnInfos>> shadowInfos, Map<String, List<JdbcTableColumnInfos>> bizInfos) {
         Map<String, String> compareResult = new HashMap<String, String>();
 
         for (Map.Entry<String, List<JdbcTableColumnInfos>> entry : shadowInfos.entrySet()) {
             String shadowTable = entry.getKey();
             List<JdbcTableColumnInfos> shadowColumns = entry.getValue();
             String tableName = shadowTable;
-            if (shadowType > 0 && Pradar.isClusterTestPrefix(shadowTable)) {
+            if (Pradar.isClusterTestPrefix(shadowTable)) {
                 tableName = shadowTable.substring(Pradar.getClusterTestPrefix().length());
             }
             List<JdbcTableColumnInfos> bizColumns = bizInfos.get(tableName);
@@ -350,6 +350,40 @@ public class JdbcPreCheckCommandProcessor {
         }
         return compareResult;
     }
+
+    /**
+     * 对比表结构，针对影子表模式
+     *
+     * @param bizInfos
+     * @param shadowInfos
+     */
+    private static Map<String, String> compareTableStructuresForShadowTable(Map<String, List<JdbcTableColumnInfos>> bizInfos, Map<String, List<JdbcTableColumnInfos>> shadowInfos) {
+        Map<String, String> compareResult = new HashMap<String, String>();
+
+        for (Map.Entry<String, List<JdbcTableColumnInfos>> entry : bizInfos.entrySet()) {
+            String tableName = entry.getKey();
+            List<JdbcTableColumnInfos> bizColumns = entry.getValue();
+            String shadowTable = tableName;
+            if (!Pradar.isClusterTestPrefix(tableName)) {
+                shadowTable = Pradar.addClusterTestPrefix(tableName);
+            }
+            List<JdbcTableColumnInfos> shadowColumns = shadowInfos.get(shadowTable);
+            if (shadowColumns == null) {
+                compareResult.put(tableName, "影子表不存在");
+                continue;
+            }
+            if (bizColumns.size() != shadowColumns.size()) {
+                compareResult.put(tableName, "业务表字段和影子表字段个数不一致");
+                continue;
+            }
+            String ret = compareColumnInfos(toMap(bizColumns), toMap(shadowColumns));
+            if (ret != null) {
+                compareResult.put(tableName, ret);
+            }
+        }
+        return compareResult;
+    }
+
 
     private static Map<String, JdbcTableColumnInfos> toMap(List<JdbcTableColumnInfos> infos) {
         Map<String, JdbcTableColumnInfos> infosMap = new HashMap<String, JdbcTableColumnInfos>();

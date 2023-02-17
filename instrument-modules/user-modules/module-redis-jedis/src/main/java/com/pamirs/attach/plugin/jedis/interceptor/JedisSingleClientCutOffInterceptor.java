@@ -73,11 +73,16 @@ public class JedisSingleClientCutOffInterceptor extends CutoffInterceptorAdaptor
             return CutOffResult.PASSED;
         }
 
-        if (JedisConstant.JEDIS.equals(className)
-                || JedisConstant.BINARY_JEDIS.equals(className)) {
+        if (JedisConstant.JEDIS.equals(className) || JedisConstant.BINARY_JEDIS.equals(className)) {
+
+            Object adviceClient = advice.getTarget();
+            Object client = JedisFactory.getFactory().getClient(adviceClient);
+            if (adviceClient == client) {
+                return CutOffResult.PASSED;
+            }
 
             try {
-                Object t = ReflectionUtils.invoke(JedisFactory.getFactory().getClient(advice.getTarget()), advice.getBehavior().getName(), advice.getParameterArray());
+                Object t = ReflectionUtils.invoke(client, advice.getBehavior().getName(), advice.getParameterArray());
                 return CutOffResult.cutoff(t);
             } catch (Throwable t) {
                 logger.error(ThrowableUtils.toString(t));

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
@@ -78,10 +79,10 @@ public class ExternalAPIImpl implements ExternalAPI {
             StringBuilder builder = new StringBuilder(agentDownloadUrl);
             if (StringUtils.indexOf(agentDownloadUrl, '?') != -1) {
                 builder.append("&appName=").append(agentConfig.getAppName()).append("&agentId=").append(
-                    agentConfig.getAgentId());
+                        agentConfig.getAgentId());
             } else {
                 builder.append("?appName=").append(agentConfig.getAppName()).append("&agentId=").append(
-                    agentConfig.getAgentId());
+                        agentConfig.getAgentId());
             }
             return DownloadUtils.download(builder.toString(), targetPath, agentConfig.getHttpMustHeaders());
         }
@@ -138,7 +139,8 @@ public class ExternalAPIImpl implements ExternalAPI {
          * 这个地方如果服务端没有最新需要执行的命令，则建议返回空,也可以返回最后一次的命令
          */
         try {
-            Type type = new TypeReference<Result<CommandPacket>>() {}.getType();
+            Type type = new TypeReference<Result<CommandPacket>>() {
+            }.getType();
             Result<CommandPacket> response = JSON.parseObject(resp, type);
             if (!response.isSuccess()) {
                 logger.error("fetch agent command got a fault response. resp={}", resp);
@@ -162,6 +164,8 @@ public class ExternalAPIImpl implements ExternalAPI {
         final String agentHeartUrl = joinUrl(webUrl, HEART_URL);
 
         MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+
+        final AtomicReference<List<CommandPacket>> reference = new AtomicReference<List<CommandPacket>>(new ArrayList<CommandPacket>());
 
         messageSendService.send(HEART_URL, agentConfig.getHttpMustHeaders(), JSON.toJSONString(heartRequest), new MessageSendCallBack() {
             @Override
@@ -188,11 +192,13 @@ public class ExternalAPIImpl implements ExternalAPI {
                     return;
                 }
                 try {
-                    Type type = new TypeReference<Result<List<CommandPacket>>>() {}.getType();
+                    Type type = new TypeReference<Result<List<CommandPacket>>>() {
+                    }.getType();
                     Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
                     if (!response.isSuccess()) {
                         throw new RuntimeException(response.getError());
                     }
+                    reference.set(response.getData());
                     return;
                 } catch (Throwable e) {
                     logger.error("AGENT: parse command err." + resp, e);
@@ -201,7 +207,7 @@ public class ExternalAPIImpl implements ExternalAPI {
             }
         });
 
-        return null;
+        return reference.get();
     }
 
     @Override

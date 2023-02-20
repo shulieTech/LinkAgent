@@ -54,7 +54,7 @@
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>druid</artifactId>
-            <version>1.2.6.0</version>
+            <version>1.2.6.1</version>
         </dependency>
 
         <dependency>

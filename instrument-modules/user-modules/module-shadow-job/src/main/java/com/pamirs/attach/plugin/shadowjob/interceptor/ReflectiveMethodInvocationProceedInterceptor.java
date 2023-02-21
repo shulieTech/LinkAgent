@@ -19,6 +19,7 @@ import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.shulie.instrument.simulator.api.reflect.ReflectionUtils;
 import org.springframework.aop.framework.ReflectiveMethodInvocation;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -42,9 +43,6 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
      * 只初始化一次
      */
     private void init() {
-        if (!isInited.compareAndSet(false, true)) {
-            return;
-        }
         try {
             interceptorsField = ReflectiveMethodInvocation.class.getDeclaredField(ShadowJobConstants.DYNAMIC_FIELD_INTERCEPTORS_AND_DYNAMIC_METHOD_MATCHERS);
             interceptorsField.setAccessible(true);
@@ -76,6 +74,10 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        // 只需要执行一次，不然会有严重的性能损耗
+        if (!isInited.compareAndSet(false, true)) {
+            return;
+        }
         if (PradarSpringUtil.isInit()) {
             return;
         }
@@ -115,10 +117,10 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
 
 
     private BeanFactory _getBeanFactory(Object target) {
-        try {
-            return Reflect.on(target).get("beanFactory");
-        } catch (Throwable e) {
+        Field beanFactory = ReflectionUtils.findField(target.getClass(), "beanFactory");
+        if (beanFactory == null) {
             return null;
         }
+        return ReflectionUtils.getField(beanFactory, target);
     }
 }

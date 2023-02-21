@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.shadowjob.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadowjob.ShadowJobConstants;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
@@ -116,10 +117,10 @@ public class ReflectiveMethodInvocationProceedInterceptor extends AroundIntercep
 
 
     private BeanFactory _getBeanFactory(Object target) {
-        try {
-            return Reflect.on(target).get("beanFactory");
-        } catch (Throwable e) {
+        Field beanFactory = ReflectionUtils.findField(target.getClass(), "beanFactory");
+        if (beanFactory == null) {
             return null;
         }
+        return ReflectionUtils.getField(beanFactory, target);
     }
 }

@@ -213,17 +213,15 @@ public class CoreLauncher {
 
                     Properties properties = readSimulatorConfigs();
                     String key = "pradar.data.pusher.pinpoint.collector.address";
-                    if(properties.containsKey(key)){
+                    if (properties.containsKey(key)) {
                         System.setProperty(key, properties.getProperty(key));
                     }
                     key = "kafka.sdk.switch";
-                    if(properties.containsKey(key)){
-                        System.setProperty(key, properties.getProperty(key));
-                    }
-                    System.setProperty("register.name", properties.getProperty("register.name","zookeeper"));
+                    System.setProperty(key, properties.getProperty(key, "false"));
+                    System.setProperty("register.name", properties.getProperty("register.name", "zookeeper"));
 
                     key = "shulie.agent.expand";
-                    if (properties.containsKey(key)){
+                    if (properties.containsKey(key)) {
                         System.setProperty(key, properties.getProperty(key));
                     }
 

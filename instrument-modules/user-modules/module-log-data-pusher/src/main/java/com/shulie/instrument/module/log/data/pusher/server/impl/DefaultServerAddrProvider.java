@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.pamirs.pradar.exception.PradarException;
+import com.shulie.instrument.module.log.data.pusher.LogDataPusherModule;
 import com.shulie.instrument.module.log.data.pusher.server.ConnectInfo;
 import com.shulie.instrument.module.log.data.pusher.server.ServerAddrProvider;
 import com.shulie.instrument.module.log.data.pusher.server.ServerProviderOptions;
@@ -38,6 +39,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * @Description log server的服务端地址提供者,暂时未采用一致性哈希算法,主要是考虑到一致性哈希算法并不能最大化使客户端连接
  * 平均负载在每一个服务端端口上
@@ -147,6 +149,11 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
                 continue;
             }
             String addr = StringUtils.trim(addrPort[0]);
+            if (LogDataPusherModule.pushAddressMappings.containsKey(addr)) {
+                String replacedAddr = LogDataPusherModule.pushAddressMappings.get(addr);
+                LOGGER.info("[log-data-pusher] replace push address {} to {}", addr, replacedAddr);
+                addr = replacedAddr;
+            }
             String portStr = StringUtils.trim(addrPort[1]);
             if (!NumberUtils.isDigits(portStr)) {
                 LOGGER.warn("listener add a valid log server,port is invalid,name : {}", node);
@@ -215,11 +222,11 @@ public class DefaultServerAddrProvider implements ServerAddrProvider {
         LOGGER.warn("push log server availableNodes:" + availableNodes.size() + ":" + Arrays.toString(availableNodes.toArray()));
         for (Node availableNode : availableNodes) {
             //最近 20s 有异常的排除在外
-            if (availableNode.getLastErrorTime() == -1 || (System.currentTimeMillis() - availableNode.getLastErrorTime()) > 20*1000L) {
+            if (availableNode.getLastErrorTime() == -1 || (System.currentTimeMillis() - availableNode.getLastErrorTime()) > 20 * 1000L) {
                 nowAvailableNode.add(availableNode);
             }
         }
-        LOGGER.warn("push log server nowAvailableNode:"+ nowAvailableNode.size() + ":" + Arrays.toString(nowAvailableNode.toArray()));
+        LOGGER.warn("push log server nowAvailableNode:" + nowAvailableNode.size() + ":" + Arrays.toString(nowAvailableNode.toArray()));
         if (nowAvailableNode.isEmpty()) {
             nowAvailableNode = new ArrayList<Node>(availableNodes);
         }

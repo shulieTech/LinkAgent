@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -42,10 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -55,7 +52,7 @@ import java.util.concurrent.TimeUnit;
  */
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "log-data-pusher", version = "1.0.0", author = "xiaobin@shulie.io",
-    description = "日志推送模式,包含 trace、monitor 日志推送")
+        description = "日志推送模式,包含 trace、monitor 日志推送")
 public class LogDataPusherModule extends ModuleLifecycleAdapter implements ExtensionModule {
     private final static Logger logger = LoggerFactory.getLogger(LogDataPusherModule.class.getName());
     private static final String APP = "app";
@@ -64,6 +61,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
     private DataPushManager dataPushManager;
     private boolean isActive;
     private ScheduledFuture future;
+    public static Map<String, String> pushAddressMappings = new HashMap<String, String>();
 
     @Override
     public boolean onActive() throws Throwable {
@@ -81,7 +79,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
                  */
                 try {
                     dataPushManager = SimulatorGuard.getInstance().doGuard(DataPushManager.class,
-                        new DefaultDataPushManager(pusherOptions));
+                            new DefaultDataPushManager(pusherOptions));
                     dataPushManager.start();
                     if (logger.isInfoEnabled()) {
                         logger.info("SIMULATOR: Data push Manager start success.");
@@ -92,21 +90,23 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
                 }
             }
         }, 30, TimeUnit.SECONDS);
+
+        initPushAddressMappings();
         return true;
     }
 
     private PusherOptions buildPusherOptions() {
         PusherOptions pusherOptions = new PusherOptions();
         pusherOptions.setDataPusher(
-            DataPushEnum.getByType(simulatorConfig.getProperty("pradar.data.pusher", "http"), DataPushEnum.HTTP));
+                DataPushEnum.getByType(simulatorConfig.getProperty("pradar.data.pusher", "http"), DataPushEnum.HTTP));
         pusherOptions.setTimeout(simulatorConfig.getIntProperty("pradar.data.pusher.timeout", 3000));
         pusherOptions.setServerZkPath(
-            simulatorConfig.getProperty("pradar.server.zk.path", "/config/log/pradar/server"));
+                simulatorConfig.getProperty("pradar.server.zk.path", "/config/log/pradar/server"));
         pusherOptions.setZkServers(simulatorConfig.getZkServers());
         pusherOptions.setConnectionTimeoutMillis(simulatorConfig.getZkConnectionTimeout());
         pusherOptions.setSessionTimeoutMillis(simulatorConfig.getZkSessionTimeout());
         pusherOptions.setProtocolCode(
-            simulatorConfig.getIntProperty("pradar.push.serialize.protocol.code", ProtocolCode.NONE));
+                simulatorConfig.getIntProperty("pradar.push.serialize.protocol.code", ProtocolCode.NONE));
         HttpPushOptions httpPushOptions = new HttpPushOptions();
         httpPushOptions.setMaxHttpPoolSize(simulatorConfig.getIntProperty("pradar.max.httpPool.size", 10));
         httpPushOptions.setHttpPath(simulatorConfig.getProperty("pradar.push.server.http.path", ""));
@@ -119,7 +119,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         traceLogOptions.setDataType(DataType.TRACE_LOG);
         traceLogOptions.setVersion(Pradar.PRADAR_TARCE_LOG_VERSION);
         traceLogOptions.setMaxFailureSleepInterval(
-            simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
+                simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
         logPusherOptionsList.add(traceLogOptions);
 
         LogPusherOptions monitorLogOptions = new LogPusherOptions();
@@ -127,7 +127,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         monitorLogOptions.setDataType(DataType.MONITOR_LOG);
         monitorLogOptions.setVersion(Pradar.PRADAR_MONITOR_LOG_VERSION);
         monitorLogOptions.setMaxFailureSleepInterval(
-            simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
+                simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
         logPusherOptionsList.add(monitorLogOptions);
 
         LogPusherOptions agentErrorLogOptions = new LogPusherOptions();
@@ -135,7 +135,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         agentErrorLogOptions.setDataType(DataType.AGENT_LOG);
         agentErrorLogOptions.setVersion(Pradar.PRADAR_ERROR_LOG_VERSION);
         agentErrorLogOptions.setMaxFailureSleepInterval(
-            simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
+                simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
         logPusherOptionsList.add(agentErrorLogOptions);
 
         LogPusherOptions simulatorErrorLogOptions = new LogPusherOptions();
@@ -143,7 +143,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         simulatorErrorLogOptions.setDataType(DataType.AGENT_LOG);
         simulatorErrorLogOptions.setVersion(Pradar.PRADAR_ERROR_LOG_VERSION);
         simulatorErrorLogOptions.setMaxFailureSleepInterval(
-            simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
+                simulatorConfig.getIntProperty("max.push.log.failure.sleep.interval", 10000));
         logPusherOptionsList.add(simulatorErrorLogOptions);
         pusherOptions.setLogPusherOptions(logPusherOptionsList);
 
@@ -242,7 +242,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
         String logName = params.get("logName");
         String fileRegx = AgentLogFileEnum.find(logName);
         String rowNumStr = params.get("rowNum");
-        if(StringUtils.isEmpty(rowNumStr)){
+        if (StringUtils.isEmpty(rowNumStr)) {
             return CommandResponse.failure("rowNum can't be null");
         }
         int rowNum;
@@ -252,10 +252,10 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
             return CommandResponse.failure("rowNum invalid");
         }
         List<String> grepParam = StringUtils.isEmpty(params.get("grepParam")) ? Collections.EMPTY_LIST
-                : JSON.parseArray(params.get("grepParam"),String.class);
+                : JSON.parseArray(params.get("grepParam"), String.class);
         try {
-            File file = FileReaderUtils.findNewestFile(simulatorConfig.getLogPath(),fileRegx);
-            if(file == null){
+            File file = FileReaderUtils.findNewestFile(simulatorConfig.getLogPath(), fileRegx);
+            if (file == null) {
                 return CommandResponse.failure("log file not found");
             }
             String logContent = FileReaderUtils.reverseReadLinesWithGrep(file, rowNum, grepParam);
@@ -272,6 +272,23 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
             logger.error("SIMULATOR: pull log occur a unknown error! ", e);
             return CommandResponse.failure("pull log occur a unknown error");
         }
+    }
+
+    private void initPushAddressMappings() {
+        String property = simulatorConfig.getProperty("log.push.address.mappings");
+        if (property == null) {
+            return;
+        }
+        logger.info("[log-data-pusher] simulator.properties explicit configure push address mappings:{}", property);
+        String[] splits = property.split(";");
+        for (String split : splits) {
+            if (!split.contains("->")) {
+                continue;
+            }
+            String[] spt = split.trim().split("->", 2);
+            pushAddressMappings.put(spt[0], spt[1]);
+        }
+        logger.info("[log-data-pusher] initialized push address mappings, result:{}", pushAddressMappings);
     }
 
 

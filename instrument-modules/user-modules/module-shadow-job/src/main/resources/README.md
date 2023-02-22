@@ -1,1 +1,1 @@
-2.0.0.5 放开spring-quartz
+2.0.0.6 放开spring-quartz

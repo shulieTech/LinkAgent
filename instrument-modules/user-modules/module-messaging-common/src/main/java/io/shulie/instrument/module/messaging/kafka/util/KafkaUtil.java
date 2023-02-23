@@ -21,6 +21,7 @@ import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.shulie.instrument.module.messaging.kafka.ApacheKafkaHandler;
 import io.shulie.instrument.module.messaging.kafka.model.KafkaConsumerMetaData;
+import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -250,7 +251,9 @@ public class KafkaUtil {
 
         copyHeartbeatConfig(config, coordinator);
 
-        config.put(ConsumerConfig.GROUP_ID_CONFIG, Pradar.addClusterTestPrefix(consumerMetaData.getGroupId()));
+        String shadowGroup = ShadowConsumerPrefixUtils.getShadowGroup(consumerMetaData.getTopics().iterator().next(), consumerMetaData.getGroupId());
+
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, shadowGroup);
         putSlience(config, ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, coordinator, "sessionTimeoutMs");
         putSlience(config, ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, coordinator, "autoCommitEnabled");
         putSlience(config, ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, coordinator, "autoCommitIntervalMs");

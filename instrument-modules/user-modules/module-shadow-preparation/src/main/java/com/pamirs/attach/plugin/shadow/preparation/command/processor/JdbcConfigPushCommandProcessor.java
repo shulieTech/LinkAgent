@@ -5,6 +5,8 @@ import com.pamirs.attach.plugin.shadow.preparation.command.JdbcConfigPushCommand
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceConfig;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.commons.Config;
+import com.pamirs.attach.plugin.shadow.preparation.commons.ConfigAck;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowDataSourceActiveEvent;
@@ -15,9 +17,6 @@ import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
-import io.shulie.agent.management.client.constant.ConfigResultEnum;
-import io.shulie.agent.management.client.model.Config;
-import io.shulie.agent.management.client.model.ConfigAck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,13 +48,13 @@ public class JdbcConfigPushCommandProcessor {
             cmd = JSON.parseObject(config.getParam(), JdbcConfigPushCommand.class);
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] parse jdbc config push command occur exception", e);
-            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
+            ack.setResultCode(500);
             ack.setResultDesc("解析数据源下发命令失败");
             callback.accept(ack);
             return;
         }
         if (CollectionUtils.isEmpty(cmd.getData())) {
-            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
+            ack.setResultCode(500);
             ack.setResultDesc("未拉取到数据源配置");
             callback.accept(ack);
             return;
@@ -88,7 +87,7 @@ public class JdbcConfigPushCommandProcessor {
 
         if (needAdd.isEmpty()) {
             // 数据已生效
-            ack.setResultCode(ConfigResultEnum.SUCC.getCode());
+            ack.setResultCode(200);
             ack.setResultDesc("数据配置已生效");
             callback.accept(ack);
             return;
@@ -238,9 +237,9 @@ public class JdbcConfigPushCommandProcessor {
         ack.setType(cfg.getType());
         ack.setVersion(cfg.getVersion());
         if (StringUtil.isEmpty(info)) {
-            ack.setResultCode(ConfigResultEnum.SUCC.getCode());
+            ack.setResultCode(200);
         } else {
-            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
+            ack.setResultCode(500);
             ack.setResultDesc(info);
         }
         callback.accept(ack);

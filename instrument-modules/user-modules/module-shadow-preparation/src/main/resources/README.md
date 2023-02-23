@@ -1,2 +1,1 @@
-2.0.0.3
-调整mysql表结构校验方式
+2.0.0.5  移除agent-management-client依赖

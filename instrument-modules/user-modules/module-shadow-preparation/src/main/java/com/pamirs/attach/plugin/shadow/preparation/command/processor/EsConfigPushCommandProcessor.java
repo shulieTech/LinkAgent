@@ -4,14 +4,13 @@ import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.EsConfigPushCommand;
 import com.pamirs.attach.plugin.shadow.preparation.es.EsClientFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.es.EsConfigEntity;
+import com.pamirs.attach.plugin.shadow.preparation.commons.Config;
+import com.pamirs.attach.plugin.shadow.preparation.commons.ConfigAck;
 import com.pamirs.pradar.internal.config.ShadowEsServerConfig;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowEsActiveEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowEsDisableEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import io.shulie.agent.management.client.constant.ConfigResultEnum;
-import io.shulie.agent.management.client.model.Config;
-import io.shulie.agent.management.client.model.ConfigAck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,7 @@ public class EsConfigPushCommandProcessor {
             cmd = JSON.parseObject(config.getParam(), EsConfigPushCommand.class);
         } catch (Exception e) {
             LOGGER.error("[shadow-preparation] parse es config push command occur exception", e);
-            ack.setResultCode(ConfigResultEnum.FAIL.getCode());
+            ack.setResultCode(500);
             ack.setResultDesc("解析数据源下发命令失败");
             callback.accept(ack);
             return;
@@ -71,7 +70,7 @@ public class EsConfigPushCommandProcessor {
 
         if (needAdd.isEmpty()) {
             LOGGER.info("[shadow-preparation] don`t exists need active shadow config, es shadow config active success");
-            ack.setResultCode(ConfigResultEnum.SUCC.getCode());
+            ack.setResultCode(500);
             callback.accept(ack);
             return;
         }
@@ -101,10 +100,10 @@ public class EsConfigPushCommandProcessor {
                 }
             }
             if (sb.length() > 0) {
-                ack.setResultCode(ConfigResultEnum.FAIL.getCode());
+                ack.setResultCode(500);
                 ack.setResultDesc(sb.toString());
             } else {
-                ack.setResultCode(ConfigResultEnum.SUCC.getCode());
+                ack.setResultCode(500);
             }
             callback.accept(ack);
         } catch (Exception e) {

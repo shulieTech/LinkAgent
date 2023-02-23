@@ -55,9 +55,6 @@ public class UrlWhiteList implements IChange<Set<MatchConfig>, ApplicationConfig
 //                && CollectionUtils.equals(urlWhiteList, newValue)) {
 //            return Boolean.FALSE;
 //        }
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
-            return true;
-        }
         // 变更后配置更新到内存
         applicationConfig.setUrlWhiteList(newValue);
         GlobalConfig.getInstance().setUrlWhiteList(newValue);

@@ -51,9 +51,6 @@ public class RpcAllowList implements IChange<Set<MatchConfig>, ApplicationConfig
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig config, Set<MatchConfig> newValue) {
-        if (ConfigFetcherModule.shadowPreparationEnabled) {
-            return true;
-        }
         config.setRpcNameWhiteList(newValue);
         GlobalConfig.getInstance().setRpcNameWhiteList(newValue);
         PradarSwitcher.turnConfigSwitcherOn(ConfigNames.RPC_WHITE_LIST);

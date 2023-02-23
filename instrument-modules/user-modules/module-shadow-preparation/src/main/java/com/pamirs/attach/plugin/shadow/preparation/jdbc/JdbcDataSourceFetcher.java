@@ -106,7 +106,11 @@ public class JdbcDataSourceFetcher {
 
     public static DataSource getBizDataSource(String key) {
         for (Map.Entry<DataSource, String> entry : bizDataSources.entrySet()) {
-            if (entry.getValue().equals(key)) {
+            String fetchedKey = entry.getValue();
+            if (!key.contains("|")) {
+                fetchedKey = fetchedKey.substring(0, fetchedKey.indexOf("|"));
+            }
+            if (fetchedKey.equals(key)) {
                 return entry.getKey();
             }
         }

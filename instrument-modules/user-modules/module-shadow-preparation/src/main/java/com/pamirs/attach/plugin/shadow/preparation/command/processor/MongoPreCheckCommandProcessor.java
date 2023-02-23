@@ -5,10 +5,10 @@ import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
+import com.pamirs.attach.plugin.shadow.preparation.commons.CommandAck;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
-import io.shulie.agent.management.client.model.CommandAck;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,12 +39,11 @@ public class MongoPreCheckCommandProcessor {
         }
 
         boolean isMongoV4 = MongoClientsFetcher.isMongoV4();
-        Integer shadowType = command.getShadowType();
-        Integer dsType = shadowType == 1 ? 0 : shadowType == 2 ? 2 : shadowType == 3 ? 1 : null;
+        Integer dsType = command.getShadowType();
         String shadowUrl = command.getShadowDataSource() == null ? null : command.getShadowDataSource().getUrl();
 
         if (dsType == null) {
-            LOGGER.error("[shadow-preparation] illegal shadow type:{} for url:{}", shadowType, bizDataSource.getUrl());
+            LOGGER.error("[shadow-preparation] illegal shadow type:{} for url:{}", dsType, bizDataSource.getUrl());
             result.setSuccess(false);
             result.setResponse("隔离类型不合法,只能为 0，1，2，3");
             ack.setResponse(JSON.toJSONString(result));

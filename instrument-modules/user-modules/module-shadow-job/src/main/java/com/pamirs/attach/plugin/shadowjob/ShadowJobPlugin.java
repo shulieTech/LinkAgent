@@ -255,6 +255,7 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });*/
 
+
         enhanceTemplate.enhance(this, "org.quartz.JobExecutionContext", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

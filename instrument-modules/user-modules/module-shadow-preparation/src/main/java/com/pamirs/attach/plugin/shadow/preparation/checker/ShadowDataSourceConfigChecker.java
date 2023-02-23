@@ -36,7 +36,6 @@ public class ShadowDataSourceConfigChecker {
     private static MessageSendService service = new PinpointSendServiceFactory().getKafkaMessageInstance();
 
     public static void checkShadowDataSourceAvailable() {
-
         List<ConfigPreCheckResult> resultList = new ArrayList<>();
         Map<String, ShadowDatabaseConfig> configs = GlobalConfig.getInstance().getShadowDatasourceConfigs();
 

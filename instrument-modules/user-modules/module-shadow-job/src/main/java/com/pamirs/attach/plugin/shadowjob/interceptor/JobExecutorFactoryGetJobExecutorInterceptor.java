@@ -20,6 +20,7 @@ import com.dangdang.ddframe.job.api.dataflow.DataflowJob;
 import com.dangdang.ddframe.job.api.simple.SimpleJob;
 import com.dangdang.ddframe.job.config.JobCoreConfiguration;
 import com.dangdang.ddframe.job.config.JobTypeConfiguration;
+import com.dangdang.ddframe.job.config.dataflow.DataflowJobConfiguration;
 import com.dangdang.ddframe.job.config.simple.SimpleJobConfiguration;
 import com.dangdang.ddframe.job.event.JobEventConfiguration;
 import com.dangdang.ddframe.job.event.rdb.JobEventRdbConfiguration;
@@ -234,7 +235,7 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
             Set<JobScheduler> values = new HashSet<JobScheduler>(schedulerMap.values());
 
             SyncObject syncObject = SyncObjectService.getSyncObject("com.dangdang.ddframe.job.lite.api.JobScheduler#init");
-            if(syncObject != null && !syncObject.getDatas().isEmpty()){
+            if (syncObject != null && !syncObject.getDatas().isEmpty()) {
                 for (SyncObjectData data : syncObject.getDatas()) {
                     values.add((JobScheduler) data.getTarget());
                 }
@@ -293,9 +294,15 @@ public class JobExecutorFactoryGetJobExecutorInterceptor extends ParametersWrapp
                 } else {
                     throw new IllegalAccessException("【Elastic-Job】" + shadowJob.getJobDataType() + "JobDataType类型错误，未知类型【simple、dataFlow】");
                 }
-                Field jobNameField = jobConfiguration.getTypeConfig().getCoreConfig().getClass().getDeclaredField("jobName");
+
+                JobCoreConfiguration coreConfig = jobConfiguration.getTypeConfig().getCoreConfig();
+
+                String jobParameter = jobTypeConfiguration.getCoreConfig().getJobParameter();
+                ReflectionUtils.set(coreConfig, "jobParameter", jobParameter);
+
+                Field jobNameField = coreConfig.getClass().getDeclaredField("jobName");
                 jobNameField.setAccessible(true);
-                jobNameField.set(jobConfiguration.getTypeConfig().getCoreConfig(), jobConfiguration.getTypeConfig().getCoreConfig().getJobName() + originJob.getClass().getName());
+                jobNameField.set(coreConfig, coreConfig.getJobName() + originJob.getClass().getName());
                 ElasticJobListener[] elasticJobListeners = null;
                 if (!StringUtil.isEmpty(shadowJob.getListenerName())) {
                     Class<?> listenerClass = Class.forName(shadowJob.getListenerName());

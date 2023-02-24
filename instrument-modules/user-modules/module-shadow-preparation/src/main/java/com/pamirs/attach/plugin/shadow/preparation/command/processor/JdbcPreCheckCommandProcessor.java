@@ -11,6 +11,7 @@ import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcTypeFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.ConfigPreCheckResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
+import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +63,13 @@ public class JdbcPreCheckCommandProcessor {
             LOGGER.error("[shadow-preparation] ds type is shadow database or shadow database table, but shadow datasource is null");
             result.setSuccess(false);
             result.setErrorMsg("影子库/影子库影子表模式时影子数据源不能为空");
+            return;
+        }
+
+        if(shadowType == 1 && CollectionUtils.isEmpty(entity.getTables())){
+            LOGGER.error("[shadow-preparation] ds type is shadow table, but not biz tables is selected");
+            result.setSuccess(false);
+            result.setErrorMsg("影子表模式时需要选择有业务表");
             return;
         }
 

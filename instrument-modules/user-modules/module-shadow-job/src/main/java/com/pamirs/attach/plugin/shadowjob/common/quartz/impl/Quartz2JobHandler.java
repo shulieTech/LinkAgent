@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,8 +16,10 @@ package com.pamirs.attach.plugin.shadowjob.common.quartz.impl;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.Set;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
 import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandler;
 import com.pamirs.attach.plugin.shadowjob.obj.quartz.PtJob;
@@ -41,6 +43,8 @@ import org.quartz.impl.triggers.CronTriggerImpl;
 import org.quartz.impl.triggers.SimpleTriggerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
+import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
 
 /**
  * @Description
@@ -51,49 +55,72 @@ import org.slf4j.LoggerFactory;
 public class Quartz2JobHandler implements QuartzJobHandler {
     private final static Logger logger = LoggerFactory.getLogger(Quartz2JobHandler.class.getName());
 
-    @Override
     public boolean registerShadowJob(ShadowJob shaDowJob) throws Throwable {
-        Scheduler scheduler = PradarSpringUtil.getBeanFactory().getBean(Scheduler.class);
-        Set<JobKey> jobKeys = scheduler.getJobKeys(GroupMatcher.<JobKey>anyGroup());
-        if (StringUtils.isBlank(shaDowJob.getListenerName()) || !shaDowJob.getListenerName().contains(".")){
-            logger.error("quartz job ListenerName is not current,ListenerName need set bus job triggerName.groupName");
+        boolean found = false;
+        String jobDataType = shaDowJob.getJobDataType();
+
+        if (StringUtils.isBlank(shaDowJob.getListenerName()) || !shaDowJob.getListenerName().contains(".")) {
+            logger.error("quartz job ListenerName is not available, ListenerName need set bus job triggerName.groupName");
             return false;
         }
-        String[] triggerAndGroup = shaDowJob.getListenerName().split("\\.");
-        boolean found = false;
-        for (JobKey jobKey : jobKeys) {
-            Object jobDetail = scheduler.getJobDetail(jobKey);
-            Method method = jobDetail.getClass().getDeclaredMethod("getJobClass");
-            Class jobClass = (Class) method.invoke(jobDetail);
-            if (jobClass.getName().equals(shaDowJob.getClassName())) {
-                found = true;
 
-                Trigger trigger = scheduler.getTrigger(new TriggerKey(triggerAndGroup[0], triggerAndGroup[1]));
+        if (ShaDowJobConstant.SIMPLE.equals(jobDataType)) {
+            Map<String, SimpleTriggerFactoryBean> simpleTriggerFactoryBeanMap = PradarSpringUtil.getBeanFactory().getBeansOfType(SimpleTriggerFactoryBean.class);
+            for (Map.Entry entry : simpleTriggerFactoryBeanMap.entrySet()) {
+                SimpleTriggerFactoryBean factoryBean = (SimpleTriggerFactoryBean) entry.getValue();
 
-
-                if (null == trigger) {
-                    throw new IllegalArgumentException("【Quartz】未找到trigger相关数据");
+                Object jobDetail = ReflectionUtils.get(factoryBean, "jobDetail");
+                Class jobClass = ReflectionUtils.invoke(jobDetail, "getJobClass");
+                if (!jobClass.getName().equals(shaDowJob.getClassName())) {
+                    continue;
                 }
 
-                String jobName = Pradar.addClusterTestPrefix(jobClass.getSimpleName());
-                Class quartzClass = null;
+                Class quartzClass;
                 if ("org.springframework.scheduling.quartz.QuartzJobBean".equals(jobClass.getSuperclass().getName())) {
                     quartzClass = PtQuartzJobBean.class;
                 } else {
-                    quartzClass = PtJob.class;//ClassGeneratorManager.createQuartzClass(Pradar.addClusterTestPrefix(jobClass.getSimpleName()), jobClass.getSimpleName(), jobClass.getPackage().getName(), 2);
+                    quartzClass = PtJob.class;
                 }
 
+                String jobName = Pradar.addClusterTestPrefix(jobClass.getSimpleName());
+                Trigger trigger = ReflectionUtils.get(factoryBean, "simpleTrigger");
+
                 registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName());
-                scheduler.start();
-                break;
+                return true;
             }
+        } else if (ShaDowJobConstant.DATAFLOW.equals(jobDataType)) {
+
+            Map<String, CronTriggerFactoryBean> cronTriggerFactoryBean = PradarSpringUtil.getBeanFactory().getBeansOfType(CronTriggerFactoryBean.class);
+
+            for (Map.Entry entry : cronTriggerFactoryBean.entrySet()) {
+                CronTriggerFactoryBean factoryBean = (CronTriggerFactoryBean) entry.getValue();
+
+                Object jobDetail = ReflectionUtils.get(factoryBean, "jobDetail");
+                Class jobClass = ReflectionUtils.invoke(jobDetail, "getJobClass");
+                if (!jobClass.getName().equals(shaDowJob.getClassName())) {
+                    continue;
+                }
+
+                Class quartzClass;
+                if ("org.springframework.scheduling.quartz.QuartzJobBean".equals(jobClass.getSuperclass().getName())) {
+                    quartzClass = PtQuartzJobBean.class;
+                } else {
+                    quartzClass = PtJob.class;
+                }
+
+                String jobName = Pradar.addClusterTestPrefix(jobClass.getSimpleName());
+                Trigger trigger = ReflectionUtils.get(factoryBean, "cronTrigger");
+
+                registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName());
+                return true;
+            }
+
         }
 
         if (!found) {
             shaDowJob.setErrorMessage("【Quartz】未找到相关Class信息，error:" + shaDowJob.getClassName());
-            return false;
         }
-        return true;
+        return false;
     }
 
     private void registerJob(String jobType, Class jobClass, String jobName,
@@ -151,16 +178,16 @@ public class Quartz2JobHandler implements QuartzJobHandler {
         }
     }
 
-    private void setDescription(JobDetail jobDetail, String busJobClassName){
+    private void setDescription(JobDetail jobDetail, String busJobClassName) {
         Field field = null;
         try {
             field = jobDetail.getClass().getDeclaredField("description");
             field.setAccessible(true);
             field.set(jobDetail, busJobClassName);
-        }catch (Exception e){
+        } catch (Exception e) {
 
-        }finally {
-            if (field != null){
+        } finally {
+            if (field != null) {
                 field.setAccessible(false);
             }
         }

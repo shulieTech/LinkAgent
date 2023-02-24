@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -166,13 +166,15 @@ class InvokeProcessor {
         final int popInvokeId() {
             final int invokeId = stack.pop();
             if (isDebugEnabled) {
-                final int processId = stack.peekLast();
-                logger.debug("SIMULATOR: pop process-stack, process-id={};invoke-id={};deep={};listener={};",
-                        processId,
-                        invokeId,
-                        stack.deep(),
-                        listenerId
-                );
+                if (!stack.isEmpty()) {
+                    final int processId = stack.peekLast();
+                    logger.debug("SIMULATOR: pop process-stack, process-id={};invoke-id={};deep={};listener={};",
+                            processId,
+                            invokeId,
+                            stack.deep(),
+                            listenerId
+                    );
+                }
             }
             if (stack.isEmpty()) {
                 processRef.remove();

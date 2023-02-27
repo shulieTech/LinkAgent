@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
+import com.pamirs.attach.plugin.apache.kafka.util.ConsumerConfigHolder;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
@@ -59,7 +59,7 @@ public class ConsumerMetaData {
                     throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
                 }
             }
-            String bootstrapServers = KafkaUtils.getBootstrapServers(consumer);
+            String bootstrapServers = ConsumerConfigHolder.getBootstrapServers(consumer);
             String groupIdStr = "";
             if(groupId instanceof String){
                 groupIdStr = (String)groupId;

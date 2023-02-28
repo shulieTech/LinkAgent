@@ -41,7 +41,7 @@ public class KafkaUtils {
         if (StringUtils.isEmpty(remoteAddress)) {
             if (remoteAddressFieldAccessor instanceof KafkaConsumer) {
                 try {
-                    remoteAddress = KafkaUtils.getBootstrapServers((KafkaConsumer<?, ?>)remoteAddressFieldAccessor);
+                    remoteAddress = ConsumerConfigHolder.getBootstrapServers((KafkaConsumer<?, ?>)remoteAddressFieldAccessor);
                     manager.setDynamicField(remoteAddressFieldAccessor, KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS,
                         remoteAddress);
                     return remoteAddress;

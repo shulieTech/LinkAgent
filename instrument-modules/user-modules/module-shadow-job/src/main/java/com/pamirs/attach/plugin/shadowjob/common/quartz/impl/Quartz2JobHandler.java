@@ -204,6 +204,9 @@ public class Quartz2JobHandler implements QuartzJobHandler {
     public boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
         if (null != PradarSpringUtil.getBeanFactory()) {
             Scheduler scheduler = PradarSpringUtil.getBeanFactory().getBean(Scheduler.class);
+            if(scheduler == null){
+                scheduler = this.scheduler;
+            }
             String className = shaDowJob.getClassName();
             int index = className.lastIndexOf(".");
             if (-1 != index) {

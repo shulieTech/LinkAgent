@@ -75,6 +75,20 @@ public abstract class ReflectionUtils {
         }
     }
 
+    public static <T> T newInstance(Class clazz, Object... args) {
+        Class[] paramTypes = new Class[args.length];
+        for (int i = 0; i < args.length; i++) {
+            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
+            paramTypes[i] = args[i].getClass();
+        }
+        try {
+            Constructor<?> constructor = clazz.getConstructor(paramTypes);
+            return (T) constructor.newInstance(args);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     public static <T> T getFieldValues(Object object, String... filedNames) {
         for (String filedName : filedNames) {
             object = get(object, filedName);

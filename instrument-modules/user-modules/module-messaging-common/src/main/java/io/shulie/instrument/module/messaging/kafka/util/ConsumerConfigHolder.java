@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.apache.kafka.util;
+package io.shulie.instrument.module.messaging.kafka.util;
 
 import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;

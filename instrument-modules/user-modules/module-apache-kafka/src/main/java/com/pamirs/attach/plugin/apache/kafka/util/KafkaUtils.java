@@ -20,6 +20,7 @@ import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.shulie.instrument.module.messaging.kafka.util.ConsumerConfigHolder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Node;

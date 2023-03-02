@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.attach.plugin.apache.kafka.util.ConsumerConfigHolder;
 import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
@@ -23,6 +22,7 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.reflect.ReflectException;
+import io.shulie.instrument.module.messaging.kafka.util.ConsumerConfigHolder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 

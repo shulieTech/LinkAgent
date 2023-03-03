@@ -1,1 +1,1 @@
-2.0.0.7 支持spring-quartz特殊用法
+2.0.0.8 解决spring-quartz特殊用法只执行一次的bug

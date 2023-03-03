@@ -59,6 +59,9 @@ public class ShadowConsumerPrefixUtils {
      * @return
      */
     public static String getShadowGroup(String topic, String group) {
+        if (Pradar.isClusterTestPrefix(topic)) {
+            topic = topic.substring(3);
+        }
         String topicGroup = topic + "#" + group;
         String shadowGroup = shadowGroupMappings.get(topicGroup);
         if (shadowGroup != null) {

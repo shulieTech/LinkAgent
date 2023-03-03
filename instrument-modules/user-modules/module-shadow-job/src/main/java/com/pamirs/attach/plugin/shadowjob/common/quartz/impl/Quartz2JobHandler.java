@@ -158,7 +158,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
             if (shadowTrigger instanceof SimpleTriggerImpl) {
                 int jobTimes = ((SimpleTriggerImpl) shadowTrigger).getRepeatCount();
                 // 没取到执行次数默认-1,即不限次数
-                if(jobTimes == 0){
+                if (jobTimes == 0) {
                     jobTimes = -1;
                 }
                 Method getRepeatIntervalMethod = shadowTrigger.getClass().getDeclaredMethod("getRepeatInterval");
@@ -174,12 +174,12 @@ public class Quartz2JobHandler implements QuartzJobHandler {
 
                 if (jobTimes < 0) {
                     trigger = TriggerBuilder.newTrigger().withIdentity(jobName, jobGroupName)
-                            .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1).withIntervalInSeconds(jobTime.intValue()/1000))
+                            .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1).withIntervalInMilliseconds(jobTime.intValue()))
                             .startNow().build();
                 } else {
                     trigger = TriggerBuilder
                             .newTrigger().withIdentity(jobName, jobGroupName).withSchedule(SimpleScheduleBuilder
-                                    .repeatSecondlyForever(1).withIntervalInSeconds(jobTime.intValue() / 1000).withRepeatCount(jobTimes))
+                                    .repeatSecondlyForever(1).withIntervalInMilliseconds(jobTime.intValue()).withRepeatCount(jobTimes))
                             .startNow().build();
                 }
                 scheduler.scheduleJob(jobDetail, trigger);

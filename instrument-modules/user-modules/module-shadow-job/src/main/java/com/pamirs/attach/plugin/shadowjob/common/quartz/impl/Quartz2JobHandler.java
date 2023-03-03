@@ -33,7 +33,6 @@ import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Map;
 
@@ -109,7 +108,6 @@ public class Quartz2JobHandler implements QuartzJobHandler {
                 registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName(), shaDowJob);
                 return true;
             }
-
         }
 
         if (!found) {

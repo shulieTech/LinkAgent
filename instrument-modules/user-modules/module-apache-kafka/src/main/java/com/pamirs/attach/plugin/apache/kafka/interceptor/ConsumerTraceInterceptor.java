@@ -94,14 +94,11 @@ public class ConsumerTraceInterceptor extends ReversedTraceInterceptorAdaptor {
             Map<String, String> ctx = headerProcessor.getHeaders(consumerRecord);
             spanRecord.setContext(ctx);
         }
-        String topic = consumerRecord.topic();
         //TODO 原生这里的kafka服务器信息 和通过spring获取的服务器信息，集群节点顺序不一致
         spanRecord.setRemoteIp(consumerMetaData.getBootstrapServers());
         spanRecord.setRequest(consumerRecords.count());
         spanRecord.setService(consumerRecord.topic());
-        boolean clusterTestPrefix = Pradar.isClusterTestPrefix(topic);
-        spanRecord.setMethod(
-                clusterTestPrefix ? ShadowConsumerPrefixUtils.getShadowGroup(topic, consumerMetaData.getGroupId()) : consumerMetaData.getGroupId());
+        spanRecord.setMethod(consumerMetaData.getGroupId());
         return spanRecord;
     }
 

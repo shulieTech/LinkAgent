@@ -174,7 +174,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
 
                 if (jobTimes < 0) {
                     trigger = TriggerBuilder.newTrigger().withIdentity(jobName, jobGroupName)
-                            .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1).withIntervalInSeconds(jobTime.intValue()))
+                            .withSchedule(SimpleScheduleBuilder.repeatSecondlyForever(1).withIntervalInSeconds(jobTime.intValue()/1000))
                             .startNow().build();
                 } else {
                     trigger = TriggerBuilder

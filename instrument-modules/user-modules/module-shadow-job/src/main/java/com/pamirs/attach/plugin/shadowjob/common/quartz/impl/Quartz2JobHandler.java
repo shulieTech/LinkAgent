@@ -161,8 +161,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
                 if (jobTimes == 0) {
                     jobTimes = -1;
                 }
-                Method getRepeatIntervalMethod = shadowTrigger.getClass().getDeclaredMethod("getRepeatInterval");
-                Long jobTime = (Long) getRepeatIntervalMethod.invoke(shadowTrigger);
+                Long jobTime = ReflectionUtils.invoke(shadowTrigger,"getRepeatInterval");
 
                 if (jobTime == null || jobTime == 0) {
                     CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(shaDowJob.getCron());

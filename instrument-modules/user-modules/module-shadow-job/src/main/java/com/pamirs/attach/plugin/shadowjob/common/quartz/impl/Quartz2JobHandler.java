@@ -21,12 +21,9 @@ import com.pamirs.attach.plugin.shadowjob.obj.quartz.PtJob;
 import com.pamirs.attach.plugin.shadowjob.obj.quartz.PtQuartzJobBean;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.SyncObjectService;
-import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.internal.config.ShadowJob;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import org.quartz.*;
-import org.quartz.core.QuartzScheduler;
-import org.quartz.impl.StdScheduler;
 import org.quartz.impl.triggers.CronTriggerImpl;
 import org.quartz.impl.triggers.SimpleTriggerImpl;
 import org.slf4j.Logger;
@@ -36,6 +33,8 @@ import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -77,7 +76,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
                 String jobName = Pradar.addClusterTestPrefix(jobClass.getSimpleName());
                 Trigger trigger = ReflectionUtils.get(factoryBean, "simpleTrigger");
 
-                registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName());
+                registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName(), shaDowJob);
                 return true;
             }
         } else if (ShaDowJobConstant.DATAFLOW.equals(jobDataType)) {
@@ -107,7 +106,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
                 String jobName = Pradar.addClusterTestPrefix(jobClass.getSimpleName());
                 Trigger trigger = ReflectionUtils.get(factoryBean, "cronTrigger");
 
-                registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName());
+                registerJob(shaDowJob.getJobDataType(), quartzClass, jobName, ShaDowJobConstant.PLUGIN_GROUP, trigger, shaDowJob.getClassName(), shaDowJob);
                 return true;
             }
 
@@ -120,7 +119,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
     }
 
     private void registerJob(String jobType, Class jobClass, String jobName,
-                             String jobGroupName, Trigger shadowTrigger, String busJobClassName) throws Exception {
+                             String jobGroupName, Trigger shadowTrigger, String busJobClassName, ShadowJob shaDowJob) throws Exception {
 
         Scheduler scheduler;
         try {
@@ -138,7 +137,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
             setDescription(jobDetail, busJobClassName);
             if (shadowTrigger instanceof CronTriggerImpl) {
 
-                String cronExpression = ((CronTriggerImpl) shadowTrigger).getCronExpression();
+                String cronExpression = shaDowJob.getCron();
                 //表达式调度构建器(即任务执行的时间)
                 CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(cronExpression);
 
@@ -163,6 +162,13 @@ public class Quartz2JobHandler implements QuartzJobHandler {
                 Method getRepeatIntervalMethod = shadowTrigger.getClass().getDeclaredMethod("getRepeatInterval");
                 Long jobTime = (Long) getRepeatIntervalMethod.invoke(shadowTrigger);
 
+                if (jobTime == null || jobTime == 0) {
+                    CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(shaDowJob.getCron());
+                    CronExpression cronExpression = ReflectionUtils.get(scheduleBuilder, "cronExpression");
+                    Date nextFireTime = cronExpression.getNextValidTimeAfter(new Date());
+                    Date nextValidTimeAfter = cronExpression.getNextValidTimeAfter(nextFireTime);
+                    jobTime = nextValidTimeAfter.getTime() - nextFireTime.getTime();
+                }
 
                 if (jobTimes < 0) {
                     trigger = TriggerBuilder.newTrigger().withIdentity(jobName, jobGroupName)

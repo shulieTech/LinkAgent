@@ -159,6 +159,10 @@ public class Quartz2JobHandler implements QuartzJobHandler {
             Trigger trigger = null;
             if (shadowTrigger instanceof SimpleTriggerImpl) {
                 int jobTimes = ((SimpleTriggerImpl) shadowTrigger).getRepeatCount();
+                // 没取到执行次数默认-1,即不限次数
+                if(jobTimes == 0){
+                    jobTimes = -1;
+                }
                 Method getRepeatIntervalMethod = shadowTrigger.getClass().getDeclaredMethod("getRepeatInterval");
                 Long jobTime = (Long) getRepeatIntervalMethod.invoke(shadowTrigger);
 

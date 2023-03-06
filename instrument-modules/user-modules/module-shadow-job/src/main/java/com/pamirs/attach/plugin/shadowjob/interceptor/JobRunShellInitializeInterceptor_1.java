@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
-import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandlerProvider;
+import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandlerProcessor;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ResultInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowJob;
@@ -125,7 +125,7 @@ public class JobRunShellInitializeInterceptor_1 extends ResultInterceptorAdaptor
             return true;
         }
 
-        return QuartzJobHandlerProvider.getHandler().registerShadowJob(shaDowJob);
+        return QuartzJobHandlerProcessor.getHandler().registerShadowJob(shaDowJob);
     }
 
 
@@ -171,6 +171,6 @@ public class JobRunShellInitializeInterceptor_1 extends ResultInterceptorAdaptor
 
 
     private boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
-        return QuartzJobHandlerProvider.getHandler().disableShaDowJob(shaDowJob);
+        return QuartzJobHandlerProcessor.getHandler().disableShaDowJob(shaDowJob);
     }
 }

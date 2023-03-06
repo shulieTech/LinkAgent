@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.shadowjob.interceptor;
 
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
-import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandlerProvider;
+import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandlerProcessor;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowJob;
@@ -66,7 +66,7 @@ public class QuartzJobBeanExecuteInterceptor extends ParametersWrapperIntercepto
             return true;
         }
 
-        return QuartzJobHandlerProvider.getHandler().registerShadowJob(shaDowJob);
+        return QuartzJobHandlerProcessor.getHandler().registerShadowJob(shaDowJob);
     }
 
 
@@ -99,6 +99,6 @@ public class QuartzJobBeanExecuteInterceptor extends ParametersWrapperIntercepto
 
 
     private boolean disableShaDowJob(ShadowJob shaDowJob) throws Throwable {
-        return QuartzJobHandlerProvider.getHandler().disableShaDowJob(shaDowJob);
+        return QuartzJobHandlerProcessor.getHandler().disableShaDowJob(shaDowJob);
     }
 }

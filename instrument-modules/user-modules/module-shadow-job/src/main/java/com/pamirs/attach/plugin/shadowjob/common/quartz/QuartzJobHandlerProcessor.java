@@ -14,8 +14,13 @@
  */
 package com.pamirs.attach.plugin.shadowjob.common.quartz;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadowjob.common.quartz.impl.Quartz1JobHandler;
 import com.pamirs.attach.plugin.shadowjob.common.quartz.impl.Quartz2JobHandler;
+import org.quartz.Trigger;
+
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * @Description
@@ -23,7 +28,9 @@ import com.pamirs.attach.plugin.shadowjob.common.quartz.impl.Quartz2JobHandler;
  * @mail xiaobin@shulie.io
  * @Date 2020/7/23 7:39 下午
  */
-public final class QuartzJobHandlerProvider {
+public final class QuartzJobHandlerProcessor {
+
+    private static String quartzStartDelayTimeInSeconds = System.getProperty("quartz.shadow.delay.seconds");
 
     public static QuartzJobHandler getHandler() {
         try {
@@ -31,6 +38,16 @@ public final class QuartzJobHandlerProvider {
             return new Quartz2JobHandler();
         } catch (Throwable e) {
             return new Quartz1JobHandler();
+        }
+    }
+
+    public static void processShadowJobDelay(Trigger trigger){
+        // 设置job启动延迟时间
+        if (quartzStartDelayTimeInSeconds != null) {
+            int delayTime = Integer.parseInt(quartzStartDelayTimeInSeconds);
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(new Date().getTime() + delayTime * 1000);
+            ReflectionUtils.set(trigger, "startTime", calendar.getTime());
         }
     }
 }

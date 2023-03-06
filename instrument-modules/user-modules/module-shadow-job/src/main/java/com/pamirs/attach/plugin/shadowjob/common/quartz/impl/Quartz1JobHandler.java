@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.shadowjob.common.quartz.impl;
 import com.pamirs.attach.plugin.shadowjob.common.ClassGeneratorManager;
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
 import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandler;
+import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandlerProcessor;
 import com.pamirs.attach.plugin.shadowjob.obj.quartz.PtQuartzJobBean;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowJob;
@@ -100,6 +101,7 @@ public class Quartz1JobHandler implements QuartzJobHandler {
 
                 String cronExpression = ((CronTrigger) shadowTrigger).getCronExpression();
                 CronTrigger trigger = new CronTrigger(jobClass.getName(), jobGroupName, cronExpression);
+                QuartzJobHandlerProcessor.processShadowJobDelay(trigger);
                 scheduler.scheduleJob(jobDetail, trigger);
             } else {
                 throw new IllegalArgumentException(String.format("【Quartz】当前类型错误，业务JOB类型: %s, 影子JOB类型: %s", shadowTrigger.getClass(), ShaDowJobConstant.SIMPLE));
@@ -120,6 +122,7 @@ public class Quartz1JobHandler implements QuartzJobHandler {
                 } else {
                     trigger = new SimpleTrigger(jobName, jobGroupName, jobTimes, jobTime);
                 }
+                QuartzJobHandlerProcessor.processShadowJobDelay(trigger);
                 scheduler.scheduleJob(jobDetail, trigger);
             } else {
                 throw new IllegalArgumentException(String.format("【Quartz】当前类型错误，业务JOB类型: %s, 影子JOB类型: %s", shadowTrigger.getClass(), ShaDowJobConstant.SIMPLE));

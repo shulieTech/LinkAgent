@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.shadowjob.common.quartz.impl;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadowjob.common.ShaDowJobConstant;
 import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandler;
+import com.pamirs.attach.plugin.shadowjob.common.quartz.QuartzJobHandlerProcessor;
 import com.pamirs.attach.plugin.shadowjob.obj.quartz.PtJob;
 import com.pamirs.attach.plugin.shadowjob.obj.quartz.PtQuartzJobBean;
 import com.pamirs.pradar.Pradar;
@@ -32,7 +33,6 @@ import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
 import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.Map;
 
@@ -44,6 +44,8 @@ import java.util.Map;
  */
 public class Quartz2JobHandler implements QuartzJobHandler {
     private final static Logger logger = LoggerFactory.getLogger(Quartz2JobHandler.class.getName());
+
+    private static String quartzStartDelayTimeInSeconds = System.getProperty("quartz.shadow.delay.seconds");
 
     private Scheduler scheduler;
 
@@ -157,7 +159,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
             Trigger trigger = null;
             if (shadowTrigger instanceof SimpleTriggerImpl) {
                 int jobTimes = ((SimpleTriggerImpl) shadowTrigger).getRepeatCount();
-                Long jobTime = ReflectionUtils.invoke(shadowTrigger,"getRepeatInterval");
+                Long jobTime = ReflectionUtils.invoke(shadowTrigger, "getRepeatInterval");
 
                 if (jobTime == null || jobTime == 0) {
                     CronScheduleBuilder scheduleBuilder = CronScheduleBuilder.cronSchedule(shaDowJob.getCron());
@@ -177,6 +179,9 @@ public class Quartz2JobHandler implements QuartzJobHandler {
                                     .repeatSecondlyForever(1).withIntervalInMilliseconds(jobTime.intValue()).withRepeatCount(jobTimes))
                             .startNow().build();
                 }
+
+                QuartzJobHandlerProcessor.processShadowJobDelay(trigger);
+
                 scheduler.scheduleJob(jobDetail, trigger);
             } else {
                 throw new IllegalArgumentException(String.format("【Quartz】当前类型错误，业务JOB类型: %s, 影子JOB类型: %s", shadowTrigger.getClass(), ShaDowJobConstant.SIMPLE));

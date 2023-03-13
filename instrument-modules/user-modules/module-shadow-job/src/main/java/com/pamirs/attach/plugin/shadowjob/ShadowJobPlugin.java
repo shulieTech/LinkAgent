@@ -18,9 +18,11 @@ import com.pamirs.attach.plugin.shadowjob.adapter.XxlJobAdapter;
 import com.pamirs.attach.plugin.shadowjob.cache.ElasticJobCache;
 import com.pamirs.attach.plugin.shadowjob.interceptor.*;
 import com.pamirs.attach.plugin.shadowjob.util.ElasticJobRegisterUtil;
+import com.pamirs.pradar.internal.config.ShadowJob;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.SilenceSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.listener.impl.ShadowImplListener;
@@ -35,6 +37,8 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
+
+import java.util.Collection;
 
 
 /**
@@ -312,7 +316,34 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         } catch (ClassNotFoundException e) {
             // do nothing
         }
+
+        registerSilenceListener();
+
         return true;
+    }
+
+    /**
+     * 注册静默事件处理器
+     */
+    private void registerSilenceListener() {
+        PradarEventListener silenceListener = new PradarEventListener() {
+            @Override
+            public EventResult onEvent(IEvent event) {
+                if(event instanceof SilenceSwitchOnEvent){
+                    Collection<ShadowJob> shadowJobs = GlobalConfig.getInstance().getRegisteredJobs().values();
+                    for (ShadowJob shadowJob : shadowJobs) {
+                        GlobalConfig.getInstance().addNeedStopJobs(shadowJob);
+                    }
+                }
+                return EventResult.IGNORE;
+            }
+
+            @Override
+            public int order() {
+                return 50;
+            }
+        };
+        EventRouter.router().addListener(silenceListener);
     }
 
     @Override

@@ -231,7 +231,6 @@ public class ConsumerManager {
         if (!PradarSwitcher.isClusterTestReady() || PradarService.isSilence()) {
             return;
         }
-
         // 避免出现 ConcurrentModificationException
         for (ConsumerRegisterModule consumerRegisterModule : new Vector<>(registerList)) {
             Thread.currentThread().setContextClassLoader(consumerRegisterModule.getConsumerRegister().getClass().getClassLoader());

@@ -1,12 +1,14 @@
 package io.shulie.instrument.module.messaging.consumer;
 
 import com.alibaba.fastjson.JSON;
-import com.pamirs.pradar.BizClassLoaderService;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarSwitcher;
-import com.pamirs.pradar.SyncObjectService;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
+import com.pamirs.pradar.pressurement.agent.event.IEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.SilenceSwitchOnEvent;
+import com.pamirs.pradar.pressurement.agent.listener.EventResult;
+import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
 import io.shulie.instrument.module.isolation.IsolationManager;
@@ -47,6 +49,25 @@ public class ConsumerManager {
     private static final SyncObject EMPTY_SYNC_OBJECT = new SyncObject();
     private static final int initialDelay = 30;
     private static final int delay = 60;
+
+    static {
+        PradarEventListener listener = new PradarEventListener() {
+            @Override
+            public EventResult onEvent(IEvent event) {
+                // 静默时关闭所有影子消费者
+                if (event instanceof SilenceSwitchOnEvent) {
+                    releaseAll();
+                }
+                return EventResult.IGNORE;
+            }
+
+            @Override
+            public int order() {
+                return 34;
+            }
+        };
+        EventRouter.router().addListener(listener);
+    }
 
     static List<ShadowConsumer> runningShadowConsumer() {
         List<ShadowConsumer> list = new ArrayList<ShadowConsumer>();
@@ -207,7 +228,7 @@ public class ConsumerManager {
     }
 
     static void runTask() {
-        if (!PradarSwitcher.isClusterTestReady()) {
+        if (!PradarSwitcher.isClusterTestReady() || PradarService.isSilence()) {
             return;
         }
 

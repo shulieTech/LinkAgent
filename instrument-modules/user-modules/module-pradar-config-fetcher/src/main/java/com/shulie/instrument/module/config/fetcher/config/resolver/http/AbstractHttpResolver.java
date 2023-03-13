@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,7 +16,9 @@ package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
+import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.config.fetcher.config.resolver.ConfigResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +89,10 @@ public abstract class AbstractHttpResolver<T extends AbstractConfig<T>> implemen
             @Override
             public void run() {
                 try {
+                    //  全局静默模式下, 不从控制台拉取应用配置
+                    if (refreshConfig instanceof ApplicationConfig && GlobalConfig.getInstance().getSimulatorDynamicConfig().isIsGlobalSilenceSwitchOn()) {
+                        return;
+                    }
                     refreshConfig.refresh(fetch());
                 } catch (Throwable e) {
                     LOGGER.error("定时获取配置异常:", e);

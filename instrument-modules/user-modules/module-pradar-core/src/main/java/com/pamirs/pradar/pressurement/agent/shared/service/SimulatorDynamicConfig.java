@@ -129,6 +129,11 @@ public class SimulatorDynamicConfig {
     private final boolean isSingleSilenceSwitchOn;
 
     /**
+     * 全局静默开关是否开关
+     */
+    private boolean isGlobalSilenceSwitchOn;
+
+    /**
      * kafka影子消费者poll最大比例
      */
     private final double kafkaPtConsumerPollMaxRatio;
@@ -630,7 +635,7 @@ public class SimulatorDynamicConfig {
         }
     }
 
-    private boolean getSingleSilenceSwitchStatus(Map<String, String> config){
+    private boolean getSingleSilenceSwitchStatus(Map<String, String> config) {
         try {
             if (config == null) {
                 return false;
@@ -652,5 +657,13 @@ public class SimulatorDynamicConfig {
 
     public double getKafkaPtConsumerPollMaxRatio() {
         return kafkaPtConsumerPollMaxRatio;
+    }
+
+    public boolean isIsGlobalSilenceSwitchOn() {
+        return isGlobalSilenceSwitchOn;
+    }
+
+    public void setIsGlobalSilenceSwitchOn(boolean isGlobalSilenceSwitchOn) {
+        this.isGlobalSilenceSwitchOn = isGlobalSilenceSwitchOn;
     }
 }

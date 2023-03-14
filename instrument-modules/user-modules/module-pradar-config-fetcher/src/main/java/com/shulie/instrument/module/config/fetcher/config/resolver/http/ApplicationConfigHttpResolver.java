@@ -932,8 +932,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
         Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
         if (configs != null && configs.get("data") != null) {
-            GlobalConfig.getInstance().setSimulatorDynamicConfig(
-                    new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+            boolean globalSilenceSwitchOn = GlobalConfig.getInstance().getSimulatorDynamicConfig().isIsGlobalSilenceSwitchOn();
+            // 非全局静默时更新
+            if(!globalSilenceSwitchOn){
+                GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+            }
         } else {
             logger.error("获取探针动态参数异常");
         }

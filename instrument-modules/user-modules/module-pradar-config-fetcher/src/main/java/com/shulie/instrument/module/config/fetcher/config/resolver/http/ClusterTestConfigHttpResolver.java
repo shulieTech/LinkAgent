@@ -166,7 +166,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
                 clusterTestConfig.setGlobalSwitchOn(!CLOSE.equals(status));
             }
             if (map != null && map.get(SILENCE_SWITCH_STATUS) != null) {
-                //全局静默开关
+                // 全局静默开关
                 boolean open = !CLOSE.equals(map.get(SILENCE_SWITCH_STATUS));
                 SimulatorDynamicConfig dynamicConfig = GlobalConfig.getInstance().getSimulatorDynamicConfig();
                 dynamicConfig.setIsGlobalSilenceSwitchOn(open);

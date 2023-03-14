@@ -12,12 +12,9 @@ import com.shulie.instrument.simulator.api.resource.DumpResult;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import io.shulie.instrument.module.isolation.IsolationManager;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxyUtils;
-import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
-import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.execute.TestShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.isolation.ConsumerIsolationCache;
 import io.shulie.instrument.module.messaging.consumer.isolation.ConsumerIsolationLifecycle;
-import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerIsolationRegister;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerRegister;
 import io.shulie.instrument.module.messaging.consumer.module.ShadowConsumer;
@@ -25,8 +22,6 @@ import io.shulie.instrument.module.messaging.consumer.module.isolation.ConsumerC
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 

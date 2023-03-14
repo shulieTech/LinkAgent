@@ -90,7 +90,7 @@ public abstract class AbstractHttpResolver<T extends AbstractConfig<T>> implemen
             public void run() {
                 try {
                     //  全局静默模式下, 不从控制台拉取应用配置
-                    if (refreshConfig instanceof ApplicationConfig && GlobalConfig.getInstance().getSimulatorDynamicConfig().isIsGlobalSilenceSwitchOn()) {
+                    if (refreshConfig instanceof ApplicationConfig && GlobalConfig.getInstance().getSimulatorDynamicConfig().isEnablePollApplicationConfig()) {
                         return;
                     }
                     refreshConfig.refresh(fetch());

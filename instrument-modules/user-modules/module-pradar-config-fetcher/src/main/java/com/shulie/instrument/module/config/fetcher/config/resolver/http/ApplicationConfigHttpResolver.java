@@ -38,7 +38,6 @@ import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
-import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
@@ -932,7 +931,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
         Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
         if (configs != null && configs.get("data") != null) {
-            boolean globalSilenceSwitchOn = GlobalConfig.getInstance().getSimulatorDynamicConfig().isIsGlobalSilenceSwitchOn();
+            boolean globalSilenceSwitchOn = GlobalConfig.getInstance().getSimulatorDynamicConfig().isEnablePollApplicationConfig();
             // 非全局静默时更新
             if(!globalSilenceSwitchOn){
                 GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));

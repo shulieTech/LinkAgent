@@ -15,6 +15,7 @@
 package com.pamirs.pradar.common;
 
 import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 
@@ -83,6 +84,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (Throwable e) {
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
             return HttpResult.result(500, Throwables.getStackTraceAsString(e));
         } finally {
             closeQuietly(input);
@@ -155,6 +157,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (IOException e) {
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
             return HttpResult.result(500, Throwables.getStackTraceAsString(e));
         } finally {
             closeQuietly(input);

@@ -20,12 +20,18 @@ public class SyncObjectAfterFetchInterceptor extends AdviceListener {
 
     public static final List<String> keys = new Vector<String>();
 
+    private boolean weakReference;
+
+    public SyncObjectAfterFetchInterceptor(boolean weakReference) {
+        this.weakReference = weakReference;
+    }
+
     @Override
     public void after(Advice advice) throws Throwable {
         String key = SyncObjectFetchUtils.getKey(advice.getTargetClass(), advice.getBehaviorName());
         logger.info("success save sync object after invoked from : {}", key);
         SyncObjectService.saveSyncObject(key, new SyncObject()
-                .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj())));
+                .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj(), weakReference)));
     }
 
 }

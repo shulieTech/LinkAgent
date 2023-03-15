@@ -21,6 +21,8 @@ import org.slf4j.LoggerFactory;
 public class SyncPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private static final Logger logger = LoggerFactory.getLogger(SyncPlugin.class);
 
+    public static final String STRONG_REFERENCE_FLAG = "#strongReference";
+
     @Override
     public boolean onActive() throws Throwable {
         String values = System.getProperty("simulator.inner.module.syncfetch");
@@ -33,11 +35,17 @@ public class SyncPlugin extends ModuleLifecycleAdapter implements ExtensionModul
             if (data == null || data.isEmpty()) {
                 continue;
             }
+
+            final boolean strongReference = data.endsWith(STRONG_REFERENCE_FLAG);
+            if (strongReference) {
+                data = data.substring(0, data.length() - STRONG_REFERENCE_FLAG.length());
+            }
+
             if (!data.contains("#")) {
                 enhanceTemplate.enhance(this, data, new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
-                        target.getConstructors().addInterceptor(Listeners.of(SyncObjectAfterFetchInterceptor.class));
+                        target.getConstructors().addInterceptor(Listeners.of(SyncObjectAfterFetchInterceptor.class, new Object[]{strongReference}));
                     }
                 });
                 continue;
@@ -48,7 +56,7 @@ public class SyncPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 enhanceTemplate.enhance(this, split[0], new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
-                        target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(SyncObjectAfterFetchInterceptor.class));
+                        target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(SyncObjectAfterFetchInterceptor.class, new Object[]{strongReference}));
                     }
                 });
                 continue;
@@ -60,7 +68,7 @@ public class SyncPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 enhanceTemplate.enhance(this, split[0], new EnhanceCallback() {
                     @Override
                     public void doEnhance(InstrumentClass target) {
-                        target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(clazz));
+                        target.getDeclaredMethods(split[1]).addInterceptor(Listeners.of(clazz, new Object[]{strongReference}));
                     }
                 });
                 continue;

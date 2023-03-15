@@ -1,8 +1,8 @@
 package com.pamirs.attach.plugin.syncfetch.interceptor;
 
+import com.pamirs.attach.plugin.syncfetch.SyncPlugin;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
@@ -12,7 +12,12 @@ public class SyncObjectFetchUtils {
 
     static {
         String values = System.getProperty("simulator.inner.module.syncfetch");
-        keys.addAll(Arrays.asList(values.split(",")));
+        for (String key : values.split(",")) {
+            if (key.endsWith(SyncPlugin.STRONG_REFERENCE_FLAG)) {
+                key = key.substring(0, key.length() - SyncPlugin.STRONG_REFERENCE_FLAG.length());
+            }
+            keys.add(key);
+        }
     }
 
     public static String getKey(Class clazz, String method) {
@@ -29,13 +34,6 @@ public class SyncObjectFetchUtils {
             return key;
         }
         return getKey(clazz.getSuperclass(), method);
-    }
-
-    public static String getKey(String key){
-        if (keys.contains(key)) {
-            return key;
-        }
-        return null;
     }
 
 }

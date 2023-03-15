@@ -14,14 +14,24 @@ public class SyncObjectData {
 
     private Class[] paramTypes;
 
-    private WeakReference<Object> target;
+    private Object target;
+    private WeakReference<Object> reference;
+
 
     public SyncObjectData(Object target, String method, Object[] args, Class[] paramTypes, Object returnObj) {
-        this.target = new WeakReference<Object>(target);
+        this(target, method, args, paramTypes, returnObj, true);
+    }
+
+    public SyncObjectData(Object target, String method, Object[] args, Class[] paramTypes, Object returnObj, boolean weakReference) {
         this.args = args;
         this.returnObj = returnObj;
         this.method = method;
         this.paramTypes = paramTypes;
+        if (weakReference) {
+            this.reference = new WeakReference<Object>(target);
+        } else {
+            this.target = target;
+        }
     }
 
     public String getMethod() {
@@ -41,7 +51,7 @@ public class SyncObjectData {
     }
 
     public Object getTarget() {
-        return target.get();
+        return target != null ? target : reference.get();
     }
 
     public Object[] getArgs() {

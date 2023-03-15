@@ -462,7 +462,7 @@ public class CoreConfig {
     }
 
     public String getAgentExpand() {
-        return getProperty("shulie.agent.expand");
+        return getProperty("pradar.agent.expand");
     }
 
     public String getTenantCode(){

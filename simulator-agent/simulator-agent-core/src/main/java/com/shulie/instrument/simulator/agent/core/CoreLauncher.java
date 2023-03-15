@@ -220,7 +220,7 @@ public class CoreLauncher {
                     System.setProperty(key, properties.getProperty(key, "false"));
                     System.setProperty("register.name", properties.getProperty("register.name", "zookeeper"));
 
-                    key = "shulie.agent.expand";
+                    key = "pradar.agent.expand";
                     if (properties.containsKey(key)) {
                         System.setProperty(key, properties.getProperty(key));
                     }

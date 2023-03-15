@@ -12,18 +12,18 @@ public class SyncObjectBeforeFetchInterceptor extends AdviceListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SyncObjectBeforeFetchInterceptor.class);
 
-    private boolean weakReference;
+    private boolean strongReference;
 
-    public SyncObjectBeforeFetchInterceptor(boolean weakReference) {
-        this.weakReference = weakReference;
+    public SyncObjectBeforeFetchInterceptor(boolean strongReference) {
+        this.strongReference = strongReference;
     }
 
     @Override
     public void before(Advice advice) throws Throwable {
         String key = String.format("%s#%s", advice.getTargetClass().getName(), advice.getBehaviorName());
-        logger.info("success save sync object before invoke from : {}", key);
+        logger.info("success save sync object before invoke from : {}, reference:{}", key, strongReference ? "strong" : "weak");
         SyncObjectService.saveSyncObject(key, new SyncObject()
-                .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj(), weakReference)));
+                .addData(new SyncObjectData(advice.getTarget(), advice.getBehaviorName(), advice.getParameterArray(), advice.getBehavior().getParameterTypes(), advice.getReturnObj(), strongReference)));
     }
 
 

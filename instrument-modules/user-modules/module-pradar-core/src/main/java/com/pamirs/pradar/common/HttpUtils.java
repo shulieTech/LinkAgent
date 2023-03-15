@@ -331,7 +331,7 @@ public abstract class HttpUtils {
 
     private final static String PRADAR_USER_APP_KEY = "user.app.key";
 
-    private final static String SHULIE_AGENT_EXPAND = "shulie.agent.expand";
+    private final static String SHULIE_AGENT_EXPAND = "pradar.agent.expand";
 
     private static String getProperty(String key) {
         String val = System.getProperty(key);

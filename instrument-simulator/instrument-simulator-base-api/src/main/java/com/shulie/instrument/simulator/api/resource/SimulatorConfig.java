@@ -337,6 +337,6 @@ public interface SimulatorConfig {
      * 当拉取app config报错时是否阻塞
      * @return
      */
-    Boolean getBlockedWhenAppConfigPollFailed();
+    Boolean getAbortedWhenAppConfigPollFailed();
 
 }

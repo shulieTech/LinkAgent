@@ -92,9 +92,9 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
             System.setProperty("plugin.response.on", String.valueOf(responseOn));
         }
 
-        Boolean blocked = simulatorConfig.getBlockedWhenAppConfigPollFailed();
-        if(blocked){
-            System.setProperty("poll.app.config.failed.blocked", blocked.toString());
+        Boolean aborted = simulatorConfig.getAbortedWhenAppConfigPollFailed();
+        if(aborted){
+            System.setProperty("poll.app.config.failed.aborted", aborted.toString());
         }
 
         PradarService.registerPradarService(new DefaultPradarService());

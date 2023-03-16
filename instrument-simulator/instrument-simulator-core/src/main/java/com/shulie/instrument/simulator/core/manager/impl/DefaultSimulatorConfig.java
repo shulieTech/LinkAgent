@@ -359,8 +359,8 @@ class DefaultSimulatorConfig implements SimulatorConfig {
     }
 
     @Override
-    public Boolean getBlockedWhenAppConfigPollFailed() {
-        String value = config.getBlockedWhenPollAppConfigFailed();
+    public Boolean getAbortedWhenAppConfigPollFailed() {
+        String value = config.getAbortedWhenPollAppConfigFailed();
         return "true".equals(value);
     }
 

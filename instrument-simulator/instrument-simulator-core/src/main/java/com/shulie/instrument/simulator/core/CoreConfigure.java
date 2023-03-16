@@ -78,7 +78,7 @@ public class CoreConfigure {
     private static final String PROP_KEY_AGENT_VERSION = "agent.version";
     private static final String PROP_KEY_SIMULATOR_VERSION = "simulator.version";
 
-    private static final String PROP_KEY_BLOCK_WHEN_POLL_APP_CONFIG = "poll.app.config.failed.blocked";
+    private static final String PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED = "poll.app.config.failed.aborted";
 
     //模块仓库模块
     private static final String VAL_MODULE_REPOSITORY_MODE_LOCAL = "local";
@@ -1034,8 +1034,8 @@ public class CoreConfigure {
      *  在拉取app config时报错是否阻塞
      * @return
      */
-    public String getBlockedWhenPollAppConfigFailed(){
-        return getProperty(PROP_KEY_BLOCK_WHEN_POLL_APP_CONFIG);
+    public String getAbortedWhenPollAppConfigFailed(){
+        return getProperty(PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED);
     }
 
 }

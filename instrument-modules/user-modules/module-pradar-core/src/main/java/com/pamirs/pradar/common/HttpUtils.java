@@ -35,13 +35,13 @@ public abstract class HttpUtils {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 
-    private static final String POLL_APP_CONFIG_FAILED_BLOCKED = System.getProperty("poll.app.config.failed.blocked");
+    private static final String POLL_APP_CONFIG_FAILED_ABORTED = System.getProperty("poll.app.config.failed.aborted");
 
     public static HttpResult doGet(String url) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         HttpResult httpResult = doGet(hostPort.host, hostPort.port, hostPort.url);
-        if (httpResult.status == 511 && POLL_APP_CONFIG_FAILED_BLOCKED != null) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setBlockedPollAppConfig(true);
+        if (httpResult.status == 511 && POLL_APP_CONFIG_FAILED_ABORTED != null) {
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setAbortPollAppConfig(true);
         }
         return httpResult;
     }
@@ -109,8 +109,8 @@ public abstract class HttpUtils {
     public static HttpResult doPost(String url, String body) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         HttpResult httpResult = doPost(hostPort.host, hostPort.port, hostPort.url, body);
-        if (httpResult.status == 500 && POLL_APP_CONFIG_FAILED_BLOCKED != null) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setBlockedPollAppConfig(true);
+        if (httpResult.status == 500 && POLL_APP_CONFIG_FAILED_ABORTED != null) {
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setAbortPollAppConfig(true);
         }
         return httpResult;
     }

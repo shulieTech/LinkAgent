@@ -131,7 +131,7 @@ public class SimulatorDynamicConfig {
     /**
      * 是否中止拉取应用配置, 全局静默打开时不允许
      */
-    private boolean abortPollAppConfig;
+    private boolean abortPollingAppConfig;
 
     /**
      * kafka影子消费者poll最大比例
@@ -659,11 +659,11 @@ public class SimulatorDynamicConfig {
         return kafkaPtConsumerPollMaxRatio;
     }
 
-    public boolean isAbortPollAppConfig() {
-        return abortPollAppConfig;
+    public boolean isAbortPollingAppConfig() {
+        return abortPollingAppConfig;
     }
 
-    public void setAbortPollAppConfig(boolean abortPollAppConfig) {
-        this.abortPollAppConfig = abortPollAppConfig;
+    public void setAbortPollingAppConfig(boolean abortPollingAppConfig) {
+        this.abortPollingAppConfig = abortPollingAppConfig;
     }
 }

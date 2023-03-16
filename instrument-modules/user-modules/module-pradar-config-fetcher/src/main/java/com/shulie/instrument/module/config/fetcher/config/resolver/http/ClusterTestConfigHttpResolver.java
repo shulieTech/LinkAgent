@@ -169,7 +169,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
                 // 全局静默开关
                 boolean open = !CLOSE.equals(map.get(SILENCE_SWITCH_STATUS));
                 SimulatorDynamicConfig dynamicConfig = GlobalConfig.getInstance().getSimulatorDynamicConfig();
-                dynamicConfig.setAbortPollAppConfig(open);
+                dynamicConfig.setAbortPollingAppConfig(open);
 
                 // 单个应用静默开关
                 boolean silenceSwitchOn = dynamicConfig.isSingleSilenceSwitchOn();

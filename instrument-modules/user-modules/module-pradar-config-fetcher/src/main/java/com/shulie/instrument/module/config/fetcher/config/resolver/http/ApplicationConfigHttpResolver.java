@@ -931,9 +931,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
         Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
         if (configs != null && configs.get("data") != null) {
-            boolean globalSilenceSwitchOn = GlobalConfig.getInstance().getSimulatorDynamicConfig().isEnablePollApplicationConfig();
-            // 非全局静默时更新
-            if(!globalSilenceSwitchOn){
+            boolean blocked = GlobalConfig.getInstance().getSimulatorDynamicConfig().isBlockedPollAppConfig();
+            // 阻塞拉app配置时不更新
+            if (!blocked) {
                 GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
             }
         } else {

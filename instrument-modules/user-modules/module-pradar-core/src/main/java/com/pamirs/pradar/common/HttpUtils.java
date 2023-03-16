@@ -41,7 +41,7 @@ public abstract class HttpUtils {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         HttpResult httpResult = doGet(hostPort.host, hostPort.port, hostPort.url);
         if (httpResult.status == 511 && POLL_APP_CONFIG_FAILED_BLOCKED != null) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setBlockedPollAppConfig(true);
         }
         return httpResult;
     }
@@ -110,7 +110,7 @@ public abstract class HttpUtils {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         HttpResult httpResult = doPost(hostPort.host, hostPort.port, hostPort.url, body);
         if (httpResult.status == 500 && POLL_APP_CONFIG_FAILED_BLOCKED != null) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setBlockedPollAppConfig(true);
         }
         return httpResult;
     }

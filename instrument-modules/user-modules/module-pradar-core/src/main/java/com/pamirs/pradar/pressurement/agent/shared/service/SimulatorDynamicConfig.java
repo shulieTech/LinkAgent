@@ -129,9 +129,9 @@ public class SimulatorDynamicConfig {
     private final boolean isSingleSilenceSwitchOn;
 
     /**
-     * 是否允许拉取应用配置, 全局静默打开时不允许
+     * 是否阻塞拉取应用配置, 全局静默打开时不允许
      */
-    private boolean enablePollApplicationConfig;
+    private boolean blockedPollAppConfig;
 
     /**
      * kafka影子消费者poll最大比例
@@ -659,11 +659,11 @@ public class SimulatorDynamicConfig {
         return kafkaPtConsumerPollMaxRatio;
     }
 
-    public boolean isEnablePollApplicationConfig() {
-        return enablePollApplicationConfig;
+    public boolean isBlockedPollAppConfig() {
+        return blockedPollAppConfig;
     }
 
-    public void setEnablePollApplicationConfig(boolean isGlobalSilenceSwitchOn) {
-        this.enablePollApplicationConfig = isGlobalSilenceSwitchOn;
+    public void setBlockedPollAppConfig(boolean blockedPollAppConfig) {
+        this.blockedPollAppConfig = blockedPollAppConfig;
     }
 }

@@ -35,9 +35,15 @@ public abstract class HttpUtils {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 
+    private static final String POLL_APP_CONFIG_FAILED_BLOCKED = System.getProperty("poll.app.config.failed.blocked");
+
     public static HttpResult doGet(String url) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
-        return doGet(hostPort.host, hostPort.port, hostPort.url);
+        HttpResult httpResult = doGet(hostPort.host, hostPort.port, hostPort.url);
+        if (httpResult.status == 511 && POLL_APP_CONFIG_FAILED_BLOCKED != null) {
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
+        }
+        return httpResult;
     }
 
     public static HttpResult doGet(String host, int port, String url) {
@@ -84,8 +90,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (Throwable e) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
-            return HttpResult.result(500, Throwables.getStackTraceAsString(e));
+            return HttpResult.result(511, Throwables.getStackTraceAsString(e));
         } finally {
             closeQuietly(input);
             closeQuietly(output);
@@ -103,7 +108,11 @@ public abstract class HttpUtils {
 
     public static HttpResult doPost(String url, String body) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
-        return doPost(hostPort.host, hostPort.port, hostPort.url, body);
+        HttpResult httpResult = doPost(hostPort.host, hostPort.port, hostPort.url, body);
+        if (httpResult.status == 500 && POLL_APP_CONFIG_FAILED_BLOCKED != null) {
+            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
+        }
+        return httpResult;
     }
 
     public static HttpResult doPost(String host, int port, String url, String body) {
@@ -157,8 +166,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (IOException e) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setEnablePollApplicationConfig(false);
-            return HttpResult.result(500, Throwables.getStackTraceAsString(e));
+            return HttpResult.result(511, Throwables.getStackTraceAsString(e));
         } finally {
             closeQuietly(input);
             closeQuietly(output);

@@ -333,4 +333,10 @@ public interface SimulatorConfig {
      */
     Map<String, String> getAgentFileConfigs();
 
+    /**
+     * 当拉取app config报错时是否阻塞
+     * @return
+     */
+    Boolean getBlockedWhenAppConfigPollFailed();
+
 }

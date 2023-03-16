@@ -358,5 +358,11 @@ class DefaultSimulatorConfig implements SimulatorConfig {
         return Collections.unmodifiableMap(config.getAgentFileConfigs());
     }
 
+    @Override
+    public Boolean getBlockedWhenAppConfigPollFailed() {
+        String value = config.getBlockedWhenPollAppConfigFailed();
+        return "true".equals(value);
+    }
+
 
 }

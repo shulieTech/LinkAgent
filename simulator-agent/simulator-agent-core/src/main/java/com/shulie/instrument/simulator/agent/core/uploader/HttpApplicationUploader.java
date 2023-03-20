@@ -78,7 +78,7 @@ public class HttpApplicationUploader implements ApplicationUploader {
 
         final Map<String, Object> map = new HashMap<String, Object>();
         map.put(APP_COLUMN_APPLICATION_NAME, appName);
-        map.put(CLUSTER_NAME, agentConfig.getProperty("cluster.name", null));
+        map.put(CLUSTER_NAME, this.getClusterName());
         map.put(APP_COLUMN_DDL_PATH, appName + "/ddl.sh");
         map.put(APP_COLUMN_CLEAN_PATH, appName + "/clean.sh");
         map.put(APP_COLUMN_READY_PATH, appName + "/ready.sh");
@@ -115,5 +115,13 @@ public class HttpApplicationUploader implements ApplicationUploader {
         } catch (Throwable e) {
             LOGGER.error("自动增加应用失败 url={}", url, e);
         }
+    }
+
+    private String getClusterName(){
+        String clusterName = System.getProperty("cluster.name", null);
+        if (clusterName != null){
+            return clusterName;
+        }
+        return agentConfig.getProperty("cluster.name", null);
     }
 }

@@ -22,15 +22,15 @@ public class SyncObjectData {
         this(target, method, args, paramTypes, returnObj, true);
     }
 
-    public SyncObjectData(Object target, String method, Object[] args, Class[] paramTypes, Object returnObj, boolean weakReference) {
+    public SyncObjectData(Object target, String method, Object[] args, Class[] paramTypes, Object returnObj, boolean strongReference) {
         this.args = args;
         this.returnObj = returnObj;
         this.method = method;
         this.paramTypes = paramTypes;
-        if (weakReference) {
-            this.reference = new WeakReference<Object>(target);
-        } else {
+        if (strongReference) {
             this.target = target;
+        } else {
+            this.reference = new WeakReference<Object>(target);
         }
     }
 

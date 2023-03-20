@@ -38,7 +38,6 @@ import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.pressurement.mock.WhiteListStrategy;
 import com.shulie.instrument.module.config.fetcher.ConfigFetcherConstants;
-import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
@@ -932,8 +931,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         }
         Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
         if (configs != null && configs.get("data") != null) {
-            GlobalConfig.getInstance().setSimulatorDynamicConfig(
-                    new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+            boolean aborted = GlobalConfig.getInstance().getSimulatorDynamicConfig().isAbortPollingAppConfig();
+            // 中止拉app配置时不更新
+            if (!aborted) {
+                GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+            }
         } else {
             logger.error("获取探针动态参数异常");
         }

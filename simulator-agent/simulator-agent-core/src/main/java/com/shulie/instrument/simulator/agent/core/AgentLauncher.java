@@ -21,7 +21,6 @@ import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
 import com.shulie.instrument.simulator.agent.core.download.FtpOperationClient;
 import com.shulie.instrument.simulator.agent.core.download.OssOperationClient;
-import com.shulie.instrument.simulator.agent.core.download.SwiftOperationClient;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
@@ -243,15 +242,6 @@ public class AgentLauncher {
                         String s = SecureUtil.aes(salt.getBytes()).decryptStr(passwd);
                         FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + File.separator + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
                         break;
-                    case 2: // swiftOSS
-                        String uname = (String) context.get(HeartCommandConstants.UNAME_KEY);
-                        String account = (String) context.get(HeartCommandConstants.ACCOUNT_KEY);
-                        String ak = (String) context.get(HeartCommandConstants.AK_KEY);
-                        String userKey = (String) context.get(HeartCommandConstants.USER_KEY);
-                        String url = (String) context.get(HeartCommandConstants.URL_KEy);
-                        String container = (String) context.get(HeartCommandConstants.CONTAINER_KEY);
-                        logger.info("swift-oss config: userKey:{}, ak:{}, url:{}, uname:{}, account:{},  container:{}", userKey, ak, url, uname, account, container);
-                        SwiftOperationClient.download(uname, account, userKey, ak, url, container, upgradeBatch);
                 }
                 //解压
                 UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);

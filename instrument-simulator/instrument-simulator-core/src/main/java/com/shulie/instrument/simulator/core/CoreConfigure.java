@@ -78,6 +78,8 @@ public class CoreConfigure {
     private static final String PROP_KEY_AGENT_VERSION = "agent.version";
     private static final String PROP_KEY_SIMULATOR_VERSION = "simulator.version";
 
+    private static final String PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED = "poll.app.config.failed.aborted";
+
     //模块仓库模块
     private static final String VAL_MODULE_REPOSITORY_MODE_LOCAL = "local";
     private static final String VAL_MODULE_REPOSITORY_MODE_REMOTE = "remote";
@@ -1026,6 +1028,14 @@ public class CoreConfigure {
 
     public Map<String, String> getAgentFileConfigs() {
         return agentFileConfigs;
+    }
+
+    /**
+     *  在拉取app config时报错是否阻塞
+     * @return
+     */
+    public String getAbortedWhenPollAppConfigFailed(){
+        return getProperty(PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED);
     }
 
 }

@@ -24,6 +24,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
 import com.shulie.instrument.module.config.fetcher.config.impl.ClusterTestConfig;
@@ -165,11 +166,14 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
                 clusterTestConfig.setGlobalSwitchOn(!CLOSE.equals(status));
             }
             if (map != null && map.get(SILENCE_SWITCH_STATUS) != null) {
+                // 全局静默开关
+                boolean open = !CLOSE.equals(map.get(SILENCE_SWITCH_STATUS));
+                SimulatorDynamicConfig dynamicConfig = GlobalConfig.getInstance().getSimulatorDynamicConfig();
+                dynamicConfig.setAbortPollingAppConfig(open);
+
                 // 单个应用静默开关
-                boolean silenceSwitchOn = GlobalConfig.getInstance().getSimulatorDynamicConfig().isSingleSilenceSwitchOn();
-                //全局静默开关
-                String status = (String) map.get(SILENCE_SWITCH_STATUS);
-                clusterTestConfig.setSilenceSwitchOn(!CLOSE.equals(status) || silenceSwitchOn);
+                boolean silenceSwitchOn = dynamicConfig.isSingleSilenceSwitchOn();
+                clusterTestConfig.setSilenceSwitchOn(open || silenceSwitchOn);
             }
 
         } catch (Throwable e) {

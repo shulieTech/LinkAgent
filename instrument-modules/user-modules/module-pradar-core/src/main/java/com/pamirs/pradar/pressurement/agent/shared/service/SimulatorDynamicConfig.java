@@ -15,6 +15,7 @@
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
 import com.alibaba.fastjson.JSON;
+import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.pressurement.entry.CheckerEntry;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
@@ -132,6 +133,11 @@ public class SimulatorDynamicConfig {
      * 是否中止拉取应用配置, 全局静默打开时不允许
      */
     private boolean abortPollingAppConfig;
+
+    /**
+     * 是否触发降级, 触发时采样率降低为9999
+     */
+    private static boolean degradeTriggered;
 
     /**
      * kafka影子消费者poll最大比例
@@ -482,7 +488,7 @@ public class SimulatorDynamicConfig {
 
     private int getTraceSamplingInterval(Map<String, String> config) {
         try {
-            if (config == null) {
+            if (config == null || degradeTriggered) {
                 return DEFAULT_TRACE_SAMPLING_INTERVAL;
             }
             final String value = getConfig(config, TRACE_SAMPLING_INTERVAL_KEY);
@@ -498,6 +504,9 @@ public class SimulatorDynamicConfig {
 
     private double getKafkaPtConsumerMaxPollRatio(Map<String, String> config) {
         try {
+            if(degradeTriggered){
+                return DEFAULT_TRACE_SAMPLING_INTERVAL;
+            }
             if (config == null) {
                 return DEFAULT_PT_KAFKA_CONSUMER_MAX_POLL_RATIO;
             }
@@ -665,5 +674,29 @@ public class SimulatorDynamicConfig {
 
     public void setAbortPollingAppConfig(boolean abortPollingAppConfig) {
         this.abortPollingAppConfig = abortPollingAppConfig;
+    }
+
+    public static void triggerDegrade(String message){
+        ErrorReporter.buildError()
+                .setErrorType(ErrorTypeEnum.DEGRADE)
+                .setErrorCode("degrade-0001")
+                .setMessage("资源紧张触发降级,采样率降低为9999")
+                .setDetail(message)
+                .report();
+        degradeTriggered = true;
+    }
+
+    public static void resetDegradeStatus(){
+        ErrorReporter.buildError()
+                .setErrorType(ErrorTypeEnum.DEGRADE)
+                .setErrorCode("degrade-0002")
+                .setMessage("资源充足降级恢复，采样率恢复")
+                .setDetail("")
+                .report();
+        degradeTriggered = true;
+    }
+
+    public static boolean isDegraded(){
+        return degradeTriggered;
     }
 }

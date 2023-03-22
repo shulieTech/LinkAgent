@@ -15,13 +15,11 @@
 package com.pamirs.pradar.interceptor;
 
 import com.alibaba.fastjson.JSON;
-import com.pamirs.pradar.InvokeContext;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.TraceIdGenerator;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
@@ -210,6 +208,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        // 业务流量,且业务trace开关关闭,不执行trace interceptor
+        if(!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()){
+            return;
+        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {

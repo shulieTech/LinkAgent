@@ -276,6 +276,9 @@ public abstract class RequestTracer<REQ, RESP> {
      * 开始调用链，注意，开始之后，不管后续处理是否正常，都需要调用。
      */
     public final boolean startTrace(REQ request, RESP response, String pluginName) {
+        if(!Pradar.isClusterTest() &&  !PradarSwitcher.isSwitchSaveBusinessTrace()){
+            return false;
+        }
         String url = getRequestURI(request);
 
         if (isNeedFilter(url, request)) {

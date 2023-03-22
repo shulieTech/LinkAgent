@@ -24,14 +24,16 @@ import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.datasource.TableParserResult;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -259,6 +261,13 @@ public final class Pradar {
      * 忽略不处理，用于防御某些不配对的调用埋点
      */
     static final int LOG_TYPE_EVENT_ILLEGAL = -255;
+
+    private static Boolean isRunningDocker = null;
+
+    /**
+     * 是否静默降级
+     */
+    private static boolean isSilenceDegraded;
 
     /**
      * 用于记录当前时段内是否有压测流量请求
@@ -2667,5 +2676,55 @@ public final class Pradar {
      */
     public static Boolean getBooleanProperty(String key) {
         return getBooleanProperty(key, null);
+    }
+
+    /**
+     * 判断是否运行在docker环境中
+     *
+     * @return true or false
+     */
+    public static boolean isRunningInsideDocker() {
+        if (isRunningDocker != null) {
+            return isRunningDocker;
+        }
+        try {
+            File file = new File("/proc/1/cgroup");
+            if (!file.exists()) {
+                isRunningDocker = false;
+                return isRunningDocker;
+            }
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new FileReader(file));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("/docker")) {
+                        isRunningDocker = true;
+                        return isRunningDocker;
+                    }
+                }
+            } catch (Exception e) {
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+            isRunningDocker = false;
+            return isRunningDocker;
+        } catch (Throwable e) {
+            isRunningDocker = false;
+            return isRunningDocker;
+        }
+    }
+
+    public static boolean isSilenceDegraded(){
+        return isSilenceDegraded;
+    }
+
+    public static void setSilenceDegradeStatus(boolean degraded){
+        isSilenceDegraded = degraded;
     }
 }

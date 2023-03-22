@@ -15,8 +15,9 @@
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
 import com.pamirs.pradar.ErrorTypeEnum;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
 import com.shulie.instrument.module.config.fetcher.config.AbstractConfig;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import com.shulie.instrument.module.config.fetcher.config.resolver.ConfigResolver;
@@ -90,7 +91,7 @@ public abstract class AbstractHttpResolver<T extends AbstractConfig<T>> implemen
             public void run() {
                 try {
                     //  全局静默模式下/请求控制台超时等失败时, 不从控制台拉取应用配置
-                    if (refreshConfig instanceof ApplicationConfig && GlobalConfig.getInstance().getSimulatorDynamicConfig().isAbortPollingAppConfig()) {
+                    if (refreshConfig instanceof ApplicationConfig && (SimulatorDynamicConfig.isAbortPollingAppConfig() || Pradar.isSilenceDegraded())) {
                         return;
                     }
                     refreshConfig.refresh(fetch());

@@ -168,12 +168,9 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             if (map != null && map.get(SILENCE_SWITCH_STATUS) != null) {
                 // 全局静默开关
                 boolean open = !CLOSE.equals(map.get(SILENCE_SWITCH_STATUS));
-                SimulatorDynamicConfig dynamicConfig = GlobalConfig.getInstance().getSimulatorDynamicConfig();
-                dynamicConfig.setAbortPollingAppConfig(open);
-
+                SimulatorDynamicConfig.setAbortPollingAppConfig(open || Pradar.isSilenceDegraded());
                 // 单个应用静默开关
-                boolean silenceSwitchOn = dynamicConfig.isSingleSilenceSwitchOn();
-                clusterTestConfig.setSilenceSwitchOn(open || silenceSwitchOn);
+                clusterTestConfig.setSilenceSwitchOn(open || Pradar.isSilenceDegraded() || SimulatorDynamicConfig.isSingleSilenceSwitchOn());
             }
 
         } catch (Throwable e) {

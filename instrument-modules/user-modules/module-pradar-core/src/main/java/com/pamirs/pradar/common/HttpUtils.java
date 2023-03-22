@@ -16,6 +16,7 @@ package com.pamirs.pradar.common;
 
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 
@@ -41,7 +42,7 @@ public abstract class HttpUtils {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         HttpResult httpResult = doGet(hostPort.host, hostPort.port, hostPort.url);
         if (httpResult.status == 511 && POLL_APP_CONFIG_FAILED_ABORTED != null) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setAbortPollingAppConfig(true);
+            SimulatorDynamicConfig.setAbortPollingAppConfig(true);
         }
         return httpResult;
     }
@@ -110,7 +111,7 @@ public abstract class HttpUtils {
         HostPort hostPort = getHostPortUrlFromUrl(url);
         HttpResult httpResult = doPost(hostPort.host, hostPort.port, hostPort.url, body);
         if (httpResult.status == 500 && POLL_APP_CONFIG_FAILED_ABORTED != null) {
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().setAbortPollingAppConfig(true);
+            SimulatorDynamicConfig.setAbortPollingAppConfig(true);
         }
         return httpResult;
     }

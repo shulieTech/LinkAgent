@@ -22,6 +22,7 @@ import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.ClassUtils;
 import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.degrade.CombineResourceLimitDegradeDetect;
+import com.pamirs.pradar.degrade.action.ReduceSamplingRateDegradeAction;
 import com.pamirs.pradar.degrade.action.SilenceDegradeAction;
 import com.pamirs.pradar.degrade.resources.*;
 import com.pamirs.pradar.internal.GlobalConfigService;
@@ -98,7 +99,7 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         }
 
         Boolean aborted = simulatorConfig.getAbortedWhenAppConfigPollFailed();
-        if(aborted){
+        if (aborted) {
             System.setProperty("poll.app.config.failed.aborted", aborted.toString());
         }
 
@@ -128,7 +129,7 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         monitorCollector = MonitorCollector.getInstance();
         monitorCollector.start();
 
-        if (simulatorConfig.getBooleanProperty("degrade.detect.enable", false)) {
+        if (simulatorConfig.getBooleanProperty("degrade.detect.enable", true)) {
             startDegradeDetect();
         }
 
@@ -173,7 +174,9 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
             degradeDetect.addResourceDetect(resourceDetect);
             logger.info("[degrade] MemoryResourceDetect active max is {}", resourceDetect.threshold());
         }
-        degradeDetect.startDetect(SilenceDegradeAction.INSTANCE);
+
+        String strategy = simulatorConfig.getProperty("degrade.strategy", "sampling");
+        degradeDetect.startDetect("sampling".equals(strategy) ? ReduceSamplingRateDegradeAction.INSTANCE : SilenceDegradeAction.INSTANCE);
     }
 
     @Override

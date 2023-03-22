@@ -127,12 +127,12 @@ public class SimulatorDynamicConfig {
     /**
      * 单个应用的静默开关是否打开
      */
-    private final boolean isSingleSilenceSwitchOn;
+    private static boolean isSingleSilenceSwitchOn;
 
     /**
      * 是否中止拉取应用配置, 全局静默打开时不允许
      */
-    private boolean abortPollingAppConfig;
+    private static boolean abortPollingAppConfig;
 
     /**
      * 是否触发降级, 触发时采样率降低为9999
@@ -660,7 +660,7 @@ public class SimulatorDynamicConfig {
         }
     }
 
-    public boolean isSingleSilenceSwitchOn() {
+    public static boolean isSingleSilenceSwitchOn() {
         return isSingleSilenceSwitchOn;
     }
 
@@ -668,32 +668,20 @@ public class SimulatorDynamicConfig {
         return kafkaPtConsumerPollMaxRatio;
     }
 
-    public boolean isAbortPollingAppConfig() {
+    public static boolean isAbortPollingAppConfig() {
         return abortPollingAppConfig;
     }
 
-    public void setAbortPollingAppConfig(boolean abortPollingAppConfig) {
-        this.abortPollingAppConfig = abortPollingAppConfig;
+    public static void setAbortPollingAppConfig(boolean abortPollingAppConfig) {
+        SimulatorDynamicConfig.abortPollingAppConfig = abortPollingAppConfig;
     }
 
     public static void triggerDegrade(String message){
-        ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.DEGRADE)
-                .setErrorCode("degrade-0001")
-                .setMessage("资源紧张触发降级,采样率降低为9999")
-                .setDetail(message)
-                .report();
         degradeTriggered = true;
     }
 
     public static void resetDegradeStatus(){
-        ErrorReporter.buildError()
-                .setErrorType(ErrorTypeEnum.DEGRADE)
-                .setErrorCode("degrade-0002")
-                .setMessage("资源充足降级恢复，采样率恢复")
-                .setDetail("")
-                .report();
-        degradeTriggered = true;
+        degradeTriggered = false;
     }
 
     public static boolean isDegraded(){

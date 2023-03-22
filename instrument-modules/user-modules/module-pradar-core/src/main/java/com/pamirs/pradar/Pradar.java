@@ -24,7 +24,6 @@ import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.datasource.TableParserResult;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.text.StrBuilder;
@@ -264,6 +263,11 @@ public final class Pradar {
     static final int LOG_TYPE_EVENT_ILLEGAL = -255;
 
     private static Boolean isRunningDocker = null;
+
+    /**
+     * 是否静默降级
+     */
+    private static boolean isSilenceDegraded;
 
     /**
      * 用于记录当前时段内是否有压测流量请求
@@ -2714,5 +2718,13 @@ public final class Pradar {
             isRunningDocker = false;
             return isRunningDocker;
         }
+    }
+
+    public static boolean isSilenceDegraded(){
+        return isSilenceDegraded;
+    }
+
+    public static void setSilenceDegradeStatus(boolean degraded){
+        isSilenceDegraded = degraded;
     }
 }

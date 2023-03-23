@@ -21,10 +21,6 @@ public class InsideContainerResourcesInfoCollector implements Runnable {
 
     @Override
     public void run() {
-
-        if (!PradarSwitcher.isMonitorEnabled()) {
-            return;
-        }
         if (collector == null) {
             collector = new ContainerStatsInfoCollector();
         }

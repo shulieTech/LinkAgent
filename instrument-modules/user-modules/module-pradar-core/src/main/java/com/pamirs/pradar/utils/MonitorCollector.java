@@ -14,27 +14,14 @@
  */
 package com.pamirs.pradar.utils;
 
-import com.pamirs.pradar.AppNameUtils;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.PradarSwitcher;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import oshi.SystemInfo;
-import oshi.hardware.*;
-import oshi.software.os.FileSystem;
-import oshi.software.os.OSFileStore;
-import oshi.util.Util;
 
-import java.io.*;
-import java.text.DecimalFormat;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 

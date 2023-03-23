@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -19,6 +19,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.PradarSwitcher;
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,15 +47,17 @@ public class MonitorCollector {
 
     private static MonitorCollector INSTANCE;
     private ScheduledFuture future;
+    private SimulatorConfig simulatorConfig;
 
-    private MonitorCollector() {
+    private MonitorCollector(SimulatorConfig simulatorConfig) {
+        this.simulatorConfig = simulatorConfig;
     }
 
-    public static MonitorCollector getInstance() {
+    public static MonitorCollector getInstance(SimulatorConfig simulatorConfig) {
         if (INSTANCE == null) {
             synchronized (MonitorCollector.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new MonitorCollector();
+                    INSTANCE = new MonitorCollector(simulatorConfig);
                 }
             }
         }
@@ -65,6 +68,11 @@ public class MonitorCollector {
      * 初始化 monitor 数据收集任务
      */
     public void start() {
+        // 禁止打印监控日志
+        boolean enableMonitor = simulatorConfig.getBooleanProperty("pradar.switcher.monitor", true);
+        if (!enableMonitor || !PradarSwitcher.isMonitorEnabled()) {
+            return;
+        }
         boolean runningInContainer = isRunningInsideDocker();
         if (runningInContainer) {
             executeResourcesInfoCollectingTaskInsideContainer();

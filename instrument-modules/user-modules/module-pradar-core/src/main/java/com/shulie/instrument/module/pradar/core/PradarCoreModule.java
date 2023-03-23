@@ -126,7 +126,7 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
             Messager.registerExecutionTagSupplier(new DefaultExecutionTagSupplier());
         }
 
-        monitorCollector = MonitorCollector.getInstance();
+        monitorCollector = MonitorCollector.getInstance(simulatorConfig);
         monitorCollector.start();
 
         if (simulatorConfig.getBooleanProperty("degrade.detect.enable", true)) {

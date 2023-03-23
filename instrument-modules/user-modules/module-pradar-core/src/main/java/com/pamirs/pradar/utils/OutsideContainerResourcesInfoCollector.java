@@ -44,9 +44,6 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
 
     @Override
     public void run() {
-        if (!PradarSwitcher.isMonitorEnabled()) {
-            return;
-        }
         try {
             long timeStamp = System.currentTimeMillis() / 1000;
             String appName = AppNameUtils.appName();

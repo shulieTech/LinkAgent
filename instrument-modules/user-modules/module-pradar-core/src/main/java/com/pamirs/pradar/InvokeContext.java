@@ -14,6 +14,7 @@
  */
 package com.pamirs.pradar;
 
+import cn.hutool.core.lang.Snowflake;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -25,10 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.pamirs.pradar.AppNameUtils.appName;
@@ -103,6 +101,8 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
      * 是否需要线程兜底 commit
      */
     private boolean isThreadCommit;
+
+    private static Snowflake snowflake = new Snowflake(1, 1);
 
     // log control event ctx
     InvokeContext(int logType) {
@@ -724,6 +724,9 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
     }
 
     protected String generateNodeId(String traceNode, String serviceName, String methodName, String middlewareName) {
+        if (Pradar.SNOWFLAKE_GENERATE_ID) {
+            return generateId();
+        }
         if (StringUtils.startsWith(serviceName, "http://") || StringUtils.startsWith(serviceName, "https://")) {
             return md5String(
                     (traceNode == null ? "" : traceNode + '-') + getRegularServiceName(defaultBlankIfNull(serviceName),
@@ -735,11 +738,18 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
         }
     }
 
+    private String generateId(){
+        return Pradar.getAgentId(false) + snowflake.nextIdStr();
+    }
+
     protected String generateNodeId() {
         return "empty";
     }
 
     protected String generateTraceNode() {
+        if (Pradar.SNOWFLAKE_GENERATE_ID) {
+            return generateId();
+        }
         if (StringUtils.startsWith(serviceName, "http://") || StringUtils.startsWith(serviceName, "https://")) {
             return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + getRegularServiceName(
                     defaultBlankIfNull(serviceName), methodName)

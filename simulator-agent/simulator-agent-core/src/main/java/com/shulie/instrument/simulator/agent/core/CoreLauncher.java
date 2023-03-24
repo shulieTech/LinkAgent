@@ -225,6 +225,16 @@ public class CoreLauncher {
                         System.setProperty(key, properties.getProperty(key));
                     }
 
+                    key = "pradar.collector.push";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
+                    key = "pradar.snowflake.generate.create";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
                     applicationUploader.checkAndGenerateApp();
 
                     Register register = RegisterFactory.getRegister(

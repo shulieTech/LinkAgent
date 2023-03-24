@@ -157,6 +157,10 @@ public final class Pradar {
      */
     static AsyncAppender serverMonitorAppender;
 
+    static AsyncCollectorAppender collectorAppender;
+
+    static AsyncCollectorAppender collectorMonitorAppender;
+
     /**
      * 正常 TRACE 开始的 InvokeId
      */
@@ -182,6 +186,16 @@ public final class Pradar {
      * 全链路压测前缀
      */
     static public final String CLUSTER_TEST_PREFIX = getClusterTestPrefix();
+
+    /**
+     * 使用collector直接推送，还是落盘
+     */
+    static public final boolean COLLECTOR_PUSH = isCollectorPush();
+
+    /**
+     * 使用雪花算法生成GeneratreId
+     */
+    static public final boolean SNOWFLAKE_GENERATE_ID = isSnowflakeGenerateId();
 
     /**
      * 全链路压测前缀
@@ -303,10 +317,15 @@ public final class Pradar {
      */
     static {
         LOGGER.info("Pradar started ({})", getPradarLocation());
-
         try {
-            pradarAppender = createPradarLoggers();
-            monitorAppender = createMonitorLoggers();
+            LOGGER.info("是否落盘处理日志:{}", !COLLECTOR_PUSH);
+            if (COLLECTOR_PUSH) {
+                createPradarCollectorLoggers();
+                createMonitorCollectorLoggers();
+            } else {
+                pradarAppender = createPradarLoggers();
+                monitorAppender = createMonitorLoggers();
+            }
         } catch (Throwable e) {
             LOGGER.error("fail to create Pradar logger", e);
         }
@@ -739,7 +758,11 @@ public final class Pradar {
      */
     public static void commitMonitorLog(String monitorLog) {
         if (!PradarSwitcher.isMonitorOff()) {
-            serverMonitorAppender.append(monitorLog);
+            if (COLLECTOR_PUSH) {
+                collectorMonitorAppender.append(monitorLog);
+            } else {
+                serverMonitorAppender.append(monitorLog);
+            }
         }
     }
 
@@ -785,6 +808,16 @@ public final class Pradar {
         }
         System.out.println("SIMULATOR: cluster test prefix lower is:" + prefix);
         return prefix;
+    }
+
+    private static boolean isSnowflakeGenerateId() {
+        String isCollectorPush = System.getProperty("pradar.snowflake.generate.create");
+        return "true".equals(isCollectorPush);
+    }
+
+    private static boolean isCollectorPush() {
+        String isCollectorPush = System.getProperty("pradar.collector.push");
+        return "true".equals(isCollectorPush);
     }
 
     /**
@@ -1038,6 +1071,27 @@ public final class Pradar {
         } catch (Throwable e) {
             return null;
         }
+    }
+
+    static private PradarRollingCollectorAppender createPradarCollectorLoggers() {
+        // 配置日志输出
+        collectorAppender = new AsyncCollectorAppender(getTraceQueueSize(), 0);
+        PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 1, Pradar.PRADAR_TARCE_LOG_VERSION);
+        collectorAppender.start(rpcLogger, new TraceInvokeContextEncoder(), "RpcLog");
+        PradarLogDaemon.watch(collectorAppender);
+        return rpcLogger;
+
+    }
+
+    static private PradarRollingCollectorAppender createMonitorCollectorLoggers() {
+        // 配置日志输出
+        collectorMonitorAppender = new AsyncCollectorAppender(getMonitorQueueSize(), 0);
+
+        PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 3, Pradar.PRADAR_MONITOR_LOG_VERSION);
+        collectorMonitorAppender.start(rpcLogger, new TraceInvokeContextEncoder(), "MonitorLog");
+        PradarLogDaemon.watch(collectorMonitorAppender);
+        return rpcLogger;
+
     }
 
     static private final PradarRollingFileAppender createPradarLoggers() {
@@ -2491,7 +2545,11 @@ public final class Pradar {
         }
 
         if (!isFilterContext(ctx)) {
-            rpcAppender.append(ctx);
+            if (COLLECTOR_PUSH) {
+                collectorAppender.append(ctx);
+            } else {
+                rpcAppender.append(ctx);
+            }
         }
         /**
          * 如果是压测流量，则设置有压测流量

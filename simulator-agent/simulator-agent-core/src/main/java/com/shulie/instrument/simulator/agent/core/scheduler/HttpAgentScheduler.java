@@ -312,8 +312,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             logger.error("卸载命令未清除,无法安装探针,命令详情:" + JSON.toJSONString(commandPacket));
         }
 
-
-    startScheduler();
+        startScheduler();
     }
 
     private List<CommandExecuteResponse> handleCommandExecuteResponse(CommandExecuteResponse commandExecuteResponse){
@@ -509,7 +508,7 @@ public class HttpAgentScheduler implements AgentScheduler {
      * use local jar installed if exists
      */
     private void installLocalOrRemote() {
-        CommandPacket startCommandPacket;
+        CommandPacket startCommandPacket = null;
         //直到成功为止，控制台可能重启、网络问题等原因
         //TODO
         int time = 0;
@@ -529,6 +528,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             } catch (InterruptedException ignore) {
             }
         }
+
         if(startCommandPacket == null){
             startCommandPacket = new CommandPacket();
             // 启动

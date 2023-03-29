@@ -235,6 +235,11 @@ public class CoreLauncher {
                         System.setProperty(key, properties.getProperty(key));
                     }
 
+                    key = "pradar.data.pusher.pinpoint.collector.trace.chunksize";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
                     applicationUploader.checkAndGenerateApp();
 
                     Register register = RegisterFactory.getRegister(

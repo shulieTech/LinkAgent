@@ -20,11 +20,6 @@ public class AsyncCollectorAppender extends PradarAppender {
     private static final int DEFAULT_CONSUMER_THRESHOLD = 512;
 
     /**
-     * 每次发送trace的条数
-     */
-    private static final int TRACE_CHUNK_SIZE = 10;
-
-    /**
      * 用于内部控制刷新日志的命令
      */
     static final Object EVENT_LOG_FLUSH = new Object();
@@ -39,6 +34,10 @@ public class AsyncCollectorAppender extends PradarAppender {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AsyncCollectorAppender.class);
 
+    /**
+     * 每次发送trace的条数
+     */
+    private final int chunkSize;
     // RingBuffer 实现，size 必须为 2 的 n 次方
     private final Object[] entries;
     private final int queueSize;
@@ -66,10 +65,11 @@ public class AsyncCollectorAppender extends PradarAppender {
     private AsyncCollectorAppender.AsyncRunnable task;
     private AtomicBoolean running;
 
-    public AsyncCollectorAppender(int queueSize, int maxWaitMillis) {
+    public AsyncCollectorAppender(int queueSize, int maxWaitMillis, int chunkSize) {
         // queueSize 取大于或等于 value 的 2 的 n 次方数
         queueSize = 1 << (32 - Integer.numberOfLeadingZeros(queueSize - 1));
 
+        this.chunkSize = chunkSize;
         this.queueSize = queueSize;
         this.maxWaitMillis = maxWaitMillis;
         this.entries = new Object[queueSize];
@@ -313,6 +313,7 @@ public class AsyncCollectorAppender extends PradarAppender {
             final AsyncCollectorAppender parent = AsyncCollectorAppender.this;
             final int indexMask = parent.indexMask;
             final int queueSize = parent.queueSize;
+            final int chunkSize = parent.chunkSize;
             final TraceEncoder encoder = parent.encoder;
             final String workerName = parent.workerName;
             final Object[] entries = parent.entries;
@@ -333,9 +334,9 @@ public class AsyncCollectorAppender extends PradarAppender {
                     long take = takeIndex.get();
                     long size = putIndex.get() - take;
                     if (size > 0) {
-                        long length = Math.min(size, TRACE_CHUNK_SIZE);
+                        long length = Math.min(size, chunkSize);
                         // 直接批量处理掉 size 个日志对象
-                        for (int i = 0; i < length; i++){
+                        for (int i = 0; i < length; i++) {
                             final int idx = (int) take & indexMask;
                             Object ctx = entries[idx];
                             // 从生产者 claim 到 putIndex 位置，到生产者把日志对象放入队列之间，有可能存在间隙
@@ -395,6 +396,8 @@ public class AsyncCollectorAppender extends PradarAppender {
             }
         }
     }
+
+
 
     @Override
     public String toString() {

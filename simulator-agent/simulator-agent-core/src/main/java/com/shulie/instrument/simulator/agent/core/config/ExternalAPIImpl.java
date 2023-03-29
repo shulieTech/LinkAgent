@@ -63,6 +63,8 @@ public class ExternalAPIImpl implements ExternalAPI {
     private final static String HEART_URL = "api/agent/heartbeat";
     private final static String REPORT_URL = "api/agent/application/node/probe/operateResult";
 
+    MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+
     public ExternalAPIImpl(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
         isWarnAlready = new AtomicBoolean(false);
@@ -109,6 +111,11 @@ public class ExternalAPIImpl implements ExternalAPI {
 
     @Override
     public CommandPacket getLatestCommandPacket() {
+        //如果是kafka注册，当前不和控制台进行命令交互
+        String registerName = System.getProperty("register.name", "zookeeper");
+        if (registerName.equals("kafka")) {
+            return CommandPacket.NO_ACTION_PACKET;
+        }
         String webUrl = agentConfig.getTroWebUrl();
         if (StringUtils.isBlank(webUrl)) {
             logger.warn("AGENT: tro.web.url is not assigned.");
@@ -162,8 +169,6 @@ public class ExternalAPIImpl implements ExternalAPI {
             return null;
         }
         final String agentHeartUrl = joinUrl(webUrl, HEART_URL);
-
-        MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
 
         final AtomicReference<List<CommandPacket>> reference = new AtomicReference<List<CommandPacket>>(new ArrayList<CommandPacket>());
 

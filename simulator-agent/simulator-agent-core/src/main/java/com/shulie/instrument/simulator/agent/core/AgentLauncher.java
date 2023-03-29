@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.agent.core;
 
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;

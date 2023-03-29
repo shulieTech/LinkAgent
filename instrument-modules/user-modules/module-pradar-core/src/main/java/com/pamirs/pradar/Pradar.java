@@ -198,6 +198,11 @@ public final class Pradar {
     static public final boolean SNOWFLAKE_GENERATE_ID = isSnowflakeGenerateId();
 
     /**
+     * collector每次发送的条数
+     */
+    static public final int TRACE_CHUNK_SIZE = getTraceChunkSize();
+
+    /**
      * 全链路压测前缀
      */
     static public final String CLUSTER_TEST_PREFIX_LOWER = getClusterTestPrefixLower();
@@ -815,6 +820,17 @@ public final class Pradar {
         return "true".equals(isCollectorPush);
     }
 
+    private static int getTraceChunkSize() {
+        String chunkSize = System.getProperty("pradar.data.pusher.pinpoint.collector.trace.chunksize", "1");
+        int size = 1;
+        try {
+            size = Integer.parseInt(chunkSize);
+        } catch (Exception e) {
+        }
+        System.out.println("当前批量发送条数使用的数量为:" + size);
+        return size;
+    }
+
     private static boolean isCollectorPush() {
         String isCollectorPush = System.getProperty("pradar.collector.push");
         return "true".equals(isCollectorPush);
@@ -1075,7 +1091,7 @@ public final class Pradar {
 
     static private PradarRollingCollectorAppender createPradarCollectorLoggers() {
         // 配置日志输出
-        collectorAppender = new AsyncCollectorAppender(getTraceQueueSize(), 0);
+        collectorAppender = new AsyncCollectorAppender(getTraceQueueSize(), 0, TRACE_CHUNK_SIZE);
         PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 1, Pradar.PRADAR_TARCE_LOG_VERSION);
         collectorAppender.start(rpcLogger, new TraceInvokeContextEncoder(), "RpcLog");
         PradarLogDaemon.watch(collectorAppender);
@@ -1085,7 +1101,7 @@ public final class Pradar {
 
     static private PradarRollingCollectorAppender createMonitorCollectorLoggers() {
         // 配置日志输出
-        collectorMonitorAppender = new AsyncCollectorAppender(getMonitorQueueSize(), 0);
+        collectorMonitorAppender = new AsyncCollectorAppender(getMonitorQueueSize(), 0, TRACE_CHUNK_SIZE);
 
         PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 3, Pradar.PRADAR_MONITOR_LOG_VERSION);
         collectorMonitorAppender.start(rpcLogger, new TraceInvokeContextEncoder(), "MonitorLog");

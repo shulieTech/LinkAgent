@@ -102,8 +102,6 @@ public class DataSourceWrapUtil {
         return false;
     }
 
-    //  static AtomicBoolean inited = new AtomicBoolean(false);
-
     public static void init(DataSourceMeta<HikariDataSource> dataSourceMeta) {
         if (pressureDataSources.get(dataSourceMeta) != null) {
             return;
@@ -191,6 +189,18 @@ public class DataSourceWrapUtil {
     private static HikariDataSource copy(HikariDataSource source) {
         HikariDataSource target = generate(source);
         return target;
+    }
+
+    public static void retryInitPerformanceTest(HikariMediaDataSource mediaDataSource) {
+        synchronized (DataSourceWrapUtil.class) {
+            if (mediaDataSource.getDataSourcePerformanceTest() != null) {
+                return;
+            }
+            HikariDataSource ptDataSource = copy(mediaDataSource.getDataSourceBusiness());
+            if (ptDataSource != null) {
+                mediaDataSource.setDataSourcePerformanceTest(ptDataSource);
+            }
+        }
     }
 
 

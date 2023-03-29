@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,6 +21,7 @@ import com.pamirs.attach.plugin.common.datasource.pressure.PressureConnection;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.shulie.druid.util.JdbcUtils;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -76,8 +77,11 @@ public class HikariMediaDataSource extends WrappedDbMediatorDataSource<HikariDat
                     }
                     Connection hikariConnection = dataSourceBusiness.getConnection();
                     return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType,
-                        getMidType());
+                            getMidType());
                 } else {
+                    if (dataSourcePerformanceTest == null) {
+                        DataSourceWrapUtil.retryInitPerformanceTest(this);
+                    }
                     if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");
                     }

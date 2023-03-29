@@ -502,4 +502,16 @@ public class DataSourceWrapUtil {
         }
         return shadowDatabaseConfig;
     }
+
+    public static void retryInitPerformanceTest(C3p0MediaDataSource mediaDataSource) {
+        synchronized (DataSourceWrapUtil.class) {
+            if (mediaDataSource.getDataSourcePerformanceTest() != null) {
+                return;
+            }
+            ComboPooledDataSource ptDataSource = copy(mediaDataSource.getDataSourceBusiness());
+            if (ptDataSource != null) {
+                mediaDataSource.setDataSourcePerformanceTest(ptDataSource);
+            }
+        }
+    }
 }

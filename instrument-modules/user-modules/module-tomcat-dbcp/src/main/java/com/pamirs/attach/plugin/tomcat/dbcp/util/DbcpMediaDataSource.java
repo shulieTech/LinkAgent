@@ -71,6 +71,9 @@ public class DbcpMediaDataSource extends WrappedDbMediatorDataSource<BasicDataSo
                         getMidType());
                 } else {
                     if (dataSourcePerformanceTest == null) {
+                        DataSourceWrapUtil.retryInitPerformanceTest(this);
+                    }
+                    if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");
                     }
                     return new PressureConnection(dataSourcePerformanceTest, dataSourcePerformanceTest.getConnection(),

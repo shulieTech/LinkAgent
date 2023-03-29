@@ -493,7 +493,7 @@ public class HttpAgentScheduler implements AgentScheduler {
      */
     private CommandPacket getLatestCommandPacket() {
         CommandPacket commandPacket = externalAPI.getLatestCommandPacket();
-        if (commandPacket == null || commandPacket == CommandPacket.NO_ACTION_PACKET) {
+        if (commandPacket == null || (commandPacket.getCommandType() == CommandPacket.COMMAND_TYPE_FRAMEWORK && commandPacket.getOperateType() == CommandPacket.OPERATE_TYPE_INSTALL)) {
             return null;
         }
         if (commandPacket.getLiveTime() != -1

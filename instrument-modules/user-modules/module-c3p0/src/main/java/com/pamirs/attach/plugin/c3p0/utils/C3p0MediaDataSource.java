@@ -76,6 +76,9 @@ public class C3p0MediaDataSource extends WrappedDbMediatorDataSource<ComboPooled
                         getMidType());
                 } else {
                     if (dataSourcePerformanceTest == null) {
+                        DataSourceWrapUtil.retryInitPerformanceTest(this);
+                    }
+                    if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");
                     }
                     return new PressureConnection(dataSourcePerformanceTest, dataSourcePerformanceTest.getConnection(), dataSourcePerformanceTest.getJdbcUrl(), dataSourcePerformanceTest.getUser(), dbConnectionKey, dbType);

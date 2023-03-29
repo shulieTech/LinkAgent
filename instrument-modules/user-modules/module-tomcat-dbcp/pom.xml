@@ -15,7 +15,7 @@
     <properties>
         <module-name>tomcat-dbcp</module-name>
     </properties>
-    <version>2.0.0.0</version>
+    <version>2.0.0.1</version>
 
     <dependencies>
         <dependency>

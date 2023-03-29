@@ -413,4 +413,16 @@ public class DataSourceWrapUtil {
         }
         return shadowDatabaseConfig;
     }
+
+    public static void retryInitPerformanceTest(DbcpMediaDataSource mediaDataSource) {
+        synchronized (DataSourceWrapUtil.class) {
+            if (mediaDataSource.getDataSourcePerformanceTest() != null) {
+                return;
+            }
+            BasicDataSource ptDataSource = copy(mediaDataSource.getDataSourceBusiness());
+            if (ptDataSource != null) {
+                mediaDataSource.setDataSourcePerformanceTest(ptDataSource);
+            }
+        }
+    }
 }

@@ -188,8 +188,8 @@ public class LettuceMethodFirstKeyStreamOffsetArrayInterceptor extends Parameter
         if (ignore(whiteList, str)) {
             return str;
         }
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
 
@@ -201,8 +201,8 @@ public class LettuceMethodFirstKeyStreamOffsetArrayInterceptor extends Parameter
             return key;
         }
         String str = key;
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
     }
@@ -215,8 +215,8 @@ public class LettuceMethodFirstKeyStreamOffsetArrayInterceptor extends Parameter
             if (ignore(whiteList, str)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(str)) {
-                str = Pradar.addClusterTestPrefix(str);
+            if (!Pradar.isClusterTestByConfig(str)) {
+                str = Pradar.addClusterTestByConfig(str);
             }
             datas[i] = str.toCharArray();
         }
@@ -229,8 +229,8 @@ public class LettuceMethodFirstKeyStreamOffsetArrayInterceptor extends Parameter
         if (ignore(whiteList, str)) {
             return key;
         }
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str.toCharArray();
     }
@@ -243,8 +243,8 @@ public class LettuceMethodFirstKeyStreamOffsetArrayInterceptor extends Parameter
             if (ignore(whiteList, str)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(str)) {
-                str = Pradar.addClusterTestPrefix(str);
+            if (!Pradar.isClusterTestByConfig(str)) {
+                str = Pradar.addClusterTestByConfig(str);
             }
             datas[i] = str.getBytes();
         }
@@ -269,8 +269,8 @@ public class LettuceMethodFirstKeyStreamOffsetArrayInterceptor extends Parameter
             return key;
         }
 
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str.getBytes();
     }

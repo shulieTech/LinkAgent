@@ -279,8 +279,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             if (canMatchWhiteList && whiteListValidate(whiteList, key)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(key)) {
-                key = Pradar.addClusterTestPrefix(key);
+            if (!Pradar.isClusterTestByConfig(key)) {
+                key = Pradar.addClusterTestByConfig(key);
                 keys[i] = key;
             }
         }
@@ -323,8 +323,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return key;
         }
 
-        if (!Pradar.isClusterTestPrefix(key)) {
-            return Pradar.addClusterTestPrefix(key);
+        if (!Pradar.isClusterTestByConfig(key)) {
+            return Pradar.addClusterTestByConfig(key);
         }
         return key;
     }
@@ -373,13 +373,13 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                     if (contains) {
                         continue;
                     }
-                    if (Pradar.isClusterTestPrefix(key)) {
+                    if (Pradar.isClusterTestByConfig(key)) {
                         continue;
                     }
                     if (params[i] instanceof String) {
-                        params[i] = Pradar.addClusterTestPrefix(key);
+                        params[i] = Pradar.addClusterTestByConfig(key);
                     } else {
-                        params[i] = (Pradar.addClusterTestPrefix(key)).getBytes();
+                        params[i] = (Pradar.addClusterTestByConfig(key)).getBytes();
                     }
                 }
             }
@@ -411,10 +411,10 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                     if (contains) {
                         continue;
                     }
-                    if (Pradar.isClusterTestPrefix(key)) {
+                    if (Pradar.isClusterTestByConfig(key)) {
                         continue;
                     }
-                    params[i] = (Pradar.addClusterTestPrefix(key)).getBytes();
+                    params[i] = (Pradar.addClusterTestByConfig(key)).getBytes();
                 }
             }
         } else if (args[1] instanceof java.util.List) {
@@ -426,14 +426,14 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
                 if (o instanceof String) {
                     key = (String) o;
                     if (!key.startsWith(Pradar.CLUSTER_TEST_PREFIX)) {
-                        ptList.add((Pradar.addClusterTestPrefix(key)));
+                        ptList.add((Pradar.addClusterTestByConfig(key)));
                     } else {
                         ptList.add(key);
                     }
                 } else if (o instanceof byte[]) {
                     key = new String((byte[]) o);
-                    if (!Pradar.isClusterTestPrefix(key)) {
-                        ptList.add((Pradar.addClusterTestPrefix(key)).getBytes());
+                    if (!Pradar.isClusterTestByConfig(key)) {
+                        ptList.add((Pradar.addClusterTestByConfig(key)).getBytes());
                     } else {
                         ptList.add(key.getBytes());
                     }
@@ -455,8 +455,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return args;
         }
 
-        if (!Pradar.isClusterTestPrefix(key)) {
-            key = Pradar.addClusterTestPrefix(key);
+        if (!Pradar.isClusterTestByConfig(key)) {
+            key = Pradar.addClusterTestByConfig(key);
             args[keysIndex] = key.getBytes();
             return args;
         }
@@ -479,8 +479,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             if (canMatchWhiteList && whiteListValidate(whiteList, key)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(key)) {
-                key = Pradar.addClusterTestPrefix(key);
+            if (!Pradar.isClusterTestByConfig(key)) {
+                key = Pradar.addClusterTestByConfig(key);
                 keyBytes[i] = key.getBytes();
             }
         }
@@ -575,8 +575,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         if (ignore(whiteList, str)) {
             return str;
         }
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
 
@@ -588,8 +588,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return key;
         }
         String str = key;
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
     }
@@ -602,8 +602,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             if (ignore(whiteList, str)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(str)) {
-                str = Pradar.addClusterTestPrefix(str);
+            if (!Pradar.isClusterTestByConfig(str)) {
+                str = Pradar.addClusterTestByConfig(str);
             }
             datas[i] = str.toCharArray();
         }
@@ -616,8 +616,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
         if (ignore(whiteList, str)) {
             return key;
         }
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str.toCharArray();
     }
@@ -630,8 +630,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             if (ignore(whiteList, str)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(str)) {
-                str = Pradar.addClusterTestPrefix(str);
+            if (!Pradar.isClusterTestByConfig(str)) {
+                str = Pradar.addClusterTestByConfig(str);
             }
             datas[i] = str.getBytes();
         }
@@ -656,8 +656,8 @@ public class MJedisInterceptor extends ParametersWrapperInterceptorAdaptor {
             return key;
         }
 
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str.getBytes();
     }

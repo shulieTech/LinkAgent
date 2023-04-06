@@ -1,6 +1,7 @@
 package com.pamirs.pradar.bean;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Licey
@@ -9,7 +10,7 @@ import java.util.*;
 public class SyncObject {
     //切初始化方法的应该至少次数非常少， 这里用数量来控制
     private static int maxNum;
-    private List<SyncObjectData> datas = new Vector<SyncObjectData>();
+    private Set<SyncObjectData> datas = Collections.newSetFromMap(new ConcurrentHashMap());
 
     static {
         String syncObjectMaxNumVar = System.getProperty("sync.objects.max.num");
@@ -28,15 +29,15 @@ public class SyncObject {
         return this;
     }
 
-    public SyncObject addData(List<SyncObjectData> datas) {
+    public SyncObject addData(Collection<SyncObjectData> dataList) {
         if (this.datas.size() > maxNum) {
-            throw new RuntimeException("SyncObject is max num ! with " + this.datas.get(0).getTarget().getClass());
+            throw new RuntimeException("SyncObject is max num ! with " + dataList.iterator().next().getTarget().getClass());
         }
-        this.datas.addAll(datas);
+        this.datas.addAll(dataList);
         return this;
     }
 
-    public List<SyncObjectData> getDatas() {
+    public Set<SyncObjectData> getDatas() {
         Iterator<SyncObjectData> iterator = datas.iterator();
         while (iterator.hasNext()) {
             SyncObjectData next = iterator.next();
@@ -47,7 +48,7 @@ public class SyncObject {
         return datas;
     }
 
-    public void setDatas(List<SyncObjectData> datas) {
+    public void setDatas(Set<SyncObjectData> datas) {
         this.datas = datas;
     }
 }

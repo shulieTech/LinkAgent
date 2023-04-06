@@ -29,7 +29,7 @@ public class JdbcDataSourceFetcher {
         fetchDataSourceForC3p0(SyncObjectService.removeSyncObject(c3p0_datasource_sync_key));
     }
 
-    private static void fetchDataSource(List<SyncObjectData> dataSources, String url, String userName) {
+    private static void fetchDataSource(Set<SyncObjectData> dataSources, String url, String userName) {
         Set<String> shadowKeys = buildDataSourceKeys().keySet();
         for (SyncObjectData sync : dataSources) {
             Object target = sync.getTarget();

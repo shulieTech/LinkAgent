@@ -77,4 +77,33 @@ public class SyncObjectData {
     public void setOtherData(Object otherData) {
         this.otherData = otherData;
     }
+
+    @Override
+    public int hashCode() {
+        return target != null ? target.hashCode() : reference.get().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object otherData) {
+        if (!(otherData instanceof SyncObjectData)) {
+            return false;
+        }
+        SyncObjectData other = (SyncObjectData) otherData;
+        if ((this.reference != null && other.reference == null) || (this.reference == null && other.reference != null)) {
+            return false;
+        }
+        if (this.reference != null && other.reference != null && this.reference.get() != other.reference.get()) {
+            return false;
+        }
+        if ((this.target != null && other.target == null) || (this.target == null && other.target != null)) {
+            return false;
+        }
+        if (this.target != null && other.target != null && this.target != other.target) {
+            return false;
+        }
+        if (!this.method.equals(other.method) || this.args.length != other.args.length) {
+            return false;
+        }
+        return true;
+    }
 }

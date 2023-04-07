@@ -28,6 +28,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.CRC32;
 
 import static com.pamirs.pradar.AppNameUtils.appName;
 
@@ -101,8 +102,6 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
      * 是否需要线程兜底 commit
      */
     private boolean isThreadCommit;
-
-    private static Snowflake snowflake = new Snowflake(1, 1);
 
     // log control event ctx
     InvokeContext(int logType) {
@@ -206,20 +205,6 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
             }
         }
         return serviceName;
-    }
-
-    private static String md5String(String data) {
-        byte[] bytes = md5(data);
-        StringBuilder builder = new StringBuilder();
-        for (byte b : bytes) {
-            int temp = b & 255;
-            if (temp < 16) {
-                builder.append("0").append(Integer.toHexString(temp));
-            } else {
-                builder.append(Integer.toHexString(temp));
-            }
-        }
-        return builder.toString();
     }
 
     /**
@@ -724,22 +709,23 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
     }
 
     protected String generateNodeId(String traceNode, String serviceName, String methodName, String middlewareName) {
-        if (Pradar.SNOWFLAKE_GENERATE_ID) {
-            return generateId();
-        }
         if (StringUtils.startsWith(serviceName, "http://") || StringUtils.startsWith(serviceName, "https://")) {
-            return md5String(
+            return hash(
                     (traceNode == null ? "" : traceNode + '-') + getRegularServiceName(defaultBlankIfNull(serviceName),
                             methodName)
+
                             + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         } else {
-            return md5String((traceNode == null ? "" : traceNode + '-') + defaultBlankIfNull(serviceName)
+            return hash((traceNode == null ? "" : traceNode + '-') + defaultBlankIfNull(serviceName)
                     + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         }
     }
 
-    private String generateId(){
-        return Pradar.getAgentId(false) + snowflake.nextIdStr();
+    private static String hash(String data) {
+        CRC32 crc32 = new CRC32();
+        byte[] bytes = data.getBytes();
+        crc32.update(bytes, 0, bytes.length);
+        return Long.toHexString(crc32.getValue());
     }
 
     protected String generateNodeId() {
@@ -747,18 +733,15 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
     }
 
     protected String generateTraceNode() {
-        if (Pradar.SNOWFLAKE_GENERATE_ID) {
-            return generateId();
-        }
         if (StringUtils.startsWith(serviceName, "http://") || StringUtils.startsWith(serviceName, "https://")) {
-            return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + getRegularServiceName(
+            return hash((getTraceNode() == null ? "" : getTraceNode() + '-') + getRegularServiceName(
                     defaultBlankIfNull(serviceName), methodName)
                     + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         } else if (middlewareName != null && middlewareName.equals("redis")) {
-            return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + defaultBlankIfNull(serviceName)
+            return hash((getTraceNode() == null ? "" : getTraceNode() + '-') + defaultBlankIfNull(serviceName)
                     + '-' + defaultBlankIfNull(middlewareName));
         } else {
-            return md5String((getTraceNode() == null ? "" : getTraceNode() + '-') + defaultBlankIfNull(serviceName)
+            return hash((getTraceNode() == null ? "" : getTraceNode() + '-') + defaultBlankIfNull(serviceName)
                     + '-' + defaultBlankIfNull(methodName) + '-' + defaultBlankIfNull(middlewareName));
         }
     }

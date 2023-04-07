@@ -22,10 +22,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class EsShadowPreCheckEventListener implements PradarEventListener {
 
@@ -196,7 +193,7 @@ public class EsShadowPreCheckEventListener implements PradarEventListener {
 
     private void closePreCheckClient(RestClient restClient){
         SyncObject syncObject = SyncObjectService.getSyncObject("org.elasticsearch.client.RestClient");
-        List<SyncObjectData> datas = syncObject.getDatas();
+        Set<SyncObjectData> datas = syncObject.getDatas();
         Iterator<SyncObjectData> iterator = datas.iterator();
         while (iterator.hasNext()) {
             SyncObjectData next = iterator.next();

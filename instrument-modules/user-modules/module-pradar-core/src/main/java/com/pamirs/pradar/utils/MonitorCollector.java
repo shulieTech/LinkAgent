@@ -87,7 +87,7 @@ public class MonitorCollector {
             reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.contains("/docker")) {
+                if (line.contains("/docker") || line.contains("/cke")) {
                     return true;
                 }
             }

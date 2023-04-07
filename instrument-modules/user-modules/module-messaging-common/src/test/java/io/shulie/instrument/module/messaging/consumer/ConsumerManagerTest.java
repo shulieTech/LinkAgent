@@ -97,7 +97,7 @@ public class ConsumerManagerTest extends TestCase {
             }
         });
 
-        bizTarget = syncObject.getDatas().get(0).getTarget();
+        bizTarget = syncObject.getDatas().iterator().next().getTarget();
 
     }
 

@@ -126,7 +126,7 @@ public class Quartz2JobHandler implements QuartzJobHandler {
             scheduler = PradarSpringUtil.getBeanFactory().getBean(Scheduler.class);
         } catch (Exception e) {
             if (this.scheduler == null) {
-                this.scheduler = (Scheduler) SyncObjectService.getSyncObject("org.quartz.impl.StdScheduler").getDatas().get(0).getTarget();
+                this.scheduler = (Scheduler) SyncObjectService.getSyncObject("org.quartz.impl.StdScheduler").getDatas().iterator().next().getTarget();
             }
             scheduler = this.scheduler;
         }

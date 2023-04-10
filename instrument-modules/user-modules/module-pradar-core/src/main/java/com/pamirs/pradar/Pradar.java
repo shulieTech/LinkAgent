@@ -888,6 +888,7 @@ public final class Pradar {
      */
     public static Boolean getClusterTestPrefixOrSuffix() {
         String value = System.getProperty("pradar.cluster.test.prefix.suffix");
+        LOGGER.info("pradar.cluster.test.prefix.suffix is " + value);
         if (StringUtils.isBlank(value)) {
             return true;
         }

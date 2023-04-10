@@ -19,10 +19,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -200,7 +197,12 @@ public class CoreConfig {
         }
         String value = System.getProperty("user.home") + File.separator + "pradarlogs" + File.separator + getAppName();
         if (isMultiAppSwitch()) {
-            value += '/' + PidUtils.getPid();
+            int pid = PidUtils.getPid();
+            if(pid == 1){
+                value += '/' + UUID.randomUUID().toString();
+            }else{
+                value += '/' + pid;
+            }
         }
         return value;
     }

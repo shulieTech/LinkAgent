@@ -827,7 +827,6 @@ public final class Pradar {
             size = Integer.parseInt(chunkSize);
         } catch (Exception e) {
         }
-        System.out.println("当前批量发送条数使用的数量为:" + size);
         return size;
     }
 

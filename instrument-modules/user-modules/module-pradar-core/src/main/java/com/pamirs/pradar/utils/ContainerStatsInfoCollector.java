@@ -42,6 +42,11 @@ public class ContainerStatsInfoCollector {
     private final static Logger logger = LoggerFactory.getLogger(ContainerStatsInfoCollector.class.getName());
 
     /**
+     * k8s平台限制cpu核心数, 在控制台仿真系统配置的key
+     */
+    private String k8s_container_cpu_limit_key = "k8s.containers.resources.limits.cpu";
+
+    /**
      * 偶数次采集数据
      */
     private volatile StatsInfo previousRecord;
@@ -87,21 +92,36 @@ public class ContainerStatsInfoCollector {
         long timeDiff = latest.collectingTime - previous.collectingTime;
 
         ContainerStatsInfo statsInfo = new ContainerStatsInfo();
-        statsInfo.coresNum = this.coresNum;
+
+        // 是否在控制台对k8s cpu做限制
+        boolean k8sLimitCpu = false;
+        String k8sCpuLimit = System.getProperty(k8s_container_cpu_limit_key);
+        if (k8sCpuLimit != null && Double.parseDouble(k8sCpuLimit) > 0) {
+            statsInfo.coresNum = Integer.parseInt(k8sCpuLimit);
+            k8sLimitCpu = true;
+        } else {
+            statsInfo.coresNum = this.coresNum;
+        }
 
         DecimalFormat format = new DecimalFormat("0.00");
 
         // 100% * 容器使用cpu时间 / 系统使用cpu时间
         //cpu使用率是整体的, 上限就是100，所以不乘核数
         BigDecimal containerCpuDelta = latest.containerCpuValue.subtract(previous.containerCpuValue);
-        BigDecimal systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
+
+        BigDecimal systemCpuDelta;
+        if (k8sLimitCpu) {
+            systemCpuDelta = new BigDecimal(statsInfo.coresNum * timeDiff).multiply(new BigDecimal(1000 * 1000));
+        } else {
+            systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
+        }
 
         statsInfo.cpuUsagePercent = containerCpuDelta.multiply(new BigDecimal(100)).divide(systemCpuDelta, 2, BigDecimal.ROUND_HALF_UP).doubleValue();
-        if (statsInfo.cpuUsagePercent  < 2){
+        if (statsInfo.cpuUsagePercent < 2) {
             OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
             double systemCpuLoad = osBean.getSystemCpuLoad();
-            if (systemCpuLoad != 0){
-                statsInfo.cpuUsagePercent = new BigDecimal(systemCpuLoad).multiply(new BigDecimal(100),new MathContext(2, RoundingMode.HALF_UP)).doubleValue();
+            if (systemCpuLoad != 0) {
+                statsInfo.cpuUsagePercent = new BigDecimal(systemCpuLoad).multiply(new BigDecimal(100), new MathContext(2, RoundingMode.HALF_UP)).doubleValue();
             }
         }
 
@@ -160,7 +180,7 @@ public class ContainerStatsInfoCollector {
             List<String> eths = execCommand("ip -o -4 route show to default | awk '{print $5}'");
             if (!eths.isEmpty()) {
                 this.eth = eths.get(0);
-            }else if(new File("/sys/class/net/eth0/speed").exists()){
+            } else if (new File("/sys/class/net/eth0/speed").exists()) {
                 // 看看是否存在eth0网口,存在则用这个
                 this.eth = "eth0";
             }
@@ -387,7 +407,7 @@ public class ContainerStatsInfoCollector {
         private long totalMemory;
         private long availableMemory;
         private double memoryUsagePercent;
-        private int coresNum;
+        private double coresNum;
         private long totalDiskSpace;
         private long usableDiskSpace;
         private long diskReadBytes;
@@ -433,7 +453,7 @@ public class ContainerStatsInfoCollector {
             return memoryUsagePercent;
         }
 
-        public int getCoresNum() {
+        public double getCoresNum() {
             return coresNum;
         }
 

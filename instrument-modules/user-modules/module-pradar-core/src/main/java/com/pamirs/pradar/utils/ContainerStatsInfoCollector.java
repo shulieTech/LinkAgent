@@ -94,14 +94,8 @@ public class ContainerStatsInfoCollector {
         ContainerStatsInfo statsInfo = new ContainerStatsInfo();
 
         // 是否在控制台对k8s cpu做限制
-        boolean k8sLimitCpu = false;
-        String k8sCpuLimit = System.getProperty(k8s_container_cpu_limit_key);
-        if (k8sCpuLimit != null && Double.parseDouble(k8sCpuLimit) > 0) {
-            statsInfo.coresNum = Integer.parseInt(k8sCpuLimit);
-            k8sLimitCpu = true;
-        } else {
-            statsInfo.coresNum = this.coresNum;
-        }
+        Double k8sCpuLimit = getK8sCpuNum();
+        statsInfo.coresNum = k8sCpuLimit != null ? k8sCpuLimit : this.coresNum;
 
         DecimalFormat format = new DecimalFormat("0.00");
 
@@ -110,7 +104,7 @@ public class ContainerStatsInfoCollector {
         BigDecimal containerCpuDelta = latest.containerCpuValue.subtract(previous.containerCpuValue);
 
         BigDecimal systemCpuDelta;
-        if (k8sLimitCpu) {
+        if (k8sCpuLimit != null) {
             systemCpuDelta = new BigDecimal(statsInfo.coresNum * timeDiff).multiply(new BigDecimal(1000 * 1000));
         } else {
             systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
@@ -315,6 +309,18 @@ public class ContainerStatsInfoCollector {
 
             return memory;
         }
+    }
+
+    private Double getK8sCpuNum() {
+        String k8sCpuLimit = System.getProperty(k8s_container_cpu_limit_key);
+        try {
+            if (k8sCpuLimit != null && Double.parseDouble(k8sCpuLimit) > 0) {
+                return Double.parseDouble(k8sCpuLimit);
+            }
+        } catch (Exception e) {
+            logger.error("[k8s-container-monitor] parse k8s cpu limit num error , config value:" + k8sCpuLimit);
+        }
+        return null;
     }
 
     private static class StatsInfo {

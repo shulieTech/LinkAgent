@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -28,17 +28,22 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.lettuce.core.AbstractRedisAsyncCommands;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.cluster.models.partitions.Partitions;
+import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.masterslave.MasterSlaveConnectionProvider;
 import io.lettuce.core.protocol.DefaultEndpoint;
 import io.netty.channel.Channel;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import oshi.util.StringJoiner;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
 
@@ -50,12 +55,13 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
      * 防止{@link AbstractRedisAsyncCommands#set(java.lang.Object, java.lang.Object)}等方法
      * 和{@link AbstractRedisAsyncCommands#dispatch(io.lettuce.core.protocol.ProtocolKeyword, io.lettuce.core.output.CommandOutput, io.lettuce.core.protocol.CommandArgs)}增强方法重复执行
      */
-    public static ThreadLocal<Boolean> interceptorApplied = new ThreadLocal<Boolean>(){
+    public static ThreadLocal<Boolean> interceptorApplied = new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
             return false;
         }
     };
+
     @Override
     public String getPluginName() {
         return LettuceConstants.PLUGIN_NAME;
@@ -68,6 +74,7 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
 
     @Resource
     protected DynamicFieldManager manager;
+
     @Override
     public SpanRecord beforeTrace(Advice advice) {
         interceptorApplied.set(true);
@@ -82,17 +89,18 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
         spanRecord.setMiddlewareName(LettuceConstants.MIDDLEWARE_NAME);
         return spanRecord;
     }
-    private void setRemoteIpAndPort(Object target,SpanRecord spanRecord){
+
+    private void setRemoteIpAndPort(Object target, SpanRecord spanRecord) {
         final List<Object> redisUris = manager.getDynamicField(target, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS);
-        if(redisUris != null && !redisUris.isEmpty()){
+        if (redisUris != null && !redisUris.isEmpty()) {
             final List<String> remoteIps = new ArrayList<String>();
             for (Object redisUri : redisUris) {
-                final String host = ReflectionUtils.get(redisUri,"host");
-                final Integer port = ReflectionUtils.get(redisUri,"port");
+                final String host = ReflectionUtils.get(redisUri, "host");
+                final Integer port = ReflectionUtils.get(redisUri, "port");
                 remoteIps.add(host + ":" + port);
             }
-            spanRecord.setRemoteIp(StringUtils.join(remoteIps,","));
-        }else {
+            spanRecord.setRemoteIp(StringUtils.join(remoteIps, ","));
+        } else {
             spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
         }
 
@@ -174,7 +182,7 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
 
     protected void appendEndPoint(Object target, final SpanRecord spanRecord) {
         try {
-            final Object connection =  ReflectionUtils.get(target, LettuceConstants.REFLECT_FIELD_CONNECTION);
+            final Object connection = ReflectionUtils.get(target, LettuceConstants.REFLECT_FIELD_CONNECTION);
             final Object t = ReflectionUtils.get(connection, LettuceConstants.REFLECT_FIELD_CHANNEL_WRITER);
             DefaultEndpoint endpoint = null;
             if ("io.lettuce.core.masterslave.MasterSlaveChannelWriter".equals(t.getClass().getName())) {
@@ -182,7 +190,7 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                     /**
                      * 这是主从的
                      */
-                    MasterSlaveConnectionProvider provider = ReflectionUtils.get(t,"masterSlaveConnectionProvider");
+                    MasterSlaveConnectionProvider provider = ReflectionUtils.get(t, "masterSlaveConnectionProvider");
                     RedisURI redisUri = ReflectionUtils.get(provider, "initialRedisUri");
                     spanRecord.setRemoteIp(redisUri.getHost());
                     spanRecord.setPort(redisUri.getPort());
@@ -195,7 +203,7 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                  */
             } else if ("io.lettuce.core.masterslave.SentinelConnector$1".equals(t.getClass().getName())) {
                 try {
-                    Object sentinelConnector = ReflectionUtils.get(t,"this$0");
+                    Object sentinelConnector = ReflectionUtils.get(t, "this$0");
                     RedisURI redisURI = ReflectionUtils.get(sentinelConnector, "redisURI");
                     List<RedisURI> sentinels = redisURI.getSentinels();
                     RedisURI current = sentinels.get(0);
@@ -204,6 +212,22 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
                 } catch (Throwable thx) {
                     spanRecord.setRemoteIp(LettuceConstants.ADDRESS_UNKNOW);
                 }
+                return;
+            }
+            /**
+             * 集群模式
+             */
+            else if ("io.lettuce.core.cluster.ClusterDistributionChannelWriter".equals(t.getClass().getName())) {
+                Partitions partitions = ReflectionUtils.getFieldValues(t, "clusterEventListener", "redisClusterClient", "partitions");
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < partitions.size(); i++) {
+                    RedisURI redisURI = partitions.getPartition(0).getUri();
+                    sb.append(redisURI.getHost() + ":" + redisURI.getPort());
+                    if (i < partitions.size() - 1) {
+                        sb.append(";");
+                    }
+                }
+                spanRecord.setRemoteIp(sb.toString());
                 return;
             }
             if (t instanceof DefaultEndpoint) {

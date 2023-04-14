@@ -435,16 +435,11 @@ public final class GlobalConfig {
         if (StringUtils.isNotBlank(s)) {
             return Boolean.parseBoolean(s);
         }
-        s = getSystemProperty("shadowtable_in_shadowdbhbaseserver_mode", "false");
-        return Boolean.parseBoolean(s);
-    }
-
-    static private String getSystemProperty(String key, String defau) {
-        try {
-            return System.getProperty(key, defau);
-        } catch (Exception e) {
-            return null;
+        s = System.getProperty("shadowtable_in_shadowdbhbaseserver_mode");
+        if(StringUtils.isNotEmpty(s)){
+            return Boolean.parseBoolean(s);
         }
+        throw new IllegalStateException("[hbase] shadow table config must assign if shadow table mode or not! Add -Dshadowtable_in_shadowdbhbaseserver_mode=true or false in jvm arguments");
     }
 
     public void setShadowHbaseServer(boolean shadowHbaseServer) {

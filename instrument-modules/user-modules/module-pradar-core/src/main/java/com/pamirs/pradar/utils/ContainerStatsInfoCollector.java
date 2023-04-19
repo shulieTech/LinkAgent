@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -140,7 +141,13 @@ public class ContainerStatsInfoCollector {
         statsInfo.networkSpeed = this.networkSpeed;
         statsInfo.networkUsage = Double.parseDouble(new DecimalFormat("0.0000000").format(100 * (statsInfo.rxRate + statsInfo.txRate) / (networkSpeed / 8.0 * 1024 * 1024)));
 
+        statsInfo.youngGcCount = latest.youngGcCount - previous.youngGcCount;
+        statsInfo.youngGcCosts = latest.youngGcCosts - previous.youngGcCosts;
+        statsInfo.oldGcCount = latest.oldGcCount - previous.oldGcCount;
+        statsInfo.oldGcCosts = latest.oldGcCosts - previous.oldGcCosts;
+
         this.previousRecord = latest;
+
         return statsInfo;
     }
 
@@ -284,6 +291,13 @@ public class ContainerStatsInfoCollector {
                 break;
             }
         }
+
+        List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        statsInfo.youngGcCount = garbageCollectorMXBeans.get(0).getCollectionCount();
+        statsInfo.youngGcCosts = garbageCollectorMXBeans.get(0).getCollectionTime();
+        statsInfo.oldGcCount = garbageCollectorMXBeans.get(1).getCollectionCount();
+        statsInfo.oldGcCosts = garbageCollectorMXBeans.get(1).getCollectionTime();
+
         return statsInfo;
     }
 
@@ -402,6 +416,14 @@ public class ContainerStatsInfoCollector {
         private float latest5MinLoadAvg;
         private float latest15MinLoadAvg;
 
+        /**
+         * gc次数和耗时
+         */
+        private long oldGcCount;
+        private long oldGcCosts;
+        private long youngGcCount;
+        private long youngGcCosts;
+
     }
 
     public static class ContainerStatsInfo {
@@ -426,6 +448,10 @@ public class ContainerStatsInfoCollector {
         private long txRate;
         private long networkSpeed;
         private double networkUsage;
+        private long oldGcCount;
+        private long oldGcCosts;
+        private long youngGcCount;
+        private long youngGcCosts;
 
         public double getCpuUsagePercent() {
             return cpuUsagePercent;
@@ -509,6 +535,22 @@ public class ContainerStatsInfoCollector {
 
         public double getNetworkUsage() {
             return networkUsage;
+        }
+
+        public long getOldGcCosts() {
+            return oldGcCosts;
+        }
+
+        public long getYoungGcCosts() {
+            return youngGcCosts;
+        }
+
+        public long getOldGcCount() {
+            return oldGcCount;
+        }
+
+        public long getYoungGcCount() {
+            return youngGcCount;
         }
     }
 

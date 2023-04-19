@@ -56,6 +56,13 @@ public class InsideContainerResourcesInfoCollector implements Runnable {
                     .append(statsInfo.getUsableDiskSpace()).append('|')
                     .append(statsInfo.getDiskReadBytes()).append('|')
                     .append(statsInfo.getDiskWriteBytes()).append('|');
+
+            // 14版本增加gc次数及时间
+            if(Pradar.PRADAR_MONITOR_LOG_VERSION > 13){
+                stringBuilder.append(statsInfo.getYoungGcCount()).append("|").append(statsInfo.getYoungGcCosts())
+                .append(statsInfo.getOldGcCount()).append("|").append(statsInfo.getOldGcCosts());
+            }
+
             if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
                 stringBuilder.append(1).append('|');
             }

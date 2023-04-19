@@ -18,7 +18,7 @@
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
         <simulator.major.version>5.6.3</simulator.major.version>
-        <simulator.minor.version>3</simulator.minor.version>
+        <simulator.minor.version>4</simulator.minor.version>
     </properties>
 
     <profiles>

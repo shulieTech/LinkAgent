@@ -14,7 +14,6 @@
  */
 package com.pamirs.pradar;
 
-import cn.hutool.core.lang.Snowflake;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;

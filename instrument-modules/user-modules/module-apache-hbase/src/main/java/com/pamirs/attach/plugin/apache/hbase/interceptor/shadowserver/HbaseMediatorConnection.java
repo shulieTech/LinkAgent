@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -18,13 +18,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 
 import com.pamirs.attach.plugin.common.datasource.hbaseserver.MediatorConnection;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.internal.config.ShadowHbaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,15 +63,22 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
     @Override
     public Connection initConnection() {
         try {
-            Object ptConfiguration = matching(args[0]);
+            final Object ptConfiguration = matching(args[0]);
             if (null == ptConfiguration) {
                 logger.error("Hbase 影子Server未找到相关配置，请检查配置是否正确");
                 throw new PressureMeasureError("Hbase 影子Server未找到相关配置，请检查配置是否正确");
             }
-            return ConnectionFactory.createConnection((Configuration)ptConfiguration, (ExecutorService)args[1],
-                (User)args[2]);
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
+            Future<Connection> future = ExecutorServiceFactory.getFactory().submit(new Callable<Connection>() {
+                @Override
+                public Connection call() throws Exception {
+                    return ConnectionFactory.createConnection((Configuration) ptConfiguration, (ExecutorService) args[1], (User) args[2]);
+                }
+            });
+            return future.get(1, TimeUnit.MINUTES);
+        } catch (TimeoutException e) {
+            logger.error("[apache-hbase] create connection 1 minute time out, maybe hbase server not available or config is incorrect!", e);
+        } catch (Exception e) {
+            logger.error("[apache-hbase] create connection occur exception", e);
         }
         return null;
     }
@@ -80,7 +88,7 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         if (!(arg1 instanceof Configuration)) {
             return null;
         }
-        Configuration configuration = (Configuration)arg1;
+        Configuration configuration = (Configuration) arg1;
         String quorum = configuration.get(HConstants.ZOOKEEPER_QUORUM);
         String port = configuration.get(HConstants.ZOOKEEPER_CLIENT_PORT);
         String znode = configuration.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
@@ -94,8 +102,8 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
             if (split.length == 3) {
                 if (logger.isInfoEnabled()) {
                     logger.info("business config quorums:{}, port:{}, znode:{} ---------- " +
-                            "perfomanceTest config quorums:{}, port:{}, znode:{}",
-                        quorum, port, znode, shadowHbaseConfig.getQuorum(), shadowHbaseConfig.getPort(), shadowHbaseConfig.getZnode());
+                                    "perfomanceTest config quorums:{}, port:{}, znode:{}",
+                            quorum, port, znode, shadowHbaseConfig.getQuorum(), shadowHbaseConfig.getPort(), shadowHbaseConfig.getZnode());
                 }
                 if (!split[1].equals(port) || !split[2].equals(znode)) {
                     continue;
@@ -115,7 +123,7 @@ public class HbaseMediatorConnection extends MediatorConnection<Connection> impl
         }
 
         if (ptConfig == null) {
-            logger.warn("hbase shadow base config not find , business config key is {}", quorum+"|"+port+"|"+znode);
+            logger.warn("hbase shadow base config not find , business config key is {}", quorum + "|" + port + "|" + znode);
         }
 
         if (ptConfig != null) {

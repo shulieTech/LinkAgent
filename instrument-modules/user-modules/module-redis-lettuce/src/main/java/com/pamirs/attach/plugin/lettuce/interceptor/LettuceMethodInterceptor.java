@@ -40,9 +40,7 @@ import oshi.util.StringJoiner;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
@@ -219,15 +217,13 @@ public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {
              */
             else if ("io.lettuce.core.cluster.ClusterDistributionChannelWriter".equals(t.getClass().getName())) {
                 Partitions partitions = ReflectionUtils.getFieldValues(t, "clusterEventListener", "redisClusterClient", "partitions");
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < partitions.size(); i++) {
-                    RedisURI redisURI = partitions.getPartition(0).getUri();
-                    sb.append(redisURI.getHost() + ":" + redisURI.getPort());
-                    if (i < partitions.size() - 1) {
-                        sb.append(";");
-                    }
+                Set<String> remoteIpPorts = new HashSet<String>();
+                for (RedisClusterNode partition : partitions) {
+                    RedisURI redisURI = partition.getUri();
+                    remoteIpPorts.add(redisURI.getHost() + ":" + redisURI.getPort());
                 }
-                spanRecord.setRemoteIp(sb.toString());
+                String join = StringUtils.join(remoteIpPorts, ",");
+                spanRecord.setRemoteIp(join);
                 return;
             }
             if (t instanceof DefaultEndpoint) {

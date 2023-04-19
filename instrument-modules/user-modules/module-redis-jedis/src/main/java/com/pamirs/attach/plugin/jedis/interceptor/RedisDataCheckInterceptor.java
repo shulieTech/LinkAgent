@@ -97,7 +97,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
         for (int i = 0, size = keys.size(); i < size; i++) {
             String key = keys.get(i);
             boolean isCluster = Pradar.isClusterTest();
-            boolean withPt = Pradar.isClusterTestPrefix(key);
+            boolean withPt = Pradar.isClusterTestByConfig(key);
             if (isCluster && !withPt) {
                 throw new PressureMeasureError("jedis:压测流量进入业务库...,key = " + key + ", methodName=" + methodName);
             } else if (!isCluster && withPt) {
@@ -308,7 +308,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
                     if (contains) {
                         continue;
                     }
-                    if (Pradar.isClusterTestPrefix(key)) {
+                    if (Pradar.isClusterTestByConfig(key)) {
                         continue;
                     }
                     keys.add(key);
@@ -339,7 +339,7 @@ public class RedisDataCheckInterceptor extends AroundInterceptor {
                     if (contains) {
                         continue;
                     }
-                    if (Pradar.isClusterTestPrefix(key)) {
+                    if (Pradar.isClusterTestByConfig(key)) {
                         continue;
                     }
                     keys.add(key);

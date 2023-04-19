@@ -14,7 +14,9 @@
  */
 package com.pamirs.attach.plugin.catalina.common;
 
+import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
+import com.pamirs.pradar.PradarService;
 import org.apache.catalina.Context;
 import org.apache.catalina.Host;
 import org.apache.catalina.Session;
@@ -29,10 +31,7 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
 import java.security.Principal;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Request 包装类
@@ -49,6 +48,11 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
     protected RequestFacade facade;
     private ServletInputStream inputStream;
 
+    private boolean isClusterTest = false;
+
+    private Map<String, String> traceContext = new HashMap<String, String>(8, 1);
+
+
     public BufferedServletRequestWrapper9x(Request request) {
         super(request.getConnector());
         this.request = request;
@@ -60,12 +64,37 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
         try {
             InputStream is = request.getInputStream();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            byte buff[] = new byte[1024];
+            byte[] buff = new byte[1024];
             int read;
-            while ((read = is.read(buff)) > 0) {
+            while ((read = is.read(buff)) != -1) {
                 baos.write(buff, 0, read);
             }
-            this.buffer = baos.toByteArray();
+            byte[] reqBuffer = baos.toByteArray();
+
+            if (reqBuffer != null && reqBuffer.length > 0){
+                String paramData = new String(reqBuffer);
+                if (paramData.contains(com.pamirs.attach.plugin.catalina.utils.Constants.PRADAR_CLUSTER_FLAG_GW)){
+                    isClusterTest = true;
+                    int startIndex = paramData.indexOf(Constants.PRADAR_CLUSTER_FLAG_GW);
+                    int endIndex = paramData.indexOf(Constants.extendParamEnd);
+
+                    String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
+
+                    String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length(), paramData.length());
+
+                    String[] rpcInfo = agentParam.split(",");
+                    traceContext.put(PradarService.PRADAR_TRACE_APPNAME_KEY, rpcInfo[0]);
+                    traceContext.put(PradarService.PRADAR_UPSTREAM_APPNAME_KEY, rpcInfo[1]);
+                    traceContext.put(PradarService.PRADAR_TRACE_ID_KEY, rpcInfo[2]);
+                    traceContext.put(PradarService.PRADAR_INVOKE_ID_KEY, rpcInfo[3]);
+                    traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
+                    this.buffer = businessParam.getBytes();
+                } else {
+                    this.buffer = reqBuffer;
+                }
+            } else {
+                this.buffer = reqBuffer;
+            }
         } catch (IOException e) {
             //ignore
         }
@@ -767,5 +796,13 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
 
         }
 
+    }
+
+    public boolean isClusterTest() {
+        return isClusterTest;
+    }
+
+    public Map<String, String> getTraceContext() {
+        return traceContext;
     }
 }

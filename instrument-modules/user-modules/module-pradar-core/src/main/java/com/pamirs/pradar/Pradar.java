@@ -397,6 +397,20 @@ public final class Pradar {
     }
 
     /**
+     * redis的key的压测标加在前缀还是后缀，通过配置
+     * @param value
+     * @return
+     */
+    public static String addClusterTestByConfig(String value) {
+        if (getClusterTestPrefixOrSuffix()) {
+            return addClusterTestPrefix(value);
+        } else {
+            return addClusterTestSuffix(value);
+        }
+    }
+
+
+    /**
      * 给指定值添加压测前缀
      *
      * @param value 指定值
@@ -625,6 +639,19 @@ public final class Pradar {
     }
 
     /**
+     * 通过配置，判断前缀还是后缀
+     * @return
+     */
+    public static boolean isClusterTestByConfig(String value) {
+        boolean prefixBoolean = getClusterTestPrefixOrSuffix();
+        if (prefixBoolean) {
+            return isClusterTestPrefix(value);
+        } else {
+            return isClusterTestSuffix(value);
+        }
+    }
+
+    /**
      * 判断当前值是否是压测前缀开头
      *
      * @param value 当前值
@@ -848,6 +875,28 @@ public final class Pradar {
         System.out.println("SIMULATOR: cluster test prefix is:" + prefix);
         return prefix;
     }
+
+
+
+    /**
+     * redis 压测的key加在前面还是后面的配置
+     * 默认加在前面
+     *
+     *
+     * @return
+     */
+    public static Boolean getClusterTestPrefixOrSuffix() {
+        String value = System.getProperty("pradar.cluster.test.prefix.suffix");
+        LOGGER.info("pradar.cluster.test.prefix.suffix is " + value);
+        if (StringUtils.isBlank(value)) {
+            return true;
+        }
+        if (value.equals("suffix")) {
+            return false;
+        }
+        return true;
+    }
+
 
     /**
      * 获取压测后缀非下划线方式，类似oss不得使用下划线

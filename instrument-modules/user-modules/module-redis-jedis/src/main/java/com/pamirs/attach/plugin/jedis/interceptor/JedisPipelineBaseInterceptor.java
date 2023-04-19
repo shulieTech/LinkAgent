@@ -14,8 +14,6 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
-import java.util.Collection;
-
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisClientMediator;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
 import com.pamirs.pradar.Pradar;
@@ -24,6 +22,8 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+
+import java.util.Collection;
 
 /**
  * @Author: guohz
@@ -59,8 +59,8 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 return args;
             }
 
-            if (!Pradar.isClusterTestPrefix(key)) {
-                key = Pradar.addClusterTestPrefix(key);
+            if (!Pradar.isClusterTestByConfig(key)) {
+                key = Pradar.addClusterTestByConfig(key);
                 args[0] = key;
                 return args;
             }
@@ -73,8 +73,8 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 if (whiteList != null && whiteList.contains(key)) {
                     continue;
                 }
-                if (!Pradar.isClusterTestPrefix(key)) {
-                    key = Pradar.addClusterTestPrefix(key);
+                if (!Pradar.isClusterTestByConfig(key)) {
+                    key = Pradar.addClusterTestByConfig(key);
                     keys[i] = key;
                 }
             }
@@ -88,8 +88,8 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 return args;
             }
 
-            if (!Pradar.isClusterTestPrefix(key)) {
-                key = Pradar.addClusterTestPrefix(key);
+            if (!Pradar.isClusterTestByConfig(key)) {
+                key = Pradar.addClusterTestByConfig(key);
                 args[0] = key.getBytes();
                 return args;
             }
@@ -102,8 +102,8 @@ public class JedisPipelineBaseInterceptor extends ParametersWrapperInterceptorAd
                 return args;
             }
 
-            if (!Pradar.isClusterTestPrefix(key)) {
-                key = Pradar.addClusterTestPrefix(key);
+            if (!Pradar.isClusterTestByConfig(key)) {
+                key = Pradar.addClusterTestByConfig(key);
                 keyBytes[0] = key.getBytes();
                 args[0] = keyBytes;
                 return args;

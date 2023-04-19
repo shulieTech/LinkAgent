@@ -77,7 +77,6 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
                     isClusterTest = true;
                     int startIndex = paramData.indexOf(Constants.PRADAR_CLUSTER_FLAG_GW);
                     int endIndex = paramData.indexOf(Constants.extendParamEnd);
-
                     String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
 
                     String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length(), paramData.length());

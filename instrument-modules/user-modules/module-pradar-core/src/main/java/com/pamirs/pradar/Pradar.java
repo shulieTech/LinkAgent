@@ -85,7 +85,7 @@ public final class Pradar {
      * trace日志版本号
      */
     static public final int PRADAR_TARCE_LOG_VERSION = getPradarTraceLogVersion();
-    static public final int DEFAULT_PRADAR_MONITOR_LOG_VERSION = 13;
+    static public final int DEFAULT_PRADAR_MONITOR_LOG_VERSION = 14;
     /**
      * monitor日志版本号
      */

@@ -108,8 +108,8 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
                     oldGcCosts = latest.oldGcCosts - gcSnapshot.oldGcCosts;
                     gcSnapshot = latest;
                 }
-                stringBuilder.append(youngGcCount).append("|").append(youngGcCosts)
-                        .append(oldGcCount).append("|").append(oldGcCosts);
+                stringBuilder.append(youngGcCount).append("|").append(youngGcCosts).append("|")
+                        .append(oldGcCount).append("|").append(oldGcCosts).append("|");
             }
 
             if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {

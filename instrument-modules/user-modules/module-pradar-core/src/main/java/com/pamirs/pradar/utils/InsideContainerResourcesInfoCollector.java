@@ -59,8 +59,8 @@ public class InsideContainerResourcesInfoCollector implements Runnable {
 
             // 14版本增加gc次数及时间
             if(Pradar.PRADAR_MONITOR_LOG_VERSION > 13){
-                stringBuilder.append(statsInfo.getYoungGcCount()).append("|").append(statsInfo.getYoungGcCosts())
-                .append(statsInfo.getOldGcCount()).append("|").append(statsInfo.getOldGcCosts());
+                stringBuilder.append(statsInfo.getYoungGcCount()).append("|").append(statsInfo.getYoungGcCosts()).append("|")
+                .append(statsInfo.getOldGcCount()).append("|").append(statsInfo.getOldGcCosts()).append("|");
             }
 
             if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {

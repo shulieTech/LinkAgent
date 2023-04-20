@@ -97,19 +97,19 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
 
             // 14版本增加gc次数及时间
             if (Pradar.PRADAR_MONITOR_LOG_VERSION > 13) {
-                long youngGcCount = 0, youngGcCosts = 0, oldGcCount = 0, oldGcCosts = 0;
+                long youngGcCount = 0, youngGcCost = 0, oldGcCount = 0, oldGcCost = 0;
                 if (gcSnapshot == null) {
                     gcSnapshot = buildGcSnapshot();
                 } else {
                     GcSnapshot latest = buildGcSnapshot();
                     youngGcCount = latest.youngGcCount - gcSnapshot.youngGcCount;
-                    youngGcCosts = latest.youngGcCosts - gcSnapshot.youngGcCosts;
+                    youngGcCost = latest.youngGcCost - gcSnapshot.youngGcCost;
                     oldGcCount = latest.oldGcCount - gcSnapshot.oldGcCount;
-                    oldGcCosts = latest.oldGcCosts - gcSnapshot.oldGcCosts;
+                    oldGcCost = latest.oldGcCost - gcSnapshot.oldGcCost;
                     gcSnapshot = latest;
                 }
-                stringBuilder.append(youngGcCount).append("|").append(youngGcCosts).append("|")
-                        .append(oldGcCount).append("|").append(oldGcCosts).append("|");
+                stringBuilder.append(youngGcCount).append("|").append(youngGcCost).append("|")
+                        .append(oldGcCount).append("|").append(oldGcCost).append("|");
             }
 
             if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
@@ -250,9 +250,9 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
         List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
         GcSnapshot snapshot = new GcSnapshot();
         snapshot.youngGcCount = garbageCollectorMXBeans.get(0).getCollectionCount();
-        snapshot.youngGcCosts = garbageCollectorMXBeans.get(0).getCollectionTime();
+        snapshot.youngGcCost = garbageCollectorMXBeans.get(0).getCollectionTime();
         snapshot.oldGcCount = garbageCollectorMXBeans.get(1).getCollectionCount();
-        snapshot.oldGcCosts = garbageCollectorMXBeans.get(1).getCollectionTime();
+        snapshot.oldGcCost = garbageCollectorMXBeans.get(1).getCollectionTime();
         return snapshot;
     }
 
@@ -261,9 +261,9 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
          * gc次数和耗时
          */
         private long youngGcCount;
-        private long youngGcCosts;
+        private long youngGcCost;
         private long oldGcCount;
-        private long oldGcCosts;
+        private long oldGcCost;
 
     }
 

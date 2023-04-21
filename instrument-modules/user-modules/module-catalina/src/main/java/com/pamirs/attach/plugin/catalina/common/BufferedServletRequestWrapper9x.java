@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,6 +16,8 @@ package com.pamirs.attach.plugin.catalina.common;
 
 import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
+import com.pamirs.pradar.InvokeContext;
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import org.apache.catalina.Context;
 import org.apache.catalina.Host;
@@ -71,9 +73,9 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
             }
             byte[] reqBuffer = baos.toByteArray();
 
-            if (reqBuffer != null && reqBuffer.length > 0){
+            if (reqBuffer != null && reqBuffer.length > 0) {
                 String paramData = new String(reqBuffer);
-                if (paramData.contains(com.pamirs.attach.plugin.catalina.utils.Constants.PRADAR_CLUSTER_FLAG_GW)){
+                if (paramData.contains(com.pamirs.attach.plugin.catalina.utils.Constants.PRADAR_CLUSTER_FLAG_GW)) {
                     isClusterTest = true;
                     int startIndex = paramData.indexOf(Constants.PRADAR_CLUSTER_FLAG_GW);
                     int endIndex = paramData.indexOf(Constants.extendParamEnd);
@@ -87,6 +89,8 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
                     traceContext.put(PradarService.PRADAR_TRACE_ID_KEY, rpcInfo[2]);
                     traceContext.put(PradarService.PRADAR_INVOKE_ID_KEY, rpcInfo[3]);
                     traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
+                    Pradar.setInvokeContext(Pradar.fromMap(traceContext));
+                    Pradar.setClusterTest(true);
                     this.buffer = businessParam.getBytes();
                 } else {
                     this.buffer = reqBuffer;

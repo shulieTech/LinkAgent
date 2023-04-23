@@ -79,7 +79,8 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
 
                     String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
 
-                    String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length(), paramData.length());
+                    String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length());
+                    businessParam = restoreParamData(businessParam);
 
                     String[] rpcInfo = agentParam.split(",");
                     traceContext.put(PradarService.PRADAR_TRACE_APPNAME_KEY, rpcInfo[0]);
@@ -99,6 +100,18 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
         } catch (IOException e) {
             //ignore
         }
+    }
+
+    /**
+     * 如果paramData是一个数组，还原成对象
+     *
+     * @return
+     */
+    private String restoreParamData(String businessParam) {
+        if (businessParam.startsWith("[")) {
+            return businessParam.substring(1, businessParam.length() - 1);
+        }
+        return businessParam;
     }
 
 

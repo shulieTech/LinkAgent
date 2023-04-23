@@ -112,14 +112,8 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
      * @return
      */
     private String restoreParamData(String businessParam) {
-        if (businessParam.contains("\"paramData\":\"[{")) {
-            Map<String, String> object = JSON.parseObject(businessParam, Map.class);
-            String paramData = object.get("paramData");
-            if (paramData.startsWith("[")) {
-                String substring = paramData.substring(1, paramData.length() - 1);
-                object.put("paramData", substring);
-            }
-            return JSON.toJSONString(object);
+        if (businessParam.startsWith("[")) {
+            return businessParam.substring(1, businessParam.length() - 1);
         }
         return businessParam;
     }

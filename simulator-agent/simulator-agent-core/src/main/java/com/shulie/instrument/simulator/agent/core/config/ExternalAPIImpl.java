@@ -63,7 +63,7 @@ public class ExternalAPIImpl implements ExternalAPI {
     private final static String HEART_URL = "api/agent/heartbeat";
     private final static String REPORT_URL = "api/agent/application/node/probe/operateResult";
 
-    MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+    MessageSendService messageSendService ;
 
     public ExternalAPIImpl(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
@@ -171,6 +171,10 @@ public class ExternalAPIImpl implements ExternalAPI {
         final String agentHeartUrl = joinUrl(webUrl, HEART_URL);
 
         final AtomicReference<List<CommandPacket>> reference = new AtomicReference<List<CommandPacket>>(new ArrayList<CommandPacket>());
+
+        if(messageSendService == null){
+            messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+        }
 
         messageSendService.send(HEART_URL, agentConfig.getHttpMustHeaders(), JSON.toJSONString(heartRequest), new MessageSendCallBack() {
             @Override

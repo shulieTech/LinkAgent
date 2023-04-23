@@ -14,6 +14,8 @@
  */
 package com.pamirs.attach.plugin.catalina.common;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
 import com.pamirs.pradar.InvokeContext;
@@ -81,7 +83,8 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
                     int endIndex = paramData.indexOf(Constants.extendParamEnd);
                     String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
 
-                    String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length(), paramData.length());
+                    String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length());
+                    businessParam = restoreParamData(businessParam);
 
                     String[] rpcInfo = agentParam.split(",");
                     traceContext.put(PradarService.PRADAR_TRACE_APPNAME_KEY, rpcInfo[0]);
@@ -101,6 +104,24 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
         } catch (IOException e) {
             //ignore
         }
+    }
+
+    /**
+     * 如果paramData是一个数组，还原成对象
+     *
+     * @return
+     */
+    private String restoreParamData(String businessParam) {
+        if (businessParam.contains("\"paramData\":\"[{")) {
+            Map<String, String> object = JSON.parseObject(businessParam, Map.class);
+            String paramData = object.get("paramData");
+            if (paramData.startsWith("[")) {
+                String substring = paramData.substring(1, paramData.length() - 1);
+                object.put("paramData", substring);
+            }
+            return JSON.toJSONString(object);
+        }
+        return businessParam;
     }
 
 

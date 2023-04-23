@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -27,6 +27,8 @@ import org.apache.catalina.core.AsyncContextImpl;
 import org.apache.catalina.mapper.MappingData;
 import org.apache.tomcat.util.buf.MessageBytes;
 import org.apache.tomcat.util.http.ServerCookies;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -43,6 +45,8 @@ import java.util.*;
  * @since 2021/2/20 5:01 下午
  */
 public class BufferedServletRequestWrapper extends Request implements IBufferedServletRequestWrapper {
+
+    private final static Logger logger = LoggerFactory.getLogger(BufferedServletRequestWrapper.class);
 
     private byte[] buffer;
     private final Request request;
@@ -70,9 +74,10 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
             }
             byte[] reqBuffer = baos.toByteArray();
 
-            if (reqBuffer != null && reqBuffer.length > 0){
+            if (reqBuffer != null && reqBuffer.length > 0) {
                 String paramData = new String(reqBuffer);
-                if (paramData.contains(com.pamirs.attach.plugin.catalina.utils.Constants.PRADAR_CLUSTER_FLAG_GW)){
+//                logger.info("[gw-catalina] http request body:{}", paramData);
+                if (paramData.contains(com.pamirs.attach.plugin.catalina.utils.Constants.PRADAR_CLUSTER_FLAG_GW)) {
                     isClusterTest = true;
                     int startIndex = paramData.indexOf(Constants.PRADAR_CLUSTER_FLAG_GW);
                     int endIndex = paramData.indexOf(Constants.extendParamEnd);
@@ -80,7 +85,10 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
                     String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
 
                     String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length());
+//                    logger.info("[gw-catalina] businessParam: {}", businessParam);
+
                     businessParam = restoreParamData(businessParam);
+//                    logger.info("[gw-catalina] restored businessParam: {}", businessParam);
 
                     String[] rpcInfo = agentParam.split(",");
                     traceContext.put(PradarService.PRADAR_TRACE_APPNAME_KEY, rpcInfo[0]);
@@ -113,7 +121,6 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
         }
         return businessParam;
     }
-
 
 
     @Override

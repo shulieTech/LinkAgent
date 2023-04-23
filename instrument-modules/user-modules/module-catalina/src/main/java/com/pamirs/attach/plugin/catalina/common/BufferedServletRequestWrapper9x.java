@@ -14,22 +14,24 @@
  */
 package com.pamirs.attach.plugin.catalina.common;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
-import com.pamirs.pradar.InvokeContext;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import org.apache.catalina.Context;
 import org.apache.catalina.Host;
 import org.apache.catalina.Session;
 import org.apache.catalina.Wrapper;
-import org.apache.catalina.connector.*;
+import org.apache.catalina.connector.Connector;
+import org.apache.catalina.connector.Request;
+import org.apache.catalina.connector.RequestFacade;
+import org.apache.catalina.connector.Response;
 import org.apache.catalina.core.AsyncContextImpl;
 import org.apache.catalina.mapper.MappingData;
 import org.apache.tomcat.util.buf.MessageBytes;
 import org.apache.tomcat.util.http.ServerCookies;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -46,6 +48,8 @@ import java.util.*;
  * @since 2021/2/20 5:01 下午
  */
 public class BufferedServletRequestWrapper9x extends Request implements IBufferedServletRequestWrapper {
+
+    private final static Logger logger = LoggerFactory.getLogger(BufferedServletRequestWrapper.class);
 
     private byte[] buffer;
     private final Request request;
@@ -84,7 +88,10 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
                     String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
 
                     String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length());
+//                    logger.info("[gw-catalina] businessParam: {}", businessParam);
+
                     businessParam = restoreParamData(businessParam);
+//                    logger.info("[gw-catalina] restored businessParam: {}", businessParam);
 
                     String[] rpcInfo = agentParam.split(",");
                     traceContext.put(PradarService.PRADAR_TRACE_APPNAME_KEY, rpcInfo[0]);

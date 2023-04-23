@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.catalina.common;
 
 import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import org.apache.catalina.Context;
@@ -99,8 +100,10 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
                     traceContext.put(PradarService.PRADAR_TRACE_ID_KEY, rpcInfo[2]);
                     traceContext.put(PradarService.PRADAR_INVOKE_ID_KEY, rpcInfo[3]);
                     traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
-                    Pradar.setInvokeContext(Pradar.fromMap(traceContext));
-                    Pradar.setClusterTest(true);
+
+                    ReflectionUtils.set(Pradar.getInvokeContext(),"traceId", rpcInfo[2]);
+                    Pradar.getInvokeContext().setClusterTest(true);
+                    Pradar.getInvokeContextMap().putAll(traceContext);
                     this.buffer = businessParam.getBytes();
                 } else {
                     this.buffer = reqBuffer;

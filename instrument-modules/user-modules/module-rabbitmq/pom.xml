@@ -20,16 +20,13 @@
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
             <version>2.9.1</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-recipes</artifactId>
             <version>2.9.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>11.0.1</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>

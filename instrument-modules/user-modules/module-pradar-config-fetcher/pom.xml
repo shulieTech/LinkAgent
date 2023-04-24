@@ -43,18 +43,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>io.shulie</groupId>
-            <artifactId>oshi-core</artifactId>
-            <version>1.0.0</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>slf4j-api</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-recipes -->
         <dependency>
             <groupId>org.apache.curator</groupId>

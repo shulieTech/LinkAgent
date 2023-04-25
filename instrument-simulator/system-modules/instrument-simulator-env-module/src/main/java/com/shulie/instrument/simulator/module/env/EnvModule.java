@@ -19,7 +19,6 @@ import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.module.ParamSupported;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,7 @@ public class EnvModule extends ParamSupported implements ExtensionModule {
 
     private Map<String, String> getEnvProperties(String key) {
         Map<String, String> result = new HashMap<String, String>();
-        if (StringUtils.isNotBlank(key)) {
+        if (key != null && key.length() > 0) {
             result.put(key, System.getenv(key));
         } else {
             Map<String, String> props = System.getenv();

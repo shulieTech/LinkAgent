@@ -37,13 +37,17 @@ public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() throws Throwable {
-        this.enhanceTemplate.enhance(this, "feign.ReflectiveFeign$FeignInvocationHandler", new EnhanceCallback() {
+
+        EnhanceCallback feignInvocationHandler = new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod enqueueMethod = target.getDeclaredMethod("invoke", "java.lang.Object", "java.lang.reflect.Method", "java.lang.Object[]");
                 enqueueMethod.addInterceptor(Listeners.of(FeignMockInterceptor.class));
             }
-        });
+        };
+
+        this.enhanceTemplate.enhance(this, "feign.ReflectiveFeign$FeignInvocationHandler", feignInvocationHandler);
+        this.enhanceTemplate.enhance(this, "feign.hystrix.HystrixInvocationHandler", feignInvocationHandler);
 /*
         this.enhanceTemplate.enhance(this, "feign.SynchronousMethodHandler", new EnhanceCallback() {
             @Override

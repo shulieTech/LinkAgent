@@ -14,28 +14,12 @@
  */
 package com.shulie.instrument.simulator.module.stack.trace;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-
-import javax.annotation.Resource;
-
 import com.shulie.instrument.simulator.api.filter.ClassDescriptor;
 import com.shulie.instrument.simulator.api.filter.ExtFilter;
 import com.shulie.instrument.simulator.api.filter.Filter;
 import com.shulie.instrument.simulator.api.filter.MethodDescriptor;
 import com.shulie.instrument.simulator.api.listener.Listeners;
-import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.listener.ext.AdviceListener;
-import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
-import com.shulie.instrument.simulator.api.listener.ext.EventWatchBuilder;
-import com.shulie.instrument.simulator.api.listener.ext.EventWatcher;
+import com.shulie.instrument.simulator.api.listener.ext.*;
 import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
@@ -47,10 +31,13 @@ import com.shulie.instrument.simulator.module.stack.trace.express.ExpressExcepti
 import com.shulie.instrument.simulator.module.stack.trace.util.PatternMatchUtils;
 import com.shulie.instrument.simulator.module.stack.trace.util.ThreadUtil;
 import com.shulie.instrument.simulator.module.stack.trace.util.TraceInfo;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
 import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
 
@@ -290,7 +277,7 @@ public class TraceListener extends AdviceListener {
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
                 String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                return ArrayUtils.contains(interfaces, className);
+                return indexOf(interfaces, className,0) >= 0;
             }
 
             @Override
@@ -350,7 +337,7 @@ public class TraceListener extends AdviceListener {
              * 如果是顶点则获取监测的数据
              */
             String traceId = traceView.getTraceId();
-            if (StringUtils.isBlank(traceId)) {
+            if (traceId == null || traceId.length() == 0) {
                 traceId = "NONE";
             }
             Queue<TraceView> traceViewQueue = traceViews.get(traceId);
@@ -371,5 +358,28 @@ public class TraceListener extends AdviceListener {
                 latch.countDown();
             }
         }
+    }
+
+    public static int indexOf(Object[] array, Object objectToFind, int startIndex) {
+        if (array == null) {
+            return -1;
+        }
+        if (startIndex < 0) {
+            startIndex = 0;
+        }
+        if (objectToFind == null) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (array[i] == null) {
+                    return i;
+                }
+            }
+        } else if (array.getClass().getComponentType().isInstance(objectToFind)) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (objectToFind.equals(array[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 }

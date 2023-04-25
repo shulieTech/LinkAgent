@@ -28,8 +28,6 @@ import com.shulie.instrument.simulator.module.model.trace.TraceNode;
 import com.shulie.instrument.simulator.module.model.trace.TraceView;
 import com.shulie.instrument.simulator.module.util.ThreadUtil;
 import com.shulie.instrument.simulator.module.util.TraceInfo;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +109,7 @@ public class TraceListener extends AdviceListener {
      * @return true 如果条件表达式满足
      */
     protected boolean isConditionMet(String conditionExpress, Advice advice, long cost) throws ExpressException {
-        return StringUtils.isBlank(conditionExpress)
+        return isBlank(conditionExpress)
                 || ExpressFactory.threadLocalExpress(advice)
                 .bind(COST_VARIABLE, cost)
                 .bind(TARGET, advice.getTarget())
@@ -123,7 +121,7 @@ public class TraceListener extends AdviceListener {
     }
 
     protected Object getExpressionResult(String express, Advice advice, long cost) throws ExpressException {
-        if (StringUtils.isBlank(express)) {
+        if (isBlank(express)) {
             return null;
         }
         return ExpressFactory.threadLocalExpress(advice)
@@ -284,7 +282,7 @@ public class TraceListener extends AdviceListener {
                     @Override
                     public boolean doClassFilter(ClassDescriptor classDescriptor) {
                         String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                        return ArrayUtils.contains(interfaces, traceNode.getClassName());
+                        return indexOf(interfaces, traceNode.getClassName(), 0) >= 0;
                     }
 
                     @Override
@@ -304,7 +302,7 @@ public class TraceListener extends AdviceListener {
                     for (Class clazz : classes) {
                         if (Proxy.isProxyClass(clazz)) {
                             Class[] interfaces = clazz.getInterfaces();
-                            if (ArrayUtils.isNotEmpty(interfaces)) {
+                            if (interfaces != null && interfaces.length > 0) {
                                 for (final Class interfaceClass : interfaces) {
                                     Set<Class<?>> implClasses = loadedClassDataSource.find(new ExtFilter() {
                                         @Override
@@ -325,7 +323,7 @@ public class TraceListener extends AdviceListener {
                                         @Override
                                         public boolean doClassFilter(ClassDescriptor classDescriptor) {
                                             String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                                            return ArrayUtils.contains(interfaces, interfaceClass.getName());
+                                            return indexOf(interfaces, interfaceClass.getName(), 0) >= 0;
                                         }
 
                                         @Override
@@ -464,5 +462,32 @@ public class TraceListener extends AdviceListener {
         traceView.setInterface(isInterface);
         traceView.error(callJavaClassName);
         traceView.end();
+    }
+
+    private boolean isBlank(String str){
+        return str == null || str.length() == 0;
+    }
+
+    public static int indexOf(Object[] array, Object objectToFind, int startIndex) {
+        if (array == null) {
+            return -1;
+        }
+        if (startIndex < 0) {
+            startIndex = 0;
+        }
+        if (objectToFind == null) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (array[i] == null) {
+                    return i;
+                }
+            }
+        } else if (array.getClass().getComponentType().isInstance(objectToFind)) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (objectToFind.equals(array[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 }

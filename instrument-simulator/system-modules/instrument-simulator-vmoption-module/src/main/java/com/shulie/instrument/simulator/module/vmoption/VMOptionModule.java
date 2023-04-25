@@ -22,7 +22,6 @@ import com.shulie.instrument.simulator.module.ParamSupported;
 import com.shulie.instrument.simulator.module.model.vmoption.VmOption;
 import com.sun.management.HotSpotDiagnosticMXBean;
 import com.sun.management.VMOption;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 import java.lang.management.ManagementFactory;
@@ -46,7 +45,7 @@ public class VMOptionModule extends ParamSupported implements ExtensionModule {
             HotSpotDiagnosticMXBean hotSpotDiagnosticMXBean = ManagementFactory
                     .getPlatformMXBean(HotSpotDiagnosticMXBean.class);
 
-            if (StringUtils.isBlank(name)) {
+            if (name == null || name.length() == 0) {
                 // show all options
                 final List<VMOption> diagnosticOptions = hotSpotDiagnosticMXBean.getDiagnosticOptions();
                 List<VmOption> vmOptions = new ArrayList<VmOption>();

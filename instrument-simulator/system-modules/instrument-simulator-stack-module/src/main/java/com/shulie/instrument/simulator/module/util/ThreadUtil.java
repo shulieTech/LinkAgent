@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.module.util;
 
 import com.shulie.instrument.simulator.module.model.stack.StackElement;
-import org.apache.commons.lang.ArrayUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +29,7 @@ abstract public class ThreadUtil {
     public static List<StackElement> getThreadStack(Thread currentThread) {
         StackTraceElement[] stackTraceElementArray = currentThread.getStackTrace();
         List<StackElement> stackElements = new ArrayList<StackElement>();
-        if (ArrayUtils.isNotEmpty(stackTraceElementArray)) {
+        if (stackTraceElementArray != null && stackTraceElementArray.length > 0) {
             for (StackTraceElement element : stackTraceElementArray) {
                 StackElement stackElement = new StackElement();
                 stackElement.setClassName(element.getClassName());

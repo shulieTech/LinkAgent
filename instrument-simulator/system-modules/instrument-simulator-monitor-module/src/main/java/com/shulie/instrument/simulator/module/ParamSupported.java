@@ -14,8 +14,6 @@
  */
 package com.shulie.instrument.simulator.module;
 
-import org.apache.commons.lang.math.NumberUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +21,6 @@ import java.util.Map;
 
 import static com.shulie.instrument.simulator.api.util.ArrayUtils.isEmpty;
 import static java.util.Arrays.asList;
-import static org.apache.commons.lang.StringUtils.isNotBlank;
 
 /**
  * 命令参数支撑类
@@ -103,7 +100,7 @@ public class ParamSupported {
                                         final Converter<T> converter,
                                         final T defaultValue) {
         final String string = param.get(name);
-        return isNotBlank(string)
+        return (string != null && string.length() > 0)
                 ? converter.convert(string)
                 : defaultValue;
     }
@@ -156,7 +153,7 @@ public class ParamSupported {
     protected static int getIntParameter(final Map<String, String> param,
                                          final String name, int defaultValue) {
         String value = getParameter(param, name);
-        if (!NumberUtils.isDigits(value)) {
+        if (!isDigits(value)) {
             return defaultValue;
         }
         return Integer.valueOf(value);
@@ -170,7 +167,7 @@ public class ParamSupported {
     protected static long getLongParameter(final Map<String, String> param,
                                            final String name, long defaultValue) {
         String value = getParameter(param, name);
-        if (!NumberUtils.isDigits(value)) {
+        if (!isDigits(value)) {
             return defaultValue;
         }
         return Long.valueOf(value);
@@ -220,6 +217,17 @@ public class ParamSupported {
                 (Converter<T>) converterMap.get(type),
                 defaultValueArray
         );
+    }
+    public static boolean isDigits(String str) {
+        if (str == null || str.length() == 0) {
+            return false;
+        }
+        for (int i = 0; i < str.length(); i++) {
+            if (!Character.isDigit(str.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
 

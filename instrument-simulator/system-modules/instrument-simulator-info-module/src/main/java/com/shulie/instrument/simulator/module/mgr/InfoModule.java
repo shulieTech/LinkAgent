@@ -21,7 +21,6 @@ import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.resource.ModuleManager;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.module.model.info.CommandInfo;
-import org.apache.commons.lang.ClassUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,9 +134,9 @@ public class InfoModule implements ExtensionModule {
         }
 
         final List<Class<?>> allSuperClassesAndInterfaces = new ArrayList<Class<?>>();
-        List<Class<?>> allSuperclasses = ClassUtils.getAllSuperclasses(cls);
+        List<Class<?>> allSuperclasses = getAllSuperclasses(cls);
         int superClassIndex = 0;
-        List<Class<?>> allInterfaces = ClassUtils.getAllInterfaces(cls);
+        List<Class<?>> allInterfaces = getAllInterfaces(cls);
         int interfaceIndex = 0;
         while (interfaceIndex < allInterfaces.size() ||
                 superClassIndex < allSuperclasses.size()) {
@@ -156,5 +155,44 @@ public class InfoModule implements ExtensionModule {
             allSuperClassesAndInterfaces.add(acls);
         }
         return allSuperClassesAndInterfaces;
+    }
+
+    public static List getAllSuperclasses(Class cls) {
+        if (cls == null) {
+            return null;
+        }
+        List classes = new ArrayList();
+        Class superclass = cls.getSuperclass();
+        while (superclass != null) {
+            classes.add(superclass);
+            superclass = superclass.getSuperclass();
+        }
+        return classes;
+    }
+
+    public static List getAllInterfaces(Class cls) {
+        if (cls == null) {
+            return null;
+        }
+
+        List interfacesFound = new ArrayList();
+        getAllInterfaces(cls, interfacesFound);
+
+        return interfacesFound;
+    }
+
+    private static void getAllInterfaces(Class cls, List interfacesFound) {
+        while (cls != null) {
+            Class[] interfaces = cls.getInterfaces();
+
+            for (int i = 0; i < interfaces.length; i++) {
+                if (!interfacesFound.contains(interfaces[i])) {
+                    interfacesFound.add(interfaces[i]);
+                    getAllInterfaces(interfaces[i], interfacesFound);
+                }
+            }
+
+            cls = cls.getSuperclass();
+        }
     }
 }

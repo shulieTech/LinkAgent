@@ -26,7 +26,6 @@ import com.shulie.instrument.simulator.module.ParamSupported;
 import com.shulie.instrument.simulator.module.model.jad.JadInfo;
 import com.shulie.instrument.simulator.module.util.ClassUtils;
 import com.shulie.instrument.simulator.module.util.Decompiler;
-import org.apache.commons.collections.CollectionUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +97,7 @@ public class JadModule extends ParamSupported implements ExtensionModule {
     }
 
     private Set<String> toClassName(Set<Class<?>> sets) {
-        if (CollectionUtils.isEmpty(sets)) {
+        if (sets == null || sets.isEmpty()) {
             return Collections.EMPTY_SET;
         }
         Set<String> classNames = new HashSet<String>();

@@ -26,11 +26,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>30.1-jre</version>
-        </dependency>
-        <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>

@@ -46,11 +46,6 @@
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>11.0.1</version>
-        </dependency>
     </dependencies>
     <build>
         <plugins>

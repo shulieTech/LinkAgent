@@ -92,11 +92,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>1.10.11</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>1.21</version>
@@ -108,18 +103,6 @@
             <version>1.2</version>
         </dependency>
 
-
-        <dependency>
-            <groupId>com.aliyun.oss</groupId>
-            <artifactId>aliyun-sdk-oss</artifactId>
-            <version>3.11.3</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
-        <dependency>
-            <groupId>commons-net</groupId>
-            <artifactId>commons-net</artifactId>
-            <version>3.8.0</version>
-        </dependency>
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-message-sdk-collector</artifactId>
@@ -146,6 +129,30 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.12.0</version>
         </dependency>
+
+
+        <!-- #################################### 在线升级探针功能废弃 #################################### -->
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.10.11</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.11.3</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.8.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- #################################### 在线升级探针功能废弃 #################################### -->
+
     </dependencies>
 
     <build>

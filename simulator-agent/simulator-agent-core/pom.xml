@@ -21,12 +21,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>5.5.9</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-agent-provider</artifactId>
             <version>${project.version}</version>
@@ -145,6 +139,12 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>1.21</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.5.9</version>
             <scope>provided</scope>
         </dependency>
         <!-- #################################### 在线升级探针功能废弃 #################################### -->

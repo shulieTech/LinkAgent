@@ -19,8 +19,8 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
 
+import com.shulie.instrument.simulator.agent.core.util.IOUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import org.apache.commons.io.IOUtils;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io

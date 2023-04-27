@@ -15,26 +15,26 @@
     <modules>
         <module>instrument-simulator-env-module</module>
         <module>instrument-simulator-gc-module</module>
-        <module>instrument-simulator-heapdump-module</module>
-        <module>instrument-simulator-jad-module</module>
-        <module>instrument-simulator-logger-module</module>
+<!--        <module>instrument-simulator-heapdump-module</module>-->
+<!--        <module>instrument-simulator-jad-module</module>-->
+<!--        <module>instrument-simulator-logger-module</module>-->
         <module>instrument-simulator-memory-module</module>
-        <module>instrument-simulator-monitor-module</module>
-        <module>instrument-simulator-runtime-module</module>
-        <module>instrument-simulator-ognl-module</module>
+<!--        <module>instrument-simulator-monitor-module</module>-->
+<!--        <module>instrument-simulator-runtime-module</module>-->
+<!--        <module>instrument-simulator-ognl-module</module>-->
         <module>instrument-simulator-stack-module</module>
-        <module>instrument-simulator-sysprop-module</module>
+<!--        <module>instrument-simulator-sysprop-module</module>-->
         <module>instrument-simulator-thread-module</module>
-        <module>instrument-simulator-tomcat-module</module>
+<!--        <module>instrument-simulator-tomcat-module</module>-->
         <module>instrument-simulator-trace-module</module>
-        <module>instrument-simulator-vmoption-module</module>
-        <module>instrument-simulator-watch-module</module>
+<!--        <module>instrument-simulator-vmoption-module</module>-->
+<!--        <module>instrument-simulator-watch-module</module>-->
         <module>instrument-simulator-info-module</module>
-        <module>instrument-simulator-profiler-module</module>
+<!--        <module>instrument-simulator-profiler-module</module>-->
         <module>instrument-simulator-management-module</module>
-        <module>instrument-simulator-sc-module</module>
+<!--        <module>instrument-simulator-sc-module</module>-->
         <module>instrument-simulator-debug-model</module>
-        <module>instrument-simulator-stack-trace-module</module>
+<!--        <module>instrument-simulator-stack-trace-module</module>-->
     </modules>
 
     <dependencyManagement>

@@ -1,15 +1,12 @@
 package com.pamirs.pradar.degrade.resources;
 
 import com.sun.management.OperatingSystemMXBean;
-import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.concurrent.TimeUnit;
-
-import static java.lang.Double.NaN;
 
 /**
  * @author jirenhe | jirenhe@shulie.io

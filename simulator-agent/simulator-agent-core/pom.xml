@@ -114,6 +114,12 @@
             <version>3.12.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.5.9</version>
+        </dependency>
+
 
         <!-- #################################### 在线升级探针功能废弃 #################################### -->
         <dependency>
@@ -139,12 +145,6 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>1.21</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>5.5.9</version>
             <scope>provided</scope>
         </dependency>
         <!-- #################################### 在线升级探针功能废弃 #################################### -->

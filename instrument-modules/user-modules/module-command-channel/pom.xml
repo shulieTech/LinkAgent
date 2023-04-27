@@ -27,7 +27,7 @@
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-common-command-channel</artifactId>
-            <version>common-2.0.1</version>
+            <version>common-2.0.3</version>
             <exclusions>
                 <exclusion>
                     <artifactId>zookeeper</artifactId>
@@ -54,11 +54,11 @@
                     <groupId>com.alibaba</groupId>
                 </exclusion>
                 <exclusion>
-                    <artifactId>curator-framework</artifactId>
+                    <artifactId>curator-client</artifactId>
                     <groupId>org.apache.curator</groupId>
                 </exclusion>
                 <exclusion>
-                    <artifactId>curator-client</artifactId>
+                    <artifactId>curator-framework</artifactId>
                     <groupId>org.apache.curator</groupId>
                 </exclusion>
             </exclusions>
@@ -71,6 +71,54 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <configuration>
+                    <relocations>
+                        <relocation>
+                            <!-- 修改 guava 包名 -->
+                            <pattern>com.google.common</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                    <outputDirectory>../../target/modules/${module-name}</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 
 </project>

@@ -18,13 +18,13 @@
 <!--        <module>instrument-simulator-heapdump-module</module>-->
 <!--        <module>instrument-simulator-jad-module</module>-->
 <!--        <module>instrument-simulator-logger-module</module>-->
-<!--        <module>instrument-simulator-memory-module</module>-->
+        <module>instrument-simulator-memory-module</module>
 <!--        <module>instrument-simulator-monitor-module</module>-->
 <!--        <module>instrument-simulator-runtime-module</module>-->
 <!--        <module>instrument-simulator-ognl-module</module>-->
         <module>instrument-simulator-stack-module</module>
 <!--        <module>instrument-simulator-sysprop-module</module>-->
-<!--        <module>instrument-simulator-thread-module</module>-->
+        <module>instrument-simulator-thread-module</module>
 <!--        <module>instrument-simulator-tomcat-module</module>-->
         <module>instrument-simulator-trace-module</module>
 <!--        <module>instrument-simulator-vmoption-module</module>-->

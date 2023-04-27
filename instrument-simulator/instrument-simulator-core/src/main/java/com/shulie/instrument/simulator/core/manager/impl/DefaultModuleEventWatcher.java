@@ -29,7 +29,6 @@ import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransforme
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.GroupMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
-import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,7 +125,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         final int total = waitingReTransformClasses.size();
 
         // 如果找不到需要被重新增强的类则直接返回
-        if (CollectionUtils.isEmpty(waitingReTransformClasses)) {
+        if (isEmpty(waitingReTransformClasses)) {
             logger.debug("SIMULATOR: reTransformClasses={};module={};watch={} not found any class;",
                     waitingReTransformClasses, coreModule.getModuleId(), watchId);
             return;
@@ -329,7 +328,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             // 激活增强类
             if (coreModule.isActivated()) {
                 List<BuildingForListeners> listeners = proxy.getAllListeners();
-                if (CollectionUtils.isNotEmpty(listeners)) {
+                if (!isEmpty(listeners)) {
                     for (BuildingForListeners buildingForListeners : listeners) {
                         eventListenerHandler.active(buildingForListeners.getListenerId(), proxy.getEventListeners().get(buildingForListeners.getListenerId()), buildingForListeners.getEventTypes());
                     }
@@ -359,7 +358,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             if (watcherId == simulatorClassFileTransformer.getWatchId()) {
 
                 List<BuildingForListeners> listeners = simulatorClassFileTransformer.getAllListeners();
-                if (CollectionUtils.isNotEmpty(listeners)) {
+                if (!isEmpty(listeners)) {
                     for (BuildingForListeners buildingForListeners : listeners) {
                         // 冻结所有关联代码增强
                         eventListenerHandler.frozen(buildingForListeners.getListenerId());
@@ -436,6 +435,10 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         } finally {
             delete(watchId, dProgress);
         }
+    }
+
+    public static boolean isEmpty(Collection coll) {
+        return (coll == null || coll.isEmpty());
     }
 
 }

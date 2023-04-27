@@ -23,7 +23,6 @@ import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.StringUtils;
@@ -213,7 +212,7 @@ public class ModuleHttpServlet extends HttpServlet {
             @Override
             public void release() {
                 final List<Closeable> list = get();
-                if (CollectionUtils.isEmpty(list)) {
+                if (list == null || list.isEmpty()) {
                     return;
                 }
                 for (final Closeable closeable : list) {

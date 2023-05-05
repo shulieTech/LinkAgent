@@ -52,7 +52,7 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
     };
 
     @Override
-    public void beforeLast(Advice advice) throws ProcessControlException {
+    public void beforeFirst(Advice advice) throws ProcessControlException {
         if (!Pradar.isClusterTest()) {
             return;
         }
@@ -84,4 +84,5 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
         }
         strategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
     }
+
 }

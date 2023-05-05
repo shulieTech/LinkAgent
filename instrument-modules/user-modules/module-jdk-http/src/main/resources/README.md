@@ -1,1 +1,1 @@
-2.0.0.3版本：修复method获取时存在的bug
+2.0.0.4  trace日志里put post请求能打印body

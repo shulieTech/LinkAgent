@@ -131,7 +131,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         record.setService(method.getDeclaringClass().getName());
         record.setMethod(method.getName() + getParameterTypesString(method.getParameterTypes()));
         if (arg != null) {
-            record.setRequestSize(arg.length);
+            record.setRequest(JSON.toJSONString(args[2]));
         }
         if (Pradar.isClusterTest()) {
             record.setPassedCheck(true);

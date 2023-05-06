@@ -15,8 +15,8 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.util.AopTargetUtil;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.shulie.instrument.module.messaging.kafka.ApacheKafkaHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -190,20 +190,20 @@ public class ConsumerHolder {
         if (factory == null) {
             return;
         }
-        Object containsBean = Reflect.on(factory).call("containsBean", "org.springframework.kafka.config.internalKafkaListenerEndpointRegistry").get();
+        Object containsBean = ReflectionUtils.invoke(factory,"containsBean","org.springframework.kafka.config.internalKafkaListenerEndpointRegistry");
         if (Boolean.FALSE.equals(containsBean)) {
             spring_kafka_consumer_init_flag.set(true);
             return;
         }
-        Object endpointRegistry = Reflect.on(factory).call("getBean", "org.springframework.kafka.config.internalKafkaListenerEndpointRegistry").get();
-        Map<String, Object> listenerContainers = Reflect.on(endpointRegistry).get("listenerContainers");
+        Object endpointRegistry = ReflectionUtils.invoke(factory,"getBean", "org.springframework.kafka.config.internalKafkaListenerEndpointRegistry");
+        Map<String, Object> listenerContainers = ReflectionUtils.get(endpointRegistry,"listenerContainers");
         if (listenerContainers.isEmpty()) {
             spring_kafka_consumer_init_flag.set(true);
             return;
         }
         for (Object container : listenerContainers.values()) {
             if ("ConcurrentMessageListenerContainer".equals(container.getClass().getSimpleName())) {
-                List containers = Reflect.on(container).get("containers");
+                List containers = ReflectionUtils.get(container,"containers");;
                 // 说明某些container还没初始化完全
                 if (containers.isEmpty()) {
                     return;
@@ -226,13 +226,13 @@ public class ConsumerHolder {
         spring_kafka_consumer_init_flag.set(true);
     }
 
-    private static Consumer extractKafkaConsumer(Object KafkaMessageListenerContainer) {
-        Object listenerConsumer = Reflect.on(KafkaMessageListenerContainer).get("listenerConsumer");
+    private static Consumer extractKafkaConsumer(Object kafkaMessageListenerContainer) {
+        Object listenerConsumer = ReflectionUtils.get(kafkaMessageListenerContainer,"listenerConsumer");
         // container没初始化好
         if (listenerConsumer == null) {
             return null;
         }
-        Consumer consumer = Reflect.on(listenerConsumer).get("consumer");
+        Consumer consumer = ReflectionUtils.get(listenerConsumer,"consumer");
         if (AopTargetUtil.isAopProxy(consumer)) {
             try {
                 return (Consumer) AopTargetUtil.getTarget(consumer);

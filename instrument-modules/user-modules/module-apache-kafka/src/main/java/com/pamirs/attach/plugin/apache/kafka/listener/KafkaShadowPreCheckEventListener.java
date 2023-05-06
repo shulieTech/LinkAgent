@@ -9,8 +9,6 @@ import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMqPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -212,7 +210,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
                 groupIdStr = ReflectionUtils.get(groupId, "value");
             }
             return groupIdStr;
-        } catch (ReflectException e) {
+        } catch (Exception e) {
             throw new PressureMeasureError(e);
         }
     }
@@ -229,13 +227,13 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
      */
     private KafkaConsumer createShadowConsumer(KafkaConsumer bizConsumer, String topic) {
         Properties config = new Properties();
-        Object coordinator = Reflect.on(bizConsumer).get("coordinator");
-        Object client = Reflect.on(bizConsumer).get("client");
-        Object kafkaClient = Reflect.on(client).get("client");
-        Object fetcher = Reflect.on(bizConsumer).get("fetcher");
-        Object metadata = Reflect.on(bizConsumer).get("metadata");
-        Object keyDeserializer = Reflect.on(bizConsumer).get("keyDeserializer");
-        Object valueDeserializer = Reflect.on(bizConsumer).get("valueDeserializer");
+        Object coordinator = ReflectionUtils.get(bizConsumer, "coordinator");
+        Object client = ReflectionUtils.get(bizConsumer, "client");
+        Object kafkaClient = ReflectionUtils.get(client, "client");
+        Object fetcher = ReflectionUtils.get(bizConsumer, "fetcher");
+        Object metadata = ReflectionUtils.get(bizConsumer, "metadata");
+        Object keyDeserializer = ReflectionUtils.get(bizConsumer, "keyDeserializer");
+        Object valueDeserializer = ReflectionUtils.get(bizConsumer, "valueDeserializer");
 
         if (keyDeserializer != null) {
             config.put(org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getClass());
@@ -333,14 +331,14 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
             kafkaConsumer = new KafkaConsumer(config);
         }
 
-        Object ptInterceptors = Reflect.on(kafkaConsumer).get("interceptors");
+        Object ptInterceptors = ReflectionUtils.get(kafkaConsumer, "interceptors");
         List list = null;
-        if (Reflect.on(ptInterceptors).existsField("interceptors")) {
-            list = Reflect.on(ptInterceptors).get("interceptors");
+        if (ReflectionUtils.existsField(ptInterceptors, "interceptors")) {
+            list = ReflectionUtils.get(ptInterceptors, "interceptors");
         }
         if ((list == null || list.isEmpty()) && interceptors != null) {
             LOGGER.info("[apache-kafka] set kafka biz interceptors to pt consumer:{}", interceptors);
-            Reflect.on(kafkaConsumer).set("interceptors", interceptors);
+            ReflectionUtils.set(kafkaConsumer, "interceptors", interceptors);
         }
 
         kafkaConsumer.subscribe(Collections.singletonList(topic));
@@ -360,45 +358,42 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
     }
 
     private void putSlience(Properties config, String configStr, Object value) {
-        try {
-            config.put(configStr, value.toString());
-        } catch (ReflectException ignore) {
-        }
+        config.put(configStr, value.toString());
     }
 
     private void putSlience(Properties config, String configStr, Object obj, String name) {
         try {
-            Object value = Reflect.on(obj).get(name).toString();
+            Object value = ReflectionUtils.get(obj, name).toString();
             config.put(configStr, value);
-        } catch (ReflectException ignore) {
+        } catch (Exception ignore) {
         }
     }
 
     private void copyHeartbeatConfig(Properties config, Object coordinator) {
         try {
-            Object heartbeat = Reflect.on(coordinator).get("heartbeat");
-            if (Reflect.on(heartbeat).existsField("rebalanceConfig")) {
-                heartbeat = Reflect.on(heartbeat).get("rebalanceConfig");
+            Object heartbeat = ReflectionUtils.get(coordinator, "heartbeat");
+            if (ReflectionUtils.existsField(heartbeat, "rebalanceConfig")) {
+                heartbeat = ReflectionUtils.get(heartbeat, "rebalanceConfig");
             }
-            config.put(org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, Reflect.on(heartbeat).get("sessionTimeoutMs"));
-            config.put(org.apache.kafka.clients.consumer.ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("rebalanceTimeoutMs"));
-            config.put(org.apache.kafka.clients.consumer.ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("heartbeatIntervalMs"));
+            config.put(org.apache.kafka.clients.consumer.ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, ReflectionUtils.get(heartbeat, "sessionTimeoutMs"));
+            config.put(org.apache.kafka.clients.consumer.ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, ReflectionUtils.get(heartbeat, "rebalanceTimeoutMs"));
+            config.put(org.apache.kafka.clients.consumer.ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, ReflectionUtils.get(heartbeat, "heartbeatIntervalMs"));
         } catch (Exception e) {
             //
         }
     }
 
     public static String getBootstrapServers(KafkaConsumer<?, ?> consumer) {
-        Object metadata = Reflect.on(consumer).get("metadata");
+        Object metadata = ReflectionUtils.get(consumer, "metadata");
         Field clusterField = ReflectionUtils.findField(metadata.getClass(), "cluster");
         Object cluster = clusterField != null ? ReflectionUtils.get(metadata, "cluster") : null;
         Iterable<Node> nodes;
         if (cluster != null) {
-            nodes = Reflect.on(cluster).get("nodes");
+            nodes = ReflectionUtils.get(cluster, "nodes");
         } else {
             Object cache = ReflectionUtils.get(metadata, "cache");
             if (cache != null) {
-                Object tmpNodes = Reflect.on(cache).get("nodes");
+                Object tmpNodes = ReflectionUtils.get(cache, "nodes");
                 if (tmpNodes instanceof Iterable) {
                     nodes = (Iterable<Node>) tmpNodes;
                 } else if (tmpNodes instanceof Map) {
@@ -412,7 +407,7 @@ public class KafkaShadowPreCheckEventListener implements PradarEventListener {
         }
         StringBuilder sb = new StringBuilder();
         for (Node node : nodes) {
-            sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
+            sb.append(ReflectionUtils.get(node, "host").toString()).append(":").append(ReflectionUtils.get(node, "port")
                     .toString()).append(",");
         }
         return sb.substring(0, sb.length() - 1);

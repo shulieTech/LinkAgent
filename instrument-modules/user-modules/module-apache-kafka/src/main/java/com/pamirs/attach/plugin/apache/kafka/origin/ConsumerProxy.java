@@ -17,11 +17,9 @@ package com.pamirs.attach.plugin.apache.kafka.origin;
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.RecordsRatioPollSelector;
-import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.consumer.internals.Heartbeat;
@@ -493,7 +491,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
                     ReflectionUtils.get(channelBuilder, "securityProtocol").toString());
             if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
-                Map jaasContexts = ReflectUtil.reflectSlience(channelBuilder, "jaasContexts");
+                Map jaasContexts = ReflectionUtils.get(channelBuilder, "jaasContexts");
                 if (jaasContexts == null) {
                     throw new RuntimeException("未支持的kafka版本，无法获取jaasContexts");
                 }
@@ -510,9 +508,9 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             }
         }
 
-        Object interceptors = ReflectUtil.reflectSlience(consumer, "interceptors");
+        Object interceptors = ReflectionUtils.get(consumer, "interceptors");
         if (interceptors != null) {
-            List list = ReflectUtil.reflectSlience(interceptors, "interceptors");
+            List list = ReflectionUtils.get(interceptors, "interceptors");
             if (list != null && list.size() > 0) {
                 List classList = new ArrayList();
                 for (Object o : list) {
@@ -530,9 +528,9 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         putSlience(config, ConsumerConfig.RECEIVE_BUFFER_CONFIG, kafkaClient, "socketReceiveBuffer");
         putSlience(config, ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaClient, "requestTimeoutMs");
 
-        Object subscriptions = ReflectUtil.reflectSlience(consumer, "subscriptions");
+        Object subscriptions = ReflectionUtils.get(consumer, "subscriptions");
         if (subscriptions != null) {
-            Object defaultResetStrategy = ReflectUtil.reflectSlience(subscriptions, "defaultResetStrategy");
+            Object defaultResetStrategy = ReflectionUtils.get(subscriptions, "defaultResetStrategy");
             if (defaultResetStrategy != null) {
                 putSlience(config, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
                         defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
@@ -593,7 +591,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     private static void putSlience(Properties config, String configStr, Object value) {
         try {
             config.put(configStr, value.toString());
-        } catch (ReflectException ignore) {
+        } catch (Exception ignore) {
         }
     }
 
@@ -601,7 +599,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         try {
             Object value = ReflectionUtils.get(obj, name).toString();
             config.put(configStr, value);
-        } catch (ReflectException ignore) {
+        } catch (Exception ignore) {
         }
     }
 

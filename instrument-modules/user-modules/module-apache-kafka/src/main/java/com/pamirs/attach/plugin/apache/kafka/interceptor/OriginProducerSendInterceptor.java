@@ -16,17 +16,16 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 /**
@@ -39,50 +38,6 @@ import java.util.List;
 @Destroyable(KafkaDestroy.class)
 @ListenerBehavior(isFilterBusinessData = true)
 public class OriginProducerSendInterceptor extends TraceInterceptorAdaptor {
-//    private Field topicField;
-    private Field producerConfigField;
-
-//    private void initTopicField(Object keyedMessage) {
-//        if (topicField != null) {
-//            return;
-//        }
-//        try {
-//            topicField = keyedMessage.getClass().getDeclaredField(KafkaConstants.REFLECT_FIELD_TOPIC);
-//            topicField.setAccessible(true);
-//        } catch (Throwable e) {
-//        }
-//    }
-
-    private void initProducerConfigField() {
-        if (producerConfigField != null) {
-            return;
-        }
-        try {
-            producerConfigField = kafka.producer.Producer.class.getDeclaredField("config");
-            producerConfigField.setAccessible(true);
-        } catch (Throwable e) {
-        }
-    }
-
-//    private void setTopic(Object KeyedMessage, String topic) {
-//        if (topicField != null) {
-//            try {
-//                topicField.set(KeyedMessage, topic);
-//            } catch (Throwable e) {
-//                try {
-//                    Reflect.on(KeyedMessage).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
-//                } catch (ReflectException ex) {
-//                    throw ex;
-//                }
-//            }
-//        } else {
-//            try {
-//                Reflect.on(KeyedMessage).set(KafkaConstants.REFLECT_FIELD_TOPIC, topic);
-//            } catch (ReflectException ex) {
-//                throw ex;
-//            }
-//        }
-//    }
 
     @Override
     public String getPluginName() {
@@ -94,59 +49,11 @@ public class OriginProducerSendInterceptor extends TraceInterceptorAdaptor {
         return KafkaConstants.PLUGIN_TYPE;
     }
 
-//    @Override
-//    public void beforeFirst(Advice advice) {
-//        if (!Pradar.isClusterTest()) {
-//            return;
-//        }
-//        Object[] args = advice.getParameterArray();
-//        if (args.length < 1) {
-//            return;
-//        }
-//        ClusterTestUtils.validateClusterTest();
-//        try {
-//            final Object obj = args[0];
-//            if (obj == null) {
-//                return;
-//            }
-//            if (obj instanceof KeyedMessage) {
-//                dealTopic((KeyedMessage) obj);
-//            }
-//
-//            if (obj instanceof List && !((List<?>) obj).isEmpty()) {
-//                initTopicField(((List<?>) obj).get(0));
-//                for (Object item : (List<?>) obj) {
-//                    if (!(item instanceof KeyedMessage)) {
-//                        continue;
-//                    }
-//                    dealTopic((KeyedMessage) item);
-//                }
-//            }
-//        } catch (Throwable e) {
-//            LOGGER.warn("SIMULATOR: origin kafka send message deal topic failed.", e);
-//        }
-//    }
-
-//    /**
-//     * 修改topic
-//     *
-//     * @param keyedMessage KeyedMessage对象
-//     */
-//    private void dealTopic(KeyedMessage keyedMessage) {
-//        initTopicField(keyedMessage);
-//        String topic = keyedMessage.topic();
-//        if (!Pradar.isClusterTestPrefix(topic)) {
-//            topic = Pradar.addClusterTestPrefix(topic);
-//        }
-//        setTopic(keyedMessage, topic);
-//    }
-
     private String getRemoteAddress(Object remoteAddressFieldAccessor) {
-        initProducerConfigField();
         try {
-            Object obj = Reflect.on(remoteAddressFieldAccessor).get("underlying");
-            ProducerConfig producerConfig = Reflect.on(obj).get(producerConfigField);
-            String value = Reflect.on(producerConfig).get("brokerList");
+            Object obj = ReflectionUtils.get(remoteAddressFieldAccessor,"underlying");
+            ProducerConfig producerConfig = ReflectionUtils.get(obj,"config");
+            String value = ReflectionUtils.get(producerConfig,"brokerList");
             if (value == null) {
                 return KafkaConstants.UNKNOWN;
             }

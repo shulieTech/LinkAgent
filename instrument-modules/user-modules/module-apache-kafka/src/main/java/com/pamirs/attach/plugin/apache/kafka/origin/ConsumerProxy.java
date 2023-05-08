@@ -17,12 +17,9 @@ package com.pamirs.attach.plugin.apache.kafka.origin;
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.PollConsumerSelector;
 import com.pamirs.attach.plugin.apache.kafka.origin.selector.RecordsRatioPollSelector;
-import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
-import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.clients.consumer.internals.Heartbeat;
@@ -87,13 +84,13 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     private Heartbeat extractHeartbeat(Consumer consumer) {
         if (consumer instanceof WithTryCatchConsumerProxy) {
-            consumer = Reflect.on(consumer).get("consumer");
+            consumer = ReflectionUtils.get(consumer,"consumer");
         }
-        Object coordinator = Reflect.on(consumer).get("coordinator");
+        Object coordinator = ReflectionUtils.get(consumer,"coordinator");
         if (coordinator == null) {
             return null;
         }
-        return Reflect.on(coordinator).get("heartbeat");
+        return ReflectionUtils.get(coordinator,"heartbeat");
     }
 
     public Consumer getPtConsumer() {
@@ -459,13 +456,13 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     private Consumer createPtConsumer(KafkaConsumer consumer, ConsumerMetaData consumerMetaData) {
         Properties config = new Properties();
-        Object coordinator = Reflect.on(consumer).get("coordinator");
-        Object client = Reflect.on(consumer).get("client");
-        Object kafkaClient = Reflect.on(client).get("client");
-        Object fetcher = Reflect.on(consumer).get("fetcher");
-        Object metadata = Reflect.on(consumer).get("metadata");
-        Object keyDeserializer = Reflect.on(consumer).get("keyDeserializer");
-        Object valueDeserializer = Reflect.on(consumer).get("valueDeserializer");
+        Object coordinator = ReflectionUtils.get(consumer, "coordinator");
+        Object client = ReflectionUtils.get(consumer, "client");
+        Object kafkaClient = ReflectionUtils.get(client, "client");
+        Object fetcher = ReflectionUtils.get(consumer, "fetcher");
+        Object metadata = ReflectionUtils.get(consumer, "metadata");
+        Object keyDeserializer = ReflectionUtils.get(consumer, "keyDeserializer");
+        Object valueDeserializer = ReflectionUtils.get(consumer, "valueDeserializer");
 
         if (keyDeserializer != null) {
             config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getClass());
@@ -474,7 +471,7 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getClass());
         }
         config.put(ConsumerConfig.CLIENT_ID_CONFIG,
-                Pradar.addClusterTestPrefix(String.valueOf(Reflect.on(consumer).get("clientId"))));
+                Pradar.addClusterTestPrefix(String.valueOf(ReflectionUtils.get(consumer, "clientId"))));
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, consumerMetaData.getBootstrapServers());
         config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (this.allowMaxLag * 2 * 3) + "");
         config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG,
@@ -486,15 +483,15 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         /**
          * 认证配置
          */
-        Object selector = Reflect.on(kafkaClient).get("selector");
-        Object channelBuilder = Reflect.on(selector).get("channelBuilder");
+        Object selector = ReflectionUtils.get(kafkaClient, "selector");
+        Object channelBuilder = ReflectionUtils.get(selector, "channelBuilder");
         if (channelBuilder.getClass().getName().equals("org.apache.kafka.common.network.SaslChannelBuilder")) {
-            String clientSaslMechanism = Reflect.on(channelBuilder).get("clientSaslMechanism");
+            String clientSaslMechanism = ReflectionUtils.get(channelBuilder, "clientSaslMechanism");
             config.put(SaslConfigs.SASL_MECHANISM, clientSaslMechanism);
             config.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG,
-                    Reflect.on(channelBuilder).get("securityProtocol").toString());
+                    ReflectionUtils.get(channelBuilder, "securityProtocol").toString());
             if (clientSaslMechanism != null && !"".equals(clientSaslMechanism)) {
-                Map jaasContexts = ReflectUtil.reflectSlience(channelBuilder, "jaasContexts");
+                Map jaasContexts = ReflectionUtils.get(channelBuilder, "jaasContexts");
                 if (jaasContexts == null) {
                     throw new RuntimeException("未支持的kafka版本，无法获取jaasContexts");
                 }
@@ -511,9 +508,9 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             }
         }
 
-        Object interceptors = ReflectUtil.reflectSlience(consumer, "interceptors");
+        Object interceptors = ReflectionUtils.get(consumer, "interceptors");
         if (interceptors != null) {
-            List list = ReflectUtil.reflectSlience(interceptors, "interceptors");
+            List list = ReflectionUtils.get(interceptors, "interceptors");
             if (list != null && list.size() > 0) {
                 List classList = new ArrayList();
                 for (Object o : list) {
@@ -531,9 +528,9 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
         putSlience(config, ConsumerConfig.RECEIVE_BUFFER_CONFIG, kafkaClient, "socketReceiveBuffer");
         putSlience(config, ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaClient, "requestTimeoutMs");
 
-        Object subscriptions = ReflectUtil.reflectSlience(consumer, "subscriptions");
+        Object subscriptions = ReflectionUtils.get(consumer, "subscriptions");
         if (subscriptions != null) {
-            Object defaultResetStrategy = ReflectUtil.reflectSlience(subscriptions, "defaultResetStrategy");
+            Object defaultResetStrategy = ReflectionUtils.get(subscriptions, "defaultResetStrategy");
             if (defaultResetStrategy != null) {
                 putSlience(config, ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
                         defaultResetStrategy.toString().toLowerCase(Locale.ROOT));
@@ -563,14 +560,14 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
             kafkaConsumer = new KafkaConsumer(config);
         }
 
-        Object ptInterceptors = Reflect.on(kafkaConsumer).get("interceptors");
+        Object ptInterceptors = ReflectionUtils.get(kafkaConsumer, "interceptors");
         List list = null;
-        if(Reflect.on(ptInterceptors).existsField("interceptors")){
-            list = Reflect.on(ptInterceptors).get("interceptors");
+        if (ReflectionUtils.existsField(ptInterceptors,"interceptors")) {
+            list = ReflectionUtils.get(ptInterceptors, "interceptors");
         }
         if ((list == null || list.isEmpty()) && interceptors != null) {
             log.info("set kafka biz interceptors to pt consumer:{}", interceptors);
-            Reflect.on(kafkaConsumer).set("interceptors", interceptors);
+            ReflectionUtils.set(kafkaConsumer,"interceptors", interceptors);
         }
 
         kafkaConsumer.subscribe(consumerMetaData.getShadowTopics());
@@ -579,13 +576,13 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
 
     private void copyHeartbeatConfig(Properties config, Object coordinator) {
         try {
-            Object heartbeat = Reflect.on(coordinator).get("heartbeat");
-            if (Reflect.on(heartbeat).existsField("rebalanceConfig")) {
-                heartbeat = Reflect.on(heartbeat).get("rebalanceConfig");
+            Object heartbeat = ReflectionUtils.get(coordinator, "heartbeat");
+            if (ReflectionUtils.existsField(heartbeat,"rebalanceConfig")) {
+                heartbeat = ReflectionUtils.get(heartbeat, "rebalanceConfig");
             }
-            config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, Reflect.on(heartbeat).get("sessionTimeoutMs"));
-            config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("rebalanceTimeoutMs"));
-            config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, Reflect.on(heartbeat).get("heartbeatIntervalMs"));
+            config.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, ReflectionUtils.get(heartbeat, "sessionTimeoutMs"));
+            config.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, ReflectionUtils.get(heartbeat, "rebalanceTimeoutMs"));
+            config.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, ReflectionUtils.get(heartbeat, "heartbeatIntervalMs"));
         } catch (Exception e) {
 
         }
@@ -594,15 +591,15 @@ public class ConsumerProxy<K, V> implements Consumer<K, V> {
     private static void putSlience(Properties config, String configStr, Object value) {
         try {
             config.put(configStr, value.toString());
-        } catch (ReflectException ignore) {
+        } catch (Exception ignore) {
         }
     }
 
     private static void putSlience(Properties config, String configStr, Object obj, String name) {
         try {
-            Object value = Reflect.on(obj).get(name).toString();
+            Object value = ReflectionUtils.get(obj, name).toString();
             config.put(configStr, value);
-        } catch (ReflectException ignore) {
+        } catch (Exception ignore) {
         }
     }
 

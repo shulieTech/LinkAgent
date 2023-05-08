@@ -15,13 +15,11 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import io.shulie.instrument.module.messaging.kafka.util.ConsumerConfigHolder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -52,9 +50,9 @@ public class ConsumerMetaData {
         Set<String> topics = consumer.subscription();
         try {
             Object coordinator = ReflectionUtils.get(consumer,KafkaConstants.REFLECT_FIELD_COORDINATOR );
-            Object groupId = ReflectUtil.reflectSlience(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            Object groupId = ReflectionUtils.get(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
             if (groupId == null) {
-                groupId = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+                groupId = ReflectionUtils.get(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
                 if (groupId == null) {
                     throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
                 }
@@ -64,10 +62,10 @@ public class ConsumerMetaData {
             if(groupId instanceof String){
                 groupIdStr = (String)groupId;
             }else {
-                groupIdStr = ReflectUtil.reflectSlience(groupId, "value");
+                groupIdStr = ReflectionUtils.get(groupId, "value");
             }
             return new ConsumerMetaData(topics, groupIdStr, bootstrapServers);
-        } catch (ReflectException e) {
+        } catch (Exception e) {
             throw new PressureMeasureError(e);
         }
     }

@@ -14,16 +14,11 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.util;
 
-import java.util.Map;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.pradar.exception.PressureMeasureError;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.shulie.instrument.module.messaging.kafka.util.ConsumerConfigHolder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,33 +51,4 @@ public class KafkaUtils {
         }
     }
 
-    public static String getBootstrapServers(KafkaConsumer<?, ?> consumer) {
-        Object metadata = Reflect.on(consumer).get("metadata");
-
-        Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
-        Iterable<Node> nodes;
-        if (cluster != null) {
-            nodes = Reflect.on(cluster).get("nodes");
-        } else {
-            Object cache = ReflectUtil.reflectSlience(metadata, "cache");
-            if (cache != null) {
-                Object tmpNodes = Reflect.on(cache).get("nodes");
-                if (tmpNodes instanceof Iterable) {
-                    nodes = (Iterable<Node>)tmpNodes;
-                } else if (tmpNodes instanceof Map) {
-                    nodes = ((Map<?, Node>)tmpNodes).values();
-                } else {
-                    throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
-                }
-            } else {
-                throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
-            }
-        }
-        StringBuilder sb = new StringBuilder();
-        for (Node node : nodes) {
-            sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
-                .toString()).append(",");
-        }
-        return sb.substring(0, sb.length() - 1);
-    }
 }

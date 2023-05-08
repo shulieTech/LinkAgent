@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.apache.tomcatjdbc.obj;
 
+import com.pamirs.attach.plugin.apache.tomcatjdbc.util.DataSourceWrapUtil;
 import com.pamirs.attach.plugin.apache.tomcatjdbc.util.TomcatJdbcConstants;
 import com.pamirs.attach.plugin.common.datasource.WrappedDbMediatorDataSource;
 import com.pamirs.attach.plugin.common.datasource.biz.BizConnection;
@@ -66,6 +67,9 @@ public class TomcatJdbcMediatorDataSource extends WrappedDbMediatorDataSource<or
                     return new NormalConnection(dataSourceBusiness, dataSourceBusiness.getConnection(), dbConnectionKey, url, username, dbType,
                         getMidType());
                 } else {
+                    if (dataSourcePerformanceTest == null) {
+                        DataSourceWrapUtil.retryInitPerformanceTest(this);
+                    }
                     //影子库
                     if (dataSourcePerformanceTest == null) {
                         throw new PressureMeasureError("Performance dataSource is null.");

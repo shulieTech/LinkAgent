@@ -100,6 +100,20 @@ public abstract class ReflectionUtils {
         return findField(clazz, name, null);
     }
 
+    public static Field findField(Object obj, String name) {
+        Assert.notNull(obj, "Target must not be null");
+        return findField(obj.getClass(), name, null);
+    }
+
+    public static boolean existsField(Class<?> clazz, String name) {
+        return findField(clazz, name) != null;
+    }
+
+    public static boolean existsField(Object target, String name) {
+        Assert.notNull(target, "Target must not be null");
+        return findField(target.getClass(), name) != null;
+    }
+
     public static <T> T getStatic(Class<?> clazz, String name) {
         Field field = findField(clazz, name, null);
         try {

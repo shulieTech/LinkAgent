@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.httpclient.utils;
 
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpUriRequest;
 
@@ -42,7 +42,7 @@ public class HttpRequestUtil {
      */
     private static String reflectFieldVal(HttpRequest request) {
         String path = "";
-        Object uriField = Reflect.on(request).get("uri");
+        Object uriField = ReflectionUtils.get(request,"uri");
         if (uriField instanceof String) {
             URI uri = null;
             try {

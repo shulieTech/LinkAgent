@@ -15,12 +15,16 @@
 
 package com.pamirs.attach.plugin.cluster.test.check.utils;
 
+import com.google.common.collect.HashBasedTable;
+
 /**
  * @Description
  * @Author ocean_wll
  * @Date 2022/8/24 13:40
  */
 public class ClassUtil {
+
+    private static HashBasedTable<String, String, Boolean> classInstancesCache = HashBasedTable.create();
 
 
     /**
@@ -39,4 +43,64 @@ public class ClassUtil {
         }
         return clazz.isInstance(obj);
     }
+
+    public static boolean isInstances(Object obj, String className) {
+        Class<?> clazz = obj.getClass();
+        Boolean aBoolean = classInstancesCache.get(clazz.getName(), className);
+        if (aBoolean != null) {
+            return aBoolean;
+        }
+
+        Class<?> aClass = clazz;
+        if (aClass.getName().equals(className)) {
+            return true;
+        }
+
+        Class<?>[] interfaces = aClass.getInterfaces();
+        for (int i = 0; i < interfaces.length; i++) {
+            if (isInterfaceImpl(interfaces[i], className)) {
+                classInstancesCache.put(aClass.getName(), className, true);
+                return true;
+            }
+        }
+
+        Class<?> superclass = clazz.getSuperclass();
+
+        return true;
+    }
+
+    private static boolean isSuperClass(Class<?> clazz, String className) {
+        if (clazz.getName().equals(className)) {
+            return true;
+        }
+        if (clazz.getName().equals("java.lang.Object")) {
+            return false;
+        }
+        Class<?>[] interfaces = clazz.getInterfaces();
+        for (Class<?> anInterface : interfaces) {
+            if (isInterfaceImpl(anInterface, className)) {
+                return true;
+            }
+        }
+        return isSuperClass(clazz.getSuperclass(), className);
+    }
+
+    private static boolean isInterfaceImpl(Class<?> clazz, String className) {
+        Class<?>[] interfaces = clazz.getInterfaces();
+        if (interfaces == null || interfaces.length == 0) {
+            return false;
+        }
+        for (int i = 0; i < interfaces.length; i++) {
+            Class<?> aClass = interfaces[i];
+            if (aClass.getName().equals(className)) {
+                return true;
+            }
+            boolean isInstances = isInterfaceImpl(aClass, className);
+            if (isInstances) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

@@ -102,6 +102,7 @@ public class BufferedServletRequestWrapper9x extends Request implements IBuffere
                     traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
 
                     ReflectionUtils.set(Pradar.getInvokeContext(),"traceId", rpcInfo[2]);
+                    ReflectionUtils.set(Pradar.getInvokeContext(),"invokeId", rpcInfo[3]);
                     Pradar.getInvokeContext().setClusterTest(true);
                     Pradar.getInvokeContextMap().putAll(traceContext);
                     this.buffer = businessParam.getBytes();

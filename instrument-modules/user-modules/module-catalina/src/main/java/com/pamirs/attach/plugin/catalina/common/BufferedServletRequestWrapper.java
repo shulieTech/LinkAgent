@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.catalina.common;
 
+import com.pamirs.attach.plugin.catalina.CatalinaConstans;
 import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
@@ -99,6 +100,12 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
                     traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
 
                     ReflectionUtils.set(Pradar.getInvokeContext(),"traceId", rpcInfo[2]);
+
+                    // 内网的invokeId是否重置
+                    String property = System.getProperty(CatalinaConstans.INTRANET_CROSS_INVOKE_ID_RESET_KEY);
+                    if("false".equals(property)){
+                        ReflectionUtils.set(Pradar.getInvokeContext(),"invokeId", rpcInfo[3]);
+                    }
 
                     Pradar.getInvokeContext().setClusterTest(true);
                     Pradar.getInvokeContextMap().putAll(traceContext);

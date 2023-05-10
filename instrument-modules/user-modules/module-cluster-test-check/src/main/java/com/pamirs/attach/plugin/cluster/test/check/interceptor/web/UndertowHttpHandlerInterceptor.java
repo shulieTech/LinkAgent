@@ -31,7 +31,7 @@ public class UndertowHttpHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "io.undertow.server.HttpServerExchange")) {
+        if (ClassUtil.isInstance(advice.getParameterArray()[0], "io.undertow.server.HttpServerExchange")) {
             HttpServerExchange serverExchange = (HttpServerExchange) advice.getParameterArray()[0];
             return serverExchange.getRequestHeaders().getFirst(key);
         }

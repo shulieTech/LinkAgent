@@ -32,7 +32,7 @@ public class GrpcInterceptor extends AbstractCheckInterceptor {
     @Override
     public Object getParam(Advice advice, String key) {
         Object param = advice.getParameterArray()[3];
-        if (ClassUtil.instanceOf(param, "io.grpc.Metadata")) {
+        if (ClassUtil.isInstance(param, "io.grpc.Metadata")) {
             Metadata headers = (Metadata) param;
             return headers.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
         }

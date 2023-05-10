@@ -32,11 +32,11 @@ public class DubboInterceptor extends AbstractCheckInterceptor {
     @Override
     public Object getParam(Advice advice, String key) {
         Object param = advice.getParameterArray()[0];
-        if (ClassUtil.instanceOf(param, "org.apache.dubbo.rpc.RpcInvocation")) {
+        if (ClassUtil.isInstance(param, "org.apache.dubbo.rpc.RpcInvocation")) {
             RpcInvocation invocation = (RpcInvocation) param;
             return invocation.getAttachments().get(key);
         }
-        if (ClassUtil.instanceOf(param, "com.alibaba.dubbo.rpc.RpcInvocation")) {
+        if (ClassUtil.isInstance(param, "com.alibaba.dubbo.rpc.RpcInvocation")) {
             com.alibaba.dubbo.rpc.RpcInvocation invocation = (com.alibaba.dubbo.rpc.RpcInvocation) param;
             return invocation.getAttachments().get(key);
         }

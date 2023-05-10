@@ -33,11 +33,11 @@ public class ChannelInboundHandlerInterceptor extends AbstractCheckInterceptor {
     @Override
     public Object getParam(Advice advice, String key) {
         Object request = advice.getParameterArray()[1];
-        if (ClassUtil.instanceOf(request, "io.netty.handler.codec.http.HttpMessage")) {
+        if (ClassUtil.isInstance(request, "io.netty.handler.codec.http.HttpMessage")) {
             HttpMessage httpMessage = (HttpMessage) request;
             return httpMessage.headers().get(key);
         }
-        if (ClassUtil.instanceOf(request, "com.netflix.zuul.message.http.HttpRequestMessage")) {
+        if (ClassUtil.isInstance(request, "com.netflix.zuul.message.http.HttpRequestMessage")) {
             HttpRequestMessage requestMessage = (HttpRequestMessage) request;
             return requestMessage.getHeaders().getFirst(key);
         }

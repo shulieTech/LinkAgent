@@ -24,8 +24,7 @@ import com.google.common.collect.HashBasedTable;
  */
 public class ClassUtil {
 
-    private static HashBasedTable<String, String, Boolean> classInstancesCache = HashBasedTable.create();
-
+    private static HashBasedTable<String, String, Boolean> classAssignableCache = HashBasedTable.create();
 
     /**
      * 判读当前对象是否指定class的实例
@@ -34,19 +33,9 @@ public class ClassUtil {
      * @param className 类名
      * @return true 属于，false 不属于
      */
-    public static boolean instanceOf(Object obj, String className) {
-        Class clazz;
-        try {
-            clazz = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-        return clazz.isInstance(obj);
-    }
-
-    public static boolean isInstances(Object obj, String className) {
+    public static boolean isInstance(Object obj, String className) {
         Class<?> clazz = obj.getClass();
-        Boolean aBoolean = classInstancesCache.get(clazz.getName(), className);
+        Boolean aBoolean = classAssignableCache.get(clazz.getName(), className);
         if (aBoolean != null) {
             return aBoolean;
         }
@@ -56,16 +45,18 @@ public class ClassUtil {
             return true;
         }
 
-        Class<?>[] interfaces = aClass.getInterfaces();
-        for (int i = 0; i < interfaces.length; i++) {
-            if (isInterfaceImpl(interfaces[i], className)) {
-                classInstancesCache.put(aClass.getName(), className, true);
-                return true;
-            }
+        if (isInterfaceImpl(clazz, className)) {
+            classAssignableCache.put(aClass.getName(), className, true);
+            return true;
         }
 
-        Class<?> superclass = clazz.getSuperclass();
+        boolean isSuperClass = isSuperClass(clazz.getSuperclass(), className);
+        if (isSuperClass) {
+            classAssignableCache.put(aClass.getName(), className, true);
+            return true;
+        }
 
+        classAssignableCache.put(aClass.getName(), className, false);
         return true;
     }
 

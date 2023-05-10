@@ -31,7 +31,7 @@ public class SpringHttpHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "org.springframework.http.server.reactive.ServerHttpRequest")) {
+        if (ClassUtil.isInstance(advice.getParameterArray()[0], "org.springframework.http.server.reactive.ServerHttpRequest")) {
             ServerHttpRequest serverHttpRequest = (ServerHttpRequest) advice.getParameterArray()[0];
             return serverHttpRequest.getHeaders().getFirst(key);
         }

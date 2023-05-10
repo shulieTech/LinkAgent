@@ -32,7 +32,7 @@ public class MotanInterceptor extends AbstractCheckInterceptor {
     @Override
     public Object getParam(Advice advice, String key) {
         Object param = advice.getParameterArray()[1];
-        if (ClassUtil.instanceOf(param, "com.weibo.api.motan.rpc.Request")) {
+        if (ClassUtil.isInstance(param, "com.weibo.api.motan.rpc.Request")) {
             Request request = (Request) param;
             return request.getAttachments().get(key);
         }

@@ -21,6 +21,7 @@ import java.util.Map;
 
 import com.alibaba.fastjson.JSONObject;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.attach.plugin.httpclient.utils.HttpClientAsyncFixJsonStrategies;
@@ -40,7 +41,6 @@ import com.pamirs.pradar.pressurement.mock.MockStrategy;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -202,15 +202,15 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                                 HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
                                 args[0] = httpHost1;
 
-                                Object uriField = Reflect.on(request).get("uri");
+                                Object uriField = ReflectionUtils.get(request,"uri");
                                 if (uriField instanceof String) {
-                                    Reflect.on(request).set("uri", uri.toASCIIString());
+                                    ReflectionUtils.set(request,"uri", uri.toASCIIString());
                                 } else {
                                     try {
-                                        Reflect.on(request).set("uri", uri);
+                                        ReflectionUtils.set(request,"uri", uri);
                                     } catch (Exception e) {
                                         URL url = new URL(forwarding);
-                                        Reflect.on(request).set("uri", url);
+                                        ReflectionUtils.set(request,"uri", url);
                                     }
                                 }
                             }

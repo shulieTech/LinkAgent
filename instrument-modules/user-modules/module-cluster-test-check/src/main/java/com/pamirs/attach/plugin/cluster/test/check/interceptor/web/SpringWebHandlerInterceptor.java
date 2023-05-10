@@ -31,7 +31,7 @@ public class SpringWebHandlerInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "org.springframework.web.server.ServerWebExchange")) {
+        if (ClassUtil.isInstance(advice.getParameterArray()[0], "org.springframework.web.server.ServerWebExchange")) {
             ServerWebExchange serverWebExchange = (ServerWebExchange) advice.getParameterArray()[0];
             return serverWebExchange.getRequest().getHeaders().getFirst(key);
         }

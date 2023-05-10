@@ -26,6 +26,9 @@ public abstract class ReflectionUtils {
     private static final Map<Class<?>, Field[]> declaredFieldsCache =
             new ConcurrentReferenceHashMap<Class<?>, Field[]>(256);
 
+    private static final Map<Class<?>, Constructor[]> declaredConstructorCache =
+            new ConcurrentReferenceHashMap<Class<?>, Constructor[]>(256);
+
     public static <T> T invoke(Object target, String methodName) {
         Method method = findMethod(target.getClass(), methodName);
         return (T) invokeMethod(method, target);
@@ -63,30 +66,45 @@ public abstract class ReflectionUtils {
     public static <T> T newInstance(String className, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
+            if (args[i] == null) {
+                paramTypes[i] = NULL.class;
+            } else if(args[i] instanceof Class) {
+                paramTypes[i] = (Class) args[i];
+            }else{
+                paramTypes[i] = args[i].getClass();
+            }
         }
         try {
             Class<?> clazz = Class.forName(className);
-            Constructor<?> constructor = clazz.getConstructor(paramTypes);
-            return (T) constructor.newInstance(args);
+            Constructor[] constructors = getDeclaredConstructors(clazz);
+            for (Constructor constructor : constructors) {
+                Class[] types = constructor.getParameterTypes();
+                if (types.length != paramTypes.length) {
+                    continue;
+                }
+                boolean match = true;
+                for (int i = 0; i < types.length; i++) {
+                    Class t1 = paramTypes[i];
+                    if (t1 == NULL.class) {
+                        continue;
+                    }
+                    if (t1 != types[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    return (T) constructor.newInstance(args);
+                }
+            }
+            throw new IllegalStateException("can`t find match constructor for class :" + className);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }
 
     public static <T> T newInstance(Class clazz, Object... args) {
-        Class[] paramTypes = new Class[args.length];
-        for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
-        }
-        try {
-            Constructor<?> constructor = clazz.getConstructor(paramTypes);
-            return (T) constructor.newInstance(args);
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+        return newInstance(clazz.getName(), args);
     }
 
     public static <T> T getFieldValues(Object object, String... filedNames) {
@@ -441,6 +459,16 @@ public abstract class ReflectionUtils {
         if (result == null) {
             result = clazz.getDeclaredFields();
             declaredFieldsCache.put(clazz, (result.length == 0 ? NO_FIELDS : result));
+        }
+        return result;
+    }
+
+    private static Constructor[] getDeclaredConstructors(Class<?> clazz) {
+        Assert.notNull(clazz, "Class must not be null");
+        Constructor[] result = declaredConstructorCache.get(clazz);
+        if (result == null) {
+            result = clazz.getDeclaredConstructors();
+            declaredConstructorCache.put(clazz, result);
         }
         return result;
     }

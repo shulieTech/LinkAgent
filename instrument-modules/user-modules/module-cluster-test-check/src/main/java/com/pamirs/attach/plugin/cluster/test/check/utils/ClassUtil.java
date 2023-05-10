@@ -15,6 +15,8 @@
 
 package com.pamirs.attach.plugin.cluster.test.check.utils;
 
+import com.google.common.collect.HashBasedTable;
+
 /**
  * @Description
  * @Author ocean_wll
@@ -22,6 +24,7 @@ package com.pamirs.attach.plugin.cluster.test.check.utils;
  */
 public class ClassUtil {
 
+    private static HashBasedTable<String, String, Boolean> classAssignableCache = HashBasedTable.create();
 
     /**
      * 判读当前对象是否指定class的实例
@@ -30,13 +33,65 @@ public class ClassUtil {
      * @param className 类名
      * @return true 属于，false 不属于
      */
-    public static boolean instanceOf(Object obj, String className) {
-        Class clazz;
-        try {
-            clazz = Class.forName(className);
-        } catch (ClassNotFoundException e) {
+    public static boolean isInstance(Object obj, String className) {
+        Class<?> clazz = obj.getClass();
+        Boolean aBoolean = classAssignableCache.get(clazz.getName(), className);
+        if (aBoolean != null) {
+            return aBoolean;
+        }
+
+        Class<?> aClass = clazz;
+        if (aClass.getName().equals(className)) {
+            return true;
+        }
+
+        if (isInterfaceImpl(clazz, className)) {
+            classAssignableCache.put(aClass.getName(), className, true);
+            return true;
+        }
+
+        boolean isSuperClass = isSuperClass(clazz.getSuperclass(), className);
+        if (isSuperClass) {
+            classAssignableCache.put(aClass.getName(), className, true);
+            return true;
+        }
+
+        classAssignableCache.put(aClass.getName(), className, false);
+        return true;
+    }
+
+    private static boolean isSuperClass(Class<?> clazz, String className) {
+        if (clazz.getName().equals(className)) {
+            return true;
+        }
+        if (clazz.getName().equals("java.lang.Object")) {
             return false;
         }
-        return clazz.isInstance(obj);
+        Class<?>[] interfaces = clazz.getInterfaces();
+        for (Class<?> anInterface : interfaces) {
+            if (isInterfaceImpl(anInterface, className)) {
+                return true;
+            }
+        }
+        return isSuperClass(clazz.getSuperclass(), className);
     }
+
+    private static boolean isInterfaceImpl(Class<?> clazz, String className) {
+        Class<?>[] interfaces = clazz.getInterfaces();
+        if (interfaces == null || interfaces.length == 0) {
+            return false;
+        }
+        for (int i = 0; i < interfaces.length; i++) {
+            Class<?> aClass = interfaces[i];
+            if (aClass.getName().equals(className)) {
+                return true;
+            }
+            boolean isInstances = isInterfaceImpl(aClass, className);
+            if (isInstances) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

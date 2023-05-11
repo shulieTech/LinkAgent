@@ -1,1 +1,1 @@
-2.0.0.4  trace日志里put post请求能打印body
+2.0.0.5  trace日志里正确显示耗时

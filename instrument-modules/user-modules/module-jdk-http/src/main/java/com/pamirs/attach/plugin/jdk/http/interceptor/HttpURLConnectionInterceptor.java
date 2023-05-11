@@ -41,6 +41,7 @@ import java.net.URL;
 public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
 
     public static ThreadLocal<SpanRecord> traceLocalCache = new ThreadLocal<SpanRecord>();
+    public static ThreadLocal<Long> connectTimeLocalCache = new ThreadLocal<Long>();
 
     protected static String getService(String schema, String host, int port, String path) {
         String url = schema + "://" + host;
@@ -117,14 +118,18 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         record.setRemoteIp(host);
         record.setPort(port);
 
+        boolean connected = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
+        boolean connecting = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
+        if(connecting){
+            connectTimeLocalCache.set(System.currentTimeMillis());
+        }
+
         // post和put请求需要在sun.net.www.http.HttpClient.writeRequests(sun.net.www.MessageHeader, sun.net.www.http.PosterOutputStream)方法打印trace
         if("post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method)){
             traceLocalCache.set(record);
             return null;
         }
 
-        boolean connected = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
-        boolean connecting = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
         if(connected || connecting){
             advice.mark("connect");
             return null;

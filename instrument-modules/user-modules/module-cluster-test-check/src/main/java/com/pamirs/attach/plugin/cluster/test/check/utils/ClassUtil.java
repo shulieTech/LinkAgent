@@ -35,28 +35,26 @@ public class ClassUtil {
      */
     public static boolean isInstance(Object obj, String className) {
         Class<?> clazz = obj.getClass();
-        Boolean aBoolean = classAssignableCache.get(clazz.getName(), className);
-        if (aBoolean != null) {
-            return aBoolean;
-        }
-
-        Class<?> aClass = clazz;
-        if (aClass.getName().equals(className)) {
+        if (clazz.getName().equals(className)) {
             return true;
+        }
+        Boolean assignable = classAssignableCache.get(clazz.getName(), className);
+        if (assignable != null) {
+            return assignable;
         }
 
         if (isInterfaceImpl(clazz, className)) {
-            classAssignableCache.put(aClass.getName(), className, true);
+            classAssignableCache.put(clazz.getName(), className, true);
             return true;
         }
 
         boolean isSuperClass = isSuperClass(clazz.getSuperclass(), className);
         if (isSuperClass) {
-            classAssignableCache.put(aClass.getName(), className, true);
+            classAssignableCache.put(clazz.getName(), className, true);
             return true;
         }
 
-        classAssignableCache.put(aClass.getName(), className, false);
+        classAssignableCache.put(clazz.getName(), className, false);
         return true;
     }
 

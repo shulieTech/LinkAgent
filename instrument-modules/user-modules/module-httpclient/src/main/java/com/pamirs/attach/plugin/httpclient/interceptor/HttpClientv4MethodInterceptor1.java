@@ -98,7 +98,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                     if (HttpClientConstants.clazz == null) {
                         HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                     }
-                    Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                    Object object = ReflectionUtils.newInstance(HttpClientConstants.clazz,response, null);
                     Advice advice = (Advice) config.getArgs().get("advice");
                     Object[] methodParams = advice.getParameterArray();
                     ResponseHandler responseHandler = null;

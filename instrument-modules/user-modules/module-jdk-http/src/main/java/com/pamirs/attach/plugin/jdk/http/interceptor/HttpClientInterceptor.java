@@ -100,6 +100,7 @@ public class HttpClientInterceptor extends TraceInterceptorAdaptor {
         if(spanRecord == null){
             return null;
         }
+        Pradar.getInvokeContext().setStartTime(HttpURLConnectionInterceptor.connectTimeLocalCache.get());
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         InnerWhiteListCheckUtil.check();
@@ -112,6 +113,7 @@ public class HttpClientInterceptor extends TraceInterceptorAdaptor {
         if(spanRecord == null){
             return null;
         }
+        Pradar.getInvokeContext().setStartTime(HttpURLConnectionInterceptor.connectTimeLocalCache.get());
         SpanRecord record = new SpanRecord();
         if (advice.getThrowable() instanceof SocketTimeoutException) {
             record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);

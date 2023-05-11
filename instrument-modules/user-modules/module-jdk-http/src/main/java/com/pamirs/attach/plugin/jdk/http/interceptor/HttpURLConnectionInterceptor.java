@@ -120,18 +120,20 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
 
         boolean connected = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
         boolean connecting = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
-        if(connecting){
+
+        String behaviorName = advice.getBehaviorName();
+        if (behaviorName.equals("connect") && !connected) {
             connectTimeLocalCache.set(System.currentTimeMillis());
         }
 
         // post和put请求需要在sun.net.www.http.HttpClient.writeRequests(sun.net.www.MessageHeader, sun.net.www.http.PosterOutputStream)方法打印trace
-        if("post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method)){
+        boolean hasBody = "post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method);
+        if (hasBody) {
             traceLocalCache.set(record);
             return null;
         }
 
-        if(connected || connecting){
-            advice.mark("connect");
+        if (connected || connecting) {
             return null;
         }
         return record;
@@ -139,33 +141,37 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        if(advice.hasMark("connect")){
+        String behaviorName = advice.getBehaviorName();
+        if (!behaviorName.equals("getInputStream")) {
             return null;
         }
         final HttpURLConnection request = (HttpURLConnection) advice.getTarget();
         // post和put请求
         String method = request.getRequestMethod();
-        if("post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method)){
+        if ("post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method)) {
             return null;
         }
         SpanRecord record = new SpanRecord();
         record.setResultCode(ResultCode.INVOKE_RESULT_SUCCESS);
         record.setMethod(StringUtils.upperCase(((HttpURLConnection) advice.getTarget()).getRequestMethod()));
+        Pradar.getInvokeContext().setStartTime(connectTimeLocalCache.get());
         InnerWhiteListCheckUtil.check();
         return record;
     }
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {
-        if(advice.hasMark("connect")){
+        String behaviorName = advice.getBehaviorName();
+        if (!behaviorName.equals("getInputStream")) {
             return null;
         }
         final HttpURLConnection request = (HttpURLConnection) advice.getTarget();
 
         String method = request.getRequestMethod();
-        if("post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method)){
+        if ("post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method)) {
             return null;
         }
+        Pradar.getInvokeContext().setStartTime(connectTimeLocalCache.get());
         SpanRecord record = new SpanRecord();
         if (advice.getThrowable() instanceof SocketTimeoutException) {
             record.setResultCode(ResultCode.INVOKE_RESULT_TIMEOUT);

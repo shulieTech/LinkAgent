@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.pamirs.attach.plugin.cluster.test.check.utils;
+package com.pamirs.pradar.common;
 
 import com.google.common.collect.HashBasedTable;
 
@@ -22,7 +22,7 @@ import com.google.common.collect.HashBasedTable;
  * @Author ocean_wll
  * @Date 2022/8/24 13:40
  */
-public class ClassUtil {
+public class ClassAssignableUtil {
 
     private static HashBasedTable<String, String, Boolean> classAssignableCache = HashBasedTable.create();
 

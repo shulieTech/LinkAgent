@@ -14,16 +14,13 @@
  */
 package com.pamirs.attach.plugin.feign.interceptor;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.alibaba.fastjson.JSON;
 import com.google.gson.Gson;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.feign.FeignConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.common.ClassAssignableUtil;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -39,6 +36,13 @@ import feign.InvocationHandlerFactory;
 import feign.MethodMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -130,8 +134,17 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         SpanRecord record = new SpanRecord();
         record.setService(method.getDeclaringClass().getName());
         record.setMethod(method.getName() + getParameterTypesString(method.getParameterTypes()));
+        // MultipartFile toJSONString时会报异常
         if (arg != null) {
-            record.setRequest(JSON.toJSONString(args[2]));
+            List<Object> toStringArgs = new ArrayList<Object>();
+            for (Object o : arg) {
+                if (ClassAssignableUtil.isInstance(o, "org.springframework.web.multipart.MultipartFile")) {
+                    toStringArgs.add(ReflectionUtils.invoke(arg, "getName"));
+                } else {
+                    toStringArgs.add(o);
+                }
+            }
+            record.setRequest(JSON.toJSONString(arg));
         }
         if (Pradar.isClusterTest()) {
             record.setPassedCheck(true);

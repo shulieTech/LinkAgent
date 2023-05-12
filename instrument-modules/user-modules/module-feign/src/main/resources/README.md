@@ -1,1 +1,1 @@
-2.0.0.4 feign请求打印参数
+2.0.0.5 feign请求打印参数时过滤MultipartFile，否则会报错

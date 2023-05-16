@@ -36,14 +36,14 @@ import io.netty.channel.Channel;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import oshi.util.StringJoiner;
-
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Destroyable(LettuceDestroy.class)
 public class LettuceMethodInterceptor extends TraceInterceptorAdaptor {

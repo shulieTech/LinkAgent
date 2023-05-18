@@ -19,10 +19,10 @@ public class PradarCoreModuleDependenciesCollector {
                 boolean ttl = dependency.artifactId.equals("transmittable-thread-local");
                 boolean spring = dependency.groupId.equals("org.springframework");
                 boolean logback = dependency.groupId.equals("ch.qos.logback");
+                boolean guava = dependency.artifactId.equals("guava");
                 boolean provided = "provided".equals(dependency.scope);
                 boolean system = "system".equals(dependency.scope);
-
-                return !agent && !ttl && !spring && !system && provided && !logback;
+                return guava || (!agent && !ttl && !spring && !system && provided && !logback);
             }
         }).collect(Collectors.toList());
 

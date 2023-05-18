@@ -11,6 +11,6 @@ public class DependencyRepositoryConfig {
     /**
      * 已经打进代码的依赖
      */
-    public static List<String> hasPackagedDependencies = Arrays.asList("com.google.guava:guava", "org.apache.httpcomponents:httpclient", "org.slf4j:slf4j-api");
+    public static List<String> hasPackagedDependencies = Arrays.asList("org.slf4j:slf4j-api");
 
 }

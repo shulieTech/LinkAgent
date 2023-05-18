@@ -14,7 +14,7 @@
 
     <properties>
         <module-name>pradar-core</module-name>
-        <scope.prop>compile</scope.prop>
+        <scope.prop>provided</scope.prop>
     </properties>
     <version>${pradar.core.version}</version>
 

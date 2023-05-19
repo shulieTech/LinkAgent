@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.api;
 import com.shulie.instrument.simulator.api.utils.ParseUtils;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.util.*;
 
 /**
@@ -484,11 +485,73 @@ public class ModuleSpec {
         return importResources;
     }
 
+    /**
+     * 导入外部的jar包或者目录
+     *
+     * @param importResource
+     * @return
+     */
     public ModuleSpec setImportResources(String importResource) {
-        this.importResources = strToSet(importResource, ",");
-        ParseUtils.parsePackagePrefixAndSuffix(this.importResources, this.importPrefixResources,
-                this.importSuffixResources, this.importExactlyResources);
+        if (importResource == null) {
+            return this;
+        }
+        File simulatorAgent = file;
+        while (true) {
+            simulatorAgent = simulatorAgent.getParentFile();
+            if (simulatorAgent.getName().equals("simulator-agent")) {
+                break;
+            }
+        }
+        Set<String> importResources = new HashSet<String>();
+        String[] split = importResource.split(",");
+        for (String s : split) {
+            Set<String> resources = extractResource(simulatorAgent, s.trim());
+            if (resources != null) {
+                importResources.addAll(resources);
+            }
+        }
+        this.importResources = importResources;
         return this;
+    }
+
+    private Set<String> extractResource(File simulatorAgent, String importResource) {
+        if (importResource.length() == 0) {
+            return null;
+        }
+
+        File resource;
+        if (importResource.startsWith("/")) {
+            resource = new File(importResource);
+        } else {
+            if (importResource.contains("..")) {
+                while (importResource.startsWith("..")) {
+                    simulatorAgent = simulatorAgent.getParentFile();
+                    importResource = importResource.substring(3);
+                }
+            }
+            resource = new File(simulatorAgent, importResource);
+        }
+
+        if (!resource.exists()) {
+            return null;
+        }
+        Set<String> importResources = new HashSet<String>();
+        if (resource.getName().endsWith(".jar")) {
+            importResources.add(resource.getAbsolutePath());
+        }
+        if (resource.isDirectory()) {
+            File[] jars = resource.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    return pathname.getName().endsWith(".jar");
+                }
+            });
+            for (File jar : jars) {
+                importResources.add(jar.getAbsolutePath());
+            }
+        }
+        return importResources;
+
     }
 
     public Set<String> getImportPrefixResources() {

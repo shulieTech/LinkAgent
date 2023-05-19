@@ -21,9 +21,24 @@ public class PomFileReader {
      */
     public static String findCurrentModulePomPath() throws IOException {
         URL resource = PradarCoreModuleDependenciesCollector.class.getResource("/");
-        String absolutePath = Paths.get(resource != null ? "instrument-modules/user-modules/module-pradar-core" : "../").toFile().getAbsolutePath();
-        DependencyRepositoryConfig.currentModulePath = absolutePath;
-        File pom = new File(absolutePath, "pom.xml");
+        File file = new File(Paths.get(resource != null ? "instrument-modules/user-modules/module-pradar-core" : "").toFile().getAbsolutePath());
+
+        File modulePath;
+        while (true) {
+            String fileName = file.getName();
+            if (fileName.equals("module-pradar-core")) {
+                modulePath = file;
+                break;
+            }
+            if (fileName.equals("LinkAgent")) {
+                modulePath = Paths.get(file.getAbsolutePath(), "instrument-modules", "user-modules", "module-pradar-core").toFile();
+                break;
+            } else {
+                file = file.getParentFile();
+            }
+        }
+        DependencyRepositoryConfig.currentModulePath = modulePath.getAbsolutePath();
+        File pom = new File(modulePath, "pom.xml");
         return pom.getAbsolutePath();
     }
 
@@ -316,7 +331,7 @@ public class PomFileReader {
                 if ("true".equals(dependency.optional)) {
                     return false;
                 }
-                if (dependency.artifactId.contains("999")) {
+                if (dependency.artifactId.contains("999") || (dependency.version != null && dependency.version.contains("999"))) {
                     return false;
                 }
                 List<String> scopes = Arrays.asList("system", "provided", "test", "import");

@@ -105,7 +105,7 @@ public class LocalRepositoryManager {
         }
         File lib = Paths.get(linkAgent.getAbsolutePath(), "deploy", "simulator-agent", "lib").toFile();
         if (!lib.exists()) {
-            lib.mkdir();
+            lib.mkdirs();
         }
         for (File jarFile : jarFiles) {
             Files.copy(jarFile.toPath(), new FileOutputStream(new File(lib, jarFile.getName())));

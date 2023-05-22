@@ -168,7 +168,7 @@
                     <include>**/logo</include>
                     <include>agent.properties</include>
                     <include>simulator-agent-logback.xml</include>
-                    <include>import-resources.config</include>
+                    <include>import-dependencies.config</include>
                 </includes>
                 <filtering>true</filtering>
             </resource>

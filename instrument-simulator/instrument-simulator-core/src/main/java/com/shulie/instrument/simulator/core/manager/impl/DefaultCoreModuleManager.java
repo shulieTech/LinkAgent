@@ -1174,7 +1174,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
 
         try {
-            final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule(), moduleSpec.getImportResources());
+            final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule(), moduleSpec.getImportArtifacts());
             classLoaderService.load(moduleSpec, moduleClassLoader);
         } catch (Throwable e) {
             logger.info("load module [{}] fail, set module invalid", moduleSpec.getModuleId(), e);

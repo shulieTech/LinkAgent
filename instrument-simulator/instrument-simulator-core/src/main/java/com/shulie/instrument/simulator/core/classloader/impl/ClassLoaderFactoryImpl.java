@@ -40,7 +40,7 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
 
     private final ClassLoaderService classLoaderService;
     private final File moduleJarFile;
-    private final Set<String> importResources;
+    private final Set<String> importArtifacts;
     private final String moduleId;
     private ConcurrentHashMap<Integer, ModuleClassLoader> classLoaderCache;
     private final long checksumCRC32;
@@ -58,7 +58,7 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
      */
     private final boolean isMiddlewareModule;
 
-    public ClassLoaderFactoryImpl(final ClassLoaderService classLoaderService, final CoreConfigure config, final File moduleJarFile, final String moduleId, final boolean isMiddlewareModule, Set<String> importResources) throws IOException {
+    public ClassLoaderFactoryImpl(final ClassLoaderService classLoaderService, final CoreConfigure config, final File moduleJarFile, final String moduleId, final boolean isMiddlewareModule, Set<String> importArtifacts) throws IOException {
         this.classLoaderService = classLoaderService;
         this.moduleJarFile = moduleJarFile;
         this.moduleId = moduleId;
@@ -66,9 +66,9 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
         this.isMiddlewareModule = isMiddlewareModule;
         this.classLoaderCache = new ConcurrentHashMap<Integer, ModuleClassLoader>();
         this.checksumCRC32 = FileUtils.checksumCRC32(moduleJarFile);
-        this.defaultClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, importResources, moduleId, "middleware-module-default-classloader");
+        this.defaultClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, importArtifacts, moduleId, "middleware-module-default-classloader");
         this.defaultBizClassLoaderRef = new AtomicReference<Integer>();
-        this.importResources = importResources;
+        this.importArtifacts = importArtifacts;
     }
 
     @Override
@@ -101,7 +101,7 @@ public class ClassLoaderFactoryImpl implements ClassLoaderFactory {
             if (moduleClassLoader != null) {
                 return moduleClassLoader;
             }
-            moduleClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, importResources, moduleId, businessClassLoader == null ? null : businessClassLoader.toString());
+            moduleClassLoader = new ModuleClassLoader(classLoaderService, moduleJarFile, importArtifacts, moduleId, businessClassLoader == null ? null : businessClassLoader.toString());
             ModuleClassLoader oldModuleClassLoader = classLoaderCache.putIfAbsent(id, moduleClassLoader);
             if (oldModuleClassLoader != null) {
                 moduleClassLoader.closeIfPossible();

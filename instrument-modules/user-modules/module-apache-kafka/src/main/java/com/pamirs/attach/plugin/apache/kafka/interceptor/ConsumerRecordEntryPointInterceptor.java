@@ -125,7 +125,11 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
             } else {
                 Object cache = ReflectionUtils.get(metadata, "cache");
                 if (cache != null) {
-                    nodes = ReflectionUtils.get(cache, "nodes");
+                    Object getNodes = ReflectionUtils.get(cache, "nodes");
+                    if(getNodes instanceof Map){
+                        getNodes = ((Map)getNodes).values();
+                    }
+                    nodes = (Iterable<Node>) getNodes;
                 }
             }
             StringBuilder sb = new StringBuilder();

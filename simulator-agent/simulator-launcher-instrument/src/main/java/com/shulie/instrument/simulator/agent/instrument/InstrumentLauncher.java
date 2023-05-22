@@ -78,9 +78,7 @@ public class InstrumentLauncher {
      * @return true|false
      */
     private static boolean isNotBlank(final String string) {
-        return null != string
-                && string.length() > 0
-                && !string.matches("^\\s*$");
+        return null != string && string.length() > 0 && !string.matches("^\\s*$");
     }
 
     /**
@@ -118,9 +116,7 @@ public class InstrumentLauncher {
                 continue;
             }
             final String[] kvSegmentArray = kvPairSegmentString.split("=");
-            if (kvSegmentArray.length != 2
-                    || isBlank(kvSegmentArray[0])
-                    || isBlank(kvSegmentArray[1])) {
+            if (kvSegmentArray.length != 2 || isBlank(kvSegmentArray[0]) || isBlank(kvSegmentArray[1])) {
                 continue;
             }
             featureMap.put(kvSegmentArray[0], kvSegmentArray[1]);
@@ -283,27 +279,27 @@ public class InstrumentLauncher {
         URL[] noImportUrls = new URL[]{jar.toURI().toURL()};
         JarFile jarFile;
         jarFile = new JarFile(jar);
-        ZipEntry jarEntry = jarFile.getEntry("import-resources.config");
+        ZipEntry jarEntry = jarFile.getEntry("import-dependencies.config");
         if (jarEntry == null) {
             return noImportUrls;
         }
 
         String[] baseDirs;
-        String[] importResources;
+        String[] importArtifacts;
         InputStream in = null;
         try {
             in = jarFile.getInputStream(jarEntry);
             Properties properties = new Properties();
             properties.load(in);
-            String baseDir = properties.getProperty("import-dir");
+            String baseDir = properties.getProperty("import-dependency-dir");
             if (baseDir == null || baseDir.length() == 0) {
                 return noImportUrls;
             }
-            String lib = properties.getProperty("import-jar");
+            String lib = properties.getProperty("import-artifacts");
             if (lib == null || lib.length() == 0) {
                 return noImportUrls;
             }
-            importResources = lib.split(",");
+            importArtifacts = lib.split(",");
             baseDirs = baseDir.split(",");
         } finally {
             if (in != null) {
@@ -311,7 +307,7 @@ public class InstrumentLauncher {
             }
         }
 
-        if (importResources == null || baseDirs == null) {
+        if (importArtifacts == null || baseDirs == null) {
             return noImportUrls;
         }
 
@@ -324,21 +320,18 @@ public class InstrumentLauncher {
         }
 
         Map<String, String> importJars = new HashMap<String, String>();
-        for (String s : importResources) {
-            for (String baseDir : baseDirs) {
-                Map<String, String> jarMaps = extractResource(simulatorAgent, baseDir.trim(), s.trim());
 
-                if (jarMaps == null || jarMaps.isEmpty()) {
+        for (String s : importArtifacts) {
+            for (String baseDir : baseDirs) {
+                File importJar = extractArtifacts(simulatorAgent, baseDir.trim(), s.trim());
+                if (importJar == null) {
                     continue;
                 }
                 // 排除重复的jar
-                Map<String, String> add = new HashMap<String, String>();
-                for (Map.Entry<String, String> newEntry : jarMaps.entrySet()) {
-                    if (!importJars.containsKey(newEntry.getKey())) {
-                        add.put(newEntry.getKey(), newEntry.getValue());
-                    }
+                String artifactId = importJar.getName().substring(0, importJar.getName().lastIndexOf("-"));
+                if (!importJars.containsKey(artifactId)) {
+                    importJars.put(artifactId, importJar.getAbsolutePath());
                 }
-                importJars.putAll(add);
             }
         }
 
@@ -351,8 +344,8 @@ public class InstrumentLauncher {
         return urls.toArray(new URL[0]);
     }
 
-    private static Map<String, String> extractResource(File agentPath, String baseDir, String importResource) {
-        if (importResource.length() == 0) {
+    private static File extractArtifacts(File agentPath, String baseDir, String artifactId) {
+        if (artifactId.length() == 0) {
             return null;
         }
 
@@ -363,44 +356,19 @@ public class InstrumentLauncher {
             }
         }
 
-        File resource;
-        if (importResource.startsWith("/")) {
-            resource = new File(importResource);
-        } else {
-            if (importResource.contains("..")) {
-                while (importResource.startsWith("..")) {
-                    agentPath = agentPath.getParentFile();
-                    importResource = importResource.substring(3);
-                }
-            }
-            resource = new File(agentPath, baseDir + File.separator + importResource);
-        }
+        File dir = new File(agentPath, baseDir);
+        final String artifact = artifactId;
 
-        if (!resource.exists()) {
+        File[] files = dir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                String name = file.getName();
+                return name.contains("-") && name.substring(0, name.lastIndexOf("-")).equals(artifact);
+            }
+        });
+        if (files.length == 0) {
             return null;
         }
-        Set<String> importResources = new HashSet<String>();
-        if (resource.getName().endsWith(".jar")) {
-            importResources.add(resource.getAbsolutePath());
-        }
-        if (resource.isDirectory()) {
-            File[] jars = resource.listFiles(new FileFilter() {
-                @Override
-                public boolean accept(File pathname) {
-                    return pathname.getName().endsWith(".jar");
-                }
-            });
-            for (File jar : jars) {
-                importResources.add(jar.getAbsolutePath());
-            }
-        }
-        // fastjson-2.0.6.jar  fastjson >> fastjson-2.0.6.jar
-        Map<String, String> jarList = new HashMap<String, String>();
-        for (String im : importResources) {
-            jarList.put(im.substring(im.lastIndexOf(File.separator) + 1, im.lastIndexOf("-")), im);
-        }
-
-        return jarList;
-
+        return new File(agentPath, baseDir + File.separator + files[0].getName());
     }
 }

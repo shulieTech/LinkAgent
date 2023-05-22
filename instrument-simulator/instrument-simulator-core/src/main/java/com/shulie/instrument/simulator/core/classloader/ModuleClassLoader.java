@@ -58,11 +58,11 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
         return tempFile;
     }
 
-    private static URL[] buildResourceUrls(final File tempModuleJarFile, Set<String> importResources) throws IOException {
+    private static URL[] buildResourceUrls(final File tempModuleJarFile, Set<String> importArtifacts) throws IOException {
         List<File> jarFiles = new ArrayList<File>();
         jarFiles.add(tempModuleJarFile);
-        if (importResources != null && !importResources.isEmpty()) {
-            for (String resource : importResources) {
+        if (importArtifacts != null && !importArtifacts.isEmpty()) {
+            for (String resource : importArtifacts) {
                 jarFiles.add(new File(resource));
             }
         }
@@ -73,14 +73,14 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
         return urls;
     }
 
-    public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, Set<String> importResources, final String moduleId, final String bizClassLoader) throws IOException {
-        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), importResources, moduleId, bizClassLoader);
+    public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, Set<String> importArtifacts, final String moduleId, final String bizClassLoader) throws IOException {
+        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), importArtifacts, moduleId, bizClassLoader);
     }
 
     private ModuleClassLoader(final ClassLoaderService classLoaderService,
                               final File moduleJarFile,
                               final File tempModuleJarFile,
-                              Set<String> importResources,
+                              Set<String> importArtifacts,
                               final String moduleId,
                               final String bizClassLoader) throws IOException {
         /**
@@ -89,7 +89,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
          */
         super(moduleId,
                 classLoaderService,
-                buildResourceUrls(tempModuleJarFile, importResources),
+                buildResourceUrls(tempModuleJarFile, importArtifacts),
                 new Routing(
                         ModuleClassLoader.class.getClassLoader(),
                         //声明所有模块需要找框架加载的类列表,模块类加载会优先从这份列表中加载

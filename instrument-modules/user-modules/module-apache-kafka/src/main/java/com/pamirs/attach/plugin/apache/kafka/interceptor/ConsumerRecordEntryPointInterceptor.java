@@ -107,15 +107,18 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
         long consumerCell = System.currentTimeMillis() - consumerRecord.timestamp();
         String remoteAddress = null;
         if (args.length >= 3) {
-            if(proxyConsumerMappings.containsKey(consumer)){
+            if (proxyConsumerMappings.containsKey(consumer)) {
                 remoteAddress = KafkaUtils.getRemoteAddress(proxyConsumerMappings.get(consumer), manager);
-            }else{
+            } else {
                 remoteAddress = KafkaUtils.getRemoteAddress(consumer, manager);
             }
         }
         if (remoteAddress == null) {
             Object metadata = ReflectionUtils.get(consumer, "metadata");
-            Object cluster = ReflectionUtils.get(metadata, "cluster");
+            Object cluster = null;
+            if (ReflectionUtils.existsField(metadata, "cluster")) {
+                cluster = ReflectionUtils.get(metadata, "cluster");
+            }
             Iterable<Node> nodes = null;
             if (cluster != null) {
                 nodes = ReflectionUtils.get(cluster, "nodes");
@@ -165,7 +168,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
                     group = groupId.get(obj);
                 } catch (Throwable e) {
                     try {
-                        Object coordinator = ReflectionUtils.get(obj,KafkaConstants.REFLECT_FIELD_COORDINATOR);
+                        Object coordinator = ReflectionUtils.get(obj, KafkaConstants.REFLECT_FIELD_COORDINATOR);
                         group = ReflectionUtils.get(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
                     } catch (Exception exp) {
 
@@ -184,14 +187,14 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
 
             try {
                 Consumer consumer = (Consumer) obj;
-                Object proxy = ReflectionUtils.get(consumer,"h");
-                Object advised = ReflectionUtils.get(proxy,"advised");
-                Object targetSource = ReflectionUtils.get(advised,"targetSource");
-                Object kafkaConsumer = ReflectionUtils.get(targetSource,"target");
+                Object proxy = ReflectionUtils.get(consumer, "h");
+                Object advised = ReflectionUtils.get(proxy, "advised");
+                Object targetSource = ReflectionUtils.get(advised, "targetSource");
+                Object kafkaConsumer = ReflectionUtils.get(targetSource, "target");
                 proxyConsumerMappings.put(obj, (Consumer) kafkaConsumer);
-                group = ReflectionUtils.get(kafkaConsumer,"groupId");
+                group = ReflectionUtils.get(kafkaConsumer, "groupId");
                 if (group.getClass().getName().equals("java.util.Optional")) {
-                    group = ReflectionUtils.invoke(group,"get");
+                    group = ReflectionUtils.invoke(group, "get");
                 }
                 return (String) group;
             } catch (Exception e) {

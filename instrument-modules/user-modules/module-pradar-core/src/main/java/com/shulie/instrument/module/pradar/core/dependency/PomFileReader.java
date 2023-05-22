@@ -181,6 +181,10 @@ public class PomFileReader {
         try {
             while (iterator.hasNext()) {
                 line = iterator.next().trim();
+                if (line.startsWith("-->")) {
+                    line = line.substring(3);
+                    comment = false;
+                }
                 if (line.isEmpty()) {
                     continue;
                 }
@@ -283,9 +287,11 @@ public class PomFileReader {
             Dependency parent = extractParentDependency(pom);
             File parentPom = findPomFile(parent);
             // 读取parent pom
-            Map.Entry<Map<String, String>, List<Dependency>> result = extractPomDependencies(dependency, parentPom.getAbsolutePath(), null, false, true);
-            Map<String, String> parentProperties = result.getKey();
-            List<Dependency> parentDependencies = result.getValue();
+            Map.Entry<Map<String, String>, List<Dependency>> parentContent = new AbstractMap.SimpleEntry<>(new HashMap<>(), new ArrayList<>());
+            extractParentDependencies(pom.getAbsolutePath(), parentContent);
+
+            Map<String, String> parentProperties = parentContent.getKey();
+            List<Dependency> parentDependencies = parentContent.getValue();
 
             Map<String, Dependency> depMaps = new HashMap<>();
             for (Dependency dep : parentDependencies) {
@@ -324,6 +330,17 @@ public class PomFileReader {
         }
     }
 
+    private static void extractParentDependencies(String childPom, Map.Entry<Map<String, String>, List<Dependency>> result) throws IOException {
+        Dependency parentDep = extractParentDependency(new File(childPom));
+        while (parentDep.artifactId != null) {
+            File parentPom = findPomFile(parentDep);
+            Map.Entry<Map<String, String>, List<Dependency>> innerResult = extractPomDependencies(parentDep, parentPom.getAbsolutePath(), null, false, true);
+            result.getKey().putAll(innerResult.getKey());
+            result.getValue().addAll(innerResult.getValue());
+            parentDep = extractParentDependency(parentPom);
+        }
+    }
+
     private static List<Dependency> filterDependencies(List<Dependency> dependencies) {
         return dependencies.stream().filter(new Predicate<Dependency>() {
             @Override
@@ -353,32 +370,41 @@ public class PomFileReader {
     private static void replaceVariable(Dependency dep, Map<String, String> properties) {
         if (dep.groupId != null && dep.groupId.startsWith("${")) {
             String key = dep.groupId.substring(2, dep.groupId.length() - 1);
-            String groupId = properties.get(key);
+            String groupId = findPropertyValue(key, properties);
             if (groupId != null) {
                 dep.groupId = groupId;
             }
         }
         if (dep.artifactId != null && dep.artifactId.startsWith("${")) {
             String key = dep.artifactId.substring(2, dep.artifactId.length() - 1);
-            String artifactId = properties.get(key);
+            String artifactId = findPropertyValue(key, properties);
             if (artifactId != null) {
                 dep.artifactId = artifactId;
             }
         }
         if (dep.version != null && dep.version.startsWith("${")) {
             String key = dep.version.substring(2, dep.version.length() - 1);
-            String version = properties.get(key);
+            String version = findPropertyValue(key, properties);
             if (version != null) {
                 dep.version = version;
             }
         }
         if (dep.scope != null && dep.scope.startsWith("${")) {
             String key = dep.scope.substring(2, dep.scope.length() - 1);
-            String scope = properties.get(key);
+            String scope = findPropertyValue(key, properties);
             if (scope != null) {
                 dep.scope = scope;
             }
         }
+    }
+
+    private static String findPropertyValue(String key, Map<String, String> properties) {
+        String value = properties.get(key);
+        while (value != null && value.startsWith("${")) {
+            key = value.substring(2, value.length() - 1);
+            value = properties.get(key);
+        }
+        return value;
     }
 
     /**

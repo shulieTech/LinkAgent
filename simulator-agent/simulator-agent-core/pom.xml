@@ -17,6 +17,7 @@
         <build.time>${timestamp}</build.time>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
+        <scope.prop>provided</scope.prop>
     </properties>
 
     <dependencies>
@@ -35,28 +36,6 @@
             <artifactId>simulator-agent-api</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>2.0.6</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.30</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.2.1</version>
-        </dependency>
 
         <dependency>
             <groupId>com.sun</groupId>
@@ -66,25 +45,36 @@
             <systemPath>${jdk.8.home}/lib/tools.jar</systemPath>
         </dependency>
 
-
-        <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-framework -->
         <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-framework</artifactId>
-            <version>2.9.1</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.30</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-recipes -->
         <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-recipes</artifactId>
-            <version>2.9.1</version>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.1</version>
         </dependency>
 
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>1.2</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-framework -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>5.2.0</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-recipes -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>5.2.0</version>
         </dependency>
 
         <dependency>
@@ -108,16 +98,33 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.12.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>2.0.6</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>5.5.9</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
 
@@ -161,6 +168,7 @@
                     <include>**/logo</include>
                     <include>agent.properties</include>
                     <include>simulator-agent-logback.xml</include>
+                    <include>import-resources.config</include>
                 </includes>
                 <filtering>true</filtering>
             </resource>

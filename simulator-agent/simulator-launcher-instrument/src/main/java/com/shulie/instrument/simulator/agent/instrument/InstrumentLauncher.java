@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,18 +14,16 @@
  */
 package com.shulie.instrument.simulator.agent.instrument;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io         入口类
@@ -37,10 +35,10 @@ public class InstrumentLauncher {
     private final static String SIMULATOR_KEY_DELAY = "simulator.delay";
     private final static String SIMULATOR_KEY_UNIT = "simulator.unit";
 
-    static{
-        try{
+    static {
+        try {
             DEFAULT_AGENT_HOME = new File(InstrumentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile()).getParent();
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
     }
@@ -260,9 +258,9 @@ public class InstrumentLauncher {
      * @throws IllegalAccessException
      * @throws java.lang.reflect.InvocationTargetException
      */
-    private static void startInternal(final long pid, final String processName, Integer delay, TimeUnit unit, Instrumentation inst) throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, java.lang.reflect.InvocationTargetException {
+    private static void startInternal(final long pid, final String processName, Integer delay, TimeUnit unit, Instrumentation inst) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, java.lang.reflect.InvocationTargetException {
         File file = new File(DEFAULT_AGENT_HOME + File.separator + "core", "simulator-agent-core.jar");
-        AgentClassLoader agentClassLoader = new AgentClassLoader(new URL[]{file.toURI().toURL()});
+        AgentClassLoader agentClassLoader = new AgentClassLoader(extractSimulatorAgentCoreImportResources(file));
         Class coreLauncherOfClass = agentClassLoader.loadClass("com.shulie.instrument.simulator.agent.core.CoreLauncher");
         Constructor constructor = coreLauncherOfClass.getConstructor(String.class, long.class, String.class, String.class, Instrumentation.class, ClassLoader.class);
         Object coreLauncherOfInstance = constructor.newInstance(DEFAULT_AGENT_HOME, pid, processName, getTagFileName(), inst, InstrumentLauncher.class.getClassLoader());
@@ -279,5 +277,123 @@ public class InstrumentLauncher {
 
         Method startMethod = coreLauncherOfClass.getDeclaredMethod("start");
         startMethod.invoke(coreLauncherOfInstance);
+    }
+
+    private static URL[] extractSimulatorAgentCoreImportResources(File jar) throws IOException {
+        URL[] noImportUrls = new URL[]{jar.toURI().toURL()};
+        JarFile jarFile;
+        jarFile = new JarFile(jar);
+        ZipEntry jarEntry = jarFile.getEntry("import-resources.config");
+        if (jarEntry == null) {
+            return noImportUrls;
+        }
+
+        String baseDir;
+        String[] importResources;
+        InputStream in = null;
+        try {
+            in = jarFile.getInputStream(jarEntry);
+            Properties properties = new Properties();
+            properties.load(in);
+            baseDir = properties.getProperty("import-dir");
+            if (baseDir == null || baseDir.length() == 0) {
+                return noImportUrls;
+            }
+            String lib = properties.getProperty("import-jar");
+            if (lib == null || lib.length() == 0) {
+                return noImportUrls;
+            }
+            importResources = lib.split(",");
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+
+        if (importResources == null) {
+            return noImportUrls;
+        }
+
+        File simulatorAgent = jar;
+        while (true) {
+            simulatorAgent = simulatorAgent.getParentFile();
+            if (simulatorAgent.getName().equals("simulator-agent")) {
+                break;
+            }
+        }
+
+        Map<String, String> importJars = new HashMap<String, String>();
+        for (String s : importResources) {
+            Map<String, String> jarMaps = extractResource(simulatorAgent, baseDir, s.trim());
+            // 排除重复的jar
+            Map<String, String> add = new HashMap<String, String>();
+            for (Map.Entry<String, String> newEntry : jarMaps.entrySet()) {
+                if (!importJars.containsKey(newEntry.getKey())) {
+                    add.put(newEntry.getKey(), newEntry.getValue());
+                }
+            }
+            importJars.putAll(add);
+        }
+
+        List<URL> urls = new ArrayList<URL>();
+        urls.add(jar.toURI().toURL());
+        for (String jarPath : importJars.values()) {
+            urls.add(new File(jarPath).toURI().toURL());
+        }
+
+        return urls.toArray(new URL[0]);
+    }
+
+    private static Map<String, String> extractResource(File agentPath, String baseDir, String importResource) {
+        if (importResource.length() == 0) {
+            return null;
+        }
+
+        if (baseDir.startsWith("..")) {
+            while (baseDir.startsWith("..")) {
+                agentPath = agentPath.getParentFile();
+                baseDir = baseDir.substring(3);
+            }
+        }
+
+        File resource;
+        if (importResource.startsWith("/")) {
+            resource = new File(importResource);
+        } else {
+            if (importResource.contains("..")) {
+                while (importResource.startsWith("..")) {
+                    agentPath = agentPath.getParentFile();
+                    importResource = importResource.substring(3);
+                }
+            }
+            resource = new File(agentPath, baseDir + File.separator + importResource);
+        }
+
+        if (!resource.exists()) {
+            return null;
+        }
+        Set<String> importResources = new HashSet<String>();
+        if (resource.getName().endsWith(".jar")) {
+            importResources.add(resource.getAbsolutePath());
+        }
+        if (resource.isDirectory()) {
+            File[] jars = resource.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File pathname) {
+                    return pathname.getName().endsWith(".jar");
+                }
+            });
+            for (File jar : jars) {
+                importResources.add(jar.getAbsolutePath());
+            }
+        }
+        // fastjson-2.0.6.jar  fastjson >> fastjson-2.0.6.jar
+        Map<String, String> jarList = new HashMap<String, String>();
+        for (String im : importResources) {
+            jarList.put(im.substring(im.lastIndexOf(File.separator) + 1, im.lastIndexOf("-")), im);
+        }
+
+        return jarList;
+
     }
 }

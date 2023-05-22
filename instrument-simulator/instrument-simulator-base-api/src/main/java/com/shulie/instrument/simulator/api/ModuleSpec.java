@@ -502,19 +502,24 @@ public class ModuleSpec {
                 break;
             }
         }
-        Set<String> importResources = new HashSet<String>();
+        Map<String, String> importResources = new HashMap<String, String>();
         String[] split = importResource.split(",");
         for (String s : split) {
-            Set<String> resources = extractResource(simulatorAgent, s.trim());
-            if (resources != null) {
-                importResources.addAll(resources);
+            Map<String, String> jarMaps = extractResource(simulatorAgent, s.trim());
+            // 排除重复的jar
+            Map<String, String> add = new HashMap<String, String>();
+            for (Map.Entry<String, String> newEntry : jarMaps.entrySet()) {
+                if (!importResources.containsKey(newEntry.getKey())) {
+                    add.put(newEntry.getKey(), newEntry.getValue());
+                }
             }
+            importResources.putAll(add);
         }
-        this.importResources = importResources;
+        this.importResources = new HashSet<String>(importResources.values());
         return this;
     }
 
-    private Set<String> extractResource(File simulatorAgent, String importResource) {
+    private Map<String, String> extractResource(File simulatorAgent, String importResource) {
         if (importResource.length() == 0) {
             return null;
         }
@@ -550,7 +555,13 @@ public class ModuleSpec {
                 importResources.add(jar.getAbsolutePath());
             }
         }
-        return importResources;
+        // fastjson-2.0.6.jar  fastjson >> fastjson-2.0.6.jar
+        Map<String, String> jarList = new HashMap<String, String>();
+        for (String im : importResources) {
+            jarList.put(im.substring(im.lastIndexOf(File.separator) + 1, im.lastIndexOf("-")), im);
+        }
+
+        return jarList;
 
     }
 

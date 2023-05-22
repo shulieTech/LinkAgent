@@ -36,6 +36,18 @@
         </dependency>
 
         <dependency>
+            <groupId>io.shulie</groupId>
+            <artifactId>oshi-core</artifactId>
+            <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
@@ -106,18 +118,6 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.1</version>
-            <scope>${scope.prop}</scope>
-            <exclusions>
-                <exclusion>
-                    <artifactId>slf4j-api</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>io.shulie</groupId>
-            <artifactId>oshi-core</artifactId>
-            <version>1.0.0</version>
             <scope>${scope.prop}</scope>
             <exclusions>
                 <exclusion>

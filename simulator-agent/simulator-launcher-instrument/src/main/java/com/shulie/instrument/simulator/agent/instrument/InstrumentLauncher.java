@@ -288,14 +288,14 @@ public class InstrumentLauncher {
             return noImportUrls;
         }
 
-        String baseDir;
+        String[] baseDirs;
         String[] importResources;
         InputStream in = null;
         try {
             in = jarFile.getInputStream(jarEntry);
             Properties properties = new Properties();
             properties.load(in);
-            baseDir = properties.getProperty("import-dir");
+            String baseDir = properties.getProperty("import-dir");
             if (baseDir == null || baseDir.length() == 0) {
                 return noImportUrls;
             }
@@ -304,13 +304,14 @@ public class InstrumentLauncher {
                 return noImportUrls;
             }
             importResources = lib.split(",");
+            baseDirs = baseDir.split(",");
         } finally {
             if (in != null) {
                 in.close();
             }
         }
 
-        if (importResources == null) {
+        if (importResources == null || baseDirs == null) {
             return noImportUrls;
         }
 
@@ -324,15 +325,21 @@ public class InstrumentLauncher {
 
         Map<String, String> importJars = new HashMap<String, String>();
         for (String s : importResources) {
-            Map<String, String> jarMaps = extractResource(simulatorAgent, baseDir, s.trim());
-            // 排除重复的jar
-            Map<String, String> add = new HashMap<String, String>();
-            for (Map.Entry<String, String> newEntry : jarMaps.entrySet()) {
-                if (!importJars.containsKey(newEntry.getKey())) {
-                    add.put(newEntry.getKey(), newEntry.getValue());
+            for (String baseDir : baseDirs) {
+                Map<String, String> jarMaps = extractResource(simulatorAgent, baseDir.trim(), s.trim());
+
+                if (jarMaps == null || jarMaps.isEmpty()) {
+                    continue;
                 }
+                // 排除重复的jar
+                Map<String, String> add = new HashMap<String, String>();
+                for (Map.Entry<String, String> newEntry : jarMaps.entrySet()) {
+                    if (!importJars.containsKey(newEntry.getKey())) {
+                        add.put(newEntry.getKey(), newEntry.getValue());
+                    }
+                }
+                importJars.putAll(add);
             }
-            importJars.putAll(add);
         }
 
         List<URL> urls = new ArrayList<URL>();

@@ -167,6 +167,8 @@ public final class ModuleSpecUtils {
                         .setImportPackages(StringUtils.trim(properties.getProperty("import-package")))
                         .setExportResources(StringUtils.trim(properties.getProperty("export-resource")))
                         .setImportResources(StringUtils.trim(properties.getProperty("import-resource")))
+                        .setImportDependencyDir(StringUtils.trim(properties.getProperty("import-dependency-dir")))
+                        .setImportArtifacts(StringUtils.trim(properties.getProperty("import-artifacts")))
                         .setSinceVersion(sinceVersion)
                         .setUntilVersion(untilVersion)
                         .setAsync(async)

@@ -51,6 +51,12 @@
             <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.shulie</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6.2</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

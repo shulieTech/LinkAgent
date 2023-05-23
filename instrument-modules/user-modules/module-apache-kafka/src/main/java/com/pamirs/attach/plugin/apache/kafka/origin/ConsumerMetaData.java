@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -49,19 +49,22 @@ public class ConsumerMetaData {
     public static ConsumerMetaData build(KafkaConsumer consumer) {
         Set<String> topics = consumer.subscription();
         try {
-            Object coordinator = ReflectionUtils.get(consumer,KafkaConstants.REFLECT_FIELD_COORDINATOR );
-            Object groupId = ReflectionUtils.get(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-            if (groupId == null) {
+            Object coordinator = ReflectionUtils.get(consumer, KafkaConstants.REFLECT_FIELD_COORDINATOR);
+            Object groupId = null;
+            if (ReflectionUtils.existsField(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID)) {
+                groupId = ReflectionUtils.get(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            }
+            if (groupId == null && ReflectionUtils.existsField(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID)) {
                 groupId = ReflectionUtils.get(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-                if (groupId == null) {
-                    throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
-                }
+            }
+            if (groupId == null) {
+                throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
             }
             String bootstrapServers = ConsumerConfigHolder.getBootstrapServers(consumer);
             String groupIdStr = "";
-            if(groupId instanceof String){
-                groupIdStr = (String)groupId;
-            }else {
+            if (groupId instanceof String) {
+                groupIdStr = (String) groupId;
+            } else {
                 groupIdStr = ReflectionUtils.get(groupId, "value");
             }
             return new ConsumerMetaData(topics, groupIdStr, bootstrapServers);

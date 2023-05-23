@@ -14,10 +14,39 @@
 
     <properties>
         <module-name>pradar-core</module-name>
+        <scope.prop>provided</scope.prop>
     </properties>
     <version>${pradar.core.version}</version>
 
     <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.31</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>30.1-jre</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.shulie</groupId>
+            <artifactId>oshi-core</artifactId>
+            <version>1.0.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
@@ -39,27 +68,10 @@
         </dependency>
 
         <dependency>
-            <groupId>io.shulie</groupId>
-            <artifactId>druid</artifactId>
-            <version>1.2.6.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.12.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>30.1-jre</version>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>instrument-simulator-debug-model</artifactId>
+            <version>${simulator.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -76,72 +88,75 @@
         </dependency>
 
         <dependency>
+            <groupId>io.shulie</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6.2</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>2.0.6</version>
+            <scope>${scope.prop}</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.2.1</version>
-            <scope>provided</scope>
+            <scope>${scope.prop}</scope>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-api</artifactId>
                     <groupId>org.slf4j</groupId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>io.shulie</groupId>
-            <artifactId>oshi-core</artifactId>
-            <version>1.0.0</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>slf4j-api</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-
-        <dependency>
-            <groupId>io.shulie.instrument.simulator</groupId>
-            <artifactId>instrument-simulator-debug-model</artifactId>
-            <version>${simulator.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.beanshell</groupId>
             <artifactId>bsh</artifactId>
             <version>2.0b5-shulie</version>
-        </dependency>
-
-        <dependency>
-            <artifactId>slf4j-api</artifactId>
-            <groupId>org.slf4j</groupId>
-            <version>1.7.31</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.thrift</groupId>
             <artifactId>libthrift</artifactId>
             <version>0.17.0</version>
+            <scope>${scope.prop}</scope>
         </dependency>
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-message-sdk</artifactId>
             <version>2.0.4.4</version>
+            <scope>${scope.prop}</scope>
         </dependency>
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-message-sdk-collector</artifactId>
             <version>2.0.4.4</version>
+            <scope>${scope.prop}</scope>
         </dependency>
         <dependency>
             <groupId>cn.chinaunicom</groupId>
             <artifactId>pinpoint-collector-client</artifactId>
             <version>1.0.1</version>
+            <scope>${scope.prop}</scope>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-api</artifactId>
@@ -149,58 +164,53 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.62.Final</version>
-        </dependency>
 
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.11.0</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.8.5</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
             <version>5.2.0</version>
+            <scope>${scope.prop}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-recipes</artifactId>
             <version>5.2.0</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <artifactId>netty-handler</artifactId>
             <groupId>io.netty</groupId>
             <version>4.1.70.Final</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <artifactId>netty-transport-native-epoll</artifactId>
             <groupId>io.netty</groupId>
             <version>4.1.70.Final</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>5.5.9</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
     </dependencies>

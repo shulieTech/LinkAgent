@@ -21,7 +21,19 @@ public class PomFileReader {
      */
     public static String findCurrentModulePomPath() throws IOException {
         URL resource = PradarCoreModuleDependenciesCollector.class.getResource("/");
-        File file = new File(Paths.get(resource != null ? "instrument-modules/user-modules/module-pradar-core" : "").toFile().getAbsolutePath());
+        File current = null;
+        if (resource != null) {
+            current = new File(resource.getFile());
+            if (current.getName().equals("classes")) {
+                current = current.getParentFile().getParentFile();
+            }
+        }
+        File file;
+        if (current != null && current.getName().equals("module-pradar-core")) {
+            file = current;
+        } else {
+            file = new File(Paths.get("").toFile().getAbsolutePath());
+        }
 
         File modulePath;
         while (true) {
@@ -30,7 +42,7 @@ public class PomFileReader {
                 modulePath = file;
                 break;
             }
-            if (fileName.equals("LinkAgent")) {
+            if (fileName.equals("LinkAgent") || fileName.equals("agent-core")) {
                 modulePath = Paths.get(file.getAbsolutePath(), "instrument-modules", "user-modules", "module-pradar-core").toFile();
                 break;
             } else {
@@ -464,9 +476,18 @@ public class PomFileReader {
         String[] groupPaths = dependency.groupId.split("\\.");
         String[] artifactPaths = dependency.artifactId.split("\\.");
         Path path = Paths.get(DependencyRepositoryConfig.localRepositoryPath, groupPaths);
-        path = Paths.get(path.toUri().getPath(), artifactPaths);
-        path = Paths.get(path.toUri().getPath(), dependency.version);
-        return Paths.get(path.toUri().getPath(), String.format("%s-%s.pom", dependency.artifactId, dependency.version)).toFile();
+        File file = new File(path.toFile().getAbsolutePath());
+        file = findFile(file.getAbsolutePath(), artifactPaths);
+        file = findFile(file.getAbsolutePath(), dependency.version);
+        return Paths.get(file.getAbsolutePath(), String.format("%s-%s.pom", dependency.artifactId, dependency.version)).toFile();
+    }
+
+    private static File findFile(String parent, String... children) {
+        File file = new File(parent);
+        for (String child : children) {
+            file = new File(file.getAbsolutePath(), child);
+        }
+        return file;
     }
 
 }

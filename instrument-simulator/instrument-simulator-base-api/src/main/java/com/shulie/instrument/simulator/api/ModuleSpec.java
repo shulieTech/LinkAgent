@@ -650,6 +650,9 @@ public class ModuleSpec {
         }
 
         File dir = new File(agentPath, baseDir);
+        if (!dir.exists()) {
+            return null;
+        }
         File[] files = dir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {

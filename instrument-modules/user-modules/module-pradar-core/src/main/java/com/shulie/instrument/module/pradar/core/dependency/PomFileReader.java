@@ -21,7 +21,19 @@ public class PomFileReader {
      */
     public static String findCurrentModulePomPath() throws IOException {
         URL resource = PradarCoreModuleDependenciesCollector.class.getResource("/");
-        File file = new File(Paths.get(resource != null ? "instrument-modules/user-modules/module-pradar-core" : "").toFile().getAbsolutePath());
+        File current = null;
+        if (resource != null) {
+            current = new File(resource.getFile());
+            if (current.getName().equals("classes")) {
+                current = current.getParentFile().getParentFile();
+            }
+        }
+        File file;
+        if (current != null && current.getName().equals("module-pradar-core")) {
+            file = current;
+        } else {
+            file = new File(Paths.get("").toFile().getAbsolutePath());
+        }
 
         File modulePath;
         while (true) {

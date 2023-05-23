@@ -344,7 +344,7 @@ public class InstrumentLauncher {
         return urls.toArray(new URL[0]);
     }
 
-    private static File extractArtifacts(File agentPath, String baseDir, String artifactId) {
+    private static File extractArtifacts(File agentPath, String baseDir, final String artifactId) {
         if (artifactId.length() == 0) {
             return null;
         }
@@ -357,18 +357,28 @@ public class InstrumentLauncher {
         }
 
         File dir = new File(agentPath, baseDir);
-        final String artifact = artifactId;
+        if (!dir.exists()) {
+            return null;
+        }
 
         File[] files = dir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {
                 String name = file.getName();
-                return name.contains("-") && name.substring(0, name.lastIndexOf("-")).equals(artifact);
+                return name.contains("-") && extractArtifactId(file).equals(artifactId);
             }
         });
         if (files.length == 0) {
             return null;
         }
         return new File(agentPath, baseDir + File.separator + files[0].getName());
+    }
+
+    private static String extractArtifactId(File jarFile) {
+        String name = jarFile.getName();
+        while (name.contains(".") && name.contains("-")) {
+            name = name.substring(0, name.lastIndexOf("-"));
+        }
+        return name;
     }
 }

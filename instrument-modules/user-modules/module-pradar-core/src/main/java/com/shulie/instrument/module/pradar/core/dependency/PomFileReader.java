@@ -30,7 +30,7 @@ public class PomFileReader {
                 modulePath = file;
                 break;
             }
-            if (fileName.equals("LinkAgent")) {
+            if (fileName.equals("LinkAgent") || fileName.equals("agent-core")) {
                 modulePath = Paths.get(file.getAbsolutePath(), "instrument-modules", "user-modules", "module-pradar-core").toFile();
                 break;
             } else {
@@ -464,9 +464,18 @@ public class PomFileReader {
         String[] groupPaths = dependency.groupId.split("\\.");
         String[] artifactPaths = dependency.artifactId.split("\\.");
         Path path = Paths.get(DependencyRepositoryConfig.localRepositoryPath, groupPaths);
-        path = Paths.get(path.toUri().getPath(), artifactPaths);
-        path = Paths.get(path.toUri().getPath(), dependency.version);
-        return Paths.get(path.toUri().getPath(), String.format("%s-%s.pom", dependency.artifactId, dependency.version)).toFile();
+        File file = new File(path.toFile().getAbsolutePath());
+        file = findFile(file.getAbsolutePath(), artifactPaths);
+        file = findFile(file.getAbsolutePath(), dependency.version);
+        return Paths.get(file.getAbsolutePath(), String.format("%s-%s.pom", dependency.artifactId, dependency.version)).toFile();
+    }
+
+    private static File findFile(String parent, String... children) {
+        File file = new File(parent);
+        for (String child : children) {
+            file = new File(file.getAbsolutePath(), child);
+        }
+        return file;
     }
 
 }

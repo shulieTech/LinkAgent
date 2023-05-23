@@ -79,15 +79,28 @@ public class LocalRepositoryManager {
         return repositoryLine.substring(start + 17, end);
     }
 
+    /**
+     * 找到pom文件
+     *
+     * @param dependency
+     * @return
+     */
     public static File findDependencyJarFile(Dependency dependency) {
         String[] groupPaths = dependency.groupId.split("\\.");
         String[] artifactPaths = dependency.artifactId.split("\\.");
-
         Path path = Paths.get(DependencyRepositoryConfig.localRepositoryPath, groupPaths);
-        path = Paths.get(path.toUri().getPath(), artifactPaths);
-        path = Paths.get(path.toUri().getPath(), dependency.version);
+        File file = new File(path.toFile().getAbsolutePath());
+        file = findFile(file.getAbsolutePath(), artifactPaths);
+        file = findFile(file.getAbsolutePath(), dependency.version);
+        return Paths.get(file.getAbsolutePath(), String.format("%s-%s.jar", dependency.artifactId, dependency.version)).toFile();
+    }
 
-        return Paths.get(path.toUri().getPath(), String.format("%s-%s.jar", dependency.artifactId, dependency.version)).toFile();
+    private static File findFile(String parent, String... children) {
+        File file = new File(parent);
+        for (String child : children) {
+            file = new File(file.getAbsolutePath(), child);
+        }
+        return file;
     }
 
     /**
@@ -98,7 +111,7 @@ public class LocalRepositoryManager {
     public static void copyDependencyJarFilesToLib(List<File> jarFiles) throws IOException {
         File linkAgent = new File(DependencyRepositoryConfig.currentModulePath);
         while (true) {
-            if (linkAgent.getName().equals("LinkAgent")) {
+            if (linkAgent.getName().equals("LinkAgent") || linkAgent.getName().equals("agent-core")) {
                 break;
             }
             linkAgent = linkAgent.getParentFile();

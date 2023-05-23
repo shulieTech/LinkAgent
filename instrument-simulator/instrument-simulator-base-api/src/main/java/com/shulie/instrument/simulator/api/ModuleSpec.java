@@ -242,6 +242,11 @@ public class ModuleSpec {
      */
     private Set<String> importArtifacts = new HashSet<String>();
 
+    /**
+     * 缺失的外部依赖
+     */
+    private Set<String> missingImportArtifactJar = new HashSet<String>();
+
     public void loadModuleInfo(ModuleInfo moduleInfo) {
         if (moduleInfo == null) {
             return;
@@ -597,7 +602,10 @@ public class ModuleSpec {
         try {
             this.importArtifacts = extractDependencyJars();
         } catch (IOException e) {
-            LOGGER.error("parse ModuleSpec 'import-artifacts' property for module {} occur exception", moduleId);
+            LOGGER.error("parse ModuleSpec 'import-artifacts' property for module '{}' occur exception", moduleId, e);
+        }
+        if (!this.missingImportArtifactJar.isEmpty()) {
+            LOGGER.warn("parse ModuleSpec 'import-artifacts' property for module '{}' missing artifacts {}", moduleId, missingImportArtifactJar);
         }
         return this;
     }
@@ -629,7 +637,7 @@ public class ModuleSpec {
         return new HashSet<String>(importJars.values());
     }
 
-    private static File extractArtifacts(File agentPath, String baseDir, String artifactId) {
+    private File extractArtifacts(File agentPath, String baseDir, final String artifactId) {
         if (artifactId.length() == 0) {
             return null;
         }
@@ -642,16 +650,16 @@ public class ModuleSpec {
         }
 
         File dir = new File(agentPath, baseDir);
-        final String artifact = artifactId;
         File[] files = dir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {
                 String name = file.getName();
-                return name.contains("-") && extractArtifactId(file).equals(artifact);
+                return name.contains("-") && extractArtifactId(file).equals(artifactId);
             }
         });
 
         if (files.length == 0) {
+            this.missingImportArtifactJar.add(artifactId);
             return null;
         }
         return new File(agentPath, baseDir + File.separator + files[0].getName());

@@ -17,8 +17,13 @@ package com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor;
 import com.pamirs.attach.plugin.apache.tomcatjdbc.destroy.TomcatJdbcDestroy;
 import com.pamirs.attach.plugin.apache.tomcatjdbc.obj.TomcatJdbcMediatorDataSource;
 import com.pamirs.attach.plugin.apache.tomcatjdbc.util.DataSourceWrapUtil;
+import com.pamirs.attach.plugin.dynamic.Attachment;
+import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.Type;
+import com.pamirs.attach.plugin.dynamic.template.TomcatJdbcTemplate;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
@@ -61,6 +66,7 @@ public class TomcatJdbcDataSourceProxyGetConnectionInterceptor extends CutoffInt
 
     @Override
     public CutOffResult cutoff0(Advice advice) {
+        attachment(advice);
         Object target = advice.getTarget();
         DataSource dataSource = (DataSource) target;
         DataSourceMeta<DataSource> dataSourceMeta = new DataSourceMeta<DataSource>(dataSource.getUrl(), dataSource.getUsername(), dataSource);
@@ -157,5 +163,24 @@ public class TomcatJdbcDataSourceProxyGetConnectionInterceptor extends CutoffInt
                 return 2;
             }
         });
+    }
+
+    public static void attachment(Advice advice) {
+        try {
+            DataSource target = (DataSource) advice.getTarget();
+            ResourceManager.set(new Attachment(target.getUrl(),
+                    "apache-tomcat-jdbc",
+                    Type.DataBaseType.types(), new TomcatJdbcTemplate()
+                    .setUrl(target.getUrl())
+                    .setUsername(target.getUsername())
+                    .setPassword(target.getPassword())
+                    .setDriverClassName(target.getDriverClassName())
+                    .setMinIdle(target.getMinIdle())
+                    .setMaxActive(target.getMaxActive())
+                    .setInitialSize(target.getInitialSize())
+                    .setMaxIdle(target.getMaxIdle())));
+        } catch (Throwable t) {
+            logger.error(Throwables.getStackTraceAsString(t));
+        }
     }
 }

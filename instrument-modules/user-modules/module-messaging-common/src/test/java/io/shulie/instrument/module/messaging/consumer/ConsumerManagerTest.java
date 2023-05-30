@@ -4,13 +4,6 @@ import com.pamirs.pradar.SyncObjectService;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.filter.Filter;
-import com.shulie.instrument.simulator.api.listener.ext.EventWatchCondition;
-import com.shulie.instrument.simulator.api.listener.ext.Progress;
-import com.shulie.instrument.simulator.api.listener.ext.WatchCallback;
-import com.shulie.instrument.simulator.api.resource.DumpResult;
-import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
-import io.shulie.instrument.module.isolation.IsolationManager;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxyUtils;
 import io.shulie.instrument.module.messaging.consumer.execute.TestShadowConsumerExecute;
 import io.shulie.instrument.module.messaging.consumer.isolation.ConsumerIsolationCache;
@@ -49,53 +42,53 @@ public class ConsumerManagerTest extends TestCase {
         mqWhiteList.add("bbb");
         GlobalConfig.getInstance().setMqWhiteList(mqWhiteList);
 
-        IsolationManager.init(new ModuleEventWatcher() {
-            @Override
-            public int watch(Filter filter, Progress progress) {
-                //todo@langyi
-                return 0;
-            }
-
-            @Override
-            public DumpResult dump(Filter filter, Progress progress) {
-                return null;
-            }
-
-            @Override
-            public int watch(Filter filter) {
-                return 0;
-            }
-
-            @Override
-            public int watch(EventWatchCondition condition, Progress progress) {
-                return 0;
-            }
-
-            @Override
-            public void delete(int watcherId, Progress progress) {
-
-            }
-
-            @Override
-            public void delete(int watcherId) {
-
-            }
-
-            @Override
-            public void watching(Filter filter, Progress wProgress, WatchCallback watchCb, Progress dProgress) throws Throwable {
-
-            }
-
-            @Override
-            public void watching(Filter filter, WatchCallback watchCb) throws Throwable {
-
-            }
-
-            @Override
-            public void close() {
-
-            }
-        });
+//        IsolationManager.init(new ModuleEventWatcher() {
+//            @Override
+//            public int watch(Filter filter, Progress progress) {
+//                //todo@langyi
+//                return 0;
+//            }
+//
+//            @Override
+//            public DumpResult dump(Filter filter, Progress progress) {
+//                return null;
+//            }
+//
+//            @Override
+//            public int watch(Filter filter) {
+//                return 0;
+//            }
+//
+//            @Override
+//            public int watch(EventWatchCondition condition, Progress progress) {
+//                return 0;
+//            }
+//
+//            @Override
+//            public void delete(int watcherId, Progress progress) {
+//
+//            }
+//
+//            @Override
+//            public void delete(int watcherId) {
+//
+//            }
+//
+//            @Override
+//            public void watching(Filter filter, Progress wProgress, WatchCallback watchCb, Progress dProgress) throws Throwable {
+//
+//            }
+//
+//            @Override
+//            public void watching(Filter filter, WatchCallback watchCb) throws Throwable {
+//
+//            }
+//
+//            @Override
+//            public void close() {
+//
+//            }
+//        });
 
         bizTarget = syncObject.getDatas().iterator().next().getTarget();
 

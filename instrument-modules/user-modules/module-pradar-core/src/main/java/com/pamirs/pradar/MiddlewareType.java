@@ -61,6 +61,8 @@ public final class MiddlewareType {
      */
     static public final int TYPE_LOCAL = 9;
 
+    static public final int TYPE_CUSTOMER = 10;
+
     /**
      * 未知
      */

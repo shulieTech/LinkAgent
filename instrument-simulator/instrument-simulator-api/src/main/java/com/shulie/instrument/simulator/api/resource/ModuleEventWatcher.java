@@ -65,6 +65,14 @@ public interface ModuleEventWatcher {
     int watch(EventWatchCondition condition, Progress progress);
 
     /**
+     * 观察事件
+     *
+     * @param condition 事件观察条件，只有符合条件的类/方法才会被观察
+     * @return {@code watchId}，本次观察的唯一编号，{@code watcherId}对象将会是整个操作的唯一KEY，后续删除观察事件的时候也需要通过同一个{@code watcherId}来完成
+     */
+    int watch(EventWatchCondition condition, Progress progress, boolean needReTransformer);
+
+    /**
      * 删除观察事件
      *
      * @param watcherId {@code watcherId}观察唯一编号

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -57,7 +57,6 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private final boolean isEnableReTransform = !"0".equals(System.getProperty("simulator.delay"));
 
 
-
     DefaultModuleEventWatcher(final Instrumentation inst,
                               final CoreLoadedClassDataSource classDataSource,
                               final CoreModule coreModule,
@@ -104,12 +103,12 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         reTransformClasses(watchId, waitingReTransformClasses, progress, false);
 
         String pauseTime = System.getProperty("reTransform.pause.time.ms");
-        if(pauseTime == null){
+        if (pauseTime == null) {
             return;
         }
         try {
             Thread.sleep(Integer.parseInt(pauseTime));
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
     }
@@ -224,14 +223,19 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     @Override
     public int watch(final Filter filter,
                      final Progress progress) {
-        return watch(new ExtFilterMatcher(make(filter)), progress);
+        return watch(new ExtFilterMatcher(make(filter)), progress, false);
     }
 
 
     @Override
     public int watch(final EventWatchCondition condition,
                      final Progress progress) {
-        return watch(ExtFilterMatcher.toOrGroupMatcher(condition.getOrFilterArray()), progress);
+        return watch(ExtFilterMatcher.toOrGroupMatcher(condition.getOrFilterArray()), progress, false);
+    }
+
+    @Override
+    public int watch(final EventWatchCondition condition, Progress progress, boolean needReTransformer) {
+        return watch(ExtFilterMatcher.toOrGroupMatcher(condition.getOrFilterArray()), progress, needReTransformer);
     }
 
 
@@ -283,7 +287,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
     // 这里是用matcher重制过后的watch
     private int watch(final Matcher matcher,
-                      final Progress progress) {
+                      final Progress progress,
+                      final boolean needReTransformer) {
         final int watchId = watchIdSequencer.next();
         // 给对应的模块追加ClassFileTransformer
         final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(this,
@@ -298,7 +303,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
 
         List<Class<?>> waitingReTransformClassesTemp = Collections.emptyList();
-        if (isEnableReTransform) {
+        if (isEnableReTransform || needReTransformer) {
             // 查找需要渲染的类集合
             waitingReTransformClassesTemp = classDataSource.findForReTransform(matcher);
             if (isInfoEnabled) {
@@ -429,7 +434,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                          final Progress wProgress,
                          final WatchCallback watchCb,
                          final Progress dProgress) throws Throwable {
-        final int watchId = watch(new ExtFilterMatcher(make(filter)), wProgress);
+        final int watchId = watch(new ExtFilterMatcher(make(filter)), wProgress, false);
         try {
             watchCb.watchCompleted();
         } finally {

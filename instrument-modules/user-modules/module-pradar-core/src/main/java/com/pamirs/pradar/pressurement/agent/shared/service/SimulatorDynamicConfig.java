@@ -15,7 +15,6 @@
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
 import com.alibaba.fastjson.JSON;
-import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.pressurement.entry.CheckerEntry;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
@@ -60,6 +59,7 @@ public class SimulatorDynamicConfig {
      */
     private static final String PRADAR_SINGLE_SILENCE_SWITCH_KEY = "pradar.single.silence.switch";
 
+    private static final String CUS_TRACE_CONFIG = "cus.trace.config";
     private static final String FILED_CHECK_RULES_SWITCH = "filed.check.rules.switch";
     private static final String FILED_CHECK_RULES = "filed.check.rules";
     private static final String KAFKA_PT_CONSUMER_MAX_POLL_RATION_KEY = "kafka.pt.consumer.max.poll.ratio";
@@ -85,6 +85,11 @@ public class SimulatorDynamicConfig {
     private static final String PRADAR_CLOSE_KAFKA_POLL_REPORT = "pradar.close.kafka.poll.report";
 
     private final boolean closeKafkaPollReport;
+
+    /**
+     * 动态切点配置
+     */
+    private final String cusTraceConfig;
     /**
      * trace 业务流量采样率
      */
@@ -185,6 +190,7 @@ public class SimulatorDynamicConfig {
         this.perfThreadCollectInterval = getPerfThreadCollectInterval(config);
         this.closeKafkaPollReport = getCloseKafkaPollReport(config);
         this.isSingleSilenceSwitchOn = getSingleSilenceSwitchStatus(config);
+        this.cusTraceConfig = getCusTraceConfig(config);
     }
 
     public String shadowDatasourceAccountPrefix() {
@@ -201,6 +207,10 @@ public class SimulatorDynamicConfig {
 
     public boolean closeKafkaPollReport() {
         return this.closeKafkaPollReport;
+    }
+
+    public String cusTraceConfig() {
+        return this.cusTraceConfig;
     }
 
     /**
@@ -504,7 +514,7 @@ public class SimulatorDynamicConfig {
 
     private double getKafkaPtConsumerMaxPollRatio(Map<String, String> config) {
         try {
-            if(degradeTriggered){
+            if (degradeTriggered) {
                 return DEFAULT_TRACE_SAMPLING_INTERVAL;
             }
             if (config == null) {
@@ -660,6 +670,18 @@ public class SimulatorDynamicConfig {
         }
     }
 
+    private String getCusTraceConfig(Map<String, String> config) {
+        try {
+            if (config == null) {
+                return null;
+            }
+            return getConfig(config, CUS_TRACE_CONFIG);
+        } catch (Exception e) {
+            LOGGER.error("getCusTraceConfig error , use default null.", e);
+            return null;
+        }
+    }
+
     public static boolean isSingleSilenceSwitchOn() {
         return isSingleSilenceSwitchOn;
     }
@@ -676,15 +698,15 @@ public class SimulatorDynamicConfig {
         SimulatorDynamicConfig.abortPollingAppConfig = abortPollingAppConfig;
     }
 
-    public static void triggerDegrade(String message){
+    public static void triggerDegrade(String message) {
         degradeTriggered = true;
     }
 
-    public static void resetDegradeStatus(){
+    public static void resetDegradeStatus() {
         degradeTriggered = false;
     }
 
-    public static boolean isDegraded(){
+    public static boolean isDegraded() {
         return degradeTriggered;
     }
 }

@@ -103,6 +103,7 @@
         <module>module-jdbc-trace</module>
         <module>module-shadow-preparation</module>
         <module>module-tomcat-dbcp</module>
+        <module>module-cus-trace</module>
     </modules>
 
     <build>

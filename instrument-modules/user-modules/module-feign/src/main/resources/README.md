@@ -1,1 +1,1 @@
-2.0.0.5 feign请求打印参数时过滤MultipartFile，否则会报错
+2.0.0.6 feign支持sentinel限流降级

@@ -633,7 +633,12 @@ public class ModuleSpec {
                     importJars.put(artifactId, jar.getAbsolutePath());
                 }
             }
+            if (!importJars.containsKey(s)) {
+                this.missingImportArtifactJar.add(s);
+            }
         }
+
+
         return new HashSet<String>(importJars.values());
     }
 
@@ -656,13 +661,11 @@ public class ModuleSpec {
         File[] files = dir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {
-                String name = file.getName();
-                return name.contains("-") && extractArtifactId(file).equals(artifactId);
+                return file.getName().substring(0, file.getName().lastIndexOf("-")).equals(artifactId);
             }
         });
 
         if (files.length == 0) {
-            this.missingImportArtifactJar.add(artifactId);
             return null;
         }
         return new File(agentPath, baseDir + File.separator + files[0].getName());

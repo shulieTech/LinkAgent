@@ -628,9 +628,8 @@ public class ModuleSpec {
                     continue;
                 }
                 // 排除重复的jar
-                String artifactId = jar.getName().substring(0, jar.getName().lastIndexOf("-"));
-                if (!importJars.containsKey(artifactId)) {
-                    importJars.put(artifactId, jar.getAbsolutePath());
+                if (!importJars.containsKey(s)) {
+                    importJars.put(s, jar.getAbsolutePath());
                 }
             }
             if (!importJars.containsKey(s)) {
@@ -661,7 +660,8 @@ public class ModuleSpec {
         File[] files = dir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {
-                return file.getName().substring(0, file.getName().lastIndexOf("-")).equals(artifactId);
+                String name = file.getName();
+                return name.contains("-") && extractArtifactId(file).equals(artifactId);
             }
         });
 

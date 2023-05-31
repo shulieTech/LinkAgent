@@ -628,12 +628,16 @@ public class ModuleSpec {
                     continue;
                 }
                 // 排除重复的jar
-                String artifactId = jar.getName().substring(0, jar.getName().lastIndexOf("-"));
-                if (!importJars.containsKey(artifactId)) {
-                    importJars.put(artifactId, jar.getAbsolutePath());
+                if (!importJars.containsKey(s)) {
+                    importJars.put(s, jar.getAbsolutePath());
                 }
             }
+            if (!importJars.containsKey(s)) {
+                this.missingImportArtifactJar.add(s);
+            }
         }
+
+
         return new HashSet<String>(importJars.values());
     }
 
@@ -662,7 +666,6 @@ public class ModuleSpec {
         });
 
         if (files.length == 0) {
-            this.missingImportArtifactJar.add(artifactId);
             return null;
         }
         return new File(agentPath, baseDir + File.separator + files[0].getName());

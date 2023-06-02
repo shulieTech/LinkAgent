@@ -135,6 +135,9 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         if (arg != null) {
             List<Object> toStringArgs = new ArrayList<Object>();
             for (Object o : arg) {
+                if (o == null) {
+                    continue;
+                }
                 if (ClassAssignableUtil.isInstance(o, "org.springframework.web.multipart.MultipartFile")) {
                     toStringArgs.add(ReflectionUtils.invoke(arg, "getName"));
                 } else {

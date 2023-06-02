@@ -7,6 +7,7 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ public class ConsumerConfigHolder {
             }
 
             List<String> servers = config.getList(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
+            Collections.sort(servers);
             String serverString = servers.toString();
             bootstrapServersMappings.put(hashCode, serverString.substring(1, serverString.length() - 1));
         }

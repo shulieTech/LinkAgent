@@ -2271,6 +2271,16 @@ public final class Pradar {
     }
 
     /**
+     * 设置mock脚本响应
+     */
+    static public void mockResponse(Object mockContent) {
+        InvokeContext ctx = InvokeContext.get();
+        if (ctx != null && GlobalConfig.getInstance().allowTraceRequestResponse()) {
+            ctx.mockResponse = mockContent;
+        }
+    }
+
+    /**
      * invoke 上追加的key value信息，会打印到当前 invoke 日志中。 与添加业务信息的 {@link #putUserData(String, String)} 不同，
      * attribute 不会跟随 invoke 调用传递，只对本地当前的这一次 invoke 有效
      *

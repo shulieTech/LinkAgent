@@ -63,6 +63,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
                         try {
                             MatchConfig config = (MatchConfig) params;
                             String scriptContent = config.getScriptContent().trim();
+                            Pradar.mockResponse(scriptContent);
                             Advice advice = (Advice) config.getArgs().get("advice");
                             Map<Method, InvocationHandlerFactory.MethodHandler>
                                     dispatch = Reflect.on(advice.getTarget()).get("dispatch");

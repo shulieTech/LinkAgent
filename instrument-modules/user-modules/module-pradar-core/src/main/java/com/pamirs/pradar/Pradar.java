@@ -2273,10 +2273,10 @@ public final class Pradar {
     /**
      * 设置mock脚本响应
      */
-    static public void mockResponse(Object mockContent) {
+    static public void mockResponse(Object mockResponse) {
         InvokeContext ctx = InvokeContext.get();
         if (ctx != null && GlobalConfig.getInstance().allowTraceRequestResponse()) {
-            ctx.mockResponse = mockContent;
+            ctx.mockResponse = mockResponse;
         }
     }
 

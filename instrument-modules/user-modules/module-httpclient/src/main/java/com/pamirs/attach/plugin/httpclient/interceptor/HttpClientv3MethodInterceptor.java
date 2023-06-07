@@ -78,6 +78,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                     MatchConfig config = (MatchConfig)params;
                     HttpMethod method = (HttpMethod)config.getArgs().get("extraMethod");
                     byte[] bytes = config.getScriptContent().getBytes();
+                    Pradar.mockResponse(new String(bytes));
                     ReflectionUtils.set(method,"responseBody", bytes);
                     ProcessController.returnImmediately(int.class, 200);
                 } catch (ProcessControlException pe) {

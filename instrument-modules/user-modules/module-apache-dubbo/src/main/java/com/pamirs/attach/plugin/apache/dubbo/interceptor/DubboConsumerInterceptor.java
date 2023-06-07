@@ -92,6 +92,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                 public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
 
                     MatchConfig config = (MatchConfig) params;
+                    Pradar.mockResponse(config.getScriptContent());
                     RpcInvocation invocation = (RpcInvocation) config.getArgs().get("invocation");
                     try {
                         //for 2.8.4

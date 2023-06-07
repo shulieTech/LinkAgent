@@ -80,7 +80,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                         ResultSerializer.serializeRequest(ctx.getRequest() == null ? "" : ctx.getRequest(),
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(PradarCoreUtils.makeLogSafe(
-                        ResultSerializer.serializeRequest(ctx.getResponse() == null ? "" : ctx.getResponse(),
+                        ResultSerializer.serializeRequest(ctx.getMockResponse() != null ? ctx.getMockResponse() : ctx.getResponse() != null ? ctx.getResponse() : "" ,
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(TraceCoreUtils.combineString(ctx.isClusterTest(), ctx.isDebug(),
                         "0".equals(ctx.invokeId),
@@ -97,7 +97,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
         buffer.append("|@").append(TraceCoreUtils.attributes(ctx.traceAppName, ctx.traceServiceName, ctx.traceMethod))
                 .append("|@")
                 .append(TraceCoreUtils.localAttributes(
-                        ctx.upAppName, ctx.remoteIp, ctx.getPort(), ctx.requestSize, ctx.responseSize))
+                        ctx.upAppName, ctx.remoteIp, ctx.getPort(), ctx.requestSize, ctx.responseSize, ctx.mockResponse != null))
                 .append("|")
                 .append(ctx.ext == null ? "" : ctx.ext);
         ctx.logContextData(buffer);

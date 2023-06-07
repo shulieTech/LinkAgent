@@ -44,6 +44,11 @@ abstract class BaseContext {
     String callBackMsg = null;
 
     /**
+     * mock内容
+     */
+    Object mockResponse;
+
+    /**
      * 中间件名称
      */
     String middlewareName = null;
@@ -268,6 +273,13 @@ abstract class BaseContext {
         return request;
     }
 
+    public Object getMockResponse() {
+        return mockResponse;
+    }
+
+    public void setMockResponse(String mockResponse) {
+        this.mockResponse = mockResponse;
+    }
 
     /**
      * 脱敏

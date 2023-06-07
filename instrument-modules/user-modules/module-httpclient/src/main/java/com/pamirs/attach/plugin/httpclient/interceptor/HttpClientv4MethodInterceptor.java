@@ -91,8 +91,12 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
                     MatchConfig config = (MatchConfig) params;
                     StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
 
+                    String content = config.getScriptContent();
+
+                    Pradar.mockResponse(content);
+
                     HttpEntity entity = null;
-                    entity = new StringEntity(String.valueOf(config.getScriptContent()), "UTF-8");
+                    entity = new StringEntity(String.valueOf(content), "UTF-8");
 
                     BasicHttpResponse response = new BasicHttpResponse(statusline);
                     response.setEntity(entity);

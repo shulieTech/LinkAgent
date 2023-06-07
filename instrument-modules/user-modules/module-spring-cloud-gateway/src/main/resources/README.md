@@ -1,1 +1,1 @@
-车联网覆写了NettyRoutingFilter,添加子类增强
+2.0.1.5   调整spring BeanFactory内部的增强点，防止出现应用没用spring-cloud-gateway而出现的ClassNotFound异常

@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.IOException;

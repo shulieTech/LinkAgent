@@ -30,13 +30,6 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>3.8.1</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>3.1.0</version>
@@ -54,6 +47,18 @@
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6.2</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

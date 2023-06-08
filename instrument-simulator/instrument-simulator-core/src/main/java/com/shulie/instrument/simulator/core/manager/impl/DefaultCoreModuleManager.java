@@ -38,7 +38,6 @@ import com.shulie.instrument.simulator.core.manager.*;
 import com.shulie.instrument.simulator.core.util.DefaultModuleLoadInfoManagerUtils;
 import com.shulie.instrument.simulator.core.util.ModuleSpecUtils;
 import com.shulie.instrument.simulator.core.util.VersionUtils;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.lang.StringUtils;
@@ -174,7 +173,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
          */
         for (Map.Entry<String, List<File>> entry : simulatorConfig.getBizClassLoaderInjectFiles().entrySet()) {
             List<Class<?>> classes = classDataSource.findForReTransform(entry.getKey());
-            if (CollectionUtils.isNotEmpty(classes)) {
+            if (!isEmpty(classes)) {
                 for (Class<?> clazz : classes) {
                     classInjector.injectClass(clazz.getClassLoader(), entry.getKey());
                 }
@@ -875,7 +874,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         // 激活所有监听器
         for (final SimulatorClassFileTransformer simulatorClassFileTransformer : coreModule.getSimulatorClassFileTransformers()) {
             List<BuildingForListeners> list = simulatorClassFileTransformer.getAllListeners();
-            if (CollectionUtils.isNotEmpty(list)) {
+            if (!isEmpty(list)) {
                 for (BuildingForListeners buildingForListeners : list) {
                     eventListenerHandler.active(
                             buildingForListeners.getListenerId(),
@@ -1175,7 +1174,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
 
         try {
-            final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule());
+            final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule(), moduleSpec.getImportArtifacts());
             classLoaderService.load(moduleSpec, moduleClassLoader);
         } catch (Throwable e) {
             logger.info("load module [{}] fail, set module invalid", moduleSpec.getModuleId(), e);
@@ -1184,7 +1183,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         if (isInfoEnabled) {
             logger.info("SIMULATOR: {} modules[{}]: load module success. module-lib={}", action, moduleSpec.getModuleId(), moduleSpec.getFile());
         }
-        if (CollectionUtils.isNotEmpty(moduleSpec.getDependencies())) {
+        if (!isEmpty(moduleSpec.getDependencies())) {
             /**
              * 如果开关已经是开启状态，则直接执行即可
              */
@@ -1448,6 +1447,10 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false, true);
         loadModules(userModuleSpecs, "force-flush");
 
+    }
+
+    public static boolean isEmpty(Collection coll) {
+        return (coll == null || coll.isEmpty());
     }
 
 }

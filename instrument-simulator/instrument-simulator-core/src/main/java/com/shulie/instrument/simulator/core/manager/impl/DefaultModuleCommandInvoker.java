@@ -22,7 +22,6 @@ import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.exception.SimulatorException;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.StringUtils;
@@ -81,7 +80,7 @@ class DefaultModuleCommandInvoker implements ModuleCommandInvoker {
             @Override
             public void release() {
                 final List<Closeable> closeables = get();
-                if (CollectionUtils.isEmpty(closeables)) {
+                if (closeables == null || closeables.isEmpty()) {
                     return;
                 }
                 for (final Closeable closeable : get()) {

@@ -48,6 +48,7 @@ public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
         this.enhanceTemplate.enhance(this, "feign.ReflectiveFeign$FeignInvocationHandler", feignInvocationHandler);
         this.enhanceTemplate.enhance(this, "feign.hystrix.HystrixInvocationHandler", feignInvocationHandler);
+        this.enhanceTemplate.enhance(this, "com.alibaba.cloud.sentinel.feign.SentinelInvocationHandler", feignInvocationHandler);
 /*
         this.enhanceTemplate.enhance(this, "feign.SynchronousMethodHandler", new EnhanceCallback() {
             @Override

@@ -14,16 +14,6 @@
  */
 package com.shulie.instrument.simulator.module.logger.common;
 
-import java.lang.reflect.Field;
-import java.security.CodeSource;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
@@ -33,6 +23,11 @@ import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.appender.FileAppender;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+
+import java.lang.reflect.Field;
+import java.security.CodeSource;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class Log4j2Helper {
     private static boolean Log4j2 = false;
@@ -104,7 +99,8 @@ public class Log4j2Helper {
                 return loggerInfoMap;
             }
             // 排掉非root时，获取到root的logger config
-            if (!name.equalsIgnoreCase(LoggerConfig.ROOT) && StringUtils.isEmpty(loggerConfig.getName())) {
+            String configName = loggerConfig.getName();
+            if (!name.equalsIgnoreCase(LoggerConfig.ROOT) && (configName == null || configName.length() == 0)) {
                 return loggerInfoMap;
             }
             loggerInfoMap.put(name, doGetLoggerInfo(loggerConfig));

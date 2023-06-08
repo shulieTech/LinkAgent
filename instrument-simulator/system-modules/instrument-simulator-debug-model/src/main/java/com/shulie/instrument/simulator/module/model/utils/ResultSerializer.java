@@ -18,15 +18,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.lang.builder.StandardToStringStyle;
-import org.apache.commons.lang.builder.ToStringStyle;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -656,41 +648,6 @@ public class ResultSerializer {
         StringBuilder buf = new StringBuilder();
         renderObject(request, 0, deep, buf);
         return buf.toString();
-    }
-
-    public static String serializeRequest(Object request, long maxRequestSize) {
-        return request == null ? null : toStr(request, maxRequestSize);
-    }
-
-    public static String serializeResponse(Object response, long maxResponseSize) {
-        return response == null ? null : toStr(response, maxResponseSize);
-    }
-
-    public static String toStr(Object request, long limitedSize) {
-        if (null == request) {
-            return "";
-        }
-        try {
-            if (Throwable.class.isAssignableFrom(request.getClass())) {
-                StringWriter stringWriter = new StringWriter();
-                ((Throwable) request).printStackTrace(new PrintWriter(stringWriter));
-                String stack = stringWriter.toString();
-                if (stack.length() > limitedSize) {
-                    stack = stack.substring(0, (int) limitedSize);
-                }
-                return stack;
-            }
-            ToStringStyle toStringStyle = new StandardToStringStyle();
-            StringBuffer content = new StringBuffer();
-            toStringStyle.append(content, null, request, true);
-            if (content.length() < 1) {
-                return "";
-            }
-            return content.deleteCharAt(content.length() - 1).toString();
-        } catch (Throwable e) {
-            //ignore
-        }
-        return "";
     }
 
     private static class ObjectTooLargeException extends Exception {

@@ -141,4 +141,16 @@ public class DataSourceWrapUtil {
         }
         return false;
     }
+
+    public static void retryInitPerformanceTest(TomcatJdbcMediatorDataSource mediaDataSource) {
+        synchronized (DataSourceWrapUtil.class) {
+            if (mediaDataSource.getDataSourcePerformanceTest() != null) {
+                return;
+            }
+            DataSource ptDataSource = TomcatJdbcDatasourceUtils.generateDatasourceFromConfiguration(mediaDataSource.getDataSourceBusiness(),GlobalConfig.getInstance().getShadowDatasourceConfigs());
+            if (ptDataSource != null) {
+                mediaDataSource.setDataSourcePerformanceTest(ptDataSource);
+            }
+        }
+    }
 }

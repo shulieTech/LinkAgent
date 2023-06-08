@@ -17,7 +17,7 @@
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.home>${env.JAVA_HOME}</jdk.home>
-        <simulator.major.version>5.6.3</simulator.major.version>
+        <simulator.major.version>5.6.4</simulator.major.version>
         <simulator.minor.version>4</simulator.minor.version>
     </properties>
 
@@ -280,7 +280,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.7.30</version>
+                <version>2.0.7</version>
             </dependency>
 
             <dependency>

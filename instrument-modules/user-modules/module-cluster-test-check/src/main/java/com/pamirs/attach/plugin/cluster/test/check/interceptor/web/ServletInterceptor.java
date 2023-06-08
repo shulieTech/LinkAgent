@@ -32,7 +32,7 @@ public class ServletInterceptor extends AbstractCheckInterceptor {
 
     @Override
     public Object getParam(Advice advice, String key) {
-        if (ClassUtil.instanceOf(advice.getParameterArray()[0], "javax.servlet.http.HttpServletRequest")) {
+        if (ClassUtil.isInstance(advice.getParameterArray()[0], "javax.servlet.http.HttpServletRequest")) {
             HttpServletRequest request = (HttpServletRequest) advice.getParameterArray()[0];
             return request.getHeader(key);
         }

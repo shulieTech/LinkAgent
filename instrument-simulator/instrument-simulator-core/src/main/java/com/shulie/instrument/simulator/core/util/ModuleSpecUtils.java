@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.core.util;
 
 import com.shulie.instrument.simulator.api.ModuleSpec;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
@@ -52,7 +51,7 @@ public final class ModuleSpecUtils {
     }
 
     public static List<ModuleSpec> loadModuleSpecs(List<File> files, boolean isSystemModule, boolean isAsync) {
-        if (CollectionUtils.isEmpty(files)) {
+        if (files == null || files.isEmpty()) {
             return Collections.EMPTY_LIST;
         }
         List<ModuleSpec> moduleSpecs = new ArrayList<ModuleSpec>();
@@ -168,6 +167,8 @@ public final class ModuleSpecUtils {
                         .setImportPackages(StringUtils.trim(properties.getProperty("import-package")))
                         .setExportResources(StringUtils.trim(properties.getProperty("export-resource")))
                         .setImportResources(StringUtils.trim(properties.getProperty("import-resource")))
+                        .setImportDependencyDir(StringUtils.trim(properties.getProperty("import-dependency-dir")))
+                        .setImportArtifacts(StringUtils.trim(properties.getProperty("import-artifacts")))
                         .setSinceVersion(sinceVersion)
                         .setUntilVersion(untilVersion)
                         .setAsync(async)
@@ -209,7 +210,7 @@ public final class ModuleSpecUtils {
     }
 
     public static Set<String> getAllModuleIds(List<ModuleSpec> moduleSpecs) {
-        if (CollectionUtils.isEmpty(moduleSpecs)) {
+        if (moduleSpecs == null || moduleSpecs.isEmpty()) {
             return Collections.EMPTY_SET;
         }
         Set<String> result = new HashSet<String>();

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,18 +14,16 @@
  */
 package com.shulie.instrument.simulator.agent.instrument;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.JarFile;
+import java.util.zip.ZipEntry;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io         入口类
@@ -37,10 +35,10 @@ public class InstrumentLauncher {
     private final static String SIMULATOR_KEY_DELAY = "simulator.delay";
     private final static String SIMULATOR_KEY_UNIT = "simulator.unit";
 
-    static{
-        try{
+    static {
+        try {
             DEFAULT_AGENT_HOME = new File(InstrumentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile()).getParent();
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
     }
@@ -80,9 +78,7 @@ public class InstrumentLauncher {
      * @return true|false
      */
     private static boolean isNotBlank(final String string) {
-        return null != string
-                && string.length() > 0
-                && !string.matches("^\\s*$");
+        return null != string && string.length() > 0 && !string.matches("^\\s*$");
     }
 
     /**
@@ -120,9 +116,7 @@ public class InstrumentLauncher {
                 continue;
             }
             final String[] kvSegmentArray = kvPairSegmentString.split("=");
-            if (kvSegmentArray.length != 2
-                    || isBlank(kvSegmentArray[0])
-                    || isBlank(kvSegmentArray[1])) {
+            if (kvSegmentArray.length != 2 || isBlank(kvSegmentArray[0]) || isBlank(kvSegmentArray[1])) {
                 continue;
             }
             featureMap.put(kvSegmentArray[0], kvSegmentArray[1]);
@@ -260,9 +254,9 @@ public class InstrumentLauncher {
      * @throws IllegalAccessException
      * @throws java.lang.reflect.InvocationTargetException
      */
-    private static void startInternal(final long pid, final String processName, Integer delay, TimeUnit unit, Instrumentation inst) throws MalformedURLException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, java.lang.reflect.InvocationTargetException {
+    private static void startInternal(final long pid, final String processName, Integer delay, TimeUnit unit, Instrumentation inst) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, java.lang.reflect.InvocationTargetException {
         File file = new File(DEFAULT_AGENT_HOME + File.separator + "core", "simulator-agent-core.jar");
-        AgentClassLoader agentClassLoader = new AgentClassLoader(new URL[]{file.toURI().toURL()});
+        AgentClassLoader agentClassLoader = new AgentClassLoader(extractSimulatorAgentCoreImportResources(file));
         Class coreLauncherOfClass = agentClassLoader.loadClass("com.shulie.instrument.simulator.agent.core.CoreLauncher");
         Constructor constructor = coreLauncherOfClass.getConstructor(String.class, long.class, String.class, String.class, Instrumentation.class, ClassLoader.class);
         Object coreLauncherOfInstance = constructor.newInstance(DEFAULT_AGENT_HOME, pid, processName, getTagFileName(), inst, InstrumentLauncher.class.getClassLoader());
@@ -279,5 +273,112 @@ public class InstrumentLauncher {
 
         Method startMethod = coreLauncherOfClass.getDeclaredMethod("start");
         startMethod.invoke(coreLauncherOfInstance);
+    }
+
+    private static URL[] extractSimulatorAgentCoreImportResources(File jar) throws IOException {
+        URL[] noImportUrls = new URL[]{jar.toURI().toURL()};
+        JarFile jarFile;
+        jarFile = new JarFile(jar);
+        ZipEntry jarEntry = jarFile.getEntry("import-dependencies.config");
+        if (jarEntry == null) {
+            return noImportUrls;
+        }
+
+        String[] baseDirs;
+        String[] importArtifacts;
+        InputStream in = null;
+        try {
+            in = jarFile.getInputStream(jarEntry);
+            Properties properties = new Properties();
+            properties.load(in);
+            String baseDir = properties.getProperty("import-dependency-dir");
+            if (baseDir == null || baseDir.length() == 0) {
+                return noImportUrls;
+            }
+            String lib = properties.getProperty("import-artifacts");
+            if (lib == null || lib.length() == 0) {
+                return noImportUrls;
+            }
+            importArtifacts = lib.split(",");
+            baseDirs = baseDir.split(",");
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+
+        if (importArtifacts == null || baseDirs == null) {
+            return noImportUrls;
+        }
+
+        File simulatorAgent = jar;
+        while (true) {
+            simulatorAgent = simulatorAgent.getParentFile();
+            if (simulatorAgent.getName().equals("simulator-agent")) {
+                break;
+            }
+        }
+
+        Map<String, String> importJars = new HashMap<String, String>();
+
+        for (String s : importArtifacts) {
+            for (String baseDir : baseDirs) {
+                File importJar = extractArtifacts(simulatorAgent, baseDir.trim(), s.trim());
+                if (importJar == null) {
+                    continue;
+                }
+                // 排除重复的jar
+                String artifactId = importJar.getName().substring(0, importJar.getName().lastIndexOf("-"));
+                if (!importJars.containsKey(artifactId)) {
+                    importJars.put(artifactId, importJar.getAbsolutePath());
+                }
+            }
+        }
+
+        List<URL> urls = new ArrayList<URL>();
+        urls.add(jar.toURI().toURL());
+        for (String jarPath : importJars.values()) {
+            urls.add(new File(jarPath).toURI().toURL());
+        }
+
+        return urls.toArray(new URL[0]);
+    }
+
+    private static File extractArtifacts(File agentPath, String baseDir, final String artifactId) {
+        if (artifactId.length() == 0) {
+            return null;
+        }
+
+        if (baseDir.startsWith("..")) {
+            while (baseDir.startsWith("..")) {
+                agentPath = agentPath.getParentFile();
+                baseDir = baseDir.substring(3);
+            }
+        }
+
+        File dir = new File(agentPath, baseDir);
+        if (!dir.exists()) {
+            return null;
+        }
+
+        File[] files = dir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                String name = file.getName();
+                return name.contains("-") && extractArtifactId(file).equals(artifactId);
+            }
+        });
+        if (files.length == 0) {
+            return null;
+        }
+        return new File(agentPath, baseDir + File.separator + files[0].getName());
+    }
+
+    private static String extractArtifactId(File jarFile) {
+        String name = jarFile.getName();
+        while (name.contains(".") && name.contains("-")) {
+            name = name.substring(0, name.lastIndexOf("-"));
+        }
+        return name;
     }
 }

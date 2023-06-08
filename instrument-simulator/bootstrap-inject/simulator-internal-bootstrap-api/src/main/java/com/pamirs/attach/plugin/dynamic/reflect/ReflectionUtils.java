@@ -26,6 +26,9 @@ public abstract class ReflectionUtils {
     private static final Map<Class<?>, Field[]> declaredFieldsCache =
             new ConcurrentReferenceHashMap<Class<?>, Field[]>(256);
 
+    private static final Map<Class<?>, Constructor[]> declaredConstructorCache =
+            new ConcurrentReferenceHashMap<Class<?>, Constructor[]>(256);
+
     public static <T> T invoke(Object target, String methodName) {
         Method method = findMethod(target.getClass(), methodName);
         return (T) invokeMethod(method, target);
@@ -60,30 +63,49 @@ public abstract class ReflectionUtils {
         setField(field, target, value);
     }
 
-    public static <T> T newInstance(String className, Object... args) {
+    public static <T> T newInstance(Class clazz, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
+            if (args[i] == null) {
+                paramTypes[i] = NULL.class;
+            } else if (args[i] instanceof Class) {
+                paramTypes[i] = (Class) args[i];
+            } else {
+                paramTypes[i] = args[i].getClass();
+            }
         }
         try {
-            Class<?> clazz = Class.forName(className);
-            Constructor<?> constructor = clazz.getConstructor(paramTypes);
-            return (T) constructor.newInstance(args);
+            Constructor[] constructors = getDeclaredConstructors(clazz);
+            for (Constructor constructor : constructors) {
+                Class[] types = constructor.getParameterTypes();
+                if (types.length != paramTypes.length) {
+                    continue;
+                }
+                boolean match = true;
+                for (int i = 0; i < types.length; i++) {
+                    Class t1 = paramTypes[i];
+                    if (t1 == NULL.class) {
+                        continue;
+                    }
+                    if (!types[i].isAssignableFrom(t1)) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    return (T) constructor.newInstance(args);
+                }
+            }
+            throw new IllegalStateException("can`t find match constructor for class :" + clazz.getName());
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public static <T> T newInstance(Class clazz, Object... args) {
-        Class[] paramTypes = new Class[args.length];
-        for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
-        }
+
+    public static <T> T newInstance(String className, Object... args) {
         try {
-            Constructor<?> constructor = clazz.getConstructor(paramTypes);
-            return (T) constructor.newInstance(args);
+            return newInstance(Class.forName(className), args);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -98,6 +120,20 @@ public abstract class ReflectionUtils {
 
     public static Field findField(Class<?> clazz, String name) {
         return findField(clazz, name, null);
+    }
+
+    public static Field findField(Object obj, String name) {
+        Assert.notNull(obj, "Target must not be null");
+        return findField(obj.getClass(), name, null);
+    }
+
+    public static boolean existsField(Class<?> clazz, String name) {
+        return findField(clazz, name) != null;
+    }
+
+    public static boolean existsField(Object target, String name) {
+        Assert.notNull(target, "Target must not be null");
+        return findField(target.getClass(), name) != null;
     }
 
     public static <T> T getStatic(Class<?> clazz, String name) {
@@ -427,6 +463,19 @@ public abstract class ReflectionUtils {
         if (result == null) {
             result = clazz.getDeclaredFields();
             declaredFieldsCache.put(clazz, (result.length == 0 ? NO_FIELDS : result));
+        }
+        return result;
+    }
+
+    private static Constructor[] getDeclaredConstructors(Class<?> clazz) {
+        Assert.notNull(clazz, "Class must not be null");
+        Constructor[] result = declaredConstructorCache.get(clazz);
+        if (result == null) {
+            result = clazz.getDeclaredConstructors();
+            for (Constructor constructor : result) {
+                constructor.setAccessible(true);
+            }
+            declaredConstructorCache.put(clazz, result);
         }
         return result;
     }

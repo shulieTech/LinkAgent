@@ -27,6 +27,7 @@ import java.util.Map;
 
 import com.alibaba.fastjson.JSONObject;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.pradar.Pradar;
@@ -41,7 +42,6 @@ import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -161,7 +161,7 @@ public class HttpClientv5MethodInterceptor extends TraceInterceptorAdaptor {
                             HttpClientConstants.clazz = Class.forName(
                                 "org.apache.hc.client5.http.impl.classic.CloseableHttpResponse");
                         }
-                        return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                        return ReflectionUtils.newInstance(HttpClientConstants.clazz,response, null);
 
                     } catch (Exception e) {
                     }

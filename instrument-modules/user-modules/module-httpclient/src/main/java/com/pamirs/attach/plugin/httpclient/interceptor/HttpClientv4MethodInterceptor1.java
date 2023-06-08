@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
 import com.alibaba.fastjson.JSONObject;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.attach.plugin.httpclient.utils.ResponseHandlerUtil;
@@ -35,7 +36,6 @@ import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.ResponseHandler;
@@ -98,7 +98,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                     if (HttpClientConstants.clazz == null) {
                         HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                     }
-                    Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                    Object object = ReflectionUtils.newInstance(HttpClientConstants.clazz,response, null);
                     Advice advice = (Advice) config.getArgs().get("advice");
                     Object[] methodParams = advice.getParameterArray();
                     ResponseHandler responseHandler = null;
@@ -108,6 +108,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                             break;
                         }
                     }
+                    Pradar.mockResponse(config.getScriptContent());
                     if (responseHandler == null) {
                         ProcessController.returnImmediately(returnType, object);
                     }
@@ -194,11 +195,10 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                             }
                             BasicHttpResponse response = new BasicHttpResponse(statusline);
                             response.setEntity(entity);
-
                             if (HttpClientConstants.clazz == null) {
                                 HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                             }
-                            Object obj = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
+                            Object obj = ReflectionUtils.newInstance(HttpClientConstants.clazz,response, null);
 
                             Advice advice = (Advice) config.getArgs().get("advice");
                             Object[] methodParams = advice.getParameterArray();

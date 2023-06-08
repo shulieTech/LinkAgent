@@ -31,7 +31,6 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.listener.ShadowConsumerDisableListener;
 import com.pamirs.pradar.pressurement.agent.listener.model.ShadowConsumerDisableInfo;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import io.shulie.instrument.module.messaging.utils.ShadowConsumerPrefixUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,7 +132,7 @@ public class ShadowConsumerDisableListenerImpl implements ShadowConsumerDisableL
                             ReflectionUtils.invoke(bean, KafkaConstants.REFLECT_METHOD_STOP);
                         }
                     }
-                } catch (ReflectException e) {
+                } catch (Exception e) {
                 }
             }
             PradarSpringUtil.getBeanFactory().removeBeanDefinition(beanName);

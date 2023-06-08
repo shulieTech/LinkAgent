@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,13 +15,11 @@
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import io.shulie.instrument.module.messaging.kafka.util.ConsumerConfigHolder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -51,23 +49,26 @@ public class ConsumerMetaData {
     public static ConsumerMetaData build(KafkaConsumer consumer) {
         Set<String> topics = consumer.subscription();
         try {
-            Object coordinator = ReflectionUtils.get(consumer,KafkaConstants.REFLECT_FIELD_COORDINATOR );
-            Object groupId = ReflectUtil.reflectSlience(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            Object coordinator = ReflectionUtils.get(consumer, KafkaConstants.REFLECT_FIELD_COORDINATOR);
+            Object groupId = null;
+            if (ReflectionUtils.existsField(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID)) {
+                groupId = ReflectionUtils.get(consumer, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            }
+            if (groupId == null && ReflectionUtils.existsField(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID)) {
+                groupId = ReflectionUtils.get(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
+            }
             if (groupId == null) {
-                groupId = ReflectUtil.reflectSlience(coordinator, KafkaConstants.REFLECT_FIELD_GROUP_ID);
-                if (groupId == null) {
-                    throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
-                }
+                throw new PressureMeasureError("未支持的kafka版本！未能获取groupId");
             }
             String bootstrapServers = ConsumerConfigHolder.getBootstrapServers(consumer);
             String groupIdStr = "";
-            if(groupId instanceof String){
-                groupIdStr = (String)groupId;
-            }else {
-                groupIdStr = ReflectUtil.reflectSlience(groupId, "value");
+            if (groupId instanceof String) {
+                groupIdStr = (String) groupId;
+            } else {
+                groupIdStr = ReflectionUtils.get(groupId, "value");
             }
             return new ConsumerMetaData(topics, groupIdStr, bootstrapServers);
-        } catch (ReflectException e) {
+        } catch (Exception e) {
             throw new PressureMeasureError(e);
         }
     }

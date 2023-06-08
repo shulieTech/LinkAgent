@@ -53,6 +53,9 @@ class ClassMatchBuilder implements IClassMatchBuilder {
     private final List<BehaviorMatchBuilder> bfBehaviors = new ArrayList<BehaviorMatchBuilder>();
     private final List<Progress> progresses = new ArrayList<Progress>();
 
+    private boolean reTransform = false;
+
+
     /**
      * 构造类构建器
      *
@@ -248,11 +251,17 @@ class ClassMatchBuilder implements IClassMatchBuilder {
         return this;
     }
 
+    @Override
+    public void needReTransform() {
+        reTransform = true;
+    }
+
     private EventWatcher build(final Progress progress) {
 
         final int watchId = moduleEventWatcher.watch(
                 toEventWatchCondition(),
-                progress
+                progress,
+                reTransform
         );
 
         return new EventWatcher() {

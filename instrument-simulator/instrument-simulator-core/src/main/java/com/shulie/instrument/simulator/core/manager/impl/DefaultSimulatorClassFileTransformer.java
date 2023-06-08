@@ -27,7 +27,6 @@ import com.shulie.instrument.simulator.core.util.matcher.MatchingResult;
 import com.shulie.instrument.simulator.core.util.matcher.UnsupportedMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructure;
 import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructureFactory;
-import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

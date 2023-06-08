@@ -21,7 +21,6 @@ import com.shulie.instrument.simulator.module.express.ExpressFactory;
 import com.shulie.instrument.simulator.module.model.watch.WatchView;
 import com.shulie.instrument.simulator.module.util.ThreadUtil;
 import com.shulie.instrument.simulator.module.util.TraceInfo;
-import org.apache.commons.lang.StringUtils;
 
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
@@ -64,7 +63,7 @@ public class WatchListener extends AdviceListener {
      * @return true 如果条件表达式满足
      */
     protected boolean isConditionMet(String conditionExpress, Advice advice, long cost) throws ExpressException {
-        return StringUtils.isBlank(conditionExpress)
+        return isBlank(conditionExpress)
                 || ExpressFactory.threadLocalExpress(advice)
                 .bind(COST_VARIABLE, cost)
                 .bind(TARGET, advice.getTarget())
@@ -76,7 +75,7 @@ public class WatchListener extends AdviceListener {
     }
 
     protected Object getExpressionResult(String express, Advice advice, long cost) throws ExpressException {
-        if (StringUtils.isBlank(express)) {
+        if (isBlank(express)) {
             return null;
         }
         return ExpressFactory.threadLocalExpress(advice)
@@ -137,6 +136,10 @@ public class WatchListener extends AdviceListener {
     @Override
     public void afterThrowing(Advice advice) throws Throwable {
         finish(advice);
+    }
+
+    private boolean isBlank(String str){
+        return str == null || str.length() == 0;
     }
 
 }

@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.httpclient.utils;
 
+import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
@@ -25,8 +26,11 @@ public class HttpClientAsyncFixJsonStrategies {
             FutureCallback<HttpResponse> futureCallback = (FutureCallback<HttpResponse>) config.getArgs().get("futureCallback");
             StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
             try {
+                String content = config.getScriptContent();
+                Pradar.mockResponse(content);
+
                 HttpEntity entity = null;
-                entity = new StringEntity(config.getScriptContent());
+                entity = new StringEntity(content);
 
                 BasicHttpResponse response = new BasicHttpResponse(statusline);
                 response.setEntity(entity);
@@ -51,11 +55,13 @@ public class HttpClientAsyncFixJsonStrategies {
         public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
             MatchConfig config = (MatchConfig) params;
             org.apache.hc.core5.concurrent.FutureCallback<SimpleHttpResponse> futureCallback = (org.apache.hc.core5.concurrent.FutureCallback<SimpleHttpResponse>) config.getArgs().get("futureCallback");
+            String content = config.getScriptContent();
             try {
-                SimpleHttpResponse response = SimpleHttpResponse.create(200, config.getScriptContent());
+                SimpleHttpResponse response = SimpleHttpResponse.create(200, content);
                 java.util.concurrent.CompletableFuture future = new java.util.concurrent.CompletableFuture();
                 future.complete(response);
 
+                Pradar.mockResponse(content);
                 futureCallback.completed(response);
                 ProcessController.returnImmediately(returnType, future);
             } catch (ProcessControlException pe) {

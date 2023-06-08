@@ -4,30 +4,15 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package com.shulie.instrument.simulator.module.stack.trace;
-
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Resource;
 
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -49,10 +34,16 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import com.shulie.instrument.simulator.module.model.trace2.TraceView;
 import com.shulie.instrument.simulator.module.stack.trace.util.ConcurrentHashSet;
 import com.shulie.instrument.simulator.module.stack.trace.util.PatternMatchUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
+import java.lang.reflect.Proxy;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
 
@@ -83,7 +74,7 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
                 String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                return ArrayUtils.contains(interfaces, clazz.getName());
+                return indexOf(interfaces, clazz.getName(), 0) >= 0;
             }
 
             @Override
@@ -172,22 +163,22 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             final CountDownLatch latch = new CountDownLatch(1);
             for (Class clazz : instrumentClasses) {
                 EventWatcher watcher = new EventWatchBuilder(moduleEventWatcher)
-                    .onClass(clazz.getName()).includeSubClasses()
-                    .onAnyBehavior()
-                    .withInvoke().withCall()
-                    .onListener(Listeners.of(TraceListener.class,
-                        new Object[] {
-                            classPatterns,
-                            latch,
-                            traceViews,
-                            traceMethods,
-                            childrenWatchers,
-                            level,
-                            limits,
-                            stopInMills,
-                            wait
-                        }))
-                    .onClass().onWatch();
+                        .onClass(clazz.getName()).includeSubClasses()
+                        .onAnyBehavior()
+                        .withInvoke().withCall()
+                        .onListener(Listeners.of(TraceListener.class,
+                                new Object[]{
+                                        classPatterns,
+                                        latch,
+                                        traceViews,
+                                        traceMethods,
+                                        childrenWatchers,
+                                        level,
+                                        limits,
+                                        stopInMills,
+                                        wait
+                                }))
+                        .onClass().onWatch();
                 watchers.add(watcher);
             }
 
@@ -239,7 +230,7 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
                 String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                return ArrayUtils.contains(interfaces, clazz.getName());
+                return indexOf(interfaces, clazz.getName(), 0) >= 0;
             }
 
             @Override
@@ -286,6 +277,29 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
                 return Collections.EMPTY_LIST;
             }
         });
+    }
+
+    public static int indexOf(Object[] array, Object objectToFind, int startIndex) {
+        if (array == null) {
+            return -1;
+        }
+        if (startIndex < 0) {
+            startIndex = 0;
+        }
+        if (objectToFind == null) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (array[i] == null) {
+                    return i;
+                }
+            }
+        } else if (array.getClass().getComponentType().isInstance(objectToFind)) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (objectToFind.equals(array[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
 }

@@ -135,6 +135,8 @@ public interface IClassMatchBuilder {
      */
     IClassMatchBuilder withProgress(Progress progress);
 
+    void needReTransform();
+
     /**
      * 类是否拥有某一组标注
      * <p>

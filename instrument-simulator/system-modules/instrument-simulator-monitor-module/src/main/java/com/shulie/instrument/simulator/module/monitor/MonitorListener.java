@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -24,8 +24,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.apache.commons.lang.ArrayUtils.isEquals;
 
 public class MonitorListener extends AdviceListener {
     // 监控数据
@@ -145,6 +143,16 @@ public class MonitorListener extends AdviceListener {
             }
             Key okey = (Key) obj;
             return isEquals(okey.className, className) && isEquals(okey.methodName, methodName);
+        }
+
+        private boolean isEquals(String o1, String o2) {
+            if (o1 == null && o2 == null) {
+                return true;
+            }
+            if ((o1 == null && o2 != null) || (o1 != null && o2 == null)) {
+                return false;
+            }
+            return o1.equals(o2);
         }
 
     }

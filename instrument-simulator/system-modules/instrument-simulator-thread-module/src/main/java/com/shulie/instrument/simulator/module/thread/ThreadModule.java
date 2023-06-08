@@ -22,7 +22,6 @@ import com.shulie.instrument.simulator.api.util.ParameterUtils;
 import com.shulie.instrument.simulator.module.ParamSupported;
 import com.shulie.instrument.simulator.module.model.thread.ThreadStat;
 import com.shulie.instrument.simulator.module.util.ThreadUtil;
-import org.apache.commons.lang.ArrayUtils;
 import org.kohsuke.MetaInfServices;
 
 import java.lang.management.ManagementFactory;
@@ -78,7 +77,7 @@ public class ThreadModule extends ParamSupported implements ExtensionModule {
 
     private CommandResponse getAllThreadStats(String state, Integer sampleInterval) {
         Map<Long, ThreadStat> allThreadStats = ThreadUtil.getAllThreadStats(state, sampleInterval);
-        ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(ArrayUtils.toPrimitive(allThreadStats.keySet().toArray(new Long[0])), lockedMonitors, lockedSynchronizers);
+        ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(toPrimitive(allThreadStats.keySet().toArray(new Long[0])), lockedMonitors, lockedSynchronizers);
         if (threadInfos == null) {
             return CommandResponse.failure("no thread found!\n");
         } else {
@@ -132,7 +131,7 @@ public class ThreadModule extends ParamSupported implements ExtensionModule {
             tids.add(threadStat.getThreadId());
         }
 
-        ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(ArrayUtils.toPrimitive(tids.toArray(new Long[tids.size()])), true, true);
+        ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(toPrimitive(tids.toArray(new Long[tids.size()])), true, true);
         if (threadInfos == null) {
             return CommandResponse.failure("thread do not exist! id: " + tids + "\n");
         } else {
@@ -155,5 +154,18 @@ public class ThreadModule extends ParamSupported implements ExtensionModule {
             Map<Long, ThreadStat> allThreadStats = ThreadUtil.getAllThreadStats(sampleInterval);
             return CommandResponse.success(ThreadUtil.getThreadInfo(threadInfos[0], allThreadStats.get(id)));
         }
+    }
+
+    public static long[] toPrimitive(Long[] array) {
+        if (array == null) {
+            return null;
+        } else if (array.length == 0) {
+            return new long[0];
+        }
+        final long[] result = new long[array.length];
+        for (int i = 0; i < array.length; i++) {
+            result[i] = array[i].longValue();
+        }
+        return result;
     }
 }

@@ -15,8 +15,12 @@
 package com.shulie.instrument.simulator.api;
 
 import com.shulie.instrument.simulator.api.utils.ParseUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -26,6 +30,8 @@ import java.util.*;
  * @since 2020/9/19 10:04 下午
  */
 public class ModuleSpec {
+
+    private final Logger LOGGER = LoggerFactory.getLogger(ModuleSpec.class);
     /**
      * 模块id
      */
@@ -225,6 +231,21 @@ public class ModuleSpec {
      * 需要同步拦截和记录什么方法
      */
     private String syncFetchTarget;
+
+    /**
+     * 引入的外部依赖目录
+     */
+    private Set<String> importDependencyDir = new HashSet<String>();
+
+    /**
+     * 引入的外部依赖工程id
+     */
+    private Set<String> importArtifacts = new HashSet<String>();
+
+    /**
+     * 缺失的外部依赖
+     */
+    private Set<String> missingImportArtifactJar = new HashSet<String>();
 
     public void loadModuleInfo(ModuleInfo moduleInfo) {
         if (moduleInfo == null) {
@@ -484,6 +505,12 @@ public class ModuleSpec {
         return importResources;
     }
 
+    /**
+     * 导入外部的jar包或者目录
+     *
+     * @param importResource
+     * @return
+     */
     public ModuleSpec setImportResources(String importResource) {
         this.importResources = strToSet(importResource, ",");
         ParseUtils.parsePackagePrefixAndSuffix(this.importResources, this.importPrefixResources,
@@ -542,6 +569,116 @@ public class ModuleSpec {
         this.syncFetchTarget = syncFetchTarget;
     }
 
+    public Set<String> getImportDependencyDir() {
+        return importDependencyDir;
+    }
+
+    public ModuleSpec setImportDependencyDir(String importDependencyDir) {
+        if (importDependencyDir == null || importDependencyDir.trim().length() == 0) {
+            return this;
+        }
+        this.importDependencyDir = new HashSet<String>();
+        for (String dir : importDependencyDir.trim().split(",")) {
+            this.importDependencyDir.add(dir.trim());
+        }
+        return this;
+    }
+
+    public Set<String> getImportArtifacts() {
+        return importArtifacts;
+    }
+
+    public ModuleSpec setImportArtifacts(String importArtifacts) {
+        if (importArtifacts == null || this.importDependencyDir.isEmpty()) {
+            return this;
+        }
+        this.importArtifacts = new HashSet<String>();
+        for (String dir : importArtifacts.trim().split(",")) {
+            this.importArtifacts.add(dir.trim());
+        }
+        if (importArtifacts.isEmpty()) {
+            return this;
+        }
+        try {
+            this.importArtifacts = extractDependencyJars();
+        } catch (IOException e) {
+            LOGGER.error("parse ModuleSpec 'import-artifacts' property for module '{}' occur exception", moduleId, e);
+        }
+        if (!this.missingImportArtifactJar.isEmpty()) {
+            LOGGER.warn("parse ModuleSpec 'import-artifacts' property for module '{}' missing artifacts {}", moduleId, missingImportArtifactJar);
+        }
+        return this;
+    }
+
+    private Set<String> extractDependencyJars() throws IOException {
+        File simulatorAgent = this.file;
+        while (true) {
+            simulatorAgent = simulatorAgent.getParentFile();
+            if (simulatorAgent.getName().equals("simulator-agent")) {
+                break;
+            }
+        }
+
+        Map<String, String> importJars = new HashMap<String, String>();
+
+        for (String s : importArtifacts) {
+            for (String baseDir : importDependencyDir) {
+                File jar = extractArtifacts(simulatorAgent, baseDir.trim(), s.trim());
+                if (jar == null) {
+                    continue;
+                }
+                // 排除重复的jar
+                if (!importJars.containsKey(s)) {
+                    importJars.put(s, jar.getAbsolutePath());
+                }
+            }
+            if (!importJars.containsKey(s)) {
+                this.missingImportArtifactJar.add(s);
+            }
+        }
+
+
+        return new HashSet<String>(importJars.values());
+    }
+
+    private File extractArtifacts(File agentPath, String baseDir, final String artifactId) {
+        if (artifactId.length() == 0) {
+            return null;
+        }
+
+        if (baseDir.startsWith("..")) {
+            while (baseDir.startsWith("..")) {
+                agentPath = agentPath.getParentFile();
+                baseDir = baseDir.substring(3);
+            }
+        }
+
+        File dir = new File(agentPath, baseDir);
+        if (!dir.exists()) {
+            return null;
+        }
+        File[] files = dir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                String name = file.getName();
+                return name.contains("-") && extractArtifactId(file).equals(artifactId);
+            }
+        });
+
+        if (files.length == 0) {
+            return null;
+        }
+        return new File(agentPath, baseDir + File.separator + files[0].getName());
+    }
+
+    private static String extractArtifactId(File jarFile) {
+        String name = jarFile.getName();
+        while (name.contains(".") && name.contains("-")) {
+            name = name.substring(0, name.lastIndexOf("-"));
+        }
+        return name;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -578,6 +715,8 @@ public class ModuleSpec {
         this.importExactlyResources.clear();
         this.importPrefixResources.clear();
         this.importSuffixResources.clear();
+        this.importDependencyDir.clear();
+        this.importArtifacts.clear();
         this.file = null;
     }
 
@@ -614,6 +753,8 @@ public class ModuleSpec {
                 ", isLoaded=" + isLoaded +
                 ", isValid=" + isValid +
                 ", priority=" + priority +
+                ", importDependencyDir=" + importDependencyDir +
+                ", importArtifacts=" + importArtifacts +
                 '}';
     }
 }

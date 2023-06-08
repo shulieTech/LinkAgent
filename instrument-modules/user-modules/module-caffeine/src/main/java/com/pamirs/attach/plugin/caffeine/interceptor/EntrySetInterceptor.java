@@ -14,16 +14,16 @@
  */
 package com.pamirs.attach.plugin.caffeine.interceptor;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import com.pamirs.attach.plugin.caffeine.utils.WrapEntry;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.cache.ClusterTestCacheWrapperKey;
 import com.pamirs.pradar.interceptor.ModificationInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -39,7 +39,7 @@ public class EntrySetInterceptor extends ModificationInterceptorAdaptor {
         }
         Set<Map.Entry> returnSet = (Set<Entry>)returnObj;
         if (returnSet.size() == 0) {
-            return new Object[0];
+            return new HashSet(0);
         }
         Set<Map.Entry> resultSet = new HashSet();
         for (Entry entry : returnSet) {

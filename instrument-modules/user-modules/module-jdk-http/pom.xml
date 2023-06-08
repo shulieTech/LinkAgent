@@ -14,7 +14,7 @@
     <properties>
         <module-name>jdk-http</module-name>
     </properties>
-    <version>2.0.0.3</version>
+    <version>2.0.0.5</version>
 
     <dependencies>
 
@@ -36,6 +36,18 @@
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>2.0.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

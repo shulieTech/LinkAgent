@@ -29,6 +29,9 @@ public class CpuUsageResourceDetector implements ResourceDetector {
     @Override
     public boolean hasResource() {
         double cpuUsage = getCurrentCpuUsage();
+        if(Double.isNaN(cpuUsage) || Double.isInfinite(cpuUsage)){
+            return true;
+        }
         boolean result = cpuUsage < maxUsage;
         if (!result) {
             logger.info("{} detect result : {}", this.getClass(), cpuUsage);

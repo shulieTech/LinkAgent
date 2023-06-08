@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.apache.kafka.destroy;
 
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
-import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.shulie.instrument.simulator.api.listener.Destroyed;
 
 /**
@@ -28,6 +27,5 @@ public class KafkaDestroy implements Destroyed {
     public void destroy() {
         ConfigCache.release();
         ConsumerHolder.release();
-        ReflectUtil.release();
     }
 }

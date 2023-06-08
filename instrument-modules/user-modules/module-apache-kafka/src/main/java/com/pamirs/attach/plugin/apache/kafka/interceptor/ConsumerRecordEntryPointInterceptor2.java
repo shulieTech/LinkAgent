@@ -14,17 +14,11 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProvider;
 import com.pamirs.attach.plugin.apache.kafka.util.KafkaUtils;
-import com.pamirs.attach.plugin.apache.kafka.util.ReflectUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -37,15 +31,13 @@ import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import org.apache.commons.lang.StringUtils;
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.Node;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
+
+import javax.annotation.Resource;
+import java.util.Map;
 
 /**
  * @Auther: vernon

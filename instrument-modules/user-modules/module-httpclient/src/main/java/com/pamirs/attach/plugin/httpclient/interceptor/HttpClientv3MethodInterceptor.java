@@ -21,6 +21,7 @@ import java.util.Map;
 
 import com.alibaba.fastjson.JSONObject;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.pradar.Pradar;
@@ -39,8 +40,6 @@ import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.URI;
@@ -79,7 +78,8 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                     MatchConfig config = (MatchConfig)params;
                     HttpMethod method = (HttpMethod)config.getArgs().get("extraMethod");
                     byte[] bytes = config.getScriptContent().getBytes();
-                    Reflect.on(method).set("responseBody", bytes);
+                    Pradar.mockResponse(new String(bytes));
+                    ReflectionUtils.set(method,"responseBody", bytes);
                     ProcessController.returnImmediately(int.class, 200);
                 } catch (ProcessControlException pe) {
                     throw pe;
@@ -161,7 +161,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
                 @Override
                 public Object call(Object param) throws ProcessControlException {
                     byte[] bytes = JSONObject.toJSONBytes(param);
-                    Reflect.on(method).set("responseBody", bytes);
+                    ReflectionUtils.set(method,"responseBody", bytes);
                     ProcessController.returnImmediately(int.class, 200);
                     return true;
                 }
@@ -215,8 +215,8 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
 
         HashMap hashMap = null;
         try {
-            hashMap = Reflect.on(httpParams).get(HttpClientConstants.DYNAMIC_FIELD_PARAMETERS);
-        } catch (ReflectException e) {
+            hashMap = ReflectionUtils.get(httpParams,HttpClientConstants.DYNAMIC_FIELD_PARAMETERS);
+        } catch (Exception e) {
             LOGGER.warn("{} has not field {}", httpParams.getClass().getName(),
                 HttpClientConstants.DYNAMIC_FIELD_PARAMETERS);
         }

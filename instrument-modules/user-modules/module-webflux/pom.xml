@@ -56,6 +56,12 @@
             <version>5.2.12.RELEASE</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!--        <dependency>-->
 <!--            <groupId>io.shulie.instrument.module</groupId>-->

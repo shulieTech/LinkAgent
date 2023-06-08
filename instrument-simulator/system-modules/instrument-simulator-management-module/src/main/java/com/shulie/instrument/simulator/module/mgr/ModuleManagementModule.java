@@ -18,8 +18,6 @@ import com.shulie.instrument.simulator.api.*;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.resource.ModuleManager;
 import com.shulie.instrument.simulator.module.mgr.model.ModuleInf;
-import org.apache.commons.lang.BooleanUtils;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.shulie.instrument.simulator.api.util.StringUtil.matching;
-import static org.apache.commons.lang.StringUtils.EMPTY;
 
 /**
  * 仿真器模块管理模块
@@ -50,7 +47,7 @@ public class ModuleManagementModule implements ExtensionModule {
     // 获取参数值
     private String getParamWithDefault(final Map<String, String> param, final String name, final String defaultValue) {
         final String valueFromReq = param.get(name);
-        return StringUtils.isBlank(valueFromReq)
+        return isBlank(valueFromReq)
                 ? defaultValue
                 : valueFromReq;
     }
@@ -116,8 +113,8 @@ public class ModuleManagementModule implements ExtensionModule {
     @Command(value = "flush", description = "刷新模块")
     public CommandResponse flush(final Map<String, String> param) throws ModuleException {
         try {
-            final String isForceString = getParamWithDefault(param, "force", EMPTY);
-            final boolean isForce = BooleanUtils.toBoolean(isForceString);
+            final String isForceString = getParamWithDefault(param, "force", "");
+            final boolean isForce = isForceString.isEmpty() ? false : Boolean.parseBoolean(isForceString);
             moduleManager.flush(isForce);
             return CommandResponse.success(String.format("module flush finished, total=%s;", moduleManager.list().size()));
         } catch (Throwable e) {
@@ -139,11 +136,11 @@ public class ModuleManagementModule implements ExtensionModule {
 
     @Command(value = "unload", description = "模块卸载")
     public CommandResponse unload(final Map<String, String> param) {
-        final String moduleId = getParamWithDefault(param, "moduleId", EMPTY);
+        final String moduleId = getParamWithDefault(param, "moduleId", "");
         try {
             int total = 0;
             int totalModule = 0;
-            if (StringUtils.isNotBlank(moduleId)) {
+            if (isNotBlank(moduleId)) {
                 for (final ModuleSpec moduleSpec : searchByModuleId(moduleId)) {
                     try {
                         moduleManager.unload(moduleSpec.getModuleId());
@@ -200,11 +197,11 @@ public class ModuleManagementModule implements ExtensionModule {
 
     @Command(value = "active", description = "模块激活")
     public CommandResponse active(final Map<String, String> param) throws ModuleException {
-        final String moduleId = getParamWithDefault(param, "moduleId", EMPTY);
+        final String moduleId = getParamWithDefault(param, "moduleId", "");
         try {
             int total = 0;
             int totalModule = 0;
-            if (StringUtils.isNotBlank(moduleId)) {
+            if (isNotBlank(moduleId)) {
                 for (final ModuleSpec moduleSpec : searchByModuleId(moduleId)) {
                     try {
                         moduleManager.active(moduleSpec.getModuleId());
@@ -225,11 +222,11 @@ public class ModuleManagementModule implements ExtensionModule {
 
     @Command(value = "frozen", description = "模块冻结")
     public CommandResponse frozen(final Map<String, String> param) throws ModuleException {
-        final String moduleId = getParamWithDefault(param, "moduleId", EMPTY);
+        final String moduleId = getParamWithDefault(param, "moduleId", "");
         try {
             int total = 0;
             int totalModule = 0;
-            if (StringUtils.isNotBlank(moduleId)) {
+            if (isNotBlank(moduleId)) {
                 for (final ModuleSpec moduleSpec : searchByModuleId(moduleId)) {
                     try {
                         moduleManager.frozen(moduleSpec.getModuleId());
@@ -252,14 +249,14 @@ public class ModuleManagementModule implements ExtensionModule {
     public CommandResponse detail(final Map<String, String> param) throws ModuleException {
         final String moduleId = param.get("moduleId");
         try {
-            if (StringUtils.isBlank(moduleId)) {
+            if (isBlank(moduleId)) {
                 // 如果参数不对，则认为找不到对应的仿真器模块，返回400
                 return CommandResponse.failure("moduleId parameter was required.");
             }
 
-            if (StringUtils.isNotBlank(moduleId)) {
+            if (isNotBlank(moduleId)) {
                 for (final ModuleSpec moduleSpec : moduleManager.listModuleSpecs()) {
-                    if (!StringUtils.equals(moduleSpec.getModuleId(), moduleId)) {
+                    if (!moduleSpec.getModuleId().equals(moduleId)) {
                         continue;
                     }
                     ModuleInf moduleInf = new ModuleInf();
@@ -290,5 +287,14 @@ public class ModuleManagementModule implements ExtensionModule {
         }
 
     }
+
+    private boolean isBlank(String str){
+        return str == null || str.length() == 0;
+    }
+
+    private boolean isNotBlank(String str){
+        return !isBlank(str);
+    }
+
 
 }

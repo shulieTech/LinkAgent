@@ -1,1 +1,1 @@
-2.0.1.0 缓存kafka构造函数，获取内部bootstrap.servers属性
+2.0.1.1 反射调整

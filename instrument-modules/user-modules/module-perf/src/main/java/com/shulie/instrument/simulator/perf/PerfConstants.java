@@ -34,4 +34,9 @@ public final class PerfConstants {
     public final static String MODULE_COMMAND_MEMORY_INFO = "info";
     public final static String MODULE_COMMAND_TRACE_INFO = "info";
     public final static String MODULE_COMMAND_DUMP = "dump";
+
+    /**
+     * 是否允许业务流量采集明细信息
+     */
+    public final static String BIZ_REQUEST_ENABLE_PERF_KEY = "pradar.biz.perf.push.enabled";
 }

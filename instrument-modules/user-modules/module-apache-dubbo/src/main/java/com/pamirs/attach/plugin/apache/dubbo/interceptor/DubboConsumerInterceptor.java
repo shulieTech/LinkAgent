@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -76,11 +76,12 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         }
         return false;
     }
+
     //申通事件中心过滤掉
-    private boolean isShentongEvent(String name){
+    private boolean isShentongEvent(String name) {
         if (name.equals("com.sto.event.ocean.client.remote.EventAccept")
-            || name.equals("com.sto.event.ocean.client.remote.EventCoreRpc")
-            || name.equals("com.sto.event.ocean.client.remote.EventPreRpc")){
+                || name.equals("com.sto.event.ocean.client.remote.EventCoreRpc")
+                || name.equals("com.sto.event.ocean.client.remote.EventPreRpc")) {
             return true;
         }
         return false;
@@ -96,7 +97,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                     RpcInvocation invocation = (RpcInvocation) config.getArgs().get("invocation");
                     try {
                         //for 2.8.4
-                        return ReflectionUtils.newInstance("org.apache.dubbo.rpc.RpcResult", config.getScriptContent());
+                        return ReflectionUtils.newInstance("org.apache.dubbo.rpc.RpcResult", classLoader, config.getScriptContent());
                     } catch (Exception e) {
                         if (logger.isInfoEnabled()) {
                             logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
@@ -107,12 +108,12 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                         try {
                             //for 2.7.5
                             java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
-                            future.complete(new AppResponse(getResultByType(invocation.getReturnType(),config.getScriptContent())));
-                            Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", future, invocation);
+                            future.complete(new AppResponse(getResultByType(invocation.getReturnType(), config.getScriptContent())));
+                            Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", classLoader, future, invocation);
                             ProcessController.returnImmediately(returnType, result);
                         } catch (ReflectException e) {
                             //for 2.7.3
-                            Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", invocation);
+                            Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", classLoader, invocation);
                             ProcessController.returnImmediately(returnType, result);
                         }
                     } catch (ProcessControlException pe) {
@@ -127,14 +128,14 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
 
     private static final Gson gson = new Gson();
 
-    private static final Object getResultByType(Class classType, String result){
+    private static final Object getResultByType(Class classType, String result) {
         try {
             String classTypeName = classType.getName();
             int code = -1;
-            if (ClassTypeUtils.getType2Code().containsKey(classTypeName)){
+            if (ClassTypeUtils.getType2Code().containsKey(classTypeName)) {
                 code = ClassTypeUtils.getType2Code().get(classTypeName);
             }
-            switch (code){
+            switch (code) {
                 case ClassTypeUtils.INT:
                     return Integer.valueOf(result);
                 case ClassTypeUtils.BOOLEAN:
@@ -152,13 +153,13 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                 default:
                     return gson.fromJson(result, classType);
             }
-        }catch (Throwable t){
-            logger.error("dubbo mock返回值类型转换异常,classType is"  + classType.getName());
+        } catch (Throwable t) {
+            logger.error("dubbo mock返回值类型转换异常,classType is" + classType.getName());
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.mock)
                     .setErrorCode("mock-0003")
                     .setMessage("mock处理异常")
-                    .setDetail("dubbo mock返回值类型转换异常,classType is"  + classType.getName())
+                    .setDetail("dubbo mock返回值类型转换异常,classType is" + classType.getName())
                     .report();
             throw new PradarException("dubbo mock返回值类型转换异常,classType is " + classType.getName());
         }
@@ -178,18 +179,20 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("class", interfaceName);
         config.addArgs("method", methodName);
         config.addArgs("invocation", invocation);
-        if(isShentongEvent(interfaceName)){
+
+        final ClassLoader classLoader = advice.getClassLoader();
+        if (isShentongEvent(interfaceName)) {
             config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, "true");
         }
-        if (config.getStrategy() instanceof JsonMockStrategy){
-            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        if (config.getStrategy() instanceof JsonMockStrategy) {
+            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), classLoader, config);
         }
-        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionCall() {
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), classLoader, config, new ExecutionCall() {
             @Override
             public Object call(Object param) {
                 try {
                     //for 2.8.4
-                    return ReflectionUtils.newInstance("org.apache.dubbo.rpc.RpcResult", param);
+                    return ReflectionUtils.newInstance("org.apache.dubbo.rpc.RpcResult", classLoader, param);
                 } catch (Exception e) {
                     if (logger.isInfoEnabled()) {
                         logger.info("find dubbo 2.8.4 class org.apache.dubbo.rpc.RpcResult fail, find others!", e);
@@ -201,11 +204,11 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                         //for 2.7.5
                         java.util.concurrent.CompletableFuture<AppResponse> future = new java.util.concurrent.CompletableFuture<AppResponse>();
                         future.complete(new AppResponse(param));
-                        Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", future, invocation);
+                        Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", classLoader, future, invocation);
                         return result;
                     } catch (ReflectException e) {
                         //for 2.7.3
-                        Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", invocation);
+                        Object result = ReflectionUtils.newInstance("org.apache.dubbo.rpc.AsyncRpcResult", classLoader, invocation);
                         return result;
                     }
                 } catch (Exception e) {
@@ -263,7 +266,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord beforeTrace(Advice advice) {
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
         final String name = getInterfaceName(invocation);
-        if (isShentongEvent(name)){
+        if (isShentongEvent(name)) {
             return null;
         }
         Invoker<?> invoker = (Invoker<?>) advice.getTarget();
@@ -296,7 +299,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
         Result result = (Result) advice.getReturnObj();
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
         final String name = getInterfaceName(invocation);
-        if (isShentongEvent(name)){
+        if (isShentongEvent(name)) {
             return null;
         }
         SpanRecord record = new SpanRecord();
@@ -313,7 +316,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
     public SpanRecord exceptionTrace(Advice advice) {
         final RpcInvocation invocation = (RpcInvocation) advice.getParameterArray()[0];
         final String name = getInterfaceName(invocation);
-        if (isShentongEvent(name)){
+        if (isShentongEvent(name)) {
             return null;
         }
         SpanRecord record = new SpanRecord();

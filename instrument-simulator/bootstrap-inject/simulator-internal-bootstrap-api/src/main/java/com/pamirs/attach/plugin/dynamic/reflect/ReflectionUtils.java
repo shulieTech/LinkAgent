@@ -102,10 +102,9 @@ public abstract class ReflectionUtils {
         }
     }
 
-
-    public static <T> T newInstance(String className, Object... args) {
+    public static <T> T newInstance(String className, ClassLoader classLoader, Object... args) {
         try {
-            return newInstance(Class.forName(className), args);
+            return newInstance(classLoader.loadClass(className), args);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

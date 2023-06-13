@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.c3p0;
 
+import com.pamirs.attach.plugin.c3p0.interceptor.C3p0PoolGetConnectionInterceptor;
 import com.pamirs.attach.plugin.c3p0.interceptor.DataSourceGetConnectionArgsCutoffInterceptor;
 import com.pamirs.attach.plugin.c3p0.interceptor.DataSourceGetConnectionCutoffInterceptor;
 import com.pamirs.attach.plugin.c3p0.listener.C3p0ShadowActiveEventListener;
@@ -56,7 +57,15 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
 
             }
         });
-        addListener();
+
+        enhanceTemplate.enhance(this, "com.mchange.v2.c3p0.impl.C3P0PooledConnectionPool", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethod("checkoutPooledConnection").addInterceptor(Listeners.of(C3p0PoolGetConnectionInterceptor.class));
+            }
+        });
+
+//        addListener();
         return true;
     }
 

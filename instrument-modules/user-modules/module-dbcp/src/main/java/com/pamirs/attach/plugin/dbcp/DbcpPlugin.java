@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.dbcp;
 
 import com.pamirs.attach.plugin.dbcp.interceptor.DataSourceGetConnectionCutoffArgsInterceptor;
 import com.pamirs.attach.plugin.dbcp.interceptor.DataSourceGetConnectionCutoffInterceptor;
+import com.pamirs.attach.plugin.dbcp.interceptor.DbcpPoolingDataSourceGetConnectionInterceptor;
 import com.pamirs.attach.plugin.dbcp.listener.DbcpShadowActiveEventListener;
 import com.pamirs.attach.plugin.dbcp.listener.DbcpShadowDisableEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
@@ -56,7 +57,14 @@ public class DbcpPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 getConnection0.addInterceptor(Listeners.of(DataSourceGetConnectionCutoffArgsInterceptor.class, "Dbcp_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
-        addListener();
+
+        enhanceTemplate.enhance(this, "org.apache.commons.dbcp.PoolingDataSource", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethod("getConnection").addInterceptor(Listeners.of(DbcpPoolingDataSourceGetConnectionInterceptor.class));
+            }
+        });
+//        addListener();
         return true;
     }
 

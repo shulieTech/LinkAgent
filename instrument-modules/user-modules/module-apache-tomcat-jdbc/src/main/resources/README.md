@@ -1,1 +1,1 @@
-2.0.1.2  trace日志里带上ext信息
+2.0.1.3  增加连接池获取connection的trace打印

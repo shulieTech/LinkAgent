@@ -14,10 +14,7 @@
  */
 package com.pamirs.attach.plugin.catalina;
 
-import com.pamirs.attach.plugin.catalina.interceptor.RequestStartAsyncInterceptor;
-import com.pamirs.attach.plugin.catalina.interceptor.SpringMvcApiInterceptor;
-import com.pamirs.attach.plugin.catalina.interceptor.SpringMvcInterceptor;
-import com.pamirs.attach.plugin.catalina.interceptor.StandardHostValveInvokeInterceptor;
+import com.pamirs.attach.plugin.catalina.interceptor.*;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -75,6 +72,13 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     getMethod.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
                 }
             });
+
+        enhanceTemplate.enhance(this, "org.apache.tomcat.util.net.AbstractEndpoint", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethod("countUpOrAwaitConnection").addInterceptor(Listeners.of(CatalinaPoolGetConnectionInterceptor.class));
+            }
+        });
         return true;
     }
 }

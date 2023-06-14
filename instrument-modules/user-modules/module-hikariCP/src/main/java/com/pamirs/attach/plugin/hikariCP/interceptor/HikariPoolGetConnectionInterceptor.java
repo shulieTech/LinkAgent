@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.dbcp2.interceptor;
+package com.pamirs.attach.plugin.hikariCP.interceptor;
 
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
@@ -7,17 +7,19 @@ import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.pool.HikariPool;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class Dbcp2PoolingDataSourceGetConnectionInterceptor extends TraceInterceptorAdaptor {
+public class HikariPoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
 
     private static Map<Integer, String> jdbcUrlCache = new HashMap<Integer, String>();
 
     @Override
     public String getPluginName() {
-        return "dbcp2";
+        return "hikaricp";
     }
 
     @Override
@@ -31,19 +33,18 @@ public class Dbcp2PoolingDataSourceGetConnectionInterceptor extends TraceInterce
             return null;
         }
         SpanRecord record = new SpanRecord();
-        Object target = advice.getTarget();
+        HikariPool target = (HikariPool) advice.getTarget();
         int hashCode = System.identityHashCode(target);
+
         String url = jdbcUrlCache.get(hashCode);
         if (url == null) {
-            if (ReflectionUtils.existsField(target, "_pool")) {
-                url = ReflectionUtils.getFieldValues(target,"_pool", "factory", "_connFactory", "_connectUri");
-            } else {
-                url = ReflectionUtils.getFieldValues(target,"pool", "factory", "connectionFactory", "connectionString");
-            }
+            HikariConfig config = ReflectionUtils.get(target,"config");
+            url = config.getJdbcUrl();
             jdbcUrlCache.put(hashCode, url);
         }
+
         record.setService(url);
-        record.setMethod("PoolingDataSource#" + advice.getBehaviorName());
+        record.setMethod("HikariPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
         return record;
     }

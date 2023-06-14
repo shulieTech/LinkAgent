@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.dbcp2.interceptor;
+package com.pamirs.attach.plugin.tomcat.dbcp.interceptor;
 
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
@@ -11,7 +11,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Dbcp2PoolingDataSourceGetConnectionInterceptor extends TraceInterceptorAdaptor {
+public class TomcatPoolingDataSourceGetConnectionInterceptor extends TraceInterceptorAdaptor {
 
     private static Map<Integer, String> jdbcUrlCache = new HashMap<Integer, String>();
 

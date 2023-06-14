@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.tomcat.dbcp;
 
 import com.pamirs.attach.plugin.tomcat.dbcp.interceptor.TomcatDbcpDataSourceGetConnectionCutoffInterceptor;
+import com.pamirs.attach.plugin.tomcat.dbcp.interceptor.TomcatPoolingDataSourceGetConnectionInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -44,6 +45,12 @@ public class TomcatDbcpPlugin extends ModuleLifecycleAdapter implements Extensio
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod getConnection = target.getDeclaredMethod("getConnection");
                 getConnection.addInterceptor(Listeners.of(TomcatDbcpDataSourceGetConnectionCutoffInterceptor.class, "Tomcat_Dbcp_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            }
+        });
+        enhanceTemplate.enhance(this, "org.apache.tomcat.dbcp.dbcp2.PoolingDataSource", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethod("getConnection").addInterceptor(Listeners.of(TomcatPoolingDataSourceGetConnectionInterceptor.class));
             }
         });
         return true;

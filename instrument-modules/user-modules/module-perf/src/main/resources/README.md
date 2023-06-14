@@ -1,2 +1,1 @@
-pradar.perf.thread.collect.interval改成动态生效，执行sql如下
-INSERT INTO `t_agent_config` (`is_deleted`,`operator`,`type`,`zh_key`,`en_key`,`default_value`,`desc`,`effect_type`,`effect_mechanism`,`effect_min_version`,`effect_min_version_num`,`effect_max_version`,`effect_max_version_num`,`editable`,`value_type`,`value_option`,`project_name`,`user_app_key`,`tenant_id`,`env_code`,`sign`) VALUES (0,'superadmin',0,'性能分析:线程数据采样间隔(s)','pradar.perf.thread.collect.interval','60','性能分析:线程数据采样间隔(s),pradar.perf.thread.collect.interval',0,1,'1.0.0.0',1073741824,NULL,NULL,0,0,NULL,NULL,NULL,-1,'system',NULL);
+允许在控制台增加配置pradar.biz.perf.push.enabled=true来对业务流量采集明细信息

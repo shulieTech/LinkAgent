@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.apache.tomcatjdbc;
 
 import com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor.TomcatJdbcDataSourceProxyGetConnectionInterceptor;
+import com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor.TomcatJdbcPoolGetConnectionInterceptor;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -53,6 +54,14 @@ public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements Ex
                 InstrumentMethod getCmethod_3 = target.getDeclaredMethod("getConnectionAsync");
                 getCmethod_3.addInterceptor(Listeners.of(TomcatJdbcDataSourceProxyGetConnectionInterceptor.class, "Tomcat_Jdbc_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
+            }
+        });
+
+        enhanceTemplate.enhance(this, "org.apache.tomcat.jdbc.pool.ConnectionPool", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getConnectionMethod = target.getDeclaredMethod("getConnection");
+                getConnectionMethod.addInterceptor(Listeners.of(TomcatJdbcPoolGetConnectionInterceptor.class));
             }
         });
         return true;

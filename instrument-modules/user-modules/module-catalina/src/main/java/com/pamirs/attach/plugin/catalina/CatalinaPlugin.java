@@ -72,13 +72,6 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
                     getMethod.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
                 }
             });
-
-        enhanceTemplate.enhance(this, "org.apache.tomcat.util.net.AbstractEndpoint", new EnhanceCallback() {
-            @Override
-            public void doEnhance(InstrumentClass target) {
-                target.getDeclaredMethod("countUpOrAwaitConnection").addInterceptor(Listeners.of(CatalinaPoolGetConnectionInterceptor.class));
-            }
-        });
         return true;
     }
 }

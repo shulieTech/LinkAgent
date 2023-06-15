@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.attach.plugin.okhttp.utils.MockReturnUtils;
+import com.pamirs.attach.plugin.okhttp.utils.RealResponseBodyUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
@@ -31,13 +32,15 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
-import okhttp3.*;
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.Protocol;
+import okhttp3.Response;
 import okhttp3.internal.http.RealResponseBody;
-import okio.Buffer;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 
-import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
 
 /**
@@ -59,8 +62,6 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
     }
 
 
-
-
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
         if (!Pradar.isClusterTest()) {
@@ -76,7 +77,7 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
         config.addArgs(PradarService.PRADAR_WHITE_LIST_CHECK, check);
         config.addArgs("url", url);
         config.addArgs("isInterface", Boolean.FALSE);
-        if (config.getStrategy() instanceof JsonMockStrategy){
+        if (config.getStrategy() instanceof JsonMockStrategy) {
             config.addArgs("call", call);
             MockReturnUtils.fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
@@ -105,21 +106,21 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
 
                     @Override
                     public Object call(Object param) {
-                        Headers header = new Headers.Builder().build();
-                        Buffer buffer = new Buffer();
-
-                        try {
+                        RealResponseBody responseBody = null;
+                            String content;
                             if (param instanceof String) {
-                                buffer.write(String.valueOf(param).getBytes("UTF-8"));
+                                content = (String) param;
                             } else {
-                                buffer.write(JSONObject.toJSONBytes(param));
+                                content = JSONObject.toJSONString(param);
                             }
-
-                        } catch (IOException e) {
+                        try {
+                            responseBody = RealResponseBodyUtil.buildResponseBody(content);
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
                         }
 
                         return new Response.Builder().code(200)
-                                .body(new RealResponseBody(header, buffer))
+                                .body(responseBody)
                                 .request(call.request())
                                 .protocol(Protocol.HTTP_1_0)
                                 .message("OK")

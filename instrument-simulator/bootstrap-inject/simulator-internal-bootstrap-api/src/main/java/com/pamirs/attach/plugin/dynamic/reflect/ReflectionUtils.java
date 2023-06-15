@@ -87,7 +87,7 @@ public abstract class ReflectionUtils {
                     if (t1 == NULL.class) {
                         continue;
                     }
-                    if (!types[i].isAssignableFrom(t1)) {
+                    if (!castToWrapperClass(types[i]).isAssignableFrom(t1)) {
                         match = false;
                         break;
                     }

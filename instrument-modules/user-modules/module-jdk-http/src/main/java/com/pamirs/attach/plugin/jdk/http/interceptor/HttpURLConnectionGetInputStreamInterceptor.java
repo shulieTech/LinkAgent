@@ -57,7 +57,7 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
 
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object target = advice.getTarget();

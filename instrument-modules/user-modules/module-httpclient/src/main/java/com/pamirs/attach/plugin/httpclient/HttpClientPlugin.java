@@ -186,6 +186,13 @@ public class HttpClientPlugin extends ModuleLifecycleAdapter implements Extensio
             }
         });
 
+        enhanceTemplate.enhance(this, "org.apache.http.pool.AbstractConnPool", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("getPoolEntryBlocking").addInterceptor(Listeners.of(HttpClientV4ConnPoolGetConnInterceptor.class));
+            }
+        });
+
         return true;
     }
 

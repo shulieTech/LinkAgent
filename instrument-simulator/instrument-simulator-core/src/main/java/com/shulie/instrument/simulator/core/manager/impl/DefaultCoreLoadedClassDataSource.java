@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -41,11 +41,14 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Instrumentation inst;
     private final boolean isEnableUnsafe;
+    private Set<String> transformExcludePackages;
 
     public DefaultCoreLoadedClassDataSource(final Instrumentation inst,
+                                            String transformExcludePackages,
                                             final boolean isEnableUnsafe) {
         this.inst = inst;
         this.isEnableUnsafe = isEnableUnsafe;
+        this.transformExcludePackages = transformExcludePackages == null ? null : new HashSet<String>(Arrays.asList(transformExcludePackages.split(",")));
     }
 
     @Override
@@ -214,6 +217,9 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                     continue;
                 }
+                if (transformExcludePackages != null && isTransformExclude(clazz)) {
+                    continue;
+                }
                 try {
                     if (isRemoveUnsupported) {
                         if (isMatchedUnsupported(matcher, clazz)) {
@@ -237,6 +243,18 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
 
     }
+
+    private boolean isTransformExclude(Class clazz) {
+        String pkg = clazz.getName();
+        while (pkg.contains(".")) {
+            if (transformExcludePackages.contains(pkg)) {
+                return true;
+            }
+            pkg = pkg.substring(0, pkg.lastIndexOf("."));
+        }
+        return transformExcludePackages.contains(pkg);
+    }
+
 
     /**
      * 这个地方匹配在加载类时有可能因为目标类依赖的其他类不存在而导致获取构造函数或者方法会

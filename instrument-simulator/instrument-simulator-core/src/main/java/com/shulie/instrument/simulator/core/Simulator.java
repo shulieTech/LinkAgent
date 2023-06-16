@@ -70,10 +70,12 @@ public class Simulator {
     }
 
     private CoreModuleManager initCoreModuleManager(boolean isSyncModuleCoreManager, Instrumentation inst, EventListenerHandler eventListenerHandler) {
+        String transformExcludePackages = config.getProperty("simulator.transform.exclude.packages", null);
+
         if (isSyncModuleCoreManager) {
             return new SyncModuleCoreModuleManager(config,
                     inst,
-                    new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe()),
+                    new DefaultCoreLoadedClassDataSource(inst, transformExcludePackages, config.isEnableUnsafe()),
                     new DefaultProviderManager(config),
                     classLoaderService,
                     eventListenerHandler,
@@ -91,7 +93,7 @@ public class Simulator {
             return new DefaultCoreModuleManager(
                     config,
                     inst,
-                    new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe()),
+                    new DefaultCoreLoadedClassDataSource(inst, transformExcludePackages, config.isEnableUnsafe()),
                     new DefaultProviderManager(config),
                     classLoaderService,
                     eventListenerHandler,

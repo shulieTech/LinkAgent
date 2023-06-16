@@ -91,7 +91,7 @@ public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAd
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!Pradar.isClusterTest() && !ClusterTestUtils.enableBizRequestMock()) {
             return;
         }
         Request request = (Request) advice.getParameterArray()[0];

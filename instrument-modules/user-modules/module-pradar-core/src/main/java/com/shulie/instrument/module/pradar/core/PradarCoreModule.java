@@ -27,6 +27,7 @@ import com.pamirs.pradar.degrade.action.SilenceDegradeAction;
 import com.pamirs.pradar.degrade.resources.*;
 import com.pamirs.pradar.internal.GlobalConfigService;
 import com.pamirs.pradar.internal.PradarInternalService;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -73,6 +74,8 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
+
+        ClusterTestUtils.initSimulatorConfig(simulatorConfig);
         //将simulator home路径和plugin相关的配置全部导入到system property中
         String home = simulatorConfig.getSimulatorHome();
         if (home != null) {

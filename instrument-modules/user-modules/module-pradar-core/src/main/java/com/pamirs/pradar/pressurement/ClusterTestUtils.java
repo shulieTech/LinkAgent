@@ -46,6 +46,10 @@ public final class ClusterTestUtils {
         return "true".equals(simulatorConfig.getProperty("pradar.biz.mock.enable"));
     }
 
+    public static boolean enableMock(){
+        return Pradar.isClusterTest() || enableBizRequestMock();
+    }
+
     /**
      * 判断是否是压测流量
      *
@@ -151,7 +155,7 @@ public final class ClusterTestUtils {
             /**
              * 如果是压测流量则需要验证 rpc 的白名单,不在白名单中则报错
              */
-            if (Pradar.isClusterTest() || enableBizRequestMock()) {
+            if (enableMock()) {
                 return ArbiterHttpExit.shallWePassRpc(className, methodName);
             }
         } catch (PressureMeasureError e) {
@@ -244,7 +248,7 @@ public final class ClusterTestUtils {
     public final static MatchConfig httpClusterTest(String url) {
         validateClusterTest();
         try {
-            if (Pradar.isClusterTest() || enableBizRequestMock()) {
+            if (enableMock()) {
                 return ArbiterHttpExit.shallWePassHttpString(url);
             }
         } catch (PressureMeasureError e) {

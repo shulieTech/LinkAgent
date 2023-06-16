@@ -60,7 +60,7 @@ public class RequestBuilderBuildMethodV2Interceptor extends TraceInterceptorAdap
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
         ClusterTestUtils.validateClusterTest();
-        if (Pradar.isClusterTest() || ClusterTestUtils.enableBizRequestMock()) {
+        if (ClusterTestUtils.enableMock()) {
             Object target = advice.getTarget();
             Request.Builder builder = (Request.Builder) target;
             Object httpUrl = Reflect.on(builder).get(OKHttpConstants.DYNAMIC_FIELD_URL);

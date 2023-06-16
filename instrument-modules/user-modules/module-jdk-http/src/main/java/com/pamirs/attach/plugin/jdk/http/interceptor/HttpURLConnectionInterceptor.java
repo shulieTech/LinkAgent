@@ -63,7 +63,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest() && !ClusterTestUtils.enableBizRequestMock()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object target = advice.getTarget();

@@ -105,7 +105,7 @@ public class HttpClientv5MethodInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest() && !ClusterTestUtils.enableBizRequestMock()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object[] args = advice.getParameterArray();

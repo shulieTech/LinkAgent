@@ -92,7 +92,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
 
     @Override
     public List<Class<?>> findForReTransform(final Matcher matcher) {
-        return find(matcher, true);
+        return find(matcher, true, true);
     }
 
     @Override
@@ -200,7 +200,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     }
 
     private List<Class<?>> find(final Matcher matcher,
-                                final boolean isRemoveUnsupported) {
+                                final boolean isRemoveUnsupported, final boolean excludePackages) {
 
         SimulatorGuard.getInstance().enter();
         try {
@@ -217,7 +217,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                     continue;
                 }
-                if (transformExcludePackages != null && isTransformExclude(clazz)) {
+                if (excludePackages && transformExcludePackages != null && isTransformExclude(clazz)) {
                     continue;
                 }
                 try {
@@ -245,6 +245,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     }
 
     private boolean isTransformExclude(Class clazz) {
+        System.out.println("find class : " + clazz.getName());
         String pkg = clazz.getName();
         while (pkg.contains(".")) {
             if (transformExcludePackages.contains(pkg)) {
@@ -302,7 +303,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
      */
     @Override
     public Set<Class<?>> find(Filter filter) {
-        return new LinkedHashSet<Class<?>>(find(new ExtFilterMatcher(make(filter)), false));
+        return new LinkedHashSet<Class<?>>(find(new ExtFilterMatcher(make(filter)), false, false));
     }
 
 }

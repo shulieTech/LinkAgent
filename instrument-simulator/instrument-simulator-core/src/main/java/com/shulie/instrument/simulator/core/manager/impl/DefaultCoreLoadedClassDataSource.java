@@ -199,6 +199,22 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
     }
 
+    @Override
+    public boolean excludeTransformByPackages(String pkg) {
+        if (transformExcludePackages == null) {
+            return false;
+        }
+        if (pkg.contains(".")) {
+            pkg = pkg.replaceAll("\\.", "/");
+        }
+        for (String excludePackage : transformExcludePackages) {
+            if (pkg.startsWith(excludePackage)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<Class<?>> find(final Matcher matcher,
                                 final boolean isRemoveUnsupported, final boolean excludePackages) {
 
@@ -217,7 +233,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                     continue;
                 }
-                if (excludePackages && transformExcludePackages != null && isTransformExclude(clazz)) {
+                if (excludePackages && transformExcludePackages != null && excludeTransformByPackages(clazz.getName())) {
                     continue;
                 }
                 try {
@@ -242,18 +258,6 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
             SimulatorGuard.getInstance().exit();
         }
 
-    }
-
-    private boolean isTransformExclude(Class clazz) {
-        System.out.println("find class : " + clazz.getName());
-        String pkg = clazz.getName();
-        while (pkg.contains(".")) {
-            if (transformExcludePackages.contains(pkg)) {
-                return true;
-            }
-            pkg = pkg.substring(0, pkg.lastIndexOf("."));
-        }
-        return transformExcludePackages.contains(pkg);
     }
 
 

@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
 
@@ -42,6 +43,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     private final Instrumentation inst;
     private final boolean isEnableUnsafe;
     private Set<String> transformExcludePackages;
+    private AtomicInteger excludeNum = new AtomicInteger(0);
 
     public DefaultCoreLoadedClassDataSource(final Instrumentation inst,
                                             String transformExcludePackages,
@@ -209,6 +211,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
         for (String excludePackage : transformExcludePackages) {
             if (pkg.startsWith(excludePackage)) {
+                logger.info("SIMULATOR: exclude transform class:{}, exclude num:{}", pkg, excludeNum.getAndIncrement());
                 return true;
             }
         }

@@ -195,7 +195,7 @@
         <dependency>
             <artifactId>netty-handler</artifactId>
             <groupId>io.netty</groupId>
-            <version>4.1.70.Final</version>
+            <version>4.1.94.Final</version>
             <scope>${scope.prop}</scope>
         </dependency>
 

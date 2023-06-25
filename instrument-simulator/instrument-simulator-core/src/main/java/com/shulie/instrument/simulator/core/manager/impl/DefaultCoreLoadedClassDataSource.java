@@ -50,7 +50,13 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                                             final boolean isEnableUnsafe) {
         this.inst = inst;
         this.isEnableUnsafe = isEnableUnsafe;
-        this.transformExcludePackages = transformExcludePackages == null ? null : new HashSet<String>(Arrays.asList(transformExcludePackages.split(",")));
+        if (transformExcludePackages != null) {
+            this.transformExcludePackages = new HashSet<>();
+            for (String pkg : Arrays.asList(transformExcludePackages.split(","))) {
+                this.transformExcludePackages.add(pkg);
+                this.transformExcludePackages.add(pkg.contains("/") ? pkg.replaceAll("/", ".") : pkg.replaceAll("\\.", "/"));
+            }
+        }
     }
 
     @Override
@@ -205,9 +211,6 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     public boolean excludeTransformByPackages(String pkg) {
         if (transformExcludePackages == null) {
             return false;
-        }
-        if (pkg.contains(".")) {
-            pkg = pkg.replaceAll("\\.", "/");
         }
         for (String excludePackage : transformExcludePackages) {
             if (pkg.startsWith(excludePackage)) {

@@ -3,13 +3,14 @@ package com.pamirs.attach.plugin.jdk.http.interceptor;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 public class JavaNetHttpURLConnectionGetHeaderInterceptor extends CutoffInterceptorAdaptor {
 
     @Override
     public CutOffResult cutoff0(Advice advice) throws Throwable {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return super.cutoff0(advice);
         }
         Integer index = (Integer) advice.getParameterArray()[0];

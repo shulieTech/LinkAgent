@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
 
@@ -42,13 +43,20 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     private final Instrumentation inst;
     private final boolean isEnableUnsafe;
     private Set<String> transformExcludePackages;
+    private AtomicInteger excludeNum = new AtomicInteger(0);
 
     public DefaultCoreLoadedClassDataSource(final Instrumentation inst,
                                             String transformExcludePackages,
                                             final boolean isEnableUnsafe) {
         this.inst = inst;
         this.isEnableUnsafe = isEnableUnsafe;
-        this.transformExcludePackages = transformExcludePackages == null ? null : new HashSet<String>(Arrays.asList(transformExcludePackages.split(",")));
+        if (transformExcludePackages != null) {
+            this.transformExcludePackages = new HashSet<String>();
+            for (String pkg : Arrays.asList(transformExcludePackages.split(","))) {
+                this.transformExcludePackages.add(pkg);
+                this.transformExcludePackages.add(pkg.contains("/") ? pkg.replaceAll("/", ".") : pkg.replaceAll("\\.", "/"));
+            }
+        }
     }
 
     @Override
@@ -92,7 +100,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
 
     @Override
     public List<Class<?>> findForReTransform(final Matcher matcher) {
-        return find(matcher, true);
+        return find(matcher, true, true);
     }
 
     @Override
@@ -199,8 +207,22 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
     }
 
+    @Override
+    public boolean excludeTransformByPackages(String className) {
+        if (className == null || transformExcludePackages == null) {
+            return false;
+        }
+        for (String excludePackage : transformExcludePackages) {
+            if (className.startsWith(excludePackage)) {
+                logger.info("SIMULATOR: exclude transform class:{}, exclude num:{}", className, excludeNum.getAndIncrement());
+                return true;
+            }
+        }
+        return false;
+    }
+
     private List<Class<?>> find(final Matcher matcher,
-                                final boolean isRemoveUnsupported) {
+                                final boolean isRemoveUnsupported, final boolean excludePackages) {
 
         SimulatorGuard.getInstance().enter();
         try {
@@ -217,7 +239,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                     continue;
                 }
-                if (transformExcludePackages != null && isTransformExclude(clazz)) {
+                if (excludePackages && transformExcludePackages != null && excludeTransformByPackages(clazz.getName())) {
                     continue;
                 }
                 try {
@@ -242,17 +264,6 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
             SimulatorGuard.getInstance().exit();
         }
 
-    }
-
-    private boolean isTransformExclude(Class clazz) {
-        String pkg = clazz.getName();
-        while (pkg.contains(".")) {
-            if (transformExcludePackages.contains(pkg)) {
-                return true;
-            }
-            pkg = pkg.substring(0, pkg.lastIndexOf("."));
-        }
-        return transformExcludePackages.contains(pkg);
     }
 
 
@@ -302,7 +313,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
      */
     @Override
     public Set<Class<?>> find(Filter filter) {
-        return new LinkedHashSet<Class<?>>(find(new ExtFilterMatcher(make(filter)), false));
+        return new LinkedHashSet<Class<?>>(find(new ExtFilterMatcher(make(filter)), false, false));
     }
 
 }

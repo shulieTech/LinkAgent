@@ -100,6 +100,11 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                             final Class<?> classBeingRedefined,
                             final ProtectionDomain protectionDomain,
                             final byte[] srcByteCodeArray) {
+        // 在simulator.properties里排除指定包下的class
+        if(watcher.getClassDataSource().excludeTransformByPackages(internalClassName)){
+            return null;
+        }
+
         SimulatorGuard.getInstance().enter();
         try {
 

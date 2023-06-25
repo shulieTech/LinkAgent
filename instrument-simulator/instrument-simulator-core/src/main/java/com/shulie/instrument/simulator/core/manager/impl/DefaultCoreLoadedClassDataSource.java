@@ -208,13 +208,13 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     }
 
     @Override
-    public boolean excludeTransformByPackages(String pkg) {
-        if (transformExcludePackages == null) {
+    public boolean excludeTransformByPackages(String className) {
+        if (className == null || transformExcludePackages == null) {
             return false;
         }
         for (String excludePackage : transformExcludePackages) {
-            if (pkg.startsWith(excludePackage)) {
-                logger.info("SIMULATOR: exclude transform class:{}, exclude num:{}", pkg, excludeNum.getAndIncrement());
+            if (className.startsWith(excludePackage)) {
+                logger.info("SIMULATOR: exclude transform class:{}, exclude num:{}", className, excludeNum.getAndIncrement());
                 return true;
             }
         }

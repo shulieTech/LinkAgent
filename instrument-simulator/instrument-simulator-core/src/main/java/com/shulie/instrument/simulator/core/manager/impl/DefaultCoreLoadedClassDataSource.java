@@ -51,7 +51,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         this.inst = inst;
         this.isEnableUnsafe = isEnableUnsafe;
         if (transformExcludePackages != null) {
-            this.transformExcludePackages = new HashSet<>();
+            this.transformExcludePackages = new HashSet<String>();
             for (String pkg : Arrays.asList(transformExcludePackages.split(","))) {
                 this.transformExcludePackages.add(pkg);
                 this.transformExcludePackages.add(pkg.contains("/") ? pkg.replaceAll("/", ".") : pkg.replaceAll("\\.", "/"));

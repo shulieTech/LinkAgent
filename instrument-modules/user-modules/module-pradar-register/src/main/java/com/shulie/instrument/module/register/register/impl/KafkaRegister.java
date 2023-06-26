@@ -1,5 +1,6 @@
 package com.shulie.instrument.module.register.register.impl;
 
+import cn.chinaunicom.pinpoint.thrift.dto.TStressTestAgentHeartbeatData;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
@@ -21,7 +22,10 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.*;
@@ -29,6 +33,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -41,41 +46,58 @@ public class KafkaRegister implements Register {
     private SimulatorConfig simulatorConfig;
     private Set<String> jars;
     private final RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+    private final AtomicInteger sendCount = new AtomicInteger(0);
     private MessageSendService messageSendService;
     /**
      * 定时服务，定时上报
      */
     private ScheduledExecutorService executorService;
 
-    private Map<String, String> getHeartbeatDatas() {
-        Map<String, String> map = new HashMap<String, String>();
-        map.put("address", PradarCoreUtils.getLocalAddress());
-        map.put("host", PradarCoreUtils.getHostName());
-        map.put("name", RuntimeUtils.getName());
-        map.put("pid", String.valueOf(RuntimeUtils.getPid()));
-        map.put("agentId", Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
-        map.put("agentVersion", simulatorConfig.getAgentVersion());
-        map.put("simulatorVersion", simulatorConfig.getSimulatorVersion());
-        map.put("md5", md5);
-        //服务的 url
-        String serviceUrl = "http://" + simulatorConfig.getServerAddress().getAddress().getHostAddress() + ":"
-                + simulatorConfig.getServerAddress().getPort()
-                + "/simulator";
-        map.put("service", serviceUrl);
-        map.put("port", String.valueOf(simulatorConfig.getServerAddress().getPort()));
-        map.put("status", String.valueOf(PradarSwitcher.isClusterTestEnabled()));
-        if (PradarSwitcher.isClusterTestEnabled()) {
-            map.put("errorCode", "");
-            map.put("errorMsg", "");
-        } else {
-            map.put("errorCode", StringUtils.defaultIfBlank(PradarSwitcher.getErrorCode(), ""));
-            map.put("errorMsg", StringUtils.defaultIfBlank(PradarSwitcher.getErrorMsg(), ""));
+    private TStressTestAgentHeartbeatData getHeartbeatData() {
+        TStressTestAgentHeartbeatData agentHeartbeatData = new TStressTestAgentHeartbeatData();
+        agentHeartbeatData.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
+        // 放入当前环境及用户信息
+        agentHeartbeatData.setTenantAppKey(Pradar.PRADAR_TENANT_KEY);
+        agentHeartbeatData.setEnvCode(Pradar.PRADAR_ENV_CODE);
+        agentHeartbeatData.setAppName(appName);
+        try {
+            agentHeartbeatData.setUserId(Long.parseLong(Pradar.PRADAR_USER_ID));
+        } catch (Exception e) {
+            LOGGER.error("没有获取到正确的userId", e);
         }
-        map.put("agentLanguage", "JAVA");
-        map.put("userId", Pradar.PRADAR_USER_ID);
-//        map.put("jars", toJarFileString(jars));
-//        map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
-//        map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
+
+        if (sendCount.get() <= 5){
+            sendCount.incrementAndGet();
+            agentHeartbeatData.setSimulatorVersion(simulatorConfig.getSimulatorVersion());
+            agentHeartbeatData.setAddress(PradarCoreUtils.getLocalAddress());
+            agentHeartbeatData.setPid(RuntimeUtils.getPid());
+            agentHeartbeatData.setAgentLanguage("JAVA");
+            agentHeartbeatData.setJvmArgsCheck("");
+            agentHeartbeatData.setJvmArgs(inputArgs);
+            agentHeartbeatData.setHost(PradarCoreUtils.getHostName());
+            agentHeartbeatData.setName(RuntimeUtils.getName());
+            agentHeartbeatData.setAgentVersion(simulatorConfig.getAgentVersion());
+            agentHeartbeatData.setMd5(md5);
+
+            //设置jdk版本
+            String java_version = System.getProperty("java.version");
+            agentHeartbeatData.setJdk(java_version == null ? "" : java_version);
+
+            //服务的 url
+            String serviceUrl = "http://" + simulatorConfig.getServerAddress().getAddress().getHostAddress() + ":"
+                    + simulatorConfig.getServerAddress().getPort()
+                    + "/simulator";
+            agentHeartbeatData.setServiceName(serviceUrl);
+            agentHeartbeatData.setPort(simulatorConfig.getServerAddress().getPort());
+        }
+
+        agentHeartbeatData.setStatus(PradarSwitcher.isClusterTestEnabled());
+
+        if (!PradarSwitcher.isClusterTestEnabled()) {
+            agentHeartbeatData.setErrorCode(StringUtils.defaultIfBlank(PradarSwitcher.getErrorCode(), ""));
+            agentHeartbeatData.setErrorMsg(StringUtils.defaultIfBlank(PradarSwitcher.getErrorMsg(), ""));
+        }
 
         if (!SimulatorStatus.statusCalculated()) {
             boolean moduleLoadResult = getModuleLoadResult();
@@ -84,18 +106,14 @@ public class KafkaRegister implements Register {
             } else {
                 SimulatorStatus.installed();
             }
+            agentHeartbeatData.setModuleLoadResult(moduleLoadResult);
         }
-        map.put("agentStatus", SimulatorStatus.getStatus());
+        agentHeartbeatData.setAgentStatus(SimulatorStatus.getStatus());
         if (SimulatorStatus.isInstallFailed()) {
-            map.put("errorMsg", "模块加载异常，请查看模块加载详情");
+            agentHeartbeatData.setErrorMsg(agentHeartbeatData.getErrorMsg() + ";模块加载异常");
         }
-        // 放入当前环境及用户信息
-        map.put("tenantAppKey", Pradar.PRADAR_TENANT_KEY);
-        map.put("envCode", Pradar.PRADAR_ENV_CODE);
-        map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
-//        map.put("moduleLoadDetail",
-//                JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
-        return map;
+
+        return agentHeartbeatData;
     }
 
     /**
@@ -180,14 +198,12 @@ public class KafkaRegister implements Register {
 
         try {
             this.jars = loadAllJars();
-            getHeartbeatDatas();
+            getHeartbeatData();
             this.pushMiddlewareJarInfo();
             executorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
-                    Map<String, String> heartbeatDatas = getHeartbeatDatas();
-                    heartbeatDatas.put("appName", appName);
-                    messageSendService.send(basePath, new HashMap<String, String>(), JSON.toJSONString(heartbeatDatas), new MessageSendCallBack() {
+                    messageSendService.send(getHeartbeatData(), new MessageSendCallBack() {
                         @Override
                         public void success() {
                         }

@@ -98,6 +98,7 @@ public class KafkaRegister implements Register {
             agentStatus = AgentStatus.INSTALL_FAILED;
             errorMsg.append("启动参数校验失败：").append(jvmArgsCheck);
             AgentStatus.checkError("启动参数校验失败：" + jvmArgsCheck);
+            LOGGER.info("启动参数校验失败：" + jvmArgsCheck);
         }
         //校验日志目录是否存在并且有权限
         String checkSimulatorLogPathResult = checkSimulatorLogPath(agentConfig.getLogPath());
@@ -105,7 +106,7 @@ public class KafkaRegister implements Register {
             agentStatus = AgentStatus.INSTALL_FAILED;
             errorMsg.append("启动参数日志目录校验异常：").append(checkSimulatorLogPathResult);
             AgentStatus.checkError("启动参数日志目录校验异常：" + checkSimulatorLogPathResult);
-
+            LOGGER.info("启动参数日志目录校验异常：" + checkSimulatorLogPathResult);
         }
         map.put("agentStatus", agentStatus);
         map.put("errorMsg", errorMsg.toString());
@@ -198,27 +199,28 @@ public class KafkaRegister implements Register {
 
     @Override
     public void start() {
-        executorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                Map<String, String> heartbeatDatas = getHeartbeatDatas();
-                heartbeatDatas.put("appName", appName);
-                messageSendService.send(basePath, new HashMap<String, String>(), JSON.toJSONString(heartbeatDatas), new MessageSendCallBack() {
-                    @Override
-                    public void success() {
-                    }
-
-                    @Override
-                    public void fail(String errorMessage) {
-                        LOGGER.error("心跳信息发送失败，节点路径为:{},errorMessage为:{}", basePath, errorMessage);
-                    }
-                }, new HttpSender() {
-                    @Override
-                    public void sendMessage() {
-                    }
-                });
-            }
-        }, 60,60, TimeUnit.SECONDS);
+        Map<String, String> heartbeatDatas = getHeartbeatDatas();
+//        executorService.scheduleAtFixedRate(new Runnable() {
+//            @Override
+//            public void run() {
+//                Map<String, String> heartbeatDatas = getHeartbeatDatas();
+//                heartbeatDatas.put("appName", appName);
+////                messageSendService.send(basePath, new HashMap<String, String>(), JSON.toJSONString(heartbeatDatas), new MessageSendCallBack() {
+////                    @Override
+////                    public void success() {
+////                    }
+////
+////                    @Override
+////                    public void fail(String errorMessage) {
+////                        LOGGER.error("心跳信息发送失败，节点路径为:{},errorMessage为:{}", basePath, errorMessage);
+////                    }
+////                }, new HttpSender() {
+////                    @Override
+////                    public void sendMessage() {
+////                    }
+////                });
+//            }
+//        }, 60,60, TimeUnit.SECONDS);
     }
 
     @Override

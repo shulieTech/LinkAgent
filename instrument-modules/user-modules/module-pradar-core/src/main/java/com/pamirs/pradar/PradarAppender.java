@@ -16,6 +16,14 @@ package com.pamirs.pradar;
 
 
 public abstract class PradarAppender {
+
+    /**
+     * 直接添加trace对象，目前发送collector使用
+     * @param log
+     */
+    protected void appendObject(Object log) {
+        append((String) log);
+    }
     /**
      * 写日志
      *

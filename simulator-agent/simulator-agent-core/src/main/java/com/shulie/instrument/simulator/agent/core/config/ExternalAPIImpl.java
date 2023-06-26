@@ -40,6 +40,7 @@ import com.sun.tools.attach.VirtualMachineDescriptor;
 import io.shulie.takin.sdk.kafka.HttpSender;
 import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
+import io.shulie.takin.sdk.kafka.util.MessageSwitchUtil;
 import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -63,7 +64,7 @@ public class ExternalAPIImpl implements ExternalAPI {
     private final static String HEART_URL = "api/agent/heartbeat";
     private final static String REPORT_URL = "api/agent/application/node/probe/operateResult";
 
-    MessageSendService messageSendService ;
+    MessageSendService messageSendService;
 
     public ExternalAPIImpl(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
@@ -172,49 +173,36 @@ public class ExternalAPIImpl implements ExternalAPI {
 
         final AtomicReference<List<CommandPacket>> reference = new AtomicReference<List<CommandPacket>>(new ArrayList<CommandPacket>());
 
-        if(messageSendService == null){
+        if (messageSendService == null) {
             messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
         }
 
-        messageSendService.send(HEART_URL, agentConfig.getHttpMustHeaders(), JSON.toJSONString(heartRequest), new MessageSendCallBack() {
-            @Override
-            public void success() {
+        if (!MessageSwitchUtil.isKafkaSdkSwitch()) {
+            HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(),
+                    JSON.toJSONString(heartRequest));
+
+            if (null == resp) {
+                logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
+                return reference.get();
             }
 
-            @Override
-            public void fail(String errorMessage) {
-                logger.warn("AGENT: sendHeart got a err response. errorMessage{}", errorMessage);
+            if (StringUtils.isBlank(resp.getResult())) {
+                logger.warn("AGENT: sendHeart got response empty . {}", agentHeartUrl);
+                return reference.get();
             }
-        }, new HttpSender() {
-            @Override
-            public void sendMessage() {
-                HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(),
-                        JSON.toJSONString(heartRequest));
-
-                if (null == resp) {
-                    logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
-                    return;
+            try {
+                Type type = new TypeReference<Result<List<CommandPacket>>>() {
+                }.getType();
+                Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
+                if (!response.isSuccess()) {
+                    throw new RuntimeException(response.getError());
                 }
-
-                if (StringUtils.isBlank(resp.getResult())) {
-                    logger.warn("AGENT: sendHeart got response empty . {}", agentHeartUrl);
-                    return;
-                }
-                try {
-                    Type type = new TypeReference<Result<List<CommandPacket>>>() {
-                    }.getType();
-                    Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
-                    if (!response.isSuccess()) {
-                        throw new RuntimeException(response.getError());
-                    }
-                    reference.set(response.getData());
-                    return;
-                } catch (Throwable e) {
-                    logger.error("AGENT: parse command err." + resp, e);
-                    return;
-                }
+                reference.set(response.getData());
+            } catch (Throwable e) {
+                logger.error("AGENT: parse command err." + resp, e);
             }
-        });
+
+        }
 
         return reference.get();
     }

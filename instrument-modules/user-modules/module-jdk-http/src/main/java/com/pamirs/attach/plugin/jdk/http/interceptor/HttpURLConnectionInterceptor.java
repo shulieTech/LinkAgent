@@ -121,7 +121,7 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         // post和put请求需要在sun.net.www.http.HttpClient.writeRequests(sun.net.www.MessageHeader, sun.net.www.http.PosterOutputStream)方法打印trace
         boolean hasBody = "post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method);
 
-        // post/put mock 不打印trace, mock和trace功能会有冲突
+        // post/put mock 不打印trace, 在子类里打印
         if (hasBody && Pradar.hasMockResponse()) {
             return null;
         }

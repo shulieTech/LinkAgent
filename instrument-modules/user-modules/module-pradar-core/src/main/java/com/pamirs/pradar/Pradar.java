@@ -1092,7 +1092,7 @@ public final class Pradar {
         // 配置日志输出
         collectorAppender = new AsyncCollectorAppender(getTraceQueueSize(), 0, TRACE_CHUNK_SIZE);
         PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 1, Pradar.PRADAR_TARCE_LOG_VERSION);
-        collectorAppender.start(rpcLogger, new TraceInvokeContextEncoder(), "RpcLog");
+        collectorAppender.start(rpcLogger, new TraceCollectorInvokeEncoder(), "RpcLog");
         PradarLogDaemon.watch(collectorAppender);
         return rpcLogger;
 

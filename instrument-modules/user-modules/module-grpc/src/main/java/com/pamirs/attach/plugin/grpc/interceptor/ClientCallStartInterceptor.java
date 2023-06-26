@@ -63,7 +63,7 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(final Advice advice) throws Exception {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         /**

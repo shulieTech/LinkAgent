@@ -291,7 +291,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
 
             //压测流量抛出异常，  业务流量只做记录
-            if (isClusterTest) {
+            if (isClusterTest || ClusterTestUtils.enableBizRequestMock()) {
                 throw throwable;
             }
         }

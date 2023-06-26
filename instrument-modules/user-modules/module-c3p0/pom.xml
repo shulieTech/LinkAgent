@@ -14,13 +14,20 @@
     <properties>
         <module-name>c3p0</module-name>
     </properties>
-    <version>2.0.1.1</version>
+    <version>2.0.1.2</version>
 
     <dependencies>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>
             <artifactId>module-pradar-core</artifactId>
             <version>${pradar.core.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-bootstrap-api</artifactId>
+            <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
 

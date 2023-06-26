@@ -63,19 +63,18 @@ public abstract class ReflectionUtils {
         setField(field, target, value);
     }
 
-    public static <T> T newInstance(String className, Object... args) {
+    public static <T> T newInstance(Class clazz, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
             if (args[i] == null) {
                 paramTypes[i] = NULL.class;
-            } else if(args[i] instanceof Class) {
+            } else if (args[i] instanceof Class) {
                 paramTypes[i] = (Class) args[i];
-            }else{
+            } else {
                 paramTypes[i] = args[i].getClass();
             }
         }
         try {
-            Class<?> clazz = Class.forName(className);
             Constructor[] constructors = getDeclaredConstructors(clazz);
             for (Constructor constructor : constructors) {
                 Class[] types = constructor.getParameterTypes();
@@ -88,7 +87,7 @@ public abstract class ReflectionUtils {
                     if (t1 == NULL.class) {
                         continue;
                     }
-                    if (t1 != types[i]) {
+                    if (!castToWrapperClass(types[i]).isAssignableFrom(t1)) {
                         match = false;
                         break;
                     }
@@ -97,14 +96,18 @@ public abstract class ReflectionUtils {
                     return (T) constructor.newInstance(args);
                 }
             }
-            throw new IllegalStateException("can`t find match constructor for class :" + className);
+            throw new IllegalStateException("can`t find match constructor for class :" + clazz.getName());
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public static <T> T newInstance(Class clazz, Object... args) {
-        return newInstance(clazz.getName(), args);
+    public static <T> T newInstance(String className, ClassLoader classLoader, Object... args) {
+        try {
+            return newInstance(classLoader.loadClass(className), args);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     public static <T> T getFieldValues(Object object, String... filedNames) {
@@ -468,6 +471,9 @@ public abstract class ReflectionUtils {
         Constructor[] result = declaredConstructorCache.get(clazz);
         if (result == null) {
             result = clazz.getDeclaredConstructors();
+            for (Constructor constructor : result) {
+                constructor.setAccessible(true);
+            }
             declaredConstructorCache.put(clazz, result);
         }
         return result;

@@ -446,4 +446,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         return (coll == null || coll.isEmpty());
     }
 
+    public CoreLoadedClassDataSource getClassDataSource() {
+        return classDataSource;
+    }
 }

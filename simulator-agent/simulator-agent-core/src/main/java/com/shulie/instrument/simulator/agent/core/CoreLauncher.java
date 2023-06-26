@@ -58,7 +58,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2020/11/16 8:50 下午
  */
 public class CoreLauncher {
-    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    private final Logger LOGGER;
     private AgentLauncher launcher;
     private AgentScheduler agentScheduler;
     private final CoreConfig coreConfig;
@@ -94,6 +94,7 @@ public class CoreLauncher {
         System.setProperty("SIMULATOR_LOG_PATH", this.agentConfig.getLogPath());
         System.setProperty("SIMULATOR_LOG_LEVEL", this.agentConfig.getLogLevel());
         LogbackUtils.init(this.agentConfig.getLogConfigFile());
+        LOGGER = LoggerFactory.getLogger(getClass());
         this.launcher = new AgentLauncher(this.agentConfig, instrumentation, classLoader);
         this.externalAPI = new ExternalAPIImpl(this.agentConfig);
         initAgentLoader();
@@ -350,7 +351,6 @@ public class CoreLauncher {
     }
 
     private boolean isStartSyncModule() {
-        System.out.println("#########################>>>> classload:" + this.getClass().getClassLoader().getClass().getName());
         boolean syncEnable = "true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"));
         if (syncEnable && launcher.isUseAgentmain() && !launcher.isUsePremain()) {
             LOGGER.error("enable sync module, but use agenmain to start!! need use premain, use simulator.use.premain=true!!");

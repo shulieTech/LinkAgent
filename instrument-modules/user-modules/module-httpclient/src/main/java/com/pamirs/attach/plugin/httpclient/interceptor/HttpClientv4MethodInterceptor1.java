@@ -108,6 +108,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                             break;
                         }
                     }
+                    Pradar.mockResponse(config.getScriptContent());
                     if (responseHandler == null) {
                         ProcessController.returnImmediately(returnType, object);
                     }
@@ -139,7 +140,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object[] args = advice.getParameterArray();
@@ -194,7 +195,6 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                             }
                             BasicHttpResponse response = new BasicHttpResponse(statusline);
                             response.setEntity(entity);
-
                             if (HttpClientConstants.clazz == null) {
                                 HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                             }

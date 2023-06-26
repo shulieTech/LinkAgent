@@ -28,6 +28,12 @@
             <artifactId>proxool</artifactId>
             <version>0.9.1</version>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>avalon-framework-api</artifactId>
+                    <groupId>avalon-framework</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.shulie.instrument.module</groupId>

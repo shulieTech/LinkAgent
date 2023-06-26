@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.alibaba.druid;
 
+import com.pamirs.attach.plugin.alibaba.druid.interceptor.DruidGetConnectionDirectInterceptor;
 import com.pamirs.attach.plugin.alibaba.druid.interceptor.DruidInjectGetConnectionInterceptor;
 import com.pamirs.attach.plugin.alibaba.druid.listener.DruidShadowActiveEventListener;
 import com.pamirs.attach.plugin.alibaba.druid.listener.DruidShadowDisableEventListener;
@@ -45,8 +46,12 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
             public void doEnhance(InstrumentClass instrumentClass) {
                 InstrumentMethod getConnectionMethod = instrumentClass.getDeclaredMethod("getConnection", "long");
                 getConnectionMethod.addInterceptor(Listeners.of(DruidInjectGetConnectionInterceptor.class, "Druid_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
+                InstrumentMethod getConnectionDirect = instrumentClass.getDeclaredMethod("getConnectionDirect", "long");
+                getConnectionDirect.addInterceptor(Listeners.of(DruidGetConnectionDirectInterceptor.class));
             }
         });
+
 //        addListener();
         return true;
     }

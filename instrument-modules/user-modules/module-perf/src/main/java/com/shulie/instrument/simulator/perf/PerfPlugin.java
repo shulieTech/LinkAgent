@@ -98,7 +98,8 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                     /**
                      * 如果当前有压测流量请求，则收集
                      */
-                    if (Pradar.clearHasPressureRequest()) {
+                    String bizEnable = System.getProperty(PerfConstants.BIZ_REQUEST_ENABLE_PERF_KEY);
+                    if("true".equals(bizEnable) || Pradar.clearHasPressureRequest()){
                         collect();
                     }
                 } catch (Throwable e) {

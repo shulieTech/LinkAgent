@@ -16,6 +16,7 @@ package com.pamirs.attach.plugin.hikariCP;
 
 import com.pamirs.attach.plugin.hikariCP.interceptor.DataSourceConnectionInterceptor;
 import com.pamirs.attach.plugin.hikariCP.interceptor.DataSourceConstructorInterceptor;
+import com.pamirs.attach.plugin.hikariCP.interceptor.HikariPoolGetConnectionInterceptor;
 import com.pamirs.attach.plugin.hikariCP.listener.HikaricpShadowActiveEventListener;
 import com.pamirs.attach.plugin.hikariCP.listener.HikaricpShadowDisableEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
@@ -65,7 +66,14 @@ public class HikariCPPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         method.addInterceptor(Listeners.of(DataSourceConstructorInterceptor.class));
                     }
                 });
-        addListener();
+
+        enhanceTemplate.enhance(this, "com.zaxxer.hikari.pool.HikariPool", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethod("getConnection", "long").addInterceptor(Listeners.of(HikariPoolGetConnectionInterceptor.class));
+            }
+        });
+//        addListener();
         return true;
     }
 

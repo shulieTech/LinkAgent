@@ -14,30 +14,18 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-
-import com.alibaba.fastjson.JSONObject;
-
 import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
-import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * agent 配置
@@ -46,7 +34,6 @@ import org.slf4j.LoggerFactory;
  * @since 2020/11/17 8:09 下午
  */
 public class CoreConfig {
-    private final Logger logger = LoggerFactory.getLogger(CoreConfig.class);
 
     private final static String CONFIG_PATH_NAME = "config";
     private final static String AGENT_PATH_NAME = "agent";

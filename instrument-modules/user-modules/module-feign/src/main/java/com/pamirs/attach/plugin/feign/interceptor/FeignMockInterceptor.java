@@ -63,6 +63,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
                         try {
                             MatchConfig config = (MatchConfig) params;
                             String scriptContent = config.getScriptContent().trim();
+                            Pradar.mockResponse(scriptContent);
                             Advice advice = (Advice) config.getArgs().get("advice");
                             Map<Method, InvocationHandlerFactory.MethodHandler>
                                     dispatch = Reflect.on(advice.getTarget()).get("dispatch");
@@ -85,7 +86,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
-        if (Pradar.isClusterTest()) {
+        if (ClusterTestUtils.enableMock()) {
             Object[] parameterArray = advice.getParameterArray();
             Method method = (Method) parameterArray[1];
             String className = method.getDeclaringClass().getName();
@@ -141,7 +142,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
                     toStringArgs.add(o);
                 }
             }
-            record.setRequest(JSON.toJSONString(arg));
+            record.setRequest(JSON.toJSONString(toStringArgs));
         }
         if (Pradar.isClusterTest()) {
             record.setPassedCheck(true);

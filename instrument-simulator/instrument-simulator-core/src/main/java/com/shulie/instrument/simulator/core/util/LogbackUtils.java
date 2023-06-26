@@ -29,6 +29,11 @@ import java.io.InputStream;
  */
 public class LogbackUtils {
 
+    /**
+     * 是否使用xml形式配置logback, 这种形式会导致logback的spi机制执行时打印一些错误日志到控制台/应用日志上
+     */
+    private static boolean configByXml = "xml".equals(System.getProperty("pradar.log.config.type"));
+
 
     /**
      * 初始化Logback日志框架
@@ -36,24 +41,30 @@ public class LogbackUtils {
      * @param logbackConfigFilePath logback配置文件路径
      */
     public static void init(final String logbackConfigFilePath) {
-        final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-        final JoranConfigurator configurator = new JoranConfigurator();
-        final File configureFile = new File(logbackConfigFilePath);
-        configurator.setContext(loggerContext);
-        loggerContext.reset();
-        InputStream is = null;
-        final Logger logger = LoggerFactory.getLogger(LoggerFactory.class);
-        try {
-            is = new FileInputStream(configureFile);
-            configurator.doConfigure(is);
-            logger.info(SimulatorStringUtils.getLogo());
-            if (logger.isInfoEnabled()) {
-                logger.info("SIMULATOR: initializing logback success. file={};", configureFile);
+        if(configByXml){
+            final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+            final JoranConfigurator configurator = new JoranConfigurator();
+            final File configureFile = new File(logbackConfigFilePath);
+            configurator.setContext(loggerContext);
+            loggerContext.reset();
+            InputStream is = null;
+            final Logger logger = LoggerFactory.getLogger(LoggerFactory.class);
+            try {
+                is = new FileInputStream(configureFile);
+                configurator.doConfigure(is);
+                logger.info(SimulatorStringUtils.getLogo());
+                if (logger.isInfoEnabled()) {
+                    logger.info("SIMULATOR: initializing logback success. file={};", configureFile);
+                }
+            } catch (Throwable cause) {
+                logger.warn("SIMULATOR: initialize logback failed. file={};", configureFile, cause);
+            } finally {
+                IOUtils.closeQuietly(is);
             }
-        } catch (Throwable cause) {
-            logger.warn("SIMULATOR: initialize logback failed. file={};", configureFile, cause);
-        } finally {
-            IOUtils.closeQuietly(is);
+        }else{
+            final Logger logger = LoggerFactory.getLogger(LoggerFactory.class);
+            logger.info(SimulatorStringUtils.getLogo());
+            logger.info("SIMULATOR: initializing logback success with spi.");
         }
     }
 

@@ -31,6 +31,7 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
         public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
             MatchConfig config = (MatchConfig) params;
             String ret = config.getScriptContent();
+            Pradar.mockResponse(ret);
             ProcessController.returnImmediately(new ByteArrayInputStream(ret.getBytes()));
             return null;
         }
@@ -43,6 +44,9 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
             String scriptContent = config.getScriptContent();
             ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
             Object result = evaluator.evaluate(scriptContent, config.getArgs());
+
+            Pradar.mockResponse(result);
+
             if (result.getClass().isAssignableFrom(InputStream.class)) {
                 ProcessController.returnImmediately(result);
             }
@@ -53,7 +57,7 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
 
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object target = advice.getTarget();

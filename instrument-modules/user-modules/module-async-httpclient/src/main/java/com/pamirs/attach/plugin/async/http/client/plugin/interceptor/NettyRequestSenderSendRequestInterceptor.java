@@ -60,6 +60,7 @@ public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAd
         @Override
         public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
             MatchConfig config = (MatchConfig) params;
+            Pradar.mockResponse(config.getScriptContent());
             Object[] parameters = (Object[]) config.getArgs().get("parameters");
             AsyncCompletionHandler handler = null;
             if (parameters.length > 0 && parameters[1] instanceof AsyncCompletionHandler) {
@@ -82,7 +83,7 @@ public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAd
             if (parameters.length > 0 && parameters[1] instanceof AsyncCompletionHandler) {
                 handler = (AsyncCompletionHandler) parameters[1];
             }
-
+            Pradar.mockResponse(result);
             ProcessController.returnImmediately(new DefaultListenableFuture(result, handler));
             return null;
         }
@@ -90,7 +91,7 @@ public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAd
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Request request = (Request) advice.getParameterArray()[0];

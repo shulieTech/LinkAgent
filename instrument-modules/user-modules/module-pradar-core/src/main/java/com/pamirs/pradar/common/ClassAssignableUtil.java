@@ -34,6 +34,9 @@ public class ClassAssignableUtil {
      * @return true 属于，false 不属于
      */
     public static boolean isInstance(Object obj, String className) {
+        if(obj == null){
+            return false;
+        }
         Class<?> clazz = obj.getClass();
         if (clazz.getName().equals(className)) {
             return true;

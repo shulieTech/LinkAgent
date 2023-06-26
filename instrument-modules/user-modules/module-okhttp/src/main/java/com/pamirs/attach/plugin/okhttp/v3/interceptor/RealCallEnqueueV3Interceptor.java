@@ -17,6 +17,7 @@ package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.attach.plugin.okhttp.utils.MockReturnUtils;
+import com.pamirs.attach.plugin.okhttp.utils.RealResponseBodyUtil;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -34,6 +35,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 /**
  * @Description
@@ -79,21 +81,21 @@ public class RealCallEnqueueV3Interceptor extends TraceInterceptorAdaptor {
 
             @Override
             public Object call(Object param) {
-                Headers header = new Headers.Builder().build();
-                Buffer buffer = new Buffer();
-
+                RealResponseBody responseBody = null;
+                String content;
+                if (param instanceof String) {
+                    content = (String) param;
+                } else {
+                    content = JSONObject.toJSONString(param);
+                }
                 try {
-                    if (param instanceof String) {
-                        buffer.write(String.valueOf(param).getBytes("UTF-8"));
-                    } else {
-                        buffer.write(JSONObject.toJSONBytes(param));
-                    }
-
-                } catch (IOException e) {
+                    responseBody = RealResponseBodyUtil.buildResponseBody(content);
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
                 }
 
                 return new Response.Builder().code(200)
-                        .body(new RealResponseBody(header,buffer))
+                        .body(responseBody)
                         .request(call.request())
                         .protocol(Protocol.HTTP_1_0)
                         .message("OK")

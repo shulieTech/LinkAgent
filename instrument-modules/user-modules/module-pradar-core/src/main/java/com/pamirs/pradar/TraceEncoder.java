@@ -247,7 +247,7 @@ class TraceCollectorInvokeEncoder extends TraceEncoder {
         traceData.setServer(TraceCoreUtils.isServer(ctx));
         traceData.setUpAppName(ctx.upAppName);
         traceData.setRemoteIp(ctx.remoteIp);
-        traceData.setPort(ctx.getPort() == null ? 0 : Integer.parseInt(ctx.getPort()));
+        traceData.setPort(StringUtils.isBlank(ctx.getPort()) ? 0 : Integer.parseInt(ctx.getPort()));
         if (ctx.attributes != null && ctx.attributes.containsKey(PradarService.PRADAR_TRACE_NODE_KEY)){
             traceData.setEntranceId(ctx.attributes.get(PradarService.PRADAR_TRACE_NODE_KEY));
         }

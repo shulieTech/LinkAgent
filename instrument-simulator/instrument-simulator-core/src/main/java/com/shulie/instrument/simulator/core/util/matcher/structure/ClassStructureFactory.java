@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 类结构工厂类
@@ -32,9 +31,39 @@ public class ClassStructureFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(ClassStructureFactory.class);
 
-    private static HashBasedTable<Object, Integer, ClassStructure> classStructureCache = HashBasedTable.create(2048, 1);
+    /**
+     * 在探针启动完成后禁止缓存
+     */
+    private static boolean enableCacheClassStructure = true;
 
-    private static AtomicInteger callNum = new AtomicInteger();
+    /**
+     * 最近获取ClassStructure时间
+     */
+    private static long latestAccessTime = -1;
+
+    private static HashBasedTable<Object, Integer, ClassStructure> classStructureCache = HashBasedTable.create(8192, 1);
+
+    static {
+        Thread thread = new Thread("[SIMULATOR_ClassStructure_Cache]") {
+            @Override
+            public void run() {
+                while (enableCacheClassStructure) {
+                    if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 60000) {
+                        logger.info("[SIMULATOR] clear and forbidden ClassStructure Cache.");
+                        enableCacheClassStructure = false;
+                        classStructureCache.clear();
+                    }
+                }
+                try {
+                    Thread.sleep(60 * 1000);
+                } catch (InterruptedException e) {
+                    logger.error("ClassStructure_Cache Thread is interrupted.");
+                }
+            }
+        };
+        thread.start();
+    }
+
 
     /**
      * 通过Class类来构造类结构
@@ -43,7 +72,10 @@ public class ClassStructureFactory {
      * @return JDK实现的类结构
      */
     public static ClassStructure createClassStructure(final Class<?> clazz) {
-        callNum.incrementAndGet();
+        latestAccessTime = System.currentTimeMillis();
+        if (!enableCacheClassStructure) {
+            return new JdkClassStructure(clazz);
+        }
         ClassLoader loader = clazz.getClassLoader();
         int hashCode = loader == null ? 0 : loader.hashCode();
         ClassStructure classStructure = classStructureCache.get(clazz, hashCode);
@@ -62,9 +94,12 @@ public class ClassStructureFactory {
      * @return ASM实现的类结构
      */
     public static ClassStructure createClassStructure(final InputStream classInputStream, final ClassLoader loader) {
-        callNum.incrementAndGet();
-        int hashCode = loader == null ? 0 : loader.hashCode();
+        latestAccessTime = System.currentTimeMillis();
         try {
+            if (!enableCacheClassStructure) {
+                return new AsmClassStructure(classInputStream, loader);
+            }
+            int hashCode = loader == null ? 0 : loader.hashCode();
             ClassStructure classStructure = classStructureCache.get(classInputStream, hashCode);
             if (classStructure == null) {
                 classStructure = new AsmClassStructure(classInputStream, loader);
@@ -85,7 +120,10 @@ public class ClassStructureFactory {
      * @return ASM实现的类结构
      */
     public static ClassStructure createClassStructure(final byte[] classByteArray, final ClassLoader loader) {
-        callNum.incrementAndGet();
+        latestAccessTime = System.currentTimeMillis();
+        if (!enableCacheClassStructure) {
+            return new AsmClassStructure(classByteArray, loader);
+        }
         int hashCode = loader == null ? 0 : loader.hashCode();
         ClassStructure classStructure = classStructureCache.get(classByteArray, hashCode);
         if (classStructure == null) {

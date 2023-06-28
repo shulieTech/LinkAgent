@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,11 +14,13 @@
  */
 package com.shulie.instrument.simulator.core.util.matcher.structure;
 
+import com.google.common.collect.HashBasedTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 类结构工厂类
@@ -30,6 +32,10 @@ public class ClassStructureFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(ClassStructureFactory.class);
 
+    private static HashBasedTable<Object, Integer, ClassStructure> classStructureCache = HashBasedTable.create(2048, 1);
+
+    private static AtomicInteger callNum = new AtomicInteger();
+
     /**
      * 通过Class类来构造类结构
      *
@@ -37,7 +43,13 @@ public class ClassStructureFactory {
      * @return JDK实现的类结构
      */
     public static ClassStructure createClassStructure(final Class<?> clazz) {
-        return new JdkClassStructure(clazz);
+        callNum.incrementAndGet();
+        ClassStructure classStructure = classStructureCache.get(clazz, clazz.getClassLoader().hashCode());
+        if (classStructure == null) {
+            classStructure = new JdkClassStructure(clazz);
+            classStructureCache.put(clazz, clazz.getClassLoader().hashCode(), classStructure);
+        }
+        return classStructure;
     }
 
     /**
@@ -47,10 +59,16 @@ public class ClassStructureFactory {
      * @param loader           即将装载Class的ClassLoader
      * @return ASM实现的类结构
      */
-    public static ClassStructure createClassStructure(final InputStream classInputStream,
-                                                      final ClassLoader loader) {
+    public static ClassStructure createClassStructure(final InputStream classInputStream, final ClassLoader loader) {
+        callNum.incrementAndGet();
+        int hashCode = loader == null ? 0 : loader.hashCode();
         try {
-            return new AsmClassStructure(classInputStream, loader);
+            ClassStructure classStructure = classStructureCache.get(classInputStream, hashCode);
+            if (classStructure == null) {
+                classStructure = new AsmClassStructure(classInputStream, loader);
+                classStructureCache.put(classInputStream, hashCode, classStructure);
+            }
+            return classStructure;
         } catch (IOException cause) {
             logger.warn("SIMULATOR: create class structure failed by using ASM, return null. loader={};", loader, cause);
             return null;
@@ -64,9 +82,15 @@ public class ClassStructureFactory {
      * @param loader         即将装载Class的ClassLoader
      * @return ASM实现的类结构
      */
-    public static ClassStructure createClassStructure(final byte[] classByteArray,
-                                                      final ClassLoader loader) {
-        return new AsmClassStructure(classByteArray, loader);
+    public static ClassStructure createClassStructure(final byte[] classByteArray, final ClassLoader loader) {
+        callNum.incrementAndGet();
+        int hashCode = loader == null ? 0 : loader.hashCode();
+        ClassStructure classStructure = classStructureCache.get(classByteArray, hashCode);
+        if (classStructure == null) {
+            classStructure = new AsmClassStructure(classByteArray, loader);
+            classStructureCache.put(classByteArray, hashCode, classStructure);
+        }
+        return classStructure;
     }
 
 }

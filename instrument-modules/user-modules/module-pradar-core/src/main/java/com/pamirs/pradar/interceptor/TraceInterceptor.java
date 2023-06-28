@@ -209,7 +209,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
     @Override
     public void doBefore(Advice advice) throws Throwable {
         // 业务流量,且业务trace开关关闭,不执行trace interceptor
-        if(!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()){
+        if (!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()) {
             return;
         }
         ClusterTestUtils.validateClusterTest();
@@ -286,7 +286,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 } finally {
                     advice.unMark(BEFORE_TRACE_SUCCESS);
                 }
-            } else {
+            } else if (!Pradar.hasMockResponse()) {
                 LOGGER.error("trace throw exception, but not BEFORE_TRACE_SUCCESS in {}.beforeTrace(...). loss trace log!", getClass().getName(), throwable);
             }
 

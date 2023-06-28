@@ -118,6 +118,13 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         record.setRemoteIp(host);
         record.setPort(port);
 
+        // post和put请求需要在sun.net.www.http.HttpClient.writeRequests(sun.net.www.MessageHeader, sun.net.www.http.PosterOutputStream)方法打印trace
+        boolean hasBody = "post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method);
+
+        // post/put mock 不打印trace, 在子类里打印
+        if (hasBody && Pradar.hasMockResponse()) {
+            return null;
+        }
         boolean connected = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTED);
         boolean connecting = ReflectionUtils.get(request, JdkHttpConstants.DYNAMIC_FIELD_CONNECTING);
 
@@ -125,9 +132,6 @@ public class HttpURLConnectionInterceptor extends TraceInterceptorAdaptor {
         if (behaviorName.equals("connect") && !connected) {
             connectTimeLocalCache.set(System.currentTimeMillis());
         }
-
-        // post和put请求需要在sun.net.www.http.HttpClient.writeRequests(sun.net.www.MessageHeader, sun.net.www.http.PosterOutputStream)方法打印trace
-        boolean hasBody = "post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method);
         if (hasBody) {
             traceLocalCache.set(record);
             return null;

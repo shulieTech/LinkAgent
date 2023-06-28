@@ -44,10 +44,12 @@ public class ClassStructureFactory {
      */
     public static ClassStructure createClassStructure(final Class<?> clazz) {
         callNum.incrementAndGet();
-        ClassStructure classStructure = classStructureCache.get(clazz, clazz.getClassLoader().hashCode());
+        ClassLoader loader = clazz.getClassLoader();
+        int hashCode = loader == null ? 0 : loader.hashCode();
+        ClassStructure classStructure = classStructureCache.get(clazz, hashCode);
         if (classStructure == null) {
             classStructure = new JdkClassStructure(clazz);
-            classStructureCache.put(clazz, clazz.getClassLoader().hashCode(), classStructure);
+            classStructureCache.put(clazz, hashCode, classStructure);
         }
         return classStructure;
     }

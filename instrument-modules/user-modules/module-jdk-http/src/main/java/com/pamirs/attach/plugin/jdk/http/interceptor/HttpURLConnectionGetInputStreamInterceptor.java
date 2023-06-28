@@ -3,6 +3,7 @@ package com.pamirs.attach.plugin.jdk.http.interceptor;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
@@ -25,6 +26,11 @@ import java.net.URL;
  * @description:
  */
 public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectionInterceptor {
+
+    /**
+     * 一次请求getInputStream()可能会被调用多次，确保只打印一条trace
+     */
+    private static ThreadLocal<Integer> traceFlag = new ThreadLocal<Integer>();
 
     private static ExecutionStrategy fixJsonStrategy = new JsonMockStrategy() {
         @Override
@@ -86,7 +92,25 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
         if (strategy instanceof MockStrategy) {
             strategy = mockStrategy;
         }
-        strategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        int hashCode = System.identityHashCode(advice.getTarget());
+
+        // put/post mock请求直接打印trace
+        String method = request.getRequestMethod();
+        boolean hasBodyRequest = "post".equalsIgnoreCase(method) || "put".equalsIgnoreCase(method);
+        // 之前是否记录过trace
+        boolean hasTraceBefore = traceFlag.get() != null && traceFlag.get() == hashCode;
+
+        if (hasBodyRequest && !hasTraceBefore) {
+            traceFlag.set(hashCode);
+            Pradar.startClientInvoke(request.getURL().getPath(), method);
+        }
+        try {
+            strategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        } finally {
+            if (hasBodyRequest && !hasTraceBefore) {
+                Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
+            }
+        }
     }
 
 }

@@ -123,13 +123,11 @@ public class JedisConnectionSendProtocolCommandTraceInterceptor extends TraceInt
         Client client = (Client) advice.getTarget();
         //单机模式
         String node = client.getHost().concat(":").concat(String.valueOf(client.getPort()));
-        String password = ReflectionUtils.get(client,"password");
         int db = Integer.parseInt(String.valueOf(ReflectionUtils.get(client,"db")));
         Attachment ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
                 new String[]{RedisConstants.MIDDLEWARE_NAME}
                 , new RedisTemplate.JedisSingleTemplate()
                 .setNodes(node)
-                .setPassword(password)
                 .setDatabase(db)
         );
         Pradar.getInvokeContext().setExt(ext);

@@ -143,13 +143,6 @@ class FactoryInitializer extends MatchStrategy {
         } else if (sentinelConfiguration != null) {
             RedisSentinelConfiguration redisSentinelConfiguration = (RedisSentinelConfiguration) sentinelConfiguration;
             String masterName = redisSentinelConfiguration.getMaster().getName();
-            String password = null;
-            try {
-                char[] passwdbyte = redisSentinelConfiguration.getPassword().get();
-                password = new String(passwdbyte);
-            } catch (NoSuchElementException e) {
-                //
-            }
             Integer database = Integer.parseInt(String.valueOf(redisSentinelConfiguration.getDatabase()));
             Set<RedisNode> nodes = redisSentinelConfiguration.getSentinels();
 

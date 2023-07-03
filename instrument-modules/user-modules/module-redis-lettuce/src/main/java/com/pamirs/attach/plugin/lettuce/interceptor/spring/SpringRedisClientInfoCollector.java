@@ -72,32 +72,16 @@ public class SpringRedisClientInfoCollector extends ResultInterceptorAdaptor {
                 }
                 String nodes = builder.deleteCharAt(builder.length() - 1).toString();
 
-                String password = null;
-                try {
-                    char[] passwdbyte = ((RedisClusterConfiguration) clusterConfiguration).getPassword().get();
-                    password = new String(passwdbyte);
-                } catch (NoSuchElementException e) {
-                    //
-                }
-
                 ResourceManager.set(new Attachment(Arrays.asList(nodes.split(","))
                         , "redis-lettuce"
                         , new String[]{"redis"},
                         new RedisTemplate.LettuceClusterTemplate()
                                 .setNodes(nodes)
-                                .setPassword(password)
                 ));
 
             } else if (sentinelConfiguration != null) {
                 RedisSentinelConfiguration redisSentinelConfiguration = (RedisSentinelConfiguration) sentinelConfiguration;
                 String masterName = redisSentinelConfiguration.getMaster().getName();
-                String password = null;
-                try {
-                    char[] passwdbyte = redisSentinelConfiguration.getPassword().get();
-                    password = new String(passwdbyte);
-                } catch (NoSuchElementException e) {
-                    //
-                }
                 Integer database = Integer.parseInt(String.valueOf(redisSentinelConfiguration.getDatabase()));
                 Set<RedisNode> nodeSet = redisSentinelConfiguration.getSentinels();
                 StringBuilder builder = new StringBuilder();
@@ -133,7 +117,6 @@ public class SpringRedisClientInfoCollector extends ResultInterceptorAdaptor {
                         , new String[]{"redis"},
                         new RedisTemplate.LettuceSentinelTemplate()
                                 .setNodes(nodes)
-                                .setPassword(password)
                                 .setMaster(masterName)
                                 .setDatabase(database)
                 ));
@@ -150,13 +133,6 @@ public class SpringRedisClientInfoCollector extends ResultInterceptorAdaptor {
                 String host = configuration.getHostName();
                 Integer port = configuration.getPort();
                 Integer db = configuration.getDatabase();
-                String password = null;
-                try {
-                    char[] passwdbyte = configuration.getPassword().get();
-                    password = new String(passwdbyte);
-                } catch (NoSuchElementException e) {
-                    //
-                }
                 String node = host.concat(":").concat(String.valueOf(port));
 
                 ResourceManager.set(new Attachment(Arrays.asList(node)
@@ -164,7 +140,6 @@ public class SpringRedisClientInfoCollector extends ResultInterceptorAdaptor {
                         , new String[]{"redis"},
                         new RedisTemplate.LettuceSingleTemplate()
                                 .setNodes(node)
-                                .setPassword(password)
                                 .setDatabase(db)
 
                 ));

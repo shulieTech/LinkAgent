@@ -50,6 +50,7 @@ public class ClassStructureFactory {
                 while (enableCacheClassStructure) {
                     // 5分钟后清空缓存，时间太短可能导致一些sync增强点增强后，应用延迟加载时缓存不生效
                     if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 5 * 60 * 1000) {
+                    if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 5 * 60000) {
                         logger.info("[SIMULATOR] clear and forbidden ClassStructure Cache.");
                         enableCacheClassStructure = false;
                         classStructureCache.clear();

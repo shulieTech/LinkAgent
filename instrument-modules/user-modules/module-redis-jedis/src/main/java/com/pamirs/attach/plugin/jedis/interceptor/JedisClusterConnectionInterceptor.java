@@ -55,7 +55,6 @@ public class JedisClusterConnectionInterceptor extends CutoffInterceptorAdaptor 
             }
             JedisSlotBasedConnectionHandler handler = (JedisSlotBasedConnectionHandler) advice.getTarget();
             JedisClusterInfoCache cache = ReflectionUtils.get(handler, "cache");
-            String password = ReflectionUtils.get(cache, "password");
             Map hashmap = ReflectionUtils.get(cache, "nodes");
 
             StringBuilder builder = new StringBuilder();
@@ -69,7 +68,6 @@ public class JedisClusterConnectionInterceptor extends CutoffInterceptorAdaptor 
                     new String[]{RedisConstants.MIDDLEWARE_NAME}
                     , new RedisTemplate.JedisClusterTemplate()
                     .setNodes(builder.toString())
-                    .setPassword(password)
             ));
         } catch (Throwable t) {
 

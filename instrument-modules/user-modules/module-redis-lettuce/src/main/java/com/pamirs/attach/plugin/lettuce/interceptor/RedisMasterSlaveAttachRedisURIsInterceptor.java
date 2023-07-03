@@ -79,7 +79,6 @@ public class RedisMasterSlaveAttachRedisURIsInterceptor extends AroundIntercepto
         try {
             List<String> indexes = new ArrayList<String>();
             StringBuilder nodeBuilder = new StringBuilder();
-            String password = null;
             String nodes = "";
             String db = "";
 
@@ -95,7 +94,6 @@ public class RedisMasterSlaveAttachRedisURIsInterceptor extends AroundIntercepto
                         String node = inner.getHost().concat(":").concat(String.valueOf(inner.getPort()));
                         indexes.add(node);
                         nodeBuilder.append(node).append(",");
-                        password = inner.getPassword() == null ? null : new String(inner.getPassword());
                         db = String.valueOf(inner.getDatabase());
                     }
                     nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
@@ -103,8 +101,7 @@ public class RedisMasterSlaveAttachRedisURIsInterceptor extends AroundIntercepto
                             new String[]{"redis"},
                             new RedisTemplate.LettuceSentinelTemplate()
                                     .setMaster(sentinelMasterId)
-                                    .setNodes(nodes)
-                                    .setPassword(password));
+                                    .setNodes(nodes));
 
                     ResourceManager.set(attachment);
 
@@ -118,7 +115,6 @@ public class RedisMasterSlaveAttachRedisURIsInterceptor extends AroundIntercepto
                 String node = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
                 indexes.add(node);
                 nodeBuilder.append(node).append(",");
-                password = redisURI.getPassword() == null ? null : new String(redisURI.getPassword());
                 db = String.valueOf(redisURI.getDatabase());
             }
             nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
@@ -127,8 +123,7 @@ public class RedisMasterSlaveAttachRedisURIsInterceptor extends AroundIntercepto
                     new String[]{"redis"},
                     new RedisTemplate.LettuceMasterSlaveTemplate()
                             .setMaster(null)
-                            .setNodes(nodes)
-                            .setPassword(password));
+                            .setNodes(nodes));
 
             ResourceManager.set(attachment);
 

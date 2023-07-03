@@ -48,7 +48,7 @@ public class ClassStructureFactory {
             @Override
             public void run() {
                 while (enableCacheClassStructure) {
-                    if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 60000) {
+                    if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 5 * 60000) {
                         logger.info("[SIMULATOR] clear and forbidden ClassStructure Cache.");
                         enableCacheClassStructure = false;
                         classStructureCache.clear();

@@ -15,11 +15,13 @@ import java.util.Map;
 
 public class HikariPoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
 
+    private static ThreadLocal<String> dbType = new ThreadLocal<String>();
+
     private static Map<Integer, String> jdbcUrlCache = new HashMap<Integer, String>();
 
     @Override
     public String getPluginName() {
-        return "hikaricp";
+        return dbType.get();
     }
 
     @Override
@@ -46,6 +48,7 @@ public class HikariPoolGetConnectionInterceptor extends TraceInterceptorAdaptor 
         record.setService(url);
         record.setMethod("HikariPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        dbType.set(record.getService());
         return record;
     }
 

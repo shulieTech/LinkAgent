@@ -13,11 +13,13 @@ import java.util.Map;
 
 public class Dbcp2PoolingDataSourceGetConnectionInterceptor extends TraceInterceptorAdaptor {
 
+    private static ThreadLocal<String> dbType = new ThreadLocal<String>();
+
     private static Map<Integer, String> jdbcUrlCache = new HashMap<Integer, String>();
 
     @Override
     public String getPluginName() {
-        return "dbcp2";
+        return dbType.get();
     }
 
     @Override
@@ -45,6 +47,7 @@ public class Dbcp2PoolingDataSourceGetConnectionInterceptor extends TraceInterce
         record.setService(url);
         record.setMethod("PoolingDataSource#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        dbType.set(record.getService());
         return record;
     }
 

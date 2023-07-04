@@ -10,9 +10,11 @@ import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 public class DruidGetConnectionDirectInterceptor extends TraceInterceptorAdaptor {
 
+    private static ThreadLocal<String> dbType = new ThreadLocal<String>();
+
     @Override
     public String getPluginName() {
-        return "alibaba-druid";
+        return dbType.get();
     }
 
     @Override
@@ -29,6 +31,7 @@ public class DruidGetConnectionDirectInterceptor extends TraceInterceptorAdaptor
         record.setService(ReflectionUtils.<String>get(advice.getTarget(), "jdbcUrl"));
         record.setMethod("DruidDataSource#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        dbType.set(record.getService());
         return record;
     }
 

@@ -1,7 +1,5 @@
 package com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor;
 
-import com.pamirs.attach.plugin.apache.tomcatjdbc.ApacheTomcatJdbcConstants;
-import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
@@ -12,9 +10,11 @@ import org.apache.tomcat.jdbc.pool.ConnectionPool;
 
 public class TomcatJdbcPoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
 
+    private static ThreadLocal<String> dbType = new ThreadLocal<String>();
+
     @Override
     public String getPluginName() {
-        return ApacheTomcatJdbcConstants.MODULE_NAME;
+        return dbType.get();
     }
 
     @Override
@@ -33,6 +33,7 @@ public class TomcatJdbcPoolGetConnectionInterceptor extends TraceInterceptorAdap
         record.setService(url);
         record.setMethod("ConnectionPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        dbType.set(record.getService());
         return record;
     }
 

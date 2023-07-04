@@ -9,6 +9,7 @@ import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.druid.util.JdbcUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 
 import java.util.HashMap;
@@ -18,9 +19,11 @@ public class C3p0PoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
 
     private static Map<Integer, String> jdbcUrlCache = new HashMap<Integer, String>();
 
+    private static ThreadLocal<String> dbType = new ThreadLocal<String>();
+
     @Override
     public String getPluginName() {
-        return "c3p0";
+        return dbType.get();
     }
 
     @Override
@@ -37,6 +40,7 @@ public class C3p0PoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
         record.setService(getJdbcUrl(advice.getTarget()));
         record.setMethod("C3P0PooledConnectionPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        dbType.set(JdbcUtils.getDbType(record.getService(), null));
         return record;
     }
 
@@ -60,27 +64,27 @@ public class C3p0PoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
         return record;
     }
 
-    private String getJdbcUrl(Object pool){
+    private String getJdbcUrl(Object pool) {
         int hashCode = System.identityHashCode(pool);
-        if(jdbcUrlCache.containsKey(hashCode)){
+        if (jdbcUrlCache.containsKey(hashCode)) {
             return jdbcUrlCache.get(hashCode);
         }
         SyncObject syncObject = SyncObjectService.getSyncObject("com.mchange.v2.c3p0.impl.C3P0PooledConnectionPool");
-        if(syncObject == null){
+        if (syncObject == null) {
             return null;
         }
         SyncObjectData objectData = null;
         for (SyncObjectData data : syncObject.getDatas()) {
-            if(pool.equals(data.getTarget())){
+            if (pool.equals(data.getTarget())) {
                 objectData = data;
                 break;
             }
         }
-        if(objectData == null){
+        if (objectData == null) {
             return null;
         }
         Object dataSource = objectData.getArgs()[0];
-        String jdbcUrl = ReflectionUtils.getFieldValues(dataSource,"nestedDataSource","jdbcUrl");
+        String jdbcUrl = ReflectionUtils.getFieldValues(dataSource, "nestedDataSource", "jdbcUrl");
         jdbcUrlCache.put(hashCode, jdbcUrl);
         return jdbcUrl;
     }

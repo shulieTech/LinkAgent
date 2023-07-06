@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.dbcp.interceptor;
 
+import com.pamirs.attach.plugin.common.datasource.utils.JdbcUrlParser;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
@@ -44,6 +45,10 @@ public class DbcpPoolingDataSourceGetConnectionInterceptor extends TraceIntercep
         record.setService(url);
         record.setMethod("PoolingDataSource#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        Map.Entry<String, String> hostIp = JdbcUrlParser.extractUrl(url);
+        record.setRemoteIp(hostIp.getKey());
+        record.setPort(hostIp.getValue());
+
         dbType.set(JdbcUtils.getDbType(record.getService(), null));
         return record;
     }

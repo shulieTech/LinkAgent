@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.c3p0.interceptor;
 
+import com.pamirs.attach.plugin.common.datasource.utils.JdbcUrlParser;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
@@ -40,6 +41,9 @@ public class C3p0PoolGetConnectionInterceptor extends TraceInterceptorAdaptor {
         record.setService(getJdbcUrl(advice.getTarget()));
         record.setMethod("C3P0PooledConnectionPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        Map.Entry<String, String> hostIp = JdbcUrlParser.extractUrl(record.getService());
+        record.setRemoteIp(hostIp.getKey());
+        record.setPort(hostIp.getValue());
         dbType.set(JdbcUtils.getDbType(record.getService(), null));
         return record;
     }

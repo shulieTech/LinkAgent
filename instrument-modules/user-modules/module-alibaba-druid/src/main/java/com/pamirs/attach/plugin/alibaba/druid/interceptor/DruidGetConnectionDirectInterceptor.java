@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.alibaba.druid.interceptor;
 
+import com.pamirs.attach.plugin.common.datasource.utils.JdbcUrlParser;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
@@ -8,6 +9,8 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.druid.util.JdbcUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+
+import java.util.Map;
 
 public class DruidGetConnectionDirectInterceptor extends TraceInterceptorAdaptor {
 
@@ -32,6 +35,9 @@ public class DruidGetConnectionDirectInterceptor extends TraceInterceptorAdaptor
         record.setService(ReflectionUtils.<String>get(advice.getTarget(), "jdbcUrl"));
         record.setMethod("DruidDataSource#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
+        Map.Entry<String, String> hostIp = JdbcUrlParser.extractUrl(record.getService());
+        record.setRemoteIp(hostIp.getKey());
+        record.setPort(hostIp.getValue());
         dbType.set(JdbcUtils.getDbType(record.getService(), null));
         return record;
     }

@@ -5,6 +5,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.druid.util.JdbcUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.tomcat.jdbc.pool.ConnectionPool;
 
@@ -33,7 +34,7 @@ public class TomcatJdbcPoolGetConnectionInterceptor extends TraceInterceptorAdap
         record.setService(url);
         record.setMethod("ConnectionPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
-        dbType.set(record.getService());
+        dbType.set(JdbcUtils.getDbType(record.getService(), null));
         return record;
     }
 

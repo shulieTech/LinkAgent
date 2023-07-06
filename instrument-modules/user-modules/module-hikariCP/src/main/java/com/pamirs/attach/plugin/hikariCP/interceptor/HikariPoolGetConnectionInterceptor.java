@@ -1,11 +1,13 @@
 package com.pamirs.attach.plugin.hikariCP.interceptor;
 
+import com.pamirs.attach.plugin.common.datasource.utils.JdbcUrlParser;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.shulie.druid.util.JdbcUtils;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.pool.HikariPool;
@@ -48,7 +50,10 @@ public class HikariPoolGetConnectionInterceptor extends TraceInterceptorAdaptor 
         record.setService(url);
         record.setMethod("HikariPool#" + advice.getBehaviorName());
         record.setRequest(advice.getParameterArray());
-        dbType.set(record.getService());
+        Map.Entry<String, String> hostIp = JdbcUrlParser.extractUrl(url);
+        record.setRemoteIp(hostIp.getKey());
+        record.setPort(hostIp.getValue());
+        dbType.set(JdbcUtils.getDbType(record.getService(), null));
         return record;
     }
 

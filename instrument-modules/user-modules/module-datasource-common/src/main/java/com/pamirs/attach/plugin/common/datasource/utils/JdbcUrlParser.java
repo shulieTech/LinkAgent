@@ -15,17 +15,15 @@ public class JdbcUrlParser {
             if (jdbc.contains("//")) {
                 int i = jdbc.indexOf("//");
                 String str = jdbc.substring(i + 2);
-                String urlPort = str.substring(0, str.indexOf("/"));
-                String[] split = urlPort.split(":", 2);
-                return new AbstractMap.SimpleEntry<String, String>(split[0], split[1]);
+                String host = str.substring(0, str.indexOf(":"));
+                String port = getPort(str, str.indexOf(":") + 1);
+                return new AbstractMap.SimpleEntry<String, String>(host, port);
             }
             if (jdbc.contains("@")) {
                 int i = jdbc.indexOf("@");
                 String str = jdbc.substring(i + 1);
                 String host = str.substring(0, str.indexOf(":"));
-                int j = str.indexOf(":") + 1;
-                int x = str.indexOf(":", j);
-                String port = str.substring(j, x);
+                String port = getPort(str, str.indexOf(":") + 1);
                 return new AbstractMap.SimpleEntry<String, String>(host, port);
             }
         } catch (Exception e) {
@@ -33,5 +31,17 @@ public class JdbcUrlParser {
         }
         return new AbstractMap.SimpleEntry<String, String>("unknown", "unknown");
     }
+
+    private static String getPort(String url, int start) {
+        String port = "";
+        char c = url.charAt(start);
+        while (Character.isDigit(c)) {
+            port = port + c;
+            start++;
+            c = url.charAt(start);
+        }
+        return port;
+    }
+
 
 }

@@ -39,6 +39,7 @@ public class ClassUtil {
             return true;
         }
         String key = clazz.getName() + "_" + className;
+
         Boolean assignable = classAssignableCache.get(key);
         if (assignable != null) {
             return assignable;

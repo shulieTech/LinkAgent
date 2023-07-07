@@ -15,7 +15,7 @@
 
 package com.pamirs.attach.plugin.cluster.test.check.utils;
 
-import com.google.common.collect.HashBasedTable;
+import java.util.HashMap;
 
 /**
  * @Description
@@ -24,7 +24,7 @@ import com.google.common.collect.HashBasedTable;
  */
 public class ClassUtil {
 
-    private static HashBasedTable<String, String, Boolean> classAssignableCache = HashBasedTable.create();
+    private static HashMap<String, Boolean> classAssignableCache = new HashMap<String, Boolean>();
 
     /**
      * 判读当前对象是否指定class的实例
@@ -38,23 +38,25 @@ public class ClassUtil {
         if (clazz.getName().equals(className)) {
             return true;
         }
-        Boolean assignable = classAssignableCache.get(clazz.getName(), className);
+        String key = clazz.getName() + "_" + className;
+
+        Boolean assignable = classAssignableCache.get(key);
         if (assignable != null) {
             return assignable;
         }
 
         if (isInterfaceImpl(clazz, className)) {
-            classAssignableCache.put(clazz.getName(), className, true);
+            classAssignableCache.put(key, true);
             return true;
         }
 
         boolean isSuperClass = isSuperClass(clazz.getSuperclass(), className);
         if (isSuperClass) {
-            classAssignableCache.put(clazz.getName(), className, true);
+            classAssignableCache.put(key, true);
             return true;
         }
 
-        classAssignableCache.put(clazz.getName(), className, false);
+        classAssignableCache.put(key, false);
         return false;
     }
 

@@ -141,8 +141,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                               final Class<?> classBeingRedefined,
                               byte[] srcByteCodeArray) {
         // 如果未开启unsafe开关，是不允许增强来自BootStrapClassLoader的类
-        if (!isEnableUnsafe
-                && null == loader) {
+        if (!isEnableUnsafe && null == loader) {
             if (isDebugEnabled) {
                 logger.debug("SIMULATOR: transform ignore {}, class from bootstrap but unsafe.enable=false.", internalClassName);
             }

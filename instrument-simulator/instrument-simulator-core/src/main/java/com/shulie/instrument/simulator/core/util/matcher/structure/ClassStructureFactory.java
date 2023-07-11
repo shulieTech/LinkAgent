@@ -48,22 +48,22 @@ public class ClassStructureFactory {
             @Override
             public void run() {
                 while (enableCacheClassStructure) {
-                    if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 5 * 60000) {
+                    // 5分钟后清空缓存，时间太短可能导致一些sync增强点增强后，应用延迟加载时缓存不生效
+                    if (latestAccessTime > 0 && System.currentTimeMillis() - latestAccessTime > 5 * 60 * 1000) {
                         logger.info("[SIMULATOR] clear and forbidden ClassStructure Cache.");
                         enableCacheClassStructure = false;
                         classStructureCache.clear();
                     }
-                }
-                try {
-                    Thread.sleep(60 * 1000);
-                } catch (InterruptedException e) {
-                    logger.error("ClassStructure_Cache Thread is interrupted.");
+                    try {
+                        Thread.sleep(60 * 1000);
+                    } catch (InterruptedException e) {
+                        logger.error("ClassStructure_Cache Thread is interrupted.");
+                    }
                 }
             }
         };
         thread.start();
     }
-
 
     /**
      * 通过Class类来构造类结构

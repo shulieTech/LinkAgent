@@ -214,7 +214,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
         for (String excludePackage : transformExcludePackages) {
             if (className.startsWith(excludePackage)) {
-                logger.info("SIMULATOR: exclude transform class:{}, exclude num:{}", className, excludeNum.getAndIncrement());
+                logger.debug("SIMULATOR: exclude transform class:{}, exclude num:{}", className, excludeNum.getAndIncrement());
                 return true;
             }
         }

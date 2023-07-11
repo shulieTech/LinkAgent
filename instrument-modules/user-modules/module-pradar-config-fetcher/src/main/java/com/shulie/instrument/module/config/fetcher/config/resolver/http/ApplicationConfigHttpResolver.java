@@ -222,7 +222,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             @Override
             public int order() {
-                return 29;
+                return 80;
             }
         }).addListener(new PradarEventListener() {
             @Override
@@ -239,7 +239,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             @Override
             public int order() {
-                return 12;
+                return 81;
             }
         });
     }

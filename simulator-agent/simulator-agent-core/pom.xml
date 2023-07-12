@@ -80,15 +80,15 @@
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-message-sdk-collector</artifactId>
-            <version>2.0.4.5</version>
+            <version>2.0.4.6</version>
         </dependency>
         <dependency>
             <groupId>io.shulie.takin</groupId>
             <artifactId>takin-message-sdk</artifactId>
-            <version>2.0.4.5</version>
+            <version>2.0.4.6</version>
         </dependency>
         <dependency>
-            <groupId>cn.chinaunicom</groupId>
+            <groupId>io.shulie.takin</groupId>
             <artifactId>pinpoint-collector-client</artifactId>
             <version>1.0.2</version>
             <exclusions>

@@ -14,8 +14,8 @@
  */
 package com.pamirs.pradar;
 
-import cn.chinaunicom.pinpoint.thrift.dto.TStressTestTraceData;
-import cn.chinaunicom.pinpoint.thrift.dto.TStressTestTracePayloadData;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestTraceData;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestTracePayloadData;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.Converter;

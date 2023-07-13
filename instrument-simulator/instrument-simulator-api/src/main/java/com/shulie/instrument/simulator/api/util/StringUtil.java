@@ -31,6 +31,10 @@ public class StringUtil {
         return str1.startsWith(str2);
     }
 
+    public static boolean hasLength(String str){
+        return str != null && str.trim().length() > 0;
+    }
+
     public static boolean endsWith(String str1, String str2) {
         if (str1 == null || str2 == null) {
             return false;

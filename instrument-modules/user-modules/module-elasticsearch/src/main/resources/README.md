@@ -1,1 +1,1 @@
-elasticsearch-rest-client 6.1.4 支持影子集群模式
+2.0.0.5 支持scroll请求

@@ -1,6 +1,6 @@
 package com.shulie.instrument.module.register.register.impl;
 
-import cn.chinaunicom.pinpoint.thrift.dto.TStressTestAgentHeartbeatData;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestAgentHeartbeatData;
 import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;

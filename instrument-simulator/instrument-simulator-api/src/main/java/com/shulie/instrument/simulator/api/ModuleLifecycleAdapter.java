@@ -14,6 +14,7 @@
  */
 package com.shulie.instrument.simulator.api;
 
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.resource.ModuleController;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
@@ -37,7 +38,8 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
     protected EnhanceTemplate enhanceTemplate;
     @Resource
     protected ModuleController moduleController;
-
+    @Resource
+    protected IgnoredTypesBuilder ignoredTypesBuilder;
     protected String moduleName;
 
     public void setModuleName(String moduleName) {

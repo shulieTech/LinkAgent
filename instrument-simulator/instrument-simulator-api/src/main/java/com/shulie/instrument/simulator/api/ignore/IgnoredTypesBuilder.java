@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.shulie.instrument.simulator.core.ignore;
+package com.shulie.instrument.simulator.api.ignore;
 
 /**
  * This interface defines different ways to ignore/allow instrumenting classes or packages.

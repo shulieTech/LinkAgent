@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.core.manager.impl;
 import com.shulie.instrument.simulator.api.*;
 import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
@@ -30,6 +31,7 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.ClassLoaderFactoryImpl;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
+import com.shulie.instrument.simulator.core.ignore.IgnoredTypesBuilderImpl;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
@@ -446,6 +448,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
         coreModule.setExtensionTemplate(new DefaultExtensionTemplate());
+        coreModule.setIgnoredTypesBuilder(new IgnoredTypesBuilderImpl());
     }
 
     private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -560,6 +563,10 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 }
                 else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, coreModule.getExtensionTemplate(), true);
+                }
+                // inject ignore class builder
+                else if(IgnoredTypesBuilder.class.isAssignableFrom(fieldType)){
+                    writeField(resourceField,target, coreModule.getIgnoredTypesBuilder(), true);
                 }
                 // 其他情况需要输出日志警告
                 else {

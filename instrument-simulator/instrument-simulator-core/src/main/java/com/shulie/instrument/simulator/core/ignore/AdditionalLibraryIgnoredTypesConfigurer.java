@@ -5,6 +5,9 @@
 
 package com.shulie.instrument.simulator.core.ignore;
 
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesConfigurer;
+
 public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
 
   // only used by tests (to bypass the ignores check)

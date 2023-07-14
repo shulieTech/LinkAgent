@@ -5,6 +5,8 @@
 
 package com.shulie.instrument.simulator.core.ignore;
 
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+
 public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
   private final Trie.Builder<IgnoreAllow> ignoredTypesTrie = Trie.builder();
   private final Trie.Builder<IgnoreAllow> ignoredClassLoadersTrie = Trie.builder();

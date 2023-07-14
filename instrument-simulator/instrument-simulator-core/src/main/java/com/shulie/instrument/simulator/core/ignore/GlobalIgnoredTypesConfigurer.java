@@ -5,6 +5,8 @@
 
 package com.shulie.instrument.simulator.core.ignore;
 
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.classloader.ModuleClassLoader;
 import com.shulie.instrument.simulator.core.classloader.ModuleRoutingURLClassLoader;
 import com.shulie.instrument.simulator.core.classloader.ProviderClassLoader;

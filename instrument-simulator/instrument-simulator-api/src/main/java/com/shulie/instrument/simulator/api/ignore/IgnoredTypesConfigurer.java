@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.shulie.instrument.simulator.core.ignore;
+package com.shulie.instrument.simulator.api.ignore;
 
 public interface IgnoredTypesConfigurer{
 

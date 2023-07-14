@@ -1,8 +1,3 @@
-/*
- * Copyright The OpenTelemetry Authors
- * SPDX-License-Identifier: Apache-2.0
- */
-
 package com.shulie.instrument.simulator.core.ignore;
 
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
@@ -246,10 +241,5 @@ public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConf
 
     // kotlin, note we do not ignore kotlinx because we instrument coroutines code
     builder.ignoreClass("kotlin.").allowClass("kotlin.coroutines.jvm.internal.DebugProbesKt");
-  }
-
-  @Override
-  public int order() {
-    return 0;
   }
 }

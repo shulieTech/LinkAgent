@@ -18,15 +18,11 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
     public void configure(IgnoredTypesBuilder builder) {
         configureIgnoredTypes(builder);
         configureIgnoredClassLoaders(builder);
-        configureIgnoredTasks(builder);
-    }
-
-    @Override
-    public int order() {
-        return 0;
     }
 
     private static void configureIgnoredTypes(IgnoredTypesBuilder builder) {
+        builder.ignoreClass("com.shulie.instrument.");
+
         builder
                 .ignoreClass("org.gradle.")
                 .ignoreClass("net.bytebuddy.")
@@ -136,39 +132,4 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
                 .ignoreClassLoader("com.nr.agent.");
     }
 
-    private static void configureIgnoredTasks(IgnoredTypesBuilder builder) {
-        // ForkJoinPool threads are initialized lazily and continue to handle tasks similar to an
-        // event loop. They should not have context propagated to the base of the thread, tasks
-        // themselves will have it through other means.
-        builder.ignoreTaskClass("java.util.concurrent.ForkJoinWorkerThread");
-
-        // ThreadPoolExecutor worker threads may be initialized lazily and manage interruption of
-        // other threads. The actual tasks being run on those threads will propagate context but
-        // we should not propagate onto this management thread.
-        builder.ignoreTaskClass("java.util.concurrent.ThreadPoolExecutor$Worker");
-
-        // TODO Workaround for
-        // https://github.com/open-telemetry/opentelemetry-java-instrumentation/issues/787
-        builder.ignoreTaskClass("org.apache.tomcat.util.net.NioEndpoint$SocketProcessor");
-
-        // HttpConnection implements Runnable. When async request is completed HttpConnection
-        // may be sent to process next request while context from previous request hasn't been
-        // cleared yet.
-        builder.ignoreTaskClass("org.eclipse.jetty.server.HttpConnection");
-
-        // Avoid context leak on jetty. Runnable submitted from SelectChannelEndPoint is used to
-        // process a new request which should not have context from them current request.
-        builder.ignoreTaskClass("org.eclipse.jetty.io.nio.SelectChannelEndPoint$");
-
-        // Don't instrument the executor's own runnables. These runnables may never return until
-        // netty shuts down.
-        builder.ignoreTaskClass("io.netty.util.concurrent.SingleThreadEventExecutor$");
-
-        // Presto's presto-jdbc shades the okhttp3 ConnectionPool class. Just like we ignore the pool
-        // in OkHttp3IgnoredTypesConfigurer we need to also ignore it here.
-        builder.ignoreTaskClass("io.prestosql.jdbc.$internal.okhttp3.ConnectionPool$");
-
-        // Presto turned into trino, and so the package changed.
-        builder.ignoreTaskClass("io.trino.jdbc.$internal.okhttp3.ConnectionPool$");
-    }
 }

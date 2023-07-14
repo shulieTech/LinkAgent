@@ -31,6 +31,8 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.ClassLoaderFactoryImpl;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
+import com.shulie.instrument.simulator.core.ignore.AdditionalLibraryIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.GlobalIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.ignore.IgnoredTypesBuilderImpl;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
@@ -131,6 +133,11 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     protected ModuleLoader moduleLoader;
 
     /**
+     * transform class config
+     */
+    protected IgnoredTypesBuilder ignoredTypesBuilder;
+
+    /**
      * 模块模块管理
      *
      * @param config          模块核心配置
@@ -159,6 +166,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         this.disabledModules = config.getDisabledModules();
         this.classInjector = new ModuleJarClassInjector(this.simulatorConfig);
         this.eventListenerHandler = eventListenerHandler;
+        this.ignoredTypesBuilder = new IgnoredTypesBuilderImpl();
     }
 
     @Override
@@ -448,7 +456,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
         coreModule.setExtensionTemplate(new DefaultExtensionTemplate());
-        coreModule.setIgnoredTypesBuilder(new IgnoredTypesBuilderImpl());
+        coreModule.setIgnoredTypesBuilder(ignoredTypesBuilder);
     }
 
     private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -1267,11 +1275,24 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         //加载
         loadModules(systemModuleSpecs, "load");
         loadModules(userModuleSpecs, "load");
+
+        configGlobalIgnoredTypes();
+
         if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules finished :{}", loadedModuleMap.keySet());
         }
         return this;
     }
+
+    /**
+     *  全局ignore class 配置
+     */
+    private void configGlobalIgnoredTypes(){
+        new GlobalIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
+        new AdditionalLibraryIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
+        this.ignoredTypesBuilder.freezeConfigurer();
+    }
+
 
     /**
      * 初始化所有要加载的模块

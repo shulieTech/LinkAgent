@@ -445,8 +445,4 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     public static boolean isEmpty(Collection coll) {
         return (coll == null || coll.isEmpty());
     }
-
-    public CoreLoadedClassDataSource getClassDataSource() {
-        return classDataSource;
-    }
 }

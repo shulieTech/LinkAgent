@@ -13,5 +13,4 @@ public interface IgnoredTypesConfigurer{
    */
   void configure(IgnoredTypesBuilder builder);
 
-   int order();
 }

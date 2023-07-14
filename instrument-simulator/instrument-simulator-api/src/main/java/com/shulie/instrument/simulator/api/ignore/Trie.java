@@ -1,8 +1,6 @@
-package com.shulie.instrument.simulator.core.ignore;
+package com.shulie.instrument.simulator.api.ignore;
 
-import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.Function;
 
 public class Trie<V> {
 
@@ -45,7 +43,6 @@ public class Trie<V> {
             this.value = value;
         }
 
-        @Nullable
         Node<V> getNext(char c) {
             int index = Arrays.binarySearch(chars, c);
             if (index < 0) {
@@ -74,12 +71,19 @@ public class Trie<V> {
                 return;
             }
             char c = str.charAt(i);
-            NodeBuilder<V> next = node.children.computeIfAbsent(c, new Function<Character, NodeBuilder<V>>() {
-                @Override
-                public NodeBuilder<V> apply(Character character) {
-                    return new NodeBuilder<V>();
-                }
-            });
+
+
+            NodeBuilder<V> next = node.children.get(c);
+            if (next == null) {
+                IgnoreFunction<Character, NodeBuilder<V>> function = new IgnoreFunction<Character, NodeBuilder<V>>() {
+                    @Override
+                    public NodeBuilder<V> apply(Character character) {
+                        return new NodeBuilder<V>();
+                    }
+                };
+                next = function.apply(c);
+                node.children.put(c, next);
+            }
             put(next, str, i + 1, value);
         }
 

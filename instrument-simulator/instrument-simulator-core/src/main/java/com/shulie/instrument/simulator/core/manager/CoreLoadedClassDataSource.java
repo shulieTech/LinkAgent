@@ -59,11 +59,4 @@ public interface CoreLoadedClassDataSource extends LoadedClassDataSource {
      * @return
      */
     List<Class<?>> findForReTransform(Collection<String> classNames);
-
-    /**
-     * 是否根据package配置排除transform
-     * @param className
-     * @return
-     */
-    boolean excludeTransformByPackages(String className);
 }

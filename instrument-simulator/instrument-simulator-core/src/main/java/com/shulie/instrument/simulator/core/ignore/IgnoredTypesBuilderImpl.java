@@ -5,52 +5,80 @@
 
 package com.shulie.instrument.simulator.core.ignore;
 
+import com.shulie.instrument.simulator.api.ignore.IgnoreAllow;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
+import com.shulie.instrument.simulator.api.ignore.Trie;
 
 public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
-  private final Trie.Builder<IgnoreAllow> ignoredTypesTrie = Trie.builder();
-  private final Trie.Builder<IgnoreAllow> ignoredClassLoadersTrie = Trie.builder();
-  private final Trie.Builder<Boolean> ignoredTasksTrie = Trie.builder();
 
-  @Override
-  public IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
-    ignoredTypesTrie.put(classNameOrPrefix, IgnoreAllow.IGNORE);
-    return this;
-  }
+    private static final Trie.Builder<IgnoreAllow> ignoredTypesTrieBuilder = Trie.builder();
+    private static final Trie.Builder<IgnoreAllow> ignoredClassLoadersTrieBuilder = Trie.builder();
 
-  @Override
-  public IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
-    ignoredTypesTrie.put(classNameOrPrefix, IgnoreAllow.ALLOW);
-    return this;
-  }
+    private static Trie<IgnoreAllow> ignoredTypesTrie;
+    private static Trie<IgnoreAllow> ignoredClassLoadersTrie;
 
-  @Override
-  public IgnoredTypesBuilder ignoreClassLoader(String classNameOrPrefix) {
-    ignoredClassLoadersTrie.put(classNameOrPrefix, IgnoreAllow.IGNORE);
-    return this;
-  }
+    private static boolean isConfigurerFrozen;
 
-  @Override
-  public IgnoredTypesBuilder allowClassLoader(String classNameOrPrefix) {
-    ignoredClassLoadersTrie.put(classNameOrPrefix, IgnoreAllow.ALLOW);
-    return this;
-  }
+    @Override
+    public IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
+        checkConfigEnable();
+        ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.IGNORE);
+        return this;
+    }
 
-  @Override
-  public IgnoredTypesBuilder ignoreTaskClass(String classNameOrPrefix) {
-    ignoredTasksTrie.put(classNameOrPrefix, true);
-    return this;
-  }
+    @Override
+    public IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
+        checkConfigEnable();
+        ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.ALLOW);
+        return this;
+    }
 
-  public Trie<IgnoreAllow> buildIgnoredTypesTrie() {
-    return ignoredTypesTrie.build();
-  }
 
-  public Trie<IgnoreAllow> buildIgnoredClassLoadersTrie() {
-    return ignoredClassLoadersTrie.build();
-  }
+    @Override
+    public IgnoredTypesBuilder ignoreClassLoader(String classNameOrPrefix) {
+        checkConfigEnable();
+        ignoredClassLoadersTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.IGNORE);
+        return this;
+    }
 
-  public Trie<Boolean> buildIgnoredTasksTrie() {
-    return ignoredTasksTrie.build();
-  }
+    @Override
+    public IgnoredTypesBuilder allowClassLoader(String classNameOrPrefix) {
+        checkConfigEnable();
+        ignoredClassLoadersTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.ALLOW);
+        return this;
+    }
+
+    @Override
+    public void freezeConfigurer() {
+        ignoredTypesTrie = ignoredTypesTrieBuilder.build();
+        ignoredClassLoadersTrie = ignoredClassLoadersTrieBuilder.build();
+        isConfigurerFrozen = true;
+    }
+
+    @Override
+    public Trie<IgnoreAllow> buildIgnoredClassloaderTrie() {
+        return ignoredClassLoadersTrie;
+    }
+
+    @Override
+    public Trie<IgnoreAllow> buildIgnoredTypesTrie() {
+        return ignoredTypesTrie;
+    }
+
+    @Override
+    public boolean isConfigurerFrozen() {
+        return isConfigurerFrozen;
+    }
+
+    @Override
+    public IgnoredTypesPredicate buildTransformIgnoredFilter() {
+        return new IgnoredTypesPredicateImpl(this);
+    }
+
+    private void checkConfigEnable() {
+        if (isConfigurerFrozen) {
+            throw new IllegalStateException("[instrument-simulator]: ignore types/classloaders configurer is frozen!!!");
+        }
+    }
 }

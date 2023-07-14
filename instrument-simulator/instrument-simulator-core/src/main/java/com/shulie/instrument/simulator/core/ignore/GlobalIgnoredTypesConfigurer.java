@@ -21,7 +21,13 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
     }
 
     private static void configureIgnoredTypes(IgnoredTypesBuilder builder) {
-        builder.ignoreClass("com.shulie.instrument.");
+        // 探针相关的class ignore
+        builder
+                .ignoreClass("com.shulie.instrument.")
+                .ignoreClass("com.pamirs.pradar.")
+                .ignoreClass("com.pamirs.attach.")
+                .ignoreClass("com.shulie.druid.")
+                .ignoreClass("oshi.");
 
         builder
                 .ignoreClass("org.gradle.")
@@ -110,6 +116,10 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
 
     private static void configureIgnoredClassLoaders(IgnoredTypesBuilder builder) {
         builder
+                .ignoreClassLoader(ModuleRoutingURLClassLoader.class.getName())
+                .ignoreClassLoader(ProviderClassLoader.class.getName())
+                .ignoreClassLoader(ModuleClassLoader.class.getName())
+                .ignoreClassLoader(RoutingURLClassLoader.class.getName())
                 .ignoreClassLoader("org.codehaus.groovy.runtime.callsite.CallSiteClassLoader")
                 .ignoreClassLoader("sun.reflect.DelegatingClassLoader")
                 .ignoreClassLoader("jdk.internal.reflect.DelegatingClassLoader")
@@ -117,11 +127,8 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
                 .ignoreClassLoader("org.apache.cxf.common.util.ASMHelper$TypeHelperClassLoader")
                 .ignoreClassLoader("org.springframework.context.support.ContextTypeMatchClassLoader$ContextOverridingClassLoader")
                 .ignoreClassLoader("sun.misc.Launcher$ExtClassLoader")
-                .ignoreClassLoader("org.openjdk.nashorn.internal.runtime.ScriptLoader")
-                .ignoreClassLoader(ModuleRoutingURLClassLoader.class.getName())
-                .ignoreClassLoader(ProviderClassLoader.class.getName())
-                .ignoreClassLoader(ModuleClassLoader.class.getName())
-                .ignoreClassLoader(RoutingURLClassLoader.class.getName());
+                .ignoreClassLoader("org.openjdk.nashorn.internal.runtime.ScriptLoader");
+
 
         builder
                 .ignoreClassLoader("datadog.")

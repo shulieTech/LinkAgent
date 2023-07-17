@@ -85,6 +85,11 @@ public interface IgnoredTypesBuilder {
      */
     Trie<IgnoreAllow> buildIgnoredClassloaderTrie();
 
+    /**
+     * 是否冻结配置,即模块都是否加载完成
+     *
+     * @return
+     */
     boolean isConfigurerFrozen();
 
     /**

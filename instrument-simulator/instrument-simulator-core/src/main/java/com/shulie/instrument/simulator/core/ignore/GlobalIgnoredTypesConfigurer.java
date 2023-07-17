@@ -7,27 +7,17 @@ package com.shulie.instrument.simulator.core.ignore;
 
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesConfigurer;
-import com.shulie.instrument.simulator.core.classloader.ModuleClassLoader;
-import com.shulie.instrument.simulator.core.classloader.ModuleRoutingURLClassLoader;
-import com.shulie.instrument.simulator.core.classloader.ProviderClassLoader;
-import com.shulie.instrument.simulator.core.classloader.RoutingURLClassLoader;
 
 public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
 
     @Override
     public void configure(IgnoredTypesBuilder builder) {
+        new InstrumentSimulatorTypesConfigurer().configure(builder);
         configureIgnoredTypes(builder);
         configureIgnoredClassLoaders(builder);
     }
 
     private static void configureIgnoredTypes(IgnoredTypesBuilder builder) {
-        // 探针相关的class ignore
-        builder
-                .ignoreClass("com.shulie.instrument.")
-                .ignoreClass("com.pamirs.pradar.")
-                .ignoreClass("com.pamirs.attach.")
-                .ignoreClass("com.shulie.druid.")
-                .ignoreClass("oshi.");
 
         builder
                 .ignoreClass("org.gradle.")
@@ -116,10 +106,6 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
 
     private static void configureIgnoredClassLoaders(IgnoredTypesBuilder builder) {
         builder
-                .ignoreClassLoader(ModuleRoutingURLClassLoader.class.getName())
-                .ignoreClassLoader(ProviderClassLoader.class.getName())
-                .ignoreClassLoader(ModuleClassLoader.class.getName())
-                .ignoreClassLoader(RoutingURLClassLoader.class.getName())
                 .ignoreClassLoader("org.codehaus.groovy.runtime.callsite.CallSiteClassLoader")
                 .ignoreClassLoader("sun.reflect.DelegatingClassLoader")
                 .ignoreClassLoader("jdk.internal.reflect.DelegatingClassLoader")

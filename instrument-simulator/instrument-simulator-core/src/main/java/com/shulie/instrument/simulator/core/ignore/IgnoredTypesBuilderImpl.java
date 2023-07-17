@@ -18,17 +18,17 @@ public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
     private static Trie<IgnoreAllow> ignoredTypesTrie;
     private static Trie<IgnoreAllow> ignoredClassLoadersTrie;
 
-    private static boolean isConfigurerFrozen;
+    private boolean isConfigurerFrozen;
 
     @Override
-    public IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
+    public synchronized IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
         checkConfigEnable();
         ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.IGNORE);
         return this;
     }
 
     @Override
-    public IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
+    public synchronized IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
         checkConfigEnable();
         ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.ALLOW);
         return this;

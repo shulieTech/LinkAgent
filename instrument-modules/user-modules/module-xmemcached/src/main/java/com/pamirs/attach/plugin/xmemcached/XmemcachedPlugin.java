@@ -35,6 +35,7 @@ public class XmemcachedPlugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("net.rubyeye.xmemcached.");
         this.enhanceTemplate.enhance(this, "net.rubyeye.xmemcached.XMemcachedClient", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

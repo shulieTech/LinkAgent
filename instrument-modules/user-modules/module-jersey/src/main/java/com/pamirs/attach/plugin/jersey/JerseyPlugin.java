@@ -39,6 +39,8 @@ public class JerseyPlugin extends ModuleLifecycleAdapter implements ExtensionMod
             }
         });*/
 
+        ignoredTypesBuilder.ignoreClass("org.glassfish.jersey.grizzly2.httpserver.");
+
         enhanceTemplate.enhance(this, "org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpContainer",
             new EnhanceCallback() {
                 @Override

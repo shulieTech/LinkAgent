@@ -36,6 +36,7 @@ import org.kohsuke.MetaInfServices;
 public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("net.sf.ehcache.");
 
         enhanceTemplate.enhance(this, new EnhanceCallback() {
             @Override

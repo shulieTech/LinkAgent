@@ -40,6 +40,7 @@ public class ApacheTomcatJdbcPlugin extends ModuleLifecycleAdapter implements Ex
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.apache.tomcat.jdbc.");
         //jdbc pt table mechanism
         enhanceTemplate.enhance(this, "org.apache.tomcat.jdbc.pool.DataSourceProxy", new EnhanceCallback() {
             @Override

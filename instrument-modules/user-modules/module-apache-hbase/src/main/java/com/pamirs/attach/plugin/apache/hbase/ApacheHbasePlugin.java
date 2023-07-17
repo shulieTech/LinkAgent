@@ -100,6 +100,8 @@ public class ApacheHbasePlugin extends ModuleLifecycleAdapter implements Extensi
             }
         });
 
+        ignoredTypesBuilder.ignoreClass("org.apache.hadoop.hbase.");
+
         initEventListener();
         return true;
     }

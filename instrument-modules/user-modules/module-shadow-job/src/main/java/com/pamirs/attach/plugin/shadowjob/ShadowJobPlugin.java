@@ -50,6 +50,12 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder
+                .ignoreClass("com.xxl.job.")
+                .ignoreClass("com.github.ltsopensource.")
+                .ignoreClass("com.dangdang.ddframe.job.")
+                .ignoreClass("org.quartz.");
+
         final ShadowImplListener shaDowImplListener = new ShadowImplListener();
 
         try {
@@ -329,7 +335,7 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         PradarEventListener silenceListener = new PradarEventListener() {
             @Override
             public EventResult onEvent(IEvent event) {
-                if(event instanceof SilenceSwitchOnEvent){
+                if (event instanceof SilenceSwitchOnEvent) {
                     Collection<ShadowJob> shadowJobs = GlobalConfig.getInstance().getRegisteredJobs().values();
                     for (ShadowJob shadowJob : shadowJobs) {
                         GlobalConfig.getInstance().addNeedStopJobs(shadowJob);

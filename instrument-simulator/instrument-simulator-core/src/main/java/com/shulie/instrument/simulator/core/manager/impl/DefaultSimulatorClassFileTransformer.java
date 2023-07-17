@@ -57,15 +57,13 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     private final AffectStatistic affectStatistic = new AffectStatistic();
     private final Map<Integer, EventListener> eventListeners = new HashMap<Integer, EventListener>();
     private final List<BuildingForListeners> listeners;
-    private final DefaultModuleEventWatcher watcher;
-    private final IgnoredTypesPredicate ignoredFilter;
+    private final IgnoredTypesPredicate typesPredicate;
 
     DefaultSimulatorClassFileTransformer(final DefaultModuleEventWatcher watcher,
                                          final int watchId,
                                          final CoreModule coreModule,
                                          final Matcher matcher,
                                          final boolean isEnableUnsafe) {
-        this.watcher = watcher;
         this.watchId = watchId;
         this.moduleId = coreModule.getModuleId();
         this.matcher = matcher;
@@ -75,7 +73,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             eventListeners.put(listener.getListenerId(), new LazyEventListenerProxy(coreModule, listener.getListeners()));
         }
         this.listeners = matcher.getAllListeners();
-        this.ignoredFilter = coreModule.getIgnoredTypesBuilder().buildTransformIgnoredFilter();
+        this.typesPredicate = coreModule.getIgnoredTypesBuilder().buildTransformIgnoredFilter();
     }
 
     @Override
@@ -106,7 +104,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
         SimulatorGuard.getInstance().enter();
         try {
 
-            if (!ignoredFilter.test(loader, internalClassName)) {
+            if (!typesPredicate.test(loader, internalClassName)) {
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: ignore class {} to being transformed. ", internalClassName);
                 }

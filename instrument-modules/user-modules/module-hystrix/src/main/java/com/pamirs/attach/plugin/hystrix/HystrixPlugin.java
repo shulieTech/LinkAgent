@@ -37,6 +37,8 @@ import org.kohsuke.MetaInfServices;
 public class HystrixPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.netflix.hystrix.");
+
         enhanceTemplate.enhance(this, "com.netflix.hystrix.strategy.concurrency.HystrixContextScheduler$HystrixContextSchedulerWorker", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

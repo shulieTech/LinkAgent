@@ -38,6 +38,7 @@ public class AtomikosPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.atomikos.jdbc.");
         enhanceTemplate.enhance(this, "com.atomikos.jdbc.nonxa.AtomikosNonXADataSourceBean", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

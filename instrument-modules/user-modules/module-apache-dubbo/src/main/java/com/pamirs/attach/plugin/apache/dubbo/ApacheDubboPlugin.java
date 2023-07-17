@@ -70,6 +70,7 @@ public class ApacheDubboPlugin extends ModuleLifecycleAdapter implements Extensi
                 }
             }
         });
+        ignoredTypesBuilder.ignoreClass("org.apache.dubbo.");
         return true;
     }
 }

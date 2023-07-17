@@ -46,6 +46,8 @@ public class C3p0Plugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.mchange.v2.c3p0.");
+
         enhanceTemplate.enhance(this, "com.mchange.v2.c3p0.impl.AbstractPoolBackedDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

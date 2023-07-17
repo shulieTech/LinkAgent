@@ -52,6 +52,9 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
             }
         });
 
+        ignoredTypesBuilder.ignoreClass("com.alibaba.druid.");
+
+
 //        addListener();
         return true;
     }

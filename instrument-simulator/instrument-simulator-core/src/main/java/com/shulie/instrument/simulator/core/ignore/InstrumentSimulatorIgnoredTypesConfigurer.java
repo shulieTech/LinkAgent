@@ -11,10 +11,10 @@ public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesCo
     @Override
     public void configure(IgnoredTypesBuilder builder) {
         builder
+                .ignoreClass("com.shulie.druid.")
                 .ignoreClass("com.shulie.instrument.")
                 .ignoreClass("com.pamirs.pradar.")
                 .ignoreClass("com.pamirs.attach.")
-                .ignoreClass("com.shulie.druid.")
                 .ignoreClass("oshi.")
                 .ignoreClass("io.shulie.");
 
@@ -30,7 +30,9 @@ public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesCo
                 .ignoreClass("com.google.gson.")
                 .ignoreClass("com.netflix.governator.")
                 .ignoreClass("okio.")
-                .ignoreClass("io.netty.");
+                .ignoreClass("io.netty.")
+                .ignoreClass("org.eclipse.jetty.")
+                .ignoreClass("cn.hutool.");
 
         builder
                 .ignoreClassLoader("com.shulie.instrument.simulator.");

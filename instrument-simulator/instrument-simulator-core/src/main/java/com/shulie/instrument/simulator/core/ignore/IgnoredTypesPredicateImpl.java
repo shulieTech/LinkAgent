@@ -52,10 +52,9 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
                 ignoredClassLoadersTrie = null;
                 refreshed = true;
             }
-            if (ignoredTypesTrie == null || ignoredClassLoadersTrie == null) {
+            if (ignoredTypesTrie == null && ignoredClassLoadersTrie == null) {
                 ignoredTypesTrie = typesBuilder.buildIgnoredTypesTrie();
                 ignoredClassLoadersTrie = typesBuilder.buildIgnoredClassloaderTrie();
-
             }
         }
         loader = loader == null ? nullClassloader : loader;

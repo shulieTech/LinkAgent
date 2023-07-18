@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.apache.kafkav2.producer.proxy;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import io.shulie.instrument.module.isolation.proxy.ShadowMethodProxy;
 import org.apache.kafka.clients.producer.Callback;
@@ -29,8 +30,12 @@ public class SendMethodProxy implements ShadowMethodProxy {
                     null,
                     null,
                     bizRecord.key(),
-                    bizRecord.value(),
-                    bizRecord.headers());
+                    bizRecord.value());
+            // apache-kafka 0.10.1.1
+            boolean hasHeaders = ReflectionUtils.existsField(bizRecord.getClass(), "headers");
+            if (hasHeaders) {
+                ReflectionUtils.set(shadowProducerRecord, "headers", bizRecord.headers());
+            }
             if (args.length == 1) {
                 return kafkaProducer.send(shadowProducerRecord);
             } else if (args.length == 2) {

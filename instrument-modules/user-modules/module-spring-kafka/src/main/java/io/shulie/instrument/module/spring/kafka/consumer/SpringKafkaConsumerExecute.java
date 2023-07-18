@@ -1,5 +1,6 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.bean.SyncObjectData;
 import io.shulie.instrument.module.messaging.consumer.execute.ShadowConsumerExecute;
@@ -7,16 +8,17 @@ import io.shulie.instrument.module.messaging.consumer.execute.ShadowServer;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfigWithData;
 import io.shulie.instrument.module.spring.kafka.consumer.util.SpringKafkaUtil;
-import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * @author Licey
@@ -30,11 +32,12 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
         Object target = syncObjectData.getTarget();
         //noinspection rawtypes
         KafkaMessageListenerContainer bizContainer = (KafkaMessageListenerContainer) target;
-        ContainerProperties containerProperties = bizContainer.getContainerProperties();
-
-        String[] topics = containerProperties.getTopics();
+        Object containerProperties = ReflectionUtils.invoke(bizContainer, "getContainerProperties");
+        String[] topics = ReflectionUtils.get(containerProperties, "topics");
         if (topics == null) {
-            logger.error("not support spring-kafka topic type,TopicPartitions:{},TopicPattern:{}", containerProperties.getTopicPartitions(), containerProperties.getTopicPattern());
+            logger.error("not support spring-kafka topic type,TopicPartitions:{},TopicPattern:{}",
+                    ReflectionUtils.get(containerProperties, "topicPartitions"),
+                    ReflectionUtils.get(containerProperties, "topicPattern"));
             return null;
         }
 
@@ -51,9 +54,20 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
             config.setConsumerFactory(consumerFactory);
             config.setContainerProperties(containerProperties);
             config.setBizTopic(topic);
-            String groupId = containerProperties.getGroupId() == null
-                    ? (String) consumerFactory.getConfigurationProperties().get(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG)
-                    : containerProperties.getGroupId();
+
+            String groupId = null;
+            if (ReflectionUtils.existsField(containerProperties, "groupId")) {
+                groupId = ReflectionUtils.get(containerProperties, "groupId");
+            }
+            if (groupId == null) {
+                Map<String, Object> configs;
+                if (ReflectionUtils.existsMethod(consumerFactory.getClass(), "getConfigurationProperties")) {
+                    configs = ReflectionUtils.invoke(consumerFactory, "getConfigurationProperties");
+                } else {
+                    configs = ReflectionUtils.get(consumerFactory, "configs");
+                }
+                groupId = (String) configs.get("group.id");
+            }
 
             config.setBizGroupId(groupId);
             list.add(config);
@@ -69,50 +83,64 @@ public class SpringKafkaConsumerExecute implements ShadowConsumerExecute {
         for (int i = 0; i < dataList.size(); i++) {
             bizTopics[i] = ((SpringKafkaConsumerConfig) dataList.get(i).getConsumerConfig()).getBizTopic();
         }
-        ContainerProperties properties = prepareContainerProperties(
-                springKafkaConsumerConfig.getContainerProperties(), bizTopics, springKafkaConsumerConfig.getBizGroupId());
-        KafkaMessageListenerContainer container = new KafkaMessageListenerContainer(springKafkaConsumerConfig.getConsumerFactory(), properties);
+        String bizGroupId = springKafkaConsumerConfig.getBizGroupId();
+        Object properties = prepareContainerProperties(springKafkaConsumerConfig.getContainerProperties(), bizTopics, bizGroupId);
+
+        Object consumerFactory = springKafkaConsumerConfig.getConsumerFactory();
+        // spring-kafka 1.1.7版本
+        if (!ReflectionUtils.existsField(consumerFactory, "listeners")) {
+            Map<String, Object> configs = ReflectionUtils.get(consumerFactory, "configs");
+            configs.put("group.id", addClusterTest(bizGroupId));
+            consumerFactory = ReflectionUtils.newInstance(consumerFactory.getClass(),
+                    configs,
+                    ReflectionUtils.get(consumerFactory, "keyDeserializer"),
+                    ReflectionUtils.get(consumerFactory, "valueDeserializer"));
+        }
+
+        KafkaMessageListenerContainer container = ReflectionUtils.newInstance(KafkaMessageListenerContainer.class, consumerFactory, properties);
         return new SpringKafkaShadowServer(container);
     }
 
-    private ContainerProperties prepareContainerProperties(ContainerProperties bizContainerProperties, String[] bizTopics, String bizGroupId) {
-        ContainerProperties containerProperties = new ContainerProperties(addClusterTest(bizTopics));
-//        if (bizContainerProperties.getTopics() != null) {
-//            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopics()));
-//        } else if (bizContainerProperties.getTopicPattern() != null) {
-//            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopicPattern()));
-//        } else if (bizContainerProperties.getTopicPartitions() != null) {
-//            containerProperties = new ContainerProperties(addClusterTest(bizContainerProperties.getTopicPartitions()));
-//        } else {
-//            throw new IllegalStateException("topics, topicPattern, or topicPartitions must be provided");
-//        }
+    private Object prepareContainerProperties(Object bizContainerProperties, String[] bizTopics, String bizGroupId) {
+        // 构建ContainerProperties有问题，曲线绕下
+        Object containerProperties = ReflectionUtils.newInstance(bizContainerProperties.getClass(), Pattern.compile(addClusterTest(bizTopics[0])));
+        ReflectionUtils.set(containerProperties, "topicPattern", null);
+        ReflectionUtils.set(containerProperties, "topics", addClusterTest(bizTopics));
 
         BeanUtils.copyProperties(bizContainerProperties, containerProperties,
                 "topics", "topicPartitions", "topicPattern", "ackCount", "ackTime", "subBatchPerPartition");
 
-        containerProperties.setGroupId(addClusterTest(bizGroupId));
+        if (ReflectionUtils.existsField(containerProperties, "groupId")) {
+            ReflectionUtils.set(containerProperties, "groupId", addClusterTest(bizGroupId));
+        }
 
-        if (bizContainerProperties.getAckCount() > 0) {
-            containerProperties.setAckCount(bizContainerProperties.getAckCount());
+        int ackCount = ReflectionUtils.get(bizContainerProperties, "ackCount");
+        if (ackCount > 0) {
+            ReflectionUtils.set(containerProperties, "ackCount", ackCount);
         }
-        if (containerProperties.getAckTime() > 0) {
-            containerProperties.setAckTime(bizContainerProperties.getAckTime());
+
+        int ackTime = ReflectionUtils.get(bizContainerProperties, "ackCount");
+        if (ackTime > 0) {
+            ReflectionUtils.set(containerProperties, "ackTime", ackTime);
         }
+
         // spring-kafka 2.2.12.release没有getSubBatchPerPartition方法
         try {
-            Boolean subBatchPerPartition = bizContainerProperties.getSubBatchPerPartition();
-            if (subBatchPerPartition != null) {
-                containerProperties.setSubBatchPerPartition(subBatchPerPartition);
+            if (ReflectionUtils.existsMethod(bizContainerProperties.getClass(), "getSubBatchPerPartition")) {
+                Boolean subBatchPerPartition = ReflectionUtils.invoke(bizContainerProperties, "getSubBatchPerPartition");
+                if (subBatchPerPartition != null) {
+                    ReflectionUtils.set(containerProperties, "subBatchPerPartition", subBatchPerPartition);
+                }
             }
         } catch (Throwable t) {
             //
         }
 
-        if (containerProperties.getConsumerRebalanceListener() != null) {
+        if (ReflectionUtils.existsMethod(containerProperties.getClass(), "getConsumerRebalanceListener")) {
             //自定义了listener， 就保留
-            ConsumerRebalanceListener listener = containerProperties.getConsumerRebalanceListener();
-            if (!listener.getClass().getName().contains("org.springframework.kafka.listener.AbstractMessageListenerContainer")) {
-                containerProperties.setConsumerRebalanceListener(listener);
+            Object listener = ReflectionUtils.invoke(containerProperties, "getConsumerRebalanceListener");
+            if (listener != null && !listener.getClass().getName().contains("org.springframework.kafka.listener.AbstractMessageListenerContainer")) {
+                ReflectionUtils.set(containerProperties, "consumerRebalanceListener", listener);
             }
         }
         return containerProperties;

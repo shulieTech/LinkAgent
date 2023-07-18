@@ -21,14 +21,14 @@ public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
     private boolean isConfigurerFrozen;
 
     @Override
-    public synchronized IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
+    public IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
         checkConfigEnable();
         ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.IGNORE);
         return this;
     }
 
     @Override
-    public synchronized IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
+    public IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
         checkConfigEnable();
         ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.ALLOW);
         return this;

@@ -1,5 +1,6 @@
 package com.shulie.instrument.simulator.core.ignore;
 
+import com.google.common.collect.HashBasedTable;
 import com.shulie.instrument.simulator.api.ignore.*;
 
 public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
@@ -8,9 +9,29 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
     private static Trie<IgnoreAllow> ignoredTypesTrie;
     private static Trie<IgnoreAllow> ignoredClassLoadersTrie;
 
+    /**
+     * 探针启动期间和启动完成后用的是不同的trie
+     * 所有模块加载完成后需要刷新trie
+     */
+    private static boolean refreshed;
+
+    private static ClassLoader nullClassloader = new ClassLoader() {
+        @Override
+        public Class<?> loadClass(String name) throws ClassNotFoundException {
+            return super.loadClass(name);
+        }
+
+        @Override
+        public int hashCode() {
+            return 1;
+        }
+    };
+
+    private static HashBasedTable<ClassLoader, String, IgnoreAllow> ignoreCaches = HashBasedTable.create(256, 2 << 13);
+
     static {
         IgnoredTypesBuilder builder = new IgnoredTypesBuilderImpl();
-        new InstrumentSimulatorTypesConfigurer().configure(builder);
+        new InstrumentSimulatorIgnoredTypesConfigurer().configure(builder);
         builder.freezeConfigurer();
         ignoredTypesTrie = builder.buildIgnoredTypesTrie();
         ignoredClassLoadersTrie = builder.buildIgnoredClassloaderTrie();
@@ -23,18 +44,31 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
     @Override
     public boolean test(ClassLoader loader, String internalClassName) {
         if (typesBuilder.isConfigurerFrozen()) {
+            if (!refreshed) {
+                ignoredTypesTrie = null;
+                ignoredClassLoadersTrie = null;
+                refreshed = true;
+            }
             if (ignoredTypesTrie == null || ignoredClassLoadersTrie == null) {
                 ignoredTypesTrie = typesBuilder.buildIgnoredTypesTrie();
                 ignoredClassLoadersTrie = typesBuilder.buildIgnoredClassloaderTrie();
+
             }
         }
-        if (loader != null && ignoredClassLoadersTrie.getOrNull(loader.getClass().getName()) == IgnoreAllow.IGNORE) {
-            return false;
+        loader = loader == null ? nullClassloader : loader;
+
+        if (ignoreCaches.contains(loader, internalClassName)) {
+            return ignoreCaches.get(loader, internalClassName) == IgnoreAllow.ALLOW;
         }
-        if (internalClassName != null && ignoredTypesTrie.getOrNull(internalClassName) == IgnoreAllow.IGNORE) {
-            return false;
+        boolean allow = true;
+        if (ignoredClassLoadersTrie.getOrNull(loader.getClass().getName()) == IgnoreAllow.IGNORE) {
+            allow = false;
         }
-        return true;
+        if (allow && (ignoredTypesTrie.getOrNull(internalClassName) == IgnoreAllow.IGNORE)) {
+            allow = false;
+        }
+        ignoreCaches.put(loader, internalClassName, allow ? IgnoreAllow.ALLOW : IgnoreAllow.IGNORE);
+        return allow;
     }
 
 }

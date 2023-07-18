@@ -12,12 +12,16 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
 
     @Override
     public void configure(IgnoredTypesBuilder builder) {
-        new InstrumentSimulatorTypesConfigurer().configure(builder);
         configureIgnoredTypes(builder);
         configureIgnoredClassLoaders(builder);
     }
 
     private static void configureIgnoredTypes(IgnoredTypesBuilder builder) {
+
+        builder
+                .ignoreClass("oracle.jdbc.")
+                .ignoreClass("com.mysql.")
+                .ignoreClass("com.microsoft.sqlserver.");
 
         builder
                 .ignoreClass("org.gradle.")
@@ -44,9 +48,7 @@ public class GlobalIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
         builder
                 .ignoreClass("org.groovy.")
                 .ignoreClass("org.apache.groovy.")
-                .ignoreClass("org.codehaus.groovy.")
-                // We seem to instrument some classes in runtime
-                .allowClass("org.codehaus.groovy.runtime.");
+                .ignoreClass("org.codehaus.groovy.");
 
         // clojure
         builder.ignoreClass("clojure.").ignoreClass("$fn__");

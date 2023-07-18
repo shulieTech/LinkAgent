@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -34,6 +34,7 @@ import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
 import com.shulie.instrument.simulator.core.ignore.AdditionalLibraryIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.ignore.GlobalIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.ignore.IgnoredTypesBuilderImpl;
+import com.shulie.instrument.simulator.core.ignore.InstrumentSimulatorIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
@@ -277,14 +278,15 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
                 case MODULE_ACTIVE: {
                     ModuleLoadInfo moduleLoadInfo = DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
-                        getModuleLoadInfos().get(moduleId);
-                    if(moduleLoadInfo == null){
+                            getModuleLoadInfos().get(moduleId);
+                    if (moduleLoadInfo == null) {
                         throw new ModuleException(moduleId,
                                 MODULE_LOAD_ERROR,
                                 String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId));
                     }
 
-                    ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();;
+                    ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();
+                    ;
                     try {
                         Thread.currentThread().setContextClassLoader(coreModule.getClassLoaderFactory().getClassLoader(null));
                         boolean result = moduleLifecycle.onActive();
@@ -302,7 +304,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                         logger.error("fail to active module :{}", moduleId, throwable);
                         moduleLoadInfo.setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
-                    }finally {
+                    } finally {
                         Thread.currentThread().setContextClassLoader(threadClassLoader);
                     }
                     break;
@@ -568,13 +570,12 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 // inject switcher manager
                 else if (SwitcherManager.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, switcherManager, true);
-                }
-                else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
+                } else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, coreModule.getExtensionTemplate(), true);
                 }
                 // inject ignore class builder
-                else if(IgnoredTypesBuilder.class.isAssignableFrom(fieldType)){
-                    writeField(resourceField,target, coreModule.getIgnoredTypesBuilder(), true);
+                else if (IgnoredTypesBuilder.class.isAssignableFrom(fieldType)) {
+                    writeField(resourceField, target, coreModule.getIgnoredTypesBuilder(), true);
                 }
                 // 其他情况需要输出日志警告
                 else {
@@ -1287,7 +1288,8 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     /**
      *  全局ignore class 配置
      */
-    private void configGlobalIgnoredTypes(){
+    private void configGlobalIgnoredTypes() {
+        new InstrumentSimulatorIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
         new GlobalIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
         new AdditionalLibraryIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
         this.ignoredTypesBuilder.freezeConfigurer();

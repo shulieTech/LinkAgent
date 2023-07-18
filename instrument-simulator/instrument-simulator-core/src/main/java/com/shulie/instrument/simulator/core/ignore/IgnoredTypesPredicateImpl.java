@@ -1,7 +1,10 @@
 package com.shulie.instrument.simulator.core.ignore;
 
 import com.google.common.collect.HashBasedTable;
-import com.shulie.instrument.simulator.api.ignore.*;
+import com.shulie.instrument.simulator.api.ignore.IgnoreAllow;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
+import com.shulie.instrument.simulator.api.ignore.Trie;
 
 public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
@@ -69,6 +72,10 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
         }
         ignoreCaches.put(loader, internalClassName, allow ? IgnoreAllow.ALLOW : IgnoreAllow.IGNORE);
         return allow;
+    }
+
+    public static void clearIgnoredTypesCache() {
+        ignoreCaches.clear();
     }
 
 }

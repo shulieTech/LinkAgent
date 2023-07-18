@@ -7,6 +7,35 @@ public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConf
 
     // only used by tests (to bypass the ignores check)
     public void configure(IgnoredTypesBuilder builder) {
+
+        builder.ignoreClass("oracle.jdbc.")
+                .ignoreClass("com.mysql.")
+                .ignoreClass("org.influxdb")
+                .ignoreClass("com.microsoft.sqlserver.");
+
+        builder.ignoreClass("com.baomidou.")
+                .ignoreClass("com.github.xiaoymin.")
+                .ignoreClass("com.google.protobuf.")
+                .ignoreClass("com.netflix.curator.")
+                .ignoreClass("com.sun.jersey.")
+                .ignoreClass("org.dom4j.")
+                .ignoreClass("springfox.")
+                .ignoreClass("io.swagger.")
+                .ignoreClass("org.apache.poi.")
+                .ignoreClass("org.aspectj.")
+                .ignoreClass("aj.org.objectweb.")
+                .ignoreClass("bsh.")
+                .ignoreClass("jodd.")
+                .ignoreClass("org.codehaus.jackson.")
+                .ignoreClass("com.sun.xml.")
+                .ignoreClass("org.hamcrest")
+                .ignoreClass("org.jboss.")
+                .ignoreClass("org.kohsuke.")
+                .ignoreClass("org.apache.ibatis.")
+                .ignoreClass("javassist.")
+                .ignoreClass("lombok.");
+
+
         builder
                 .ignoreClass("com.beust.jcommander.")
                 .ignoreClass("com.fasterxml.classmate.")

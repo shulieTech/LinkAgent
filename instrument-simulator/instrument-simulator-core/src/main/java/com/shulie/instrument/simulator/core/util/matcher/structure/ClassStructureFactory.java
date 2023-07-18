@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.core.util.matcher.structure;
 
 import com.google.common.collect.HashBasedTable;
+import com.shulie.instrument.simulator.core.ignore.IgnoredTypesPredicateImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,7 @@ public class ClassStructureFactory {
                         logger.info("[SIMULATOR] clear and forbidden ClassStructure Cache.");
                         enableCacheClassStructure = false;
                         classStructureCache.clear();
+                        IgnoredTypesPredicateImpl.clearIgnoredTypesCache();
                     }
                     try {
                         Thread.sleep(60 * 1000);

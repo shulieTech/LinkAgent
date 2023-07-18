@@ -15,8 +15,8 @@ public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesCo
                 .ignoreClass("com.pamirs.pradar.")
                 .ignoreClass("com.pamirs.attach.")
                 .ignoreClass("com.shulie.druid.")
-                .ignoreClass("io.shulie.instrument.")
-                .ignoreClass("oshi.");
+                .ignoreClass("oshi.")
+                .ignoreClass("io.shulie.");
 
         builder
                 .ignoreClass("com.alibaba.fastjson2.")
@@ -24,11 +24,13 @@ public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesCo
                 .ignoreClass("org.apache.commons.")
                 .ignoreClass("org.apache.curator.")
                 .ignoreClass("org.apache.zookeeper.")
+                .ignoreClass("org.apache.jute.")
                 .ignoreClass("com.alicp.jetcache.")
                 .ignoreClass("com.fasterxml.jackson.")
                 .ignoreClass("com.google.gson.")
                 .ignoreClass("com.netflix.governator.")
-                .ignoreClass("okio.");
+                .ignoreClass("okio.")
+                .ignoreClass("io.netty.");
 
         builder
                 .ignoreClassLoader("com.shulie.instrument.simulator.");

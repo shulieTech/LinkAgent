@@ -1,1 +1,1 @@
-新版spring-kafka支持
+2.0.1.3 兼容spring-kafka 1.1.7版本

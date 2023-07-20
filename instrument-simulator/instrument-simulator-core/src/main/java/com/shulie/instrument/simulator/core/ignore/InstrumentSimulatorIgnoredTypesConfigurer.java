@@ -46,10 +46,11 @@ public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesCo
 
         if (simulatorConfig != null) {
             String property = simulatorConfig.getProperty("simulator.transform.ignored.packages");
-            if (property != null) {
-                for (String pkg : property.trim().split(",")) {
-                    builder.ignoreClass(pkg.endsWith(".") ? pkg : pkg + ".");
-                }
+            if (property == null || property.length() == 0) {
+                return;
+            }
+            for (String pkg : property.split(",")) {
+                builder.ignoreClass(pkg.endsWith(".") ? pkg : pkg + ".");
             }
         }
     }

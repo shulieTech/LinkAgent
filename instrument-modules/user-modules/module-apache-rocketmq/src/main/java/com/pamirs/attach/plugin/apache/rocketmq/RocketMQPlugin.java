@@ -46,6 +46,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
     @Override
     public boolean onActive() throws Throwable {
         addListener();
+        ignoredTypesBuilder.ignoreClass("org.apache.rocketmq.client.");
         return addHookRegisterInterceptor();
     }
 
@@ -167,6 +168,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         enhanceMethod.addInterceptor(Listeners.of(OrderlyTraceBeforeInterceptor.class));
                     }
                 });
+        ignoredTypesBuilder.allowClass("org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly");
 
         this.enhanceTemplate.enhance(this,
                 "org.apache.rocketmq.client.impl.consumer.ProcessQueue", new EnhanceCallback() {

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
 import com.shulie.instrument.simulator.api.listener.EventListener;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.core.CoreModule;
@@ -56,14 +57,13 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     private final AffectStatistic affectStatistic = new AffectStatistic();
     private final Map<Integer, EventListener> eventListeners = new HashMap<Integer, EventListener>();
     private final List<BuildingForListeners> listeners;
-    private final DefaultModuleEventWatcher watcher;
+    private final IgnoredTypesPredicate typesPredicate;
 
     DefaultSimulatorClassFileTransformer(final DefaultModuleEventWatcher watcher,
                                          final int watchId,
                                          final CoreModule coreModule,
                                          final Matcher matcher,
                                          final boolean isEnableUnsafe) {
-        this.watcher = watcher;
         this.watchId = watchId;
         this.moduleId = coreModule.getModuleId();
         this.matcher = matcher;
@@ -73,6 +73,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             eventListeners.put(listener.getListenerId(), new LazyEventListenerProxy(coreModule, listener.getListeners()));
         }
         this.listeners = matcher.getAllListeners();
+        this.typesPredicate = coreModule.getIgnoredTypesBuilder().buildTransformIgnoredFilter();
     }
 
     @Override
@@ -100,13 +101,15 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                             final Class<?> classBeingRedefined,
                             final ProtectionDomain protectionDomain,
                             final byte[] srcByteCodeArray) {
-        // 在simulator.properties里排除指定包下的class
-        if(watcher.getClassDataSource().excludeTransformByPackages(internalClassName)){
-            return null;
-        }
-
         SimulatorGuard.getInstance().enter();
         try {
+
+            if (!typesPredicate.test(loader, internalClassName)) {
+                if (isDebugEnabled) {
+                    logger.debug("SIMULATOR: ignore class {} to being transformed. ", internalClassName);
+                }
+                return null;
+            }
 
             // 这里过滤掉Simulator所需要的类|来自SimulatorClassLoader所加载的类|来自ModuleJarClassLoader加载的类
             // 防止ClassCircularityError的发生
@@ -141,8 +144,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                               final Class<?> classBeingRedefined,
                               byte[] srcByteCodeArray) {
         // 如果未开启unsafe开关，是不允许增强来自BootStrapClassLoader的类
-        if (!isEnableUnsafe
-                && null == loader) {
+        if (!isEnableUnsafe && null == loader) {
             if (isDebugEnabled) {
                 logger.debug("SIMULATOR: transform ignore {}, class from bootstrap but unsafe.enable=false.", internalClassName);
             }

@@ -44,6 +44,8 @@ public class LogbackPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() {
+        ignoredTypesBuilder.ignoreClass("ch.qos.logback.core.");
+        
         this.isBusinessLogOpen = simulatorConfig.getBooleanProperty("pradar.biz.log.divider", false);
         if (!isBusinessLogOpen) {
             if (logger.isInfoEnabled()) {

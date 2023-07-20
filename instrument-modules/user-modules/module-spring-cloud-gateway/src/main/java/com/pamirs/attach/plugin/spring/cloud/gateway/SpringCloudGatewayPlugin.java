@@ -41,6 +41,7 @@ import org.kohsuke.MetaInfServices;
 public class SpringCloudGatewayPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.springframework.cloud.gateway.");
         this.enhanceTemplate.enhance(this, "org.springframework.cloud.gateway.handler.FilteringWebHandler",
                 new EnhanceCallback() {
                     @Override
@@ -92,6 +93,7 @@ public class SpringCloudGatewayPlugin extends ModuleLifecycleAdapter implements 
                                         ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                     }
                 });
+        ignoredTypesBuilder.allowClass("org.springframework.cloud.gateway.filter.NettyRoutingFilter");
 
         this.enhanceTemplate.enhance(this, "org.springframework.cloud.gateway.handler.FilteringWebHandler$DefaultGatewayFilterChain",
                 new EnhanceCallback() {

@@ -100,7 +100,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
 
     @Override
     public List<Class<?>> findForReTransform(final Matcher matcher) {
-        return find(matcher, true, true);
+        return find(matcher, true);
     }
 
     @Override
@@ -207,22 +207,8 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
     }
 
-    @Override
-    public boolean excludeTransformByPackages(String className) {
-        if (className == null || transformExcludePackages == null) {
-            return false;
-        }
-        for (String excludePackage : transformExcludePackages) {
-            if (className.startsWith(excludePackage)) {
-                logger.info("SIMULATOR: exclude transform class:{}, exclude num:{}", className, excludeNum.getAndIncrement());
-                return true;
-            }
-        }
-        return false;
-    }
-
     private List<Class<?>> find(final Matcher matcher,
-                                final boolean isRemoveUnsupported, final boolean excludePackages) {
+                                final boolean isRemoveUnsupported) {
 
         SimulatorGuard.getInstance().enter();
         try {
@@ -237,9 +223,6 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
                 if (isRemoveUnsupported
                         && !inst.isModifiableClass(clazz)) {
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
-                    continue;
-                }
-                if (excludePackages && transformExcludePackages != null && excludeTransformByPackages(clazz.getName())) {
                     continue;
                 }
                 try {
@@ -313,7 +296,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
      */
     @Override
     public Set<Class<?>> find(Filter filter) {
-        return new LinkedHashSet<Class<?>>(find(new ExtFilterMatcher(make(filter)), false, false));
+        return new LinkedHashSet<Class<?>>(find(new ExtFilterMatcher(make(filter)), false));
     }
 
 }

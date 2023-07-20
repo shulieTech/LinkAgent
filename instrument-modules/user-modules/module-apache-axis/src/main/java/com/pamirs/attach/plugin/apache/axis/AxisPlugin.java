@@ -44,6 +44,7 @@ public class AxisPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 }
             }
         });
+        ignoredTypesBuilder.ignoreClass("org.apache.axis.");
         return true;
     }
 }

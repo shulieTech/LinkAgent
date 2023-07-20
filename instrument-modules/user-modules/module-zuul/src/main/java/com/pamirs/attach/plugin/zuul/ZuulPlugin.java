@@ -78,6 +78,8 @@ public class ZuulPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.netflix.zuul.");
+
         enhanceTemplate.enhance(this, "com.netflix.zuul.netty.filter.ZuulFilterChainHandler", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

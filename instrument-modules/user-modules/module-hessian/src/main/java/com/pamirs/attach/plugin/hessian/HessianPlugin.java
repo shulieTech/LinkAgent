@@ -35,6 +35,8 @@ import org.kohsuke.MetaInfServices;
 public class HessianPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.caucho.hessian.").ignoreClass("com.caucho.burlap.");
+
         enhanceTemplate.enhance(this, "com.caucho.hessian.client.HessianProxy", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

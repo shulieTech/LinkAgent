@@ -39,6 +39,8 @@ public class RabbitMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.rabbitmq.");
+
         EventRouter.router()
                 .addListener(new ShadowConsumerDisableListenerImpl())
                 .addListener(new RabbitMQShadowPreCheckEventHandler(simulatorConfig));

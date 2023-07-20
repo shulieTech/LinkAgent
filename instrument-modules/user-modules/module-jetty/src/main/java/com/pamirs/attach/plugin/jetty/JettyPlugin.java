@@ -33,6 +33,7 @@ public class JettyPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.eclipse.jetty.");
         return addServerInterceptor();
     }
 

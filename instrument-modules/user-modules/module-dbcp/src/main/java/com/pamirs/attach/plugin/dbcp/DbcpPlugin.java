@@ -47,6 +47,8 @@ public class DbcpPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     @Override
     public boolean onActive() {
+        ignoredTypesBuilder.ignoreClass("org.apache.commons.dbcp2.");
+
         enhanceTemplate.enhance(this, "org.apache.commons.dbcp.BasicDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

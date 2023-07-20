@@ -33,6 +33,7 @@ public class HttpServerPlugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.sun.net.");
         enhanceTemplate.enhance(this, "com.sun.net.httpserver.Filter$Chain", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

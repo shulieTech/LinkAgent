@@ -44,6 +44,8 @@ public class ProxoolPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.logicalcobwebs.proxool.");
+
         enhanceTemplate.enhance(this, "org.logicalcobwebs.proxool.ProxoolDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

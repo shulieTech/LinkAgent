@@ -34,6 +34,7 @@ public class WebspherePlugin extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.ibm.ws.");
 
         enhanceTemplate.enhance(this, "com.ibm.ws.webcontainer.srt.SRTServletRequest", new EnhanceCallback() {
             @Override

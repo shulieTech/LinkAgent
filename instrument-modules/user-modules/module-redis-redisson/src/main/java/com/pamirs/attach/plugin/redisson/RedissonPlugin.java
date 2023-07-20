@@ -72,6 +72,8 @@ public class RedissonPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.redisson.");
+
         addRedissonMaxRedisExpireTimeZeroOneTransform("org.redisson.RedissonExpirable", "expire", "expireAsync");
 
         addRedissonMaxRedisExpireTimeOneTwoTransform("org.redisson.RedissonMapCache", "putAll", "putAllAsync");

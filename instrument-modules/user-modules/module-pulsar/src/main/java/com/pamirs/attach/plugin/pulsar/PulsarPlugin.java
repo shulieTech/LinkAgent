@@ -37,6 +37,8 @@ import org.kohsuke.MetaInfServices;
 public class PulsarPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.apache.pulsar.");
+
         enhanceTemplate.enhance(this, "org.apache.pulsar.client.impl.ProducerImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

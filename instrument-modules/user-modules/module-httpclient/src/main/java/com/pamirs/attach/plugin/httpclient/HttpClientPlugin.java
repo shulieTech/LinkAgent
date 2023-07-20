@@ -35,7 +35,7 @@ public class HttpClientPlugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
-
+        ignoredTypesBuilder.ignoreClass("org.apache.commons.httpclient.");
         //httpclient v3
         enhanceTemplate.enhance(this, "org.apache.commons.httpclient.HttpClient", new EnhanceCallback() {
             @Override

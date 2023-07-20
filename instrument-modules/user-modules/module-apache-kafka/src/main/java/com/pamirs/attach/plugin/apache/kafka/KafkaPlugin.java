@@ -42,6 +42,8 @@ public class KafkaPlugin extends ModuleLifecycleAdapter implements ExtensionModu
     @Override
     public boolean onActive() throws Throwable {
 
+        ignoredTypesBuilder.ignoreClass("org.apache.kafka.");
+
         /**
          *
          */

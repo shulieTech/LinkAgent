@@ -38,6 +38,8 @@ public class FeignPlugin extends ModuleLifecycleAdapter implements ExtensionModu
     @Override
     public boolean onActive() throws Throwable {
 
+        ignoredTypesBuilder.ignoreClass("feign.");
+
         EnhanceCallback feignInvocationHandler = new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

@@ -37,6 +37,7 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() {
+        ignoredTypesBuilder.ignoreClass("redis.clients.jedis.");
 
         EnhanceCallback jedisEnhanceCallback = new EnhanceCallback() {
             @Override
@@ -93,6 +94,15 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
         };
         //redis.clients.jedis.PipelineBase
         enhanceTemplate.enhanceWithSuperClass(this, "redis.clients.jedis.PipelineBase", pipelineCallback);
+        ignoredTypesBuilder
+                .allowClass("redis.clients.jedis.PipelineBase")
+                .allowClass("redis.clients.jedis.MultiKeyPipelineBase")
+                .allowClass("redis.clients.jedis.Pipeline")
+                .allowClass("redis.clients.jedis.PipelineBlock")
+                .allowClass("redis.clients.jedis.ShardedJedisPipeline")
+                .allowClass("redis.clients.jedis.Transaction")
+                .allowClass("redis.clients.jedis.TransactionBlock");
+
         enhanceTemplate.enhance(this, "redis.clients.jedis.PipelineBase", pipelineCallback);
 
 

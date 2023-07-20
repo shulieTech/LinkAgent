@@ -40,6 +40,7 @@ public class TomcatDbcpPlugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.apache.tomcat.dbcp.");
         enhanceTemplate.enhance(this, "org.apache.tomcat.dbcp.dbcp2.BasicDataSource", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

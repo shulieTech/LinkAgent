@@ -44,6 +44,7 @@ public class RocketMQPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.alibaba.rocketmq.");
         return addHookRegisterInterceptor();
     }
 

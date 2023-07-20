@@ -16,6 +16,7 @@ package com.shulie.instrument.simulator.core.instrument;
 
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
@@ -34,13 +35,16 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     // agent中引用外部jar避免重复增强，所以打包时会在外部jar的包名前加上 com.shulie.instrument.simulator.dependencies. 但是会导致需要增强的类的类名字符串也没修改，所以这里需要去除
     private final static String dependencyPrefix = "com.shulie.instrument.simulator.dependencies.";
     private ModuleEventWatcher moduleEventWatcher;
+    private IgnoredTypesBuilder ignoredTypesBuilder;
 
-    public DefaultEnhanceTemplate(ModuleEventWatcher moduleEventWatcher) {
+    public DefaultEnhanceTemplate(ModuleEventWatcher moduleEventWatcher, IgnoredTypesBuilder ignoredTypesBuilder) {
         this.moduleEventWatcher = moduleEventWatcher;
+        this.ignoredTypesBuilder = ignoredTypesBuilder;
     }
 
     @Override
     public InstrumentClass enhance(ExtensionModule module, String className, EnhanceCallback callback) {
+        ignoredTypesBuilder.allowClass(className);
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
                 .onClass(dealClassName(className));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);
@@ -56,6 +60,9 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
     public InstrumentClass enhance(ExtensionModule module, EnhanceCallback callback, String... classNames) {
         if (classNames == null || classNames.length == 0) {
             throw new IllegalArgumentException("classNames can't be empty.");
+        }
+        for (String className : classNames) {
+            ignoredTypesBuilder.allowClass(className);
         }
 
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)

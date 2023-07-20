@@ -37,6 +37,7 @@ import org.kohsuke.MetaInfServices;
 public class SpringCachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("org.springframework.cache.");
         /**
          * 只增强具体的Cache实现
          */

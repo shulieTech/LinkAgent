@@ -34,6 +34,7 @@ public class GoogleHttpClientPlugin extends ModuleLifecycleAdapter implements Ex
 
     @Override
     public boolean onActive() throws Throwable {
+        ignoredTypesBuilder.ignoreClass("com.google.api.client.");
         return addHttpRequestClass();
     }
 

@@ -14,7 +14,9 @@ public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConf
                 .ignoreClass("com.microsoft.sqlserver.");
 
         builder.ignoreClass("com.navercorp.pinpoint.")
-                .ignoreClass("org.apache.skywalking.");
+                .ignoreClass("org.apache.skywalking.")
+                .ignoreClass("com.clickhouse.")
+                .ignoreClass("ru.yandex.clickhouse.");
 
         builder.ignoreClass("com.baomidou.")
                 .ignoreClass("com.github.xiaoymin.")
@@ -36,7 +38,9 @@ public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConf
                 .ignoreClass("org.kohsuke.")
                 .ignoreClass("org.apache.ibatis.")
                 .ignoreClass("javassist.")
-                .ignoreClass("lombok.");
+                .ignoreClass("lombok.")
+                .ignoreClass("org.pf4j.")
+                .ignoreClass("org.apache.ibatis.");
 
 
         builder

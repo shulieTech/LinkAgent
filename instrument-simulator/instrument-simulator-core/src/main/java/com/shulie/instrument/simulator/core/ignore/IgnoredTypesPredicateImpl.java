@@ -34,7 +34,7 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
     static {
         IgnoredTypesBuilder builder = new IgnoredTypesBuilderImpl();
-        new InstrumentSimulatorIgnoredTypesConfigurer().configure(builder);
+        new InstrumentSimulatorIgnoredTypesConfigurer(null).configure(builder);
         builder.freezeConfigurer();
         ignoredTypesTrie = builder.buildIgnoredTypesTrie();
         ignoredClassLoadersTrie = builder.buildIgnoredClassloaderTrie();

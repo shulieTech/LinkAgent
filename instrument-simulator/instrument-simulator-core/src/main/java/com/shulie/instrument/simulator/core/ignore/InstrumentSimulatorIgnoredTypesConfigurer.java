@@ -2,14 +2,22 @@ package com.shulie.instrument.simulator.core.ignore;
 
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 
 /**
  * 探针框架相关的配置
  */
 public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesConfigurer {
 
+    private SimulatorConfig simulatorConfig;
+
+    public InstrumentSimulatorIgnoredTypesConfigurer(SimulatorConfig simulatorConfig) {
+        this.simulatorConfig = simulatorConfig;
+    }
+
     @Override
     public void configure(IgnoredTypesBuilder builder) {
+
         builder
                 .ignoreClass("com.shulie.druid.")
                 .ignoreClass("com.shulie.instrument.")
@@ -34,8 +42,16 @@ public class InstrumentSimulatorIgnoredTypesConfigurer implements IgnoredTypesCo
                 .ignoreClass("org.eclipse.jetty.")
                 .ignoreClass("cn.hutool.");
 
-        builder
-                .ignoreClassLoader("com.shulie.instrument.simulator.");
+        builder.ignoreClassLoader("com.shulie.instrument.simulator.");
+
+        if (simulatorConfig != null) {
+            String property = simulatorConfig.getProperty("simulator.transform.ignored.packages");
+            if (property != null) {
+                for (String pkg : property.trim().split(",")) {
+                    builder.ignoreClass(pkg.endsWith(".") ? pkg : pkg + ".");
+                }
+            }
+        }
     }
 
 }

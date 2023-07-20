@@ -1289,7 +1289,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
      *  全局ignore class 配置
      */
     private void configGlobalIgnoredTypes() {
-        new InstrumentSimulatorIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
+        new InstrumentSimulatorIgnoredTypesConfigurer(simulatorConfig).configure(this.ignoredTypesBuilder);
         new GlobalIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
         new AdditionalLibraryIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
         this.ignoredTypesBuilder.freezeConfigurer();

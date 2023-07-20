@@ -13,6 +13,9 @@ public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConf
                 .ignoreClass("org.influxdb")
                 .ignoreClass("com.microsoft.sqlserver.");
 
+        builder.ignoreClass("com.navercorp.pinpoint.")
+                .ignoreClass("org.apache.skywalking.");
+
         builder.ignoreClass("com.baomidou.")
                 .ignoreClass("com.github.xiaoymin.")
                 .ignoreClass("com.google.protobuf.")

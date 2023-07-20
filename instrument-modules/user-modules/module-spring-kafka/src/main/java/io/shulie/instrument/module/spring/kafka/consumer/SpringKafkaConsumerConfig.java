@@ -1,16 +1,18 @@
 package io.shulie.instrument.module.spring.kafka.consumer;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import io.shulie.instrument.module.messaging.consumer.module.ConsumerConfig;
 import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.listener.ContainerProperties;
+
+import java.util.Map;
 
 /**
  * @author Licey
  * @date 2022/7/28
  */
 public class SpringKafkaConsumerConfig extends ConsumerConfig {
-    private ConsumerFactory consumerFactory;
-    private ContainerProperties containerProperties;
+    private Object consumerFactory;
+    private Object containerProperties;
 
     private String bizTopic;
     private String bizGroupId;
@@ -31,19 +33,19 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
         this.bizGroupId = bizGroupId;
     }
 
-    public ContainerProperties getContainerProperties() {
+    public Object getContainerProperties() {
         return containerProperties;
     }
 
-    public void setContainerProperties(ContainerProperties containerProperties) {
+    public void setContainerProperties(Object containerProperties) {
         this.containerProperties = containerProperties;
     }
 
-    public ConsumerFactory getConsumerFactory() {
+    public Object getConsumerFactory() {
         return consumerFactory;
     }
 
-    public void setConsumerFactory(ConsumerFactory consumerFactory) {
+    public void setConsumerFactory(Object consumerFactory) {
         this.consumerFactory = consumerFactory;
     }
 
@@ -54,6 +56,7 @@ public class SpringKafkaConsumerConfig extends ConsumerConfig {
 
     @Override
     public String keyOfServer() {
-        return String.valueOf(consumerFactory.getConfigurationProperties().get("bootstrap.servers"));
+        Map<String, Object> configs = ReflectionUtils.get(consumerFactory, "configs");
+        return String.valueOf(configs.get("bootstrap.servers"));
     }
 }

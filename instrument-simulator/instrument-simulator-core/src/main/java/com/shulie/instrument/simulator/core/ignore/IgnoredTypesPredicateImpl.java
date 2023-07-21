@@ -46,21 +46,15 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
     @Override
     public boolean test(ClassLoader loader, String internalClassName) {
-        if (typesBuilder.isConfigurerFrozen()) {
-            if (!refreshed) {
-                ignoredTypesTrie = null;
-                ignoredClassLoadersTrie = null;
-                refreshed = true;
-            }
-            if (ignoredTypesTrie == null && ignoredClassLoadersTrie == null) {
-                ignoredTypesTrie = typesBuilder.buildIgnoredTypesTrie();
-                ignoredClassLoadersTrie = typesBuilder.buildIgnoredClassloaderTrie();
-            }
+        if (typesBuilder.isConfigurerFrozen() && !refreshed) {
+            ignoredTypesTrie = typesBuilder.buildIgnoredTypesTrie();
+            ignoredClassLoadersTrie = typesBuilder.buildIgnoredClassloaderTrie();
+            refreshed = true;
         }
         loader = loader == null ? nullClassloader : loader;
-
-        if (ignoreCaches.contains(loader, internalClassName)) {
-            return ignoreCaches.get(loader, internalClassName) == IgnoreAllow.ALLOW;
+        IgnoreAllow ignoreAllow = ignoreCaches.get(loader, internalClassName);
+        if (ignoreAllow != null) {
+            return ignoreAllow == IgnoreAllow.ALLOW;
         }
         boolean allow = true;
         if (ignoredClassLoadersTrie.getOrNull(loader.getClass().getName()) == IgnoreAllow.IGNORE) {

@@ -55,6 +55,33 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
     }
 
     private void enhanceWeb() {
+
+        ignoredTypesBuilder
+                .allowClass("com.caucho.burlap.server.BurlapServlet")
+                .allowClass("org.apache.catalina.servlets.CGIServlet")
+                .allowClass("org.apache.catalina.servlets.DefaultServlet")
+                .allowClass("org.apache.catalina.servlets.WebdavServlet")
+                .allowClass("org.eclipse.jetty.servlet.DefaultServlet")
+                .allowClass("com.caucho.servlets.DirectoryServlet")
+                .allowClass("com.alibaba.dubbo.remoting.http.servlet.DispatcherServlet")
+                .allowClass("org.apache.dubbo.remoting.http.servlet.DispatcherServlet")
+                .allowClass("org.springframework.web.servlet.DispatcherServlet")
+                .allowClass("com.caucho.burlap.EJBServlet")
+                .allowClass("com.caucho.ejb.EJBServlet")
+                .allowClass("com.caucho.ejb.burlap.EJBServlet")
+                .allowClass("com.caucho.ejb.hessian.EJBServlet")
+                .allowClass("com.caucho.hessian.EJBServlet")
+                .allowClass("javax.servlet.GenericServlet")
+                .allowClass("com.caucho.hessian.server.HessianServlet")
+                .allowClass("org.apache.catalina.manager.host.HostManagerServlet")
+                .allowClass("org.springframework.web.context.support.HttpRequestHandlerServlet")
+                .allowClass("javax.servlet.http.HttpServlet")
+                .allowClass("org.eclipse.jetty.servlet.Invoker")
+                .allowClass("org.springframework.web.context.support.HttpRequestHandlerServlet")
+                .allowClass("org.apache.catalina.manager.JMXProxyServlet")
+                .allowClass("org.springframework.http.server.reactive.JettyHttpHandlerAdapter")
+                .allowClass("org.springframework.http.server.reactive.TomcatHttpHandlerAdapter")
+                .allowClass("org.apache.catalina.servlets.WebdavServlet");
         this.enhanceTemplate.enhanceWithInterface(this, "javax.servlet.Servlet", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -72,6 +99,11 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+        ignoredTypesBuilder
+                .allowClass("org.springframework.http.server.reactive.ContextPathCompositeHandler")
+                .allowClass("org.springframework.web.server.adapter.HttpWebHandlerAdapter")
+                .allowClass("org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext.ServerManager");
+
         this.enhanceTemplate.enhanceWithInterface(this, "org.springframework.http.server.reactive.HttpHandler", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -81,6 +113,14 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+
+        ignoredTypesBuilder
+                .allowClass("org.springframework.web.reactive.DispatcherHandler")
+                .allowClass("org.springframework.web.server.handler.ExceptionHandlingWebHandler")
+                .allowClass("org.springframework.web.server.handler.FilteringWebHandler")
+                .allowClass("org.springframework.web.reactive.resource.ResourceWebHandler")
+                .allowClass("org.springframework.web.server.handler.WebHandlerDecorator");
+
         this.enhanceTemplate.enhanceWithInterface(this, "org.springframework.web.server.WebHandler", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -88,6 +128,16 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 method.addInterceptor(Listeners.of(SpringWebHandlerInterceptor.class));
             }
         });
+
+
+
+        ignoredTypesBuilder
+                .allowClass("io.netty.channel.ChannelInitializer")
+                .allowClass("io.lettuce.core.PlainChannelInitializer")
+                .allowClass("io.netty.handler.codec.MessageToMessageCodec")
+                .allowClass("io.netty.bootstrap.ServerBootstrap.ServerBootstrapAcceptor")
+                .allowClass("org.apache.rocketmq.remoting.netty.NettyRemotingClient.NettyClientHandler");
+
 
         this.enhanceTemplate.enhanceWithInterface(this, "io.netty.channel.ChannelInboundHandler", new EnhanceCallback() {
             @Override

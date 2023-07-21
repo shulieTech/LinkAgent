@@ -91,9 +91,14 @@ public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAd
         String group = null;
         String remoteAddress = null;
         if (args.length >= 3) {
-            if (ReflectionUtils.existsField(consumer, "group_id")) {
-                group = ReflectionUtils.get(consumer, "group_id");
-            } else {
+            if (ReflectionUtils.existsField(consumer, "groupId")) {
+                Object groupIdValue = ReflectionUtils.get(consumer, "groupId");
+                if (groupIdValue.getClass().getName().equals("java.util.Optional")) {
+                    group = ReflectionUtils.get(groupIdValue, "value");
+                } else {
+                    group = (String) groupIdValue;
+                }
+            } else if (ReflectionUtils.existsField(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP)) {
                 group = ReflectionUtils.get(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP);
             }
             remoteAddress = KafkaUtils.getRemoteAddress(consumer, manager);

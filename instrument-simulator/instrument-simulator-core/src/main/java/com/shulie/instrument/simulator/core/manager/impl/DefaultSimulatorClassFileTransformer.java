@@ -104,6 +104,10 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
         SimulatorGuard.getInstance().enter();
         try {
 
+            if (internalClassName == null) {
+                return null;
+            }
+
             if (!typesPredicate.test(loader, internalClassName)) {
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: ignore class {} to being transformed. ", internalClassName);

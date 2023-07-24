@@ -1277,7 +1277,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         loadModules(systemModuleSpecs, "load");
         loadModules(userModuleSpecs, "load");
 
-        configGlobalIgnoredTypes();
+        configIgnoredTypes();
 
         if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules finished :{}", loadedModuleMap.keySet());
@@ -1286,9 +1286,9 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     }
 
     /**
-     *  全局ignore class 配置
+     *  ignore class 配置
      */
-    private void configGlobalIgnoredTypes() {
+    private void configIgnoredTypes() {
         new InstrumentSimulatorIgnoredTypesConfigurer(simulatorConfig).configure(this.ignoredTypesBuilder);
         new GlobalIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
         new AdditionalLibraryIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);

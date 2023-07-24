@@ -57,9 +57,6 @@ public class AdditionalLibraryIgnoredTypesConfigurer implements IgnoredTypesConf
 
         builder.ignoreClass("net.sf.cglib.").allowClass("net.sf.cglib.core.internal.LoadingCache$2");
 
-        builder
-                .ignoreClass("org.springframework.");
-
         // xml-apis, xerces, xalan, but not xml web-services
         builder
                 .ignoreClass("javax.xml.")

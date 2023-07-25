@@ -58,16 +58,19 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     private final Map<Integer, EventListener> eventListeners = new HashMap<Integer, EventListener>();
     private final List<BuildingForListeners> listeners;
     private final IgnoredTypesPredicate typesPredicate;
+    private final boolean isEnableReTransform;
 
     DefaultSimulatorClassFileTransformer(final DefaultModuleEventWatcher watcher,
                                          final int watchId,
                                          final CoreModule coreModule,
                                          final Matcher matcher,
-                                         final boolean isEnableUnsafe) {
+                                         final boolean isEnableUnsafe,
+                                         final boolean isEnableReTransform) {
         this.watchId = watchId;
         this.moduleId = coreModule.getModuleId();
         this.matcher = matcher;
         this.isEnableUnsafe = isEnableUnsafe;
+        this.isEnableReTransform = isEnableReTransform;
         List<BuildingForListeners> listeners = matcher.getAllListeners();
         for (BuildingForListeners listener : listeners) {
             eventListeners.put(listener.getListenerId(), new LazyEventListenerProxy(coreModule, listener.getListeners()));
@@ -108,7 +111,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                 return null;
             }
 
-            if (!typesPredicate.test(loader, internalClassName)) {
+            if (!isEnableReTransform && !typesPredicate.test(loader, internalClassName)) {
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: ignore class {} to being transformed. ", internalClassName);
                 }

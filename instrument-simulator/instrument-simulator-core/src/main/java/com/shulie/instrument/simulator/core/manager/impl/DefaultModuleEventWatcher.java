@@ -292,7 +292,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         final int watchId = watchIdSequencer.next();
         // 给对应的模块追加ClassFileTransformer
         final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(this,
-                watchId, coreModule, matcher, isEnableUnsafe);
+                watchId, coreModule, matcher, isEnableUnsafe, isEnableReTransform);
 
         SimulatorClassFileTransformer proxy = CostDumpTransformer.wrap(BytecodeDumpTransformer.wrap(transformer, coreModule.getSimulatorConfig()), coreModule.getSimulatorConfig());
         // 注册到CoreModule中

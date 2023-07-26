@@ -15,8 +15,8 @@ public class PreferredLoaderObjectInputStreamResolveClassInterceptor extends Par
         if (arg instanceof ClusterTestCacheWrapperKey) {
             arg = ((ClusterTestCacheWrapperKey) arg).getKey();
         }
-        Class<?> className = Class.forName(String.valueOf(ReflectionUtils.invoke(arg, "getName")));
+        String className = ReflectionUtils.invoke(arg, "getName");
         ClassLoader loader = ReflectionUtils.get(advice.getTarget(), "loader");
-        return new Object[]{className, false, loader};
+        return new Object[]{Class.forName(className, false, loader)};
     }
 }

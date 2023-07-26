@@ -1,1 +1,1 @@
-修复ehcache缓存不生效问题
+2.0.0.2 修复spring-cache底层用ehcache报ClusterTestCacheWrapperKey加载不到问题

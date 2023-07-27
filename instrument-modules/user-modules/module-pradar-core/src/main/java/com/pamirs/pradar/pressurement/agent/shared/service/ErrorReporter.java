@@ -14,22 +14,23 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
+import com.google.common.collect.HashBasedTable;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.FormatUtils;
 import com.pamirs.pradar.debug.DebugHelper;
+import com.pamirs.pradar.utils.MD5Util;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 用于错误信息汇报
@@ -40,6 +41,11 @@ import org.slf4j.LoggerFactory;
 public class ErrorReporter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ErrorReporter.class);
+
+    /**
+     * key: errorCode; value: md5
+     */
+    private static HashBasedTable<String, String, Long> reportCache = HashBasedTable.create(8, 1024);
 
     /**
      * 压测全局开关各插件关闭状态
@@ -116,6 +122,8 @@ public class ErrorReporter {
          */
         private String occurTime;
 
+        private long occurTimestamp;
+
         /**
          * 是否关闭压测全局开关
          */
@@ -187,6 +195,12 @@ public class ErrorReporter {
         public void report() {
             PradarSwitcher.setErrorCode(this.errorCode);
             PradarSwitcher.setErrorMsg(message);
+            this.occurTimestamp = System.currentTimeMillis();
+
+            if (!checkIfEnableReport(this)) {
+                return;
+            }
+
             this.occurTime = FormatUtils.formatTimeRange(new Date());
             ErrorReporter.getInstance()
                     .addError(this.errorType.getErrorCnDesc() + ":" + this.toString().hashCode(), this.toString());
@@ -222,6 +236,33 @@ public class ErrorReporter {
         }
 
     }
+
+    private static boolean checkIfEnableReport(Error error) {
+        String errorCode = error.errorCode;
+        // 缓存数量超过1000个,清空
+        if(reportCache.cellSet().size() > 1000){
+            reportCache.clear();
+        }
+
+        String message = error.message;
+        String fullMessage = errorCode + "#" + message;
+        if (fullMessage.length() > 100) {
+            fullMessage = fullMessage.substring(0, 100);
+        }
+
+        String md5 = MD5Util.MD5_32(fullMessage, "UTF8");
+        Long timestamp = reportCache.get(errorCode, md5);
+        if (timestamp == null) {
+            reportCache.put(errorCode, md5, error.occurTimestamp);
+            return true;
+        }
+        if (error.occurTimestamp - timestamp > 10 * 1000) {
+            reportCache.put(errorCode, md5, error.occurTimestamp);
+            return true;
+        }
+        return false;
+    }
+
 
     static class ErrorReportPojo {
         private String errorCode;

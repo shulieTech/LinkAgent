@@ -35,7 +35,6 @@ public class Neo4JPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("org.neo4j.");
         // org.neo4j.ogm.session.Neo4jSession.Neo4jSession
         this.enhanceTemplate.enhance(this, "org.neo4j.ogm.session.Neo4jSession", new EnhanceCallback() {
             @Override

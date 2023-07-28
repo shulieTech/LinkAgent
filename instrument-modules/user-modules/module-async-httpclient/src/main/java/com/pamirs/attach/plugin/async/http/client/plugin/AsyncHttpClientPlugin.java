@@ -34,7 +34,6 @@ public class AsyncHttpClientPlugin extends ModuleLifecycleAdapter implements Ext
 
     @Override
     public boolean onActive() {
-        ignoredTypesBuilder.ignoreClass("org.asynchttpclient.");
         //org.asynchttpclient.netty.request.NettyRequestSender#sendRequest
         enhanceTemplate.enhance(this, "org.asynchttpclient.netty.request.NettyRequestSender", new EnhanceCallback() {
             @Override

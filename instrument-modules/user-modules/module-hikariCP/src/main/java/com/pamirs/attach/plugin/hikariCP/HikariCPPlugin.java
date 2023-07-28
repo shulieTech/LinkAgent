@@ -45,7 +45,6 @@ public class HikariCPPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.zaxxer.hikari.");
         //com.zaxxer.hikari.HikariDataSource.getConnection
         enhanceTemplate.enhance(this, "com.zaxxer.hikari.HikariDataSource",
                 new EnhanceCallback() {

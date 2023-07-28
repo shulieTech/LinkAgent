@@ -54,7 +54,6 @@ public class WebFluxPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 //
 //            }
 //        });
-        ignoredTypesBuilder.ignoreClass("org.springframework.web.reactive.");
 
         enhanceTemplate.enhance(this, "org.springframework.web.reactive.DispatcherHandler", new EnhanceCallback() {
             @Override

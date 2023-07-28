@@ -79,7 +79,6 @@ public class AerospikePlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
-        ignoredTypesBuilder.ignoreClass("com.aerospike.client.");
         return true;
     }
 }

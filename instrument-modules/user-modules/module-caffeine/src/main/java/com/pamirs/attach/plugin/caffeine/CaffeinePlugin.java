@@ -34,8 +34,6 @@ public class CaffeinePlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("om.github.benmanes.caffeine.");
-
         enhanceTemplate.enhance(this, new EnhanceCallback() {
                 @Override
                 public void doEnhance(InstrumentClass target) {

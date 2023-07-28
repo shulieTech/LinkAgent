@@ -37,7 +37,6 @@ import org.kohsuke.MetaInfServices;
 public class JetCachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.alicp.jetcache.");
         enhanceTemplate.enhance(this, "com.alicp.jetcache.embedded.AbstractEmbeddedCache", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

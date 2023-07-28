@@ -41,15 +41,13 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("org.elasticsearch.").ignoreClass("org.apache.lucene.");
-
         System.setProperty("es.set.netty.runtime.available.processors", "false");
         addTransportClientInterceptor();
         addRestClientInterceptor();
-        EventRouter.router()
+        /*EventRouter.router()
                 .addListener(new EsShadowPreCheckEventListener())
                 .addListener(new EsShadowDisableEventListener())
-                .addListener(new EsShadowActiveEventListener());
+                .addListener(new EsShadowActiveEventListener());*/
         return true;
     }
 

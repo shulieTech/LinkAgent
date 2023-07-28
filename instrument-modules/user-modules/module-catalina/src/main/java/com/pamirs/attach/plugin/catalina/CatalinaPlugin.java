@@ -31,11 +31,6 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder
-                .ignoreClass("org.apache.catalina.")
-                .ignoreClass("org.apache.coyote.")
-                .ignoreClass("org.apache.juli.")
-                .ignoreClass("org.apache.naming.");
 
         enhanceTemplate.enhance(this, "org.apache.catalina.core.StandardHostValve", new EnhanceCallback() {
             @Override
@@ -64,20 +59,13 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
                         InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByUrl",
                                 "java.lang.String");
                         getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
-                    }
-                });
 
-        //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.MappingRegistry.getMappingsByDirectPath
-        enhanceTemplate.enhance(this,
-                "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
-                new EnhanceCallback() {
-                    @Override
-                    public void doEnhance(InstrumentClass target) {
-                        InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByDirectPath",
+                        InstrumentMethod getMappingsByDirectPath = target.getDeclaredMethod("getMappingsByDirectPath",
                                 "java.lang.String");
-                        getMethod.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
+                        getMappingsByDirectPath.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
                     }
                 });
+        
         return true;
     }
 }

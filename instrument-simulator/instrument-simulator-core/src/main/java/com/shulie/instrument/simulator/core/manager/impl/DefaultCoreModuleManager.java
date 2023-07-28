@@ -454,7 +454,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setObjectManager(new DefaultObjectManager(simulatorConfig.getInstrumentation()));
         coreModule.setModuleManager(new DefaultModuleManager(this));
         coreModule.setSimulatorConfig(simulatorConfig);
-        coreModule.setEnhanceTemplate(new DefaultEnhanceTemplate(moduleEventWatcher, ignoredTypesBuilder));
+        coreModule.setEnhanceTemplate(new DefaultEnhanceTemplate(moduleEventWatcher));
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
         coreModule.setExtensionTemplate(new DefaultExtensionTemplate());

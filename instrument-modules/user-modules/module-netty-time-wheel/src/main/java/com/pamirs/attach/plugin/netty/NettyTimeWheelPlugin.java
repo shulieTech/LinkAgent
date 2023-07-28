@@ -33,8 +33,6 @@ public class NettyTimeWheelPlugin extends ModuleLifecycleAdapter implements Exte
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("io.netty.");
-
         this.enhanceTemplate.enhance(this, "io.netty.util.HashedWheelTimer", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

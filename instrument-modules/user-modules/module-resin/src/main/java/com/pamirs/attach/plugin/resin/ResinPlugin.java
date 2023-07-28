@@ -36,8 +36,6 @@ public class ResinPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.caucho.");
-
         enhanceTemplate.enhance(this, "com.caucho.server.http.HttpServletRequestImpl", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

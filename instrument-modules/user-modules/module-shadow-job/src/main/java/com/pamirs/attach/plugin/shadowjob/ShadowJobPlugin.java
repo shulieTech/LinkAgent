@@ -50,11 +50,6 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder
-                .ignoreClass("com.xxl.job.")
-                .ignoreClass("com.github.ltsopensource.")
-                .ignoreClass("com.dangdang.ddframe.job.")
-                .ignoreClass("org.quartz.");
 
         final ShadowImplListener shaDowImplListener = new ShadowImplListener();
 

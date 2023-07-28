@@ -65,4 +65,19 @@ public abstract class SimulatorClassFileTransformer implements ClassFileTransfor
     public Map<String, File> getDumpResult() {
         return null;
     }
+
+    /**
+     * 标记下一个需要被转换的class
+     * @param clazz
+     */
+    public void markRetransformingClass(Class clazz){
+
+    }
+
+    /**
+     * 清除标记
+     */
+    public void resetRetransformingClass(){
+
+    }
 }

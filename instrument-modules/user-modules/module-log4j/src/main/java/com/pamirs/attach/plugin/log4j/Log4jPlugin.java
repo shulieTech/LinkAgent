@@ -44,8 +44,6 @@ public class Log4jPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() {
-        ignoredTypesBuilder.ignoreClass("org.apache.log4j.");
-
         this.isBusinessLogOpen = simulatorConfig.getBooleanProperty("pradar.biz.log.divider", false);
         this.bizShadowLogPath = simulatorConfig.getProperty("pradar.biz.log.divider.path", simulatorConfig.getLogPath());
         if (!isBusinessLogOpen) {

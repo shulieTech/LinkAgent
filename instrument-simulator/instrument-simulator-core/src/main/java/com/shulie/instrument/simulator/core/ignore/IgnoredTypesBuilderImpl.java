@@ -9,6 +9,7 @@ import com.shulie.instrument.simulator.api.ignore.IgnoreAllow;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
 import com.shulie.instrument.simulator.api.ignore.Trie;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 
 public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
 
@@ -18,18 +19,16 @@ public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
     private static Trie<IgnoreAllow> ignoredTypesTrie;
     private static Trie<IgnoreAllow> ignoredClassLoadersTrie;
 
-    private boolean isConfigurerFrozen;
-
     @Override
     public IgnoredTypesBuilder ignoreClass(String classNameOrPrefix) {
-        checkConfigEnable();
+        ignoredTypesTrieBuilder.put(classNameOrPrefix, IgnoreAllow.IGNORE);
         ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.IGNORE);
         return this;
     }
 
     @Override
     public IgnoredTypesBuilder allowClass(String classNameOrPrefix) {
-        checkConfigEnable();
+        ignoredTypesTrieBuilder.put(classNameOrPrefix, IgnoreAllow.ALLOW);
         ignoredTypesTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.ALLOW);
         return this;
     }
@@ -37,48 +36,38 @@ public class IgnoredTypesBuilderImpl implements IgnoredTypesBuilder {
 
     @Override
     public IgnoredTypesBuilder ignoreClassLoader(String classNameOrPrefix) {
-        checkConfigEnable();
+        ignoredClassLoadersTrieBuilder.put(classNameOrPrefix, IgnoreAllow.IGNORE);
         ignoredClassLoadersTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.IGNORE);
         return this;
     }
 
     @Override
     public IgnoredTypesBuilder allowClassLoader(String classNameOrPrefix) {
-        checkConfigEnable();
+        ignoredClassLoadersTrieBuilder.put(classNameOrPrefix, IgnoreAllow.ALLOW);
         ignoredClassLoadersTrieBuilder.put(classNameOrPrefix.replace('.', '/'), IgnoreAllow.ALLOW);
         return this;
     }
 
     @Override
-    public void freezeConfigurer() {
-        ignoredTypesTrie = ignoredTypesTrieBuilder.build();
-        ignoredClassLoadersTrie = ignoredClassLoadersTrieBuilder.build();
-        isConfigurerFrozen = true;
-    }
-
-    @Override
     public Trie<IgnoreAllow> buildIgnoredClassloaderTrie() {
+        if (ignoredClassLoadersTrie == null) {
+            ignoredClassLoadersTrie = ignoredClassLoadersTrieBuilder.build();
+        }
         return ignoredClassLoadersTrie;
     }
 
     @Override
     public Trie<IgnoreAllow> buildIgnoredTypesTrie() {
+        if (ignoredTypesTrie == null) {
+            ignoredTypesTrie = ignoredTypesTrieBuilder.build();
+        }
         return ignoredTypesTrie;
     }
 
-    @Override
-    public boolean isConfigurerFrozen() {
-        return isConfigurerFrozen;
-    }
 
     @Override
-    public IgnoredTypesPredicate buildTransformIgnoredFilter() {
-        return new IgnoredTypesPredicateImpl(this);
+    public IgnoredTypesPredicate buildTransformIgnoredPredicate() {
+        return new IgnoredTypesPredicateImpl(buildIgnoredTypesTrie(), buildIgnoredClassloaderTrie());
     }
 
-    private void checkConfigEnable() {
-        if (isConfigurerFrozen) {
-            throw new IllegalStateException("[instrument-simulator]: ignore types/classloaders configurer is frozen!!!");
-        }
-    }
 }

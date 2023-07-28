@@ -81,7 +81,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             eventListeners.put(listener.getListenerId(), new LazyEventListenerProxy(coreModule, listener.getListeners()));
         }
         this.listeners = matcher.getAllListeners();
-        this.typesPredicate = coreModule.getIgnoredTypesBuilder().buildTransformIgnoredFilter();
+        this.typesPredicate = coreModule.getIgnoredTypesBuilder().buildTransformIgnoredPredicate();
     }
 
     @Override
@@ -127,7 +127,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
                 }
             }
 
-            if (!isEnableRetransform && !typesPredicate.test(loader, internalClassName)) {
+            if (!typesPredicate.test(loader, internalClassName)) {
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: ignore class {} to being transformed. ", internalClassName);
                 }

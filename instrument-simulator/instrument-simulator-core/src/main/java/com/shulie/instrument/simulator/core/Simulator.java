@@ -22,10 +22,7 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.DefaultClassLoaderService;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.ignore.IgnoredTypesBuilderImpl;
-import com.shulie.instrument.simulator.core.ignore.configurer.AdditionalLibraryIgnoredTypesConfigurer;
-import com.shulie.instrument.simulator.core.ignore.configurer.GlobalIgnoredTypesConfigurer;
-import com.shulie.instrument.simulator.core.ignore.configurer.InstrumentSimulatorIgnoredTypesConfigurer;
-import com.shulie.instrument.simulator.core.ignore.configurer.ModulePluginIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.*;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
 import com.shulie.instrument.simulator.core.manager.impl.*;
 import com.shulie.instrument.simulator.core.util.MessageUtils;
@@ -190,6 +187,7 @@ public class Simulator {
         new GlobalIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
         new AdditionalLibraryIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
         new ModulePluginIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
+        new ExtensionModulePluginIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
         return ignoredTypesBuilder;
     }
 }

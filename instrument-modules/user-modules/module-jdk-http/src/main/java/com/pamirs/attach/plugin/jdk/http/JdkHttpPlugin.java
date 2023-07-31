@@ -35,7 +35,6 @@ public class JdkHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("sun.net.www.");
         enhanceTemplate.enhance(this, "sun.net.www.protocol.http.HttpURLConnection", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

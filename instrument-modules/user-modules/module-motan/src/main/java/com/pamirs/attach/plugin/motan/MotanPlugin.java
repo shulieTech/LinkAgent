@@ -37,7 +37,6 @@ public class MotanPlugin extends ModuleLifecycleAdapter implements ExtensionModu
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.weibo.api.motan.");
         enhanceTemplate.enhance(this, "com.weibo.api.motan.rpc.AbstractReferer", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

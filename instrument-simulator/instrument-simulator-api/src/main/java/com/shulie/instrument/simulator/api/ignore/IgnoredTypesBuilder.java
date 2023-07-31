@@ -63,14 +63,6 @@ public interface IgnoredTypesBuilder {
      */
     IgnoredTypesBuilder allowClassLoader(String classNameOrPrefix);
 
-
-    /**
-     * 冻结config
-     *
-     * @return
-     */
-    void freezeConfigurer();
-
     /**
      * 构建types trie
      *
@@ -85,19 +77,13 @@ public interface IgnoredTypesBuilder {
      */
     Trie<IgnoreAllow> buildIgnoredClassloaderTrie();
 
-    /**
-     * 是否冻结配置,即模块都是否加载完成
-     *
-     * @return
-     */
-    boolean isConfigurerFrozen();
 
     /**
-     * 构建transform class filter
+     * 构建transform class Predicate
      *
      * @return
      */
-    IgnoredTypesPredicate buildTransformIgnoredFilter();
+    IgnoredTypesPredicate buildTransformIgnoredPredicate();
 
 
 }

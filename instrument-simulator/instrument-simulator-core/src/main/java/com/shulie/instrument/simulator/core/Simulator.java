@@ -16,10 +16,16 @@ package com.shulie.instrument.simulator.core;
 
 import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.resource.ModuleLoader;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.DefaultClassLoaderService;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
+import com.shulie.instrument.simulator.core.ignore.IgnoredTypesBuilderImpl;
+import com.shulie.instrument.simulator.core.ignore.configurer.AdditionalLibraryIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.GlobalIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.InstrumentSimulatorIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.ModulePluginIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
 import com.shulie.instrument.simulator.core.manager.impl.*;
 import com.shulie.instrument.simulator.core.util.MessageUtils;
@@ -51,6 +57,7 @@ public class Simulator {
     private CoreConfigure config;
     private CoreModuleManager coreModuleManager;
     private ClassLoaderService classLoaderService;
+    private IgnoredTypesBuilder ignoredTypesBuilder;
 
     public Simulator(final CoreConfigure config,
                      final Instrumentation inst, ClassLoaderService classLoaderService) {
@@ -61,21 +68,21 @@ public class Simulator {
                      final Instrumentation inst, ClassLoaderService classLoaderService, boolean isSyncModuleCoreManager) {
         EventListenerHandler eventListenerHandler = Messager.isInit() ? (EventListenerHandler) Messager.getEventListenerHandler() : new EventListenerHandler();
         this.config = config;
+        this.ignoredTypesBuilder = buildIgnoredTypesBuilder(config);
         this.classLoaderService = classLoaderService != null ? classLoaderService : new DefaultClassLoaderService();
         this.classLoaderService.init();
         CoreModuleManager manager = initCoreModuleManager(isSyncModuleCoreManager, inst, eventListenerHandler);
         this.coreModuleManager = SimulatorGuard.getInstance().doGuard(CoreModuleManager.class, manager);
 
         init(eventListenerHandler);
+
     }
 
     private CoreModuleManager initCoreModuleManager(boolean isSyncModuleCoreManager, Instrumentation inst, EventListenerHandler eventListenerHandler) {
-        String transformExcludePackages = config.getProperty("simulator.transform.exclude.packages", null);
-
         if (isSyncModuleCoreManager) {
             return new SyncModuleCoreModuleManager(config,
                     inst,
-                    new DefaultCoreLoadedClassDataSource(inst, transformExcludePackages, config.isEnableUnsafe()),
+                    new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe(), ignoredTypesBuilder),
                     new DefaultProviderManager(config),
                     classLoaderService,
                     eventListenerHandler,
@@ -88,15 +95,17 @@ public class Simulator {
                         @Override
                         public void unload(Runnable runnable) {
                         }
-                    }));
+                    }),
+                    ignoredTypesBuilder);
         } else {
             return new DefaultCoreModuleManager(
                     config,
                     inst,
-                    new DefaultCoreLoadedClassDataSource(inst, transformExcludePackages, config.isEnableUnsafe()),
+                    new DefaultCoreLoadedClassDataSource(inst, config.isEnableUnsafe(), ignoredTypesBuilder),
                     new DefaultProviderManager(config),
                     classLoaderService,
                     eventListenerHandler,
+                    ignoredTypesBuilder,
                     new DefaultSwitcherManager(new ModuleLoader() {
                         @Override
                         public void load(Runnable runnable) {
@@ -170,5 +179,17 @@ public class Simulator {
 
     public ClassLoaderService getClassLoaderService() {
         return classLoaderService;
+    }
+
+    /**
+     * ignore class 配置
+     */
+    private IgnoredTypesBuilder buildIgnoredTypesBuilder(CoreConfigure config) {
+        IgnoredTypesBuilder ignoredTypesBuilder = new IgnoredTypesBuilderImpl();
+        new InstrumentSimulatorIgnoredTypesConfigurer(new DefaultSimulatorConfig(config)).configure(ignoredTypesBuilder);
+        new GlobalIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
+        new AdditionalLibraryIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
+        new ModulePluginIgnoredTypesConfigurer().configure(ignoredTypesBuilder);
+        return ignoredTypesBuilder;
     }
 }

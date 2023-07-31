@@ -38,7 +38,6 @@ import org.kohsuke.MetaInfServices;
 public class GoogleGuavaPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.google.common.");
         return addGuaveInterceptor();
     }
 

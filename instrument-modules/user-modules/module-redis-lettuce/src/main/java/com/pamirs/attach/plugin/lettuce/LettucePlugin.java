@@ -171,8 +171,6 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("io.lettuce.core.");
-
         AbstractRedisServerFactory.setDynamicFieldManager(manager);
 
         addRedisClient();

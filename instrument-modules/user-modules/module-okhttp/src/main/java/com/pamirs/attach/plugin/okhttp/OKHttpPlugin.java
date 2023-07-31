@@ -40,8 +40,6 @@ public class OKHttpPlugin extends ModuleLifecycleAdapter implements ExtensionMod
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("okhttp3.");
-
         // Support for OkHttp3
         enhanceTemplate.enhance(this, "okhttp3.Request$Builder", new EnhanceCallback() {
             @Override

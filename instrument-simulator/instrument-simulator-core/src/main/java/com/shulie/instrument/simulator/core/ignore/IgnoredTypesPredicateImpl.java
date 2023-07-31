@@ -5,18 +5,13 @@ import com.shulie.instrument.simulator.api.ignore.IgnoreAllow;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
 import com.shulie.instrument.simulator.api.ignore.Trie;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 
 public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
-    private IgnoredTypesBuilder typesBuilder;
-    private static Trie<IgnoreAllow> ignoredTypesTrie;
-    private static Trie<IgnoreAllow> ignoredClassLoadersTrie;
+    private Trie<IgnoreAllow> ignoredTypesTrie;
+    private Trie<IgnoreAllow> ignoredClassLoadersTrie;
 
-    /**
-     * 探针启动期间和启动完成后用的是不同的trie
-     * 所有模块加载完成后需要刷新trie
-     */
-    private static boolean refreshed;
 
     private static ClassLoader nullClassloader = new ClassLoader() {
         @Override
@@ -32,25 +27,14 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
     private static HashBasedTable<ClassLoader, String, IgnoreAllow> ignoreCaches = HashBasedTable.create(256, 2 << 13);
 
-    static {
-        IgnoredTypesBuilder builder = new IgnoredTypesBuilderImpl();
-        new InstrumentSimulatorIgnoredTypesConfigurer(null).configure(builder);
-        builder.freezeConfigurer();
-        ignoredTypesTrie = builder.buildIgnoredTypesTrie();
-        ignoredClassLoadersTrie = builder.buildIgnoredClassloaderTrie();
-    }
 
-    public IgnoredTypesPredicateImpl(IgnoredTypesBuilder typesBuilder) {
-        this.typesBuilder = typesBuilder;
+    public IgnoredTypesPredicateImpl(Trie<IgnoreAllow> ignoredTypesTrie, Trie<IgnoreAllow> ignoredClassLoadersTrie) {
+        this.ignoredTypesTrie = ignoredTypesTrie;
+        this.ignoredClassLoadersTrie = ignoredClassLoadersTrie;
     }
 
     @Override
     public boolean test(ClassLoader loader, String internalClassName) {
-        if (typesBuilder.isConfigurerFrozen() && !refreshed) {
-            ignoredTypesTrie = typesBuilder.buildIgnoredTypesTrie();
-            ignoredClassLoadersTrie = typesBuilder.buildIgnoredClassloaderTrie();
-            refreshed = true;
-        }
         loader = loader == null ? nullClassloader : loader;
         IgnoreAllow ignoreAllow = ignoreCaches.get(loader, internalClassName);
         if (ignoreAllow != null) {

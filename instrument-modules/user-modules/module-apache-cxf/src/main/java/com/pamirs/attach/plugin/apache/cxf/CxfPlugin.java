@@ -44,7 +44,6 @@ public class CxfPlugin extends ModuleLifecycleAdapter implements ExtensionModule
                 }
             }
         });
-        ignoredTypesBuilder.ignoreClass("org.apache.axis.");
         return true;
     }
 }

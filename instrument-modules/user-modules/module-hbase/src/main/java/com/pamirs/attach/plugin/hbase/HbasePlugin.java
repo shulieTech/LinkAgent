@@ -38,8 +38,6 @@ public class HbasePlugin extends ModuleLifecycleAdapter implements ExtensionModu
     public boolean onActive() throws Throwable {
         addDdlTracer();
 
-        ignoredTypesBuilder.ignoreClass("org.apache.hadoop.hbase.");
-
         enhanceTemplate.enhance(this, "com.flipkart.hbaseobjectmapper.WrappedHBTable", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

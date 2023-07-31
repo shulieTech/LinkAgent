@@ -34,8 +34,6 @@ import org.kohsuke.MetaInfServices;
 public class OscachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.opensymphony.oscache.");
-
         enhanceTemplate.enhance(this, "com.opensymphony.oscache.base.Cache", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

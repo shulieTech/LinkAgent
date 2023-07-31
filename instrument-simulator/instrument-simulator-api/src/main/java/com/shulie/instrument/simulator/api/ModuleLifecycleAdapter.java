@@ -38,8 +38,6 @@ public class ModuleLifecycleAdapter implements ModuleLifecycle {
     protected EnhanceTemplate enhanceTemplate;
     @Resource
     protected ModuleController moduleController;
-    @Resource
-    protected IgnoredTypesBuilder ignoredTypesBuilder;
     protected String moduleName;
 
     public void setModuleName(String moduleName) {

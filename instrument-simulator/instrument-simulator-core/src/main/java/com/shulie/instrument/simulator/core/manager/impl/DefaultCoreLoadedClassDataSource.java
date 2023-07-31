@@ -16,9 +16,12 @@ package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.filter.Filter;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
 import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.core.manager.CoreLoadedClassDataSource;
+import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
 import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
 import com.shulie.instrument.simulator.core.util.SimulatorStringUtils;
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
@@ -30,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
 
@@ -42,21 +44,14 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Instrumentation inst;
     private final boolean isEnableUnsafe;
-    private Set<String> transformExcludePackages;
-    private AtomicInteger excludeNum = new AtomicInteger(0);
+    private final IgnoredTypesPredicate ignoredTypesPredicate;
 
     public DefaultCoreLoadedClassDataSource(final Instrumentation inst,
-                                            String transformExcludePackages,
-                                            final boolean isEnableUnsafe) {
+                                            final boolean isEnableUnsafe,
+                                            IgnoredTypesBuilder ignoredTypesBuilder) {
         this.inst = inst;
         this.isEnableUnsafe = isEnableUnsafe;
-        if (transformExcludePackages != null) {
-            this.transformExcludePackages = new HashSet<String>();
-            for (String pkg : Arrays.asList(transformExcludePackages.split(","))) {
-                this.transformExcludePackages.add(pkg);
-                this.transformExcludePackages.add(pkg.contains("/") ? pkg.replaceAll("/", ".") : pkg.replaceAll("\\.", "/"));
-            }
-        }
+        this.ignoredTypesPredicate = ignoredTypesBuilder.buildTransformIgnoredPredicate();
     }
 
     @Override
@@ -220,12 +215,14 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
 
             for (Class<?> clazz : getAllForLoadedClasses()) {
                 // 过滤掉对于JVM认为不可修改的类
-                if (isRemoveUnsupported
-                        && !inst.isModifiableClass(clazz)) {
+                if (isRemoveUnsupported && !inst.isModifiableClass(clazz)) {
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                     continue;
                 }
                 try {
+                    if (!ignoredTypesPredicate.test(clazz.getClassLoader(), clazz.getName())) {
+                        continue;
+                    }
                     if (isRemoveUnsupported) {
                         if (isMatchedUnsupported(matcher, clazz)) {
                             classes.add(clazz);

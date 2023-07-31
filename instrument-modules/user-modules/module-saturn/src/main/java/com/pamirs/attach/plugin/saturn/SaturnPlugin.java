@@ -33,7 +33,6 @@ public class SaturnPlugin extends ModuleLifecycleAdapter implements ExtensionMod
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("com.vip.saturn.");
         this.enhanceTemplate.enhance(this, "com.vip.saturn.job.java.SaturnJavaJob", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

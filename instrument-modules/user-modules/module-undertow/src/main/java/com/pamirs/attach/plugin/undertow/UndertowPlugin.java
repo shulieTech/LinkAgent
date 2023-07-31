@@ -35,8 +35,6 @@ public class UndertowPlugin extends ModuleLifecycleAdapter implements ExtensionM
 
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("io.undertow.");
-
         enhanceTemplate.enhance(this, "io.undertow.server.Connectors", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

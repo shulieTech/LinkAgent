@@ -31,10 +31,11 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.ClassLoaderFactoryImpl;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
-import com.shulie.instrument.simulator.core.ignore.AdditionalLibraryIgnoredTypesConfigurer;
-import com.shulie.instrument.simulator.core.ignore.GlobalIgnoredTypesConfigurer;
-import com.shulie.instrument.simulator.core.ignore.IgnoredTypesBuilderImpl;
-import com.shulie.instrument.simulator.core.ignore.InstrumentSimulatorIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.*;
+import com.shulie.instrument.simulator.core.ignore.configurer.AdditionalLibraryIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.GlobalIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.InstrumentSimulatorIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.ModulePluginIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
@@ -152,6 +153,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                     final ProviderManager providerManager,
                                     final ClassLoaderService classLoaderService,
                                     final EventListenerHandler eventListenerHandler,
+                                    final IgnoredTypesBuilder ignoredTypesBuilder,
                                     final SwitcherManager switcherManager) {
         this.config = config;
         this.simulatorConfig = new DefaultSimulatorConfig(config);
@@ -167,7 +169,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         this.disabledModules = config.getDisabledModules();
         this.classInjector = new ModuleJarClassInjector(this.simulatorConfig);
         this.eventListenerHandler = eventListenerHandler;
-        this.ignoredTypesBuilder = new IgnoredTypesBuilderImpl();
+        this.ignoredTypesBuilder = ignoredTypesBuilder;
     }
 
     @Override
@@ -454,7 +456,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setObjectManager(new DefaultObjectManager(simulatorConfig.getInstrumentation()));
         coreModule.setModuleManager(new DefaultModuleManager(this));
         coreModule.setSimulatorConfig(simulatorConfig);
-        coreModule.setEnhanceTemplate(new DefaultEnhanceTemplate(moduleEventWatcher, ignoredTypesBuilder));
+        coreModule.setEnhanceTemplate(new DefaultEnhanceTemplate(moduleEventWatcher));
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
         coreModule.setExtensionTemplate(new DefaultExtensionTemplate());
@@ -572,10 +574,6 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                     writeField(resourceField, target, switcherManager, true);
                 } else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, coreModule.getExtensionTemplate(), true);
-                }
-                // inject ignore class builder
-                else if (IgnoredTypesBuilder.class.isAssignableFrom(fieldType)) {
-                    writeField(resourceField, target, coreModule.getIgnoredTypesBuilder(), true);
                 }
                 // 其他情况需要输出日志警告
                 else {
@@ -1277,24 +1275,11 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         loadModules(systemModuleSpecs, "load");
         loadModules(userModuleSpecs, "load");
 
-        configIgnoredTypes();
-
         if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules finished :{}", loadedModuleMap.keySet());
         }
         return this;
     }
-
-    /**
-     *  ignore class 配置
-     */
-    private void configIgnoredTypes() {
-        new InstrumentSimulatorIgnoredTypesConfigurer(simulatorConfig).configure(this.ignoredTypesBuilder);
-        new GlobalIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
-        new AdditionalLibraryIgnoredTypesConfigurer().configure(this.ignoredTypesBuilder);
-        this.ignoredTypesBuilder.freezeConfigurer();
-    }
-
 
     /**
      * 初始化所有要加载的模块

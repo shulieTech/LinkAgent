@@ -32,7 +32,6 @@ import org.kohsuke.MetaInfServices;
 public class MulePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-        ignoredTypesBuilder.ignoreClass("org.mule.");
         enhanceTemplate.enhance(this, "org.mule.module.http.internal.listener.grizzly.GrizzlyRequestDispatcherFilter", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

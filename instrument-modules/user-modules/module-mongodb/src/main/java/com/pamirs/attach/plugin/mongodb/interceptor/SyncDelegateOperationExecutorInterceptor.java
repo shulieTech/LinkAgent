@@ -107,10 +107,13 @@ public class SyncDelegateOperationExecutorInterceptor extends ParametersWrapperI
         ClusterSettings clusterSettings = ReflectionUtils.get(ReflectionUtils.get(mongoClientDelegate, "cluster"), "settings");
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         ShadowDatabaseConfig shadowDatabaseConfig = null;
-        for (ServerAddress serverAddress : serverAddresses) {
-            shadowDatabaseConfig = GlobalConfig.getInstance().getShadowDatabaseConfig(serverAddress.toString());
-            if (shadowDatabaseConfig != null) {
-                break;
+
+        for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {
+            for (ServerAddress serverAddress : serverAddresses) {
+                if (config.getUrl().contains(serverAddress.toString())) {
+                    shadowDatabaseConfig = config;
+                    break;
+                }
             }
         }
 

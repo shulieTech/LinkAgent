@@ -435,7 +435,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             commandPacketList.add(commandPacket);
         }
         if (commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY) == null){
-            logger.error("版本批次号获取失败，无法在线升级操作!");
+//            logger.error("版本批次号获取失败，无法在线升级操作!");
         } else {
             HeartCommandConstants.setCurUpgradeBatch((String) commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
         }

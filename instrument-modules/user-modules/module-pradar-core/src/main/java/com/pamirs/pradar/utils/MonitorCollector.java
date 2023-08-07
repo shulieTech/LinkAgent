@@ -60,21 +60,22 @@ public class MonitorCollector {
         if (!enableMonitor || !PradarSwitcher.isMonitorEnabled()) {
             return;
         }
+        int collectRate = simulatorConfig.getIntProperty("pradar.monitor.collect.rate", 5);
         boolean runningInContainer = isRunningInsideDocker();
         if (runningInContainer) {
-            executeResourcesInfoCollectingTaskInsideContainer();
+            executeResourcesInfoCollectingTaskInsideContainer(collectRate);
         } else {
-            executeResourcesInfoCollectingTaskOutsideContainer();
+            executeResourcesInfoCollectingTaskOutsideContainer(collectRate);
         }
     }
 
-    private void executeResourcesInfoCollectingTaskOutsideContainer() {
-        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new OutsideContainerResourcesInfoCollector(), 5, 1, TimeUnit.SECONDS);
+    private void executeResourcesInfoCollectingTaskOutsideContainer(int rate) {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new OutsideContainerResourcesInfoCollector(), 5, rate, TimeUnit.SECONDS);
     }
 
 
-    private void executeResourcesInfoCollectingTaskInsideContainer() {
-        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new InsideContainerResourcesInfoCollector(), 5, 1, TimeUnit.SECONDS);
+    private void executeResourcesInfoCollectingTaskInsideContainer(int rate) {
+        future = ExecutorServiceFactory.getFactory().scheduleAtFixedRate(new InsideContainerResourcesInfoCollector(), 5, rate, TimeUnit.SECONDS);
     }
 
     private boolean isRunningInsideDocker() {

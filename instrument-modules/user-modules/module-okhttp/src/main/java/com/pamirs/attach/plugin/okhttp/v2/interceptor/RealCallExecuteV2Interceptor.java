@@ -14,11 +14,10 @@
  */
 package com.pamirs.attach.plugin.okhttp.v2.interceptor;
 
-import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
@@ -94,7 +93,7 @@ public class RealCallExecuteV2Interceptor extends TraceInterceptorAdaptor {
                     if (param instanceof String) {
                         buffer.write(String.valueOf(param).getBytes("UTF-8"));
                     } else {
-                        buffer.write(JSONObject.toJSONBytes(param));
+                        buffer.write(GsonFactory.getGson().toJson(param).getBytes());
                     }
                 } catch (IOException e) {
                 }

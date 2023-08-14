@@ -71,9 +71,9 @@ public class HeartRequestUtil {
 //            return;
 //        }
 //        //后面的代码只需要校验一次
-//        String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+//        String inputArgs = GsonFactory.getGson().toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 //
-//        String jvmArgsCheckResult = JSON.toJSONString(
+//        String jvmArgsCheckResult = GsonFactory.getGson().toJson(
 //                JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig));
 //
 //

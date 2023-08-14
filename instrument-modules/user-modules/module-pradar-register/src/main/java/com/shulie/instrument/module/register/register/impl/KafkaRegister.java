@@ -1,11 +1,10 @@
 package com.shulie.instrument.module.register.register.impl;
 
-import io.shulie.takin.pinpoint.thrift.dto.TStressTestAgentHeartbeatData;
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.IOUtils;
 import com.pamirs.pradar.common.RuntimeUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.register.NodeRegisterModule;
 import com.shulie.instrument.module.register.register.Register;
@@ -14,6 +13,7 @@ import com.shulie.instrument.module.register.utils.SimulatorStatus;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadStatusEnum;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestAgentHeartbeatData;
 import io.shulie.takin.sdk.kafka.HttpSender;
 import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
@@ -46,7 +46,7 @@ public class KafkaRegister implements Register {
     private SimulatorConfig simulatorConfig;
     private Set<String> jars;
     private final RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+    private static final String inputArgs = GsonFactory.getGson().toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
     private final AtomicInteger sendCount = new AtomicInteger(0);
     private MessageSendService messageSendService;
     /**
@@ -102,7 +102,7 @@ public class KafkaRegister implements Register {
         if (!SimulatorStatus.statusCalculated()) {
             boolean moduleLoadResult = getModuleLoadResult();
             if (!moduleLoadResult) {
-                SimulatorStatus.installFailed(JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+                SimulatorStatus.installFailed(GsonFactory.getGson().toJson(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
             } else {
                 SimulatorStatus.installed();
             }
@@ -381,7 +381,7 @@ public class KafkaRegister implements Register {
                 middlewareList.add(new MiddlewareRequest(split[1], split[0], split[2]));
             }
             final PushMiddlewareVO pushMiddlewareVO = new PushMiddlewareVO(AppNameUtils.appName(), middlewareList);
-            body = JSON.toJSONString(pushMiddlewareVO);
+            body = GsonFactory.getGson().toJson(pushMiddlewareVO);
             final String finalBody = body;
             messageSendService.send(PUSH_MIDDLEWARE_URL, HttpUtils.getHttpMustHeaders(), body, new MessageSendCallBack() {
                 @Override

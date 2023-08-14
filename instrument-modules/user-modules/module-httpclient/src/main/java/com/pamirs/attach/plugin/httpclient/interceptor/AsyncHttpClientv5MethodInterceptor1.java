@@ -19,7 +19,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
 import com.pamirs.attach.plugin.httpclient.utils.HttpClientAsyncFixJsonStrategies;
@@ -29,6 +28,7 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.ExecutionCall;
@@ -195,7 +195,7 @@ AsyncHttpClientv5MethodInterceptor1 extends AroundInterceptor {
                             if (param instanceof String) {
                                 response = SimpleHttpResponse.create(200, (String) param, request.getContentType());
                             } else {
-                                response = SimpleHttpResponse.create(200, JSONObject.toJSONBytes(param), request.getContentType());
+                                response = SimpleHttpResponse.create(200, GsonFactory.getGson().toJson(param).getBytes(), request.getContentType());
                             }
                             future.complete(response);
                             return future;

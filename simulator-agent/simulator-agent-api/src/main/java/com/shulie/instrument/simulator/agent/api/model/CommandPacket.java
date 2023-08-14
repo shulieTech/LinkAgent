@@ -14,7 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.api.model;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.Gson;
 
 import java.util.Collections;
 import java.util.Map;
@@ -32,6 +32,8 @@ public class CommandPacket extends HeartCommandPacket {
     public final static int OPERATE_TYPE_INSTALL = 1;
     public final static int OPERATE_TYPE_UNINSTALL = 2;
     public final static int OPERATE_TYPE_UPGRADE = 3;
+
+    private static final Gson gson = new Gson();
 
     /**
      * 无任何操作的命令包
@@ -135,7 +137,7 @@ public class CommandPacket extends HeartCommandPacket {
 
     public Map<String, Object> getExtras() {
         if (extras.isEmpty() && null != getExtrasString() && !"".equals(getExtrasString())){
-            extras = JSON.parseObject(getExtrasString(), Map.class);
+            extras = gson.fromJson(getExtrasString(), Map.class);
         }
         return extras;
     }

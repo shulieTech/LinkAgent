@@ -1,6 +1,6 @@
 package com.pamirs.pradar.utils;
 
-import com.alibaba.fastjson2.JSONPath;
+//import com.alibaba.fastjson2.JSONPath;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
@@ -18,9 +18,9 @@ public class ObjectMatchers {
             return new DirectObjectMatcher(matcheResult);
         } else if ("regular".equals(matcherType)) {
             return new PatternObjectMatcher(matcheResult, pattern);
-        } else if ("jsonPath".equals(matcherType)) {
+        }/* else if ("jsonPath".equals(matcherType)) {
             return new JsonPathObjectMatcher(matcheResult, pattern);
-        } else if ("reflect".equals(matcherType)) {
+        }*/ else if ("reflect".equals(matcherType)) {
             return new ReflectObjectMatcher(matcheResult, pattern);
         } else {
             throw new RuntimeException(
@@ -70,7 +70,7 @@ public class ObjectMatchers {
                     "} " + super.toString();
         }
     }
-
+/*
     private static class JsonPathObjectMatcher extends AbstractObjectMatcher implements ObjectMatcher {
 
         private final JSONPath jsonPath;
@@ -91,7 +91,7 @@ public class ObjectMatchers {
                     "jsonPath=" + jsonPath.toString() +
                     "} " + super.toString();
         }
-    }
+    }*/
 
     /**
      * 反射匹配器使用的表达式支持几种类型取值方式，

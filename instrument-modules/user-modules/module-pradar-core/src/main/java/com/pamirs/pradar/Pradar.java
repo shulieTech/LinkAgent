@@ -14,7 +14,6 @@
  */
 package com.pamirs.pradar;
 
-import com.alibaba.fastjson.JSON;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -22,6 +21,7 @@ import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
@@ -1825,7 +1825,7 @@ public final class Pradar {
 
             if (PradarService.isSilence() && Pradar.isClusterTest()) {
                 LOGGER.error("[pradar2]silence module ! can not handle cluster test data in startInvoke: {}",
-                    JSON.toJSONString(childCtx));
+                    GsonFactory.getGson().toJson(childCtx));
             }
             return childCtx;
         } catch (Throwable re) {
@@ -2031,7 +2031,7 @@ public final class Pradar {
             }
             if (PradarService.isSilence() && Pradar.isClusterTest()) {
                 LOGGER.error("[pradar]silence module ! can not handle cluster test data in startInvoke: {}",
-                    JSON.toJSONString(ctx));
+                    GsonFactory.getGson().toJson(ctx));
             }
             return ctx;
         } catch (PressureMeasureError e) {

@@ -14,13 +14,6 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import java.net.SocketTimeoutException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
@@ -28,6 +21,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -47,6 +41,11 @@ import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.params.DefaultHttpParams;
 import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.lang.StringUtils;
+
+import java.net.SocketTimeoutException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by xiaobin on 2016/12/15.
@@ -160,7 +159,7 @@ public class HttpClientv3MethodInterceptor extends TraceInterceptorAdaptor {
             new ExecutionForwardCall() {
                 @Override
                 public Object call(Object param) throws ProcessControlException {
-                    byte[] bytes = JSONObject.toJSONBytes(param);
+                    byte[] bytes = GsonFactory.getGson().toJson(param).getBytes();
                     ReflectionUtils.set(method,"responseBody", bytes);
                     ProcessController.returnImmediately(int.class, 200);
                     return true;

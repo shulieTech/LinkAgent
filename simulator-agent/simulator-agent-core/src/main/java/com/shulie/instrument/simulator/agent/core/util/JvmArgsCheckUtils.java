@@ -14,7 +14,7 @@
  */
 package com.shulie.instrument.simulator.agent.core.util;
 
-import com.alibaba.fastjson.JSON;
+import com.shulie.instrument.simulator.agent.core.gson.SimulatorGsonFactory;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 
 import java.io.File;
@@ -66,7 +66,7 @@ public class JvmArgsCheckUtils {
      * @return
      */
     public static Map<String, Object> checkJvmArgs(String jdkVersion, String inputArgs, AgentConfig agentConfig) {
-        List<String> jvmArgsList = JSON.parseObject(inputArgs, List.class);
+        List<String> jvmArgsList = SimulatorGsonFactory.getGson().fromJson(inputArgs, List.class);
         //数据解析准备
         int transmittableIndex = -1;
         int simulatorLauncherInstrumentIndex = -1;

@@ -14,14 +14,14 @@
  */
 package com.pamirs.pradar;
 
-import io.shulie.takin.pinpoint.thrift.dto.TStressTestTraceData;
-import io.shulie.takin.pinpoint.thrift.dto.TStressTestTracePayloadData;
-import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.Converter;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.json.ResultSerializer;
 import com.shulie.instrument.simulator.api.util.StringUtil;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestTraceData;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestTracePayloadData;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.IOException;
@@ -121,7 +121,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                             .ofClass(
                                     attachment.getExt().getClass()
                             ).getKey();
-                    ctx.ext = key + "@##" + JSON.toJSONString(attachment);
+                    ctx.ext = key + "@##" + GsonFactory.getGson().toJson(attachment);
                 }
                 return;
             }
@@ -157,7 +157,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                         .ofClass(
                                 attachment.getExt().getClass()
                         ).getKey();
-                ctx.ext = key + "@##" + JSON.toJSONString(ctx.ext);
+                ctx.ext = key + "@##" + GsonFactory.getGson().toJson(ctx.ext);
             }
         } catch (Throwable t) {
 
@@ -297,7 +297,7 @@ class TraceCollectorInvokeEncoder extends TraceEncoder {
                             .ofClass(
                                     attachment.getExt().getClass()
                             ).getKey();
-                    ctx.ext = key + "@##" + JSON.toJSONString(attachment);
+                    ctx.ext = key + "@##" + GsonFactory.getGson().toJson(attachment);
                 }
                 return;
             }
@@ -333,7 +333,7 @@ class TraceCollectorInvokeEncoder extends TraceEncoder {
                         .ofClass(
                                 attachment.getExt().getClass()
                         ).getKey();
-                ctx.ext = key + "@##" + JSON.toJSONString(ctx.ext);
+                ctx.ext = key + "@##" + GsonFactory.getGson().toJson(ctx.ext);
             }
         } catch (Throwable t) {
 

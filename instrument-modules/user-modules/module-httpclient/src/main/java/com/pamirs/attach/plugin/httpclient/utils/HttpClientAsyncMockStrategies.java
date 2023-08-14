@@ -1,8 +1,8 @@
 package com.pamirs.attach.plugin.httpclient.utils;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
@@ -42,7 +42,7 @@ public class HttpClientAsyncMockStrategies {
                 StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
 
                 HttpEntity entity = null;
-                entity = new StringEntity(result instanceof String ? (String) result : JSON.toJSONString(result));
+                entity = new StringEntity(result instanceof String ? (String) result : GsonFactory.getGson().toJson(result));
 
                 BasicHttpResponse response = new BasicHttpResponse(statusline);
                 response.setEntity(entity);
@@ -81,7 +81,7 @@ public class HttpClientAsyncMockStrategies {
 
                 org.apache.hc.core5.concurrent.FutureCallback<SimpleHttpResponse> futureCallback = (org.apache.hc.core5.concurrent.FutureCallback<SimpleHttpResponse>) config.getArgs().get("futureCallback");
 
-                String ret = result instanceof String ? (String) result : JSON.toJSONString(result);
+                String ret = result instanceof String ? (String) result : GsonFactory.getGson().toJson(result);
                 Pradar.mockResponse(ret);
 
                 SimpleHttpResponse response = SimpleHttpResponse.create(200, ret);

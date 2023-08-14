@@ -58,7 +58,7 @@ public final class InvokeContext extends AbstractContext implements Cloneable {
 //                    if (!Thread.currentThread().toString().equals(parentValue.getLocalAttribute("parentThread"))) {
 //                        LOGGER.warn(
 //                                "[traceDebug] ttl copy trace, but startTime is over {}ms, Thread: {},childRpcId: {}, context:{}",
-//                                l, Thread.currentThread(), parentValue.childInvokeIdx.get(), JSON.toJSONString(parentValue));
+//                                l, Thread.currentThread(), parentValue.childInvokeIdx.get(), GsonFactory.getGson().toJson(parentValue));
 //                        LOGGER.warn("stack : {}", stackToString());
 //                    }
 //                }

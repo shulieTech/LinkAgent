@@ -14,7 +14,8 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.reflect.TypeToken;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.entry.CheckerEntry;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
@@ -319,7 +320,7 @@ public class SimulatorDynamicConfig {
         if (data == null) {
             return null;
         }
-        List<CheckerEntry> list = JSON.parseArray(data, CheckerEntry.class);
+        List<CheckerEntry> list = GsonFactory.getGson().fromJson(data, new TypeToken<List<CheckerEntry>>(){}.getType());
         return parser(list);
     }
 

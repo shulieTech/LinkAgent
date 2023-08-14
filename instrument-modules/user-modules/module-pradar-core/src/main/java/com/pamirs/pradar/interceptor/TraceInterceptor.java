@@ -14,12 +14,11 @@
  */
 package com.pamirs.pradar.interceptor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
@@ -500,7 +499,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
         InvokeContext invokeContext = Pradar.getInvokeContext();
         InvokeContext adviceInvokeContext = (InvokeContext) advice.getInvokeContext();
         if (invokeContext != adviceInvokeContext) {
-            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), JSON.toJSONString(invokeContext), JSON.toJSONString(adviceInvokeContext));
+            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), GsonFactory.getGson().toJson(invokeContext), GsonFactory.getGson().toJson(adviceInvokeContext));
 
             try {
                 Pradar.setInvokeContext(adviceInvokeContext);

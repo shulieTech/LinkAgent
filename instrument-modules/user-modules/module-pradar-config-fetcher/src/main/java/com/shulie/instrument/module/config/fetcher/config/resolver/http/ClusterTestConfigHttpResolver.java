@@ -14,16 +14,15 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.config.fetcher.config.event.FIELDS;
@@ -125,7 +124,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
                 clusterTestConfig.setWhiteListSwitchOn(PradarSwitcher.whiteListSwitchOn());
                 return;
             }
-            Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
+            Map<String, Object> resultMap = GsonFactory.getGson().fromJson(httpResult.getResult(), Map.class);
             Map<String, Object> map = (Map<String, Object>) resultMap.get("data");
             if (map != null && map.get(SWITCH_STATUS) != null) {
                 String status = (String) map.get(SWITCH_STATUS);
@@ -159,7 +158,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
                         httpResult.getStatus(), httpResult.getResult(), url));
                 return;
             }
-            Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
+            Map<String, Object> resultMap = GsonFactory.getGson().fromJson(httpResult.getResult(), Map.class);
             Map<String, Object> map = (Map<String, Object>) resultMap.get("data");
             if (map != null && map.get(SWITCH_STATUS) != null) {
                 String status = (String) map.get(SWITCH_STATUS);
@@ -193,7 +192,7 @@ public class ClusterTestConfigHttpResolver extends AbstractHttpResolver<ClusterT
             param.put("applicationName", AppNameUtils.appName());
             param.put("agentId", Pradar.getAgentId(false));
             param.put("globalConf", configList);
-            HttpUtils.doPost(callbackUrl, JSON.toJSONString(param));
+            HttpUtils.doPost(callbackUrl, GsonFactory.getGson().toJson(param));
         }
     }
 

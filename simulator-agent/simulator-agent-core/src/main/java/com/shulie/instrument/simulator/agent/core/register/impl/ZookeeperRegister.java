@@ -15,8 +15,7 @@
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.Gson;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
@@ -113,12 +112,13 @@ public class ZookeeperRegister implements Register {
     private final String pid = String.valueOf(PidUtils.getPid());
     private final String name = PidUtils.getName();
     private String agentId = null;
-    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+    private static final Gson gson = new Gson();
+    private static final String inputArgs = gson.toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 
     private String jvmArgsCheck = null;
 
     private byte[] getHeartbeatDatas() {
-        jvmArgsCheck = jvmArgsCheck == null ? JSON.toJSONString(
+        jvmArgsCheck = jvmArgsCheck == null ? gson.toJson(
                 JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
 
         Map<String, String> map = new HashMap<String, String>();
@@ -149,9 +149,9 @@ public class ZookeeperRegister implements Register {
         map.put("userId", agentConfig.getUserId());
 
         //设置agent配置文件参数
-        //        map.put("agentFileConfigs", JSON.toJSONString(agentConfig.getAgentFileConfigs()));
+        //        map.put("agentFileConfigs", GsonFactory.getGson().toJson(agentConfig.getAgentFileConfigs()));
         //参数比较
-        //        map.put("agentFileConfigsCheck", JSON.toJSONString(checkConfigs()));
+        //        map.put("agentFileConfigsCheck", GsonFactory.getGson().toJson(checkConfigs()));
         map.put("jvmArgsCheck", jvmArgsCheck);
         if (!JvmArgsCheckUtils.getCheckJvmArgsStatus()) {
             agentStatus = AgentStatus.INSTALL_FAILED;
@@ -169,7 +169,7 @@ public class ZookeeperRegister implements Register {
         map.put("agentStatus", agentStatus);
         map.put("errorMsg", errorMsg.toString());
 
-        String str = JSON.toJSONString(map);
+        String str = gson.toJson(map);
 
         try {
             return str.getBytes("UTF-8");

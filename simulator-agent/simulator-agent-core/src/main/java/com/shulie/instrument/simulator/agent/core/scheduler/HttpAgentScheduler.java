@@ -14,14 +14,14 @@
  */
 package com.shulie.instrument.simulator.agent.core.scheduler;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.JsonObject;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
+import com.shulie.instrument.simulator.agent.core.gson.SimulatorGsonFactory;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
@@ -309,7 +309,7 @@ public class HttpAgentScheduler implements AgentScheduler {
         if (commandPacket == null) {
             installLocalOrRemote();
         } else {
-            logger.error("卸载命令未清除,无法安装探针,命令详情:" + JSON.toJSONString(commandPacket));
+            logger.error("卸载命令未清除,无法安装探针,命令详情:" + SimulatorGsonFactory.getGson().toJson(commandPacket));
         }
 
         startScheduler();
@@ -454,7 +454,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             preCommandExecuteResponseList = handleCommandExecuteResponse(preCommandExecuteResultsResponse);
             if (preCommandExecuteResponseList.size() > 0){
                 for (CommandExecuteResponse commandExecuteResponse : preCommandExecuteResponseList){
-                    logger.info("上报执行任务结果:{}", JSON.toJSONString(commandExecuteResponse));
+                    logger.info("上报执行任务结果:{}", SimulatorGsonFactory.getGson().toJson(commandExecuteResponse));
                 }
             }
         }
@@ -739,8 +739,8 @@ public class HttpAgentScheduler implements AgentScheduler {
             commandPacket.setExtras(extras);
             CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
             if (commandExecuteResponse.isSuccess()){
-                JSONObject jsonObject = (JSONObject) commandExecuteResponse.getResult();
-                heartRequest.setDormantStatus(jsonObject.getInteger("isSilent"));
+                JsonObject jsonObject = (JsonObject) commandExecuteResponse.getResult();
+                heartRequest.setDormantStatus(jsonObject.get("isSilent").getAsInt());
             }
     }
 

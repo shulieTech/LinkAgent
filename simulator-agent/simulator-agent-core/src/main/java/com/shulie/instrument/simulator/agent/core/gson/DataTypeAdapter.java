@@ -88,7 +88,7 @@ public class DataTypeAdapter extends TypeAdapter<Object> {
             try {
                 Field field = gson.getClass().getDeclaredField("factories");
                 field.setAccessible(true);
-                this.factories = (List<TypeAdapterFactory>) field.get(gson);
+                this.factories =  new ArrayList<>((List<TypeAdapterFactory>) field.get(gson));
             }catch (Exception e){
                 
             }

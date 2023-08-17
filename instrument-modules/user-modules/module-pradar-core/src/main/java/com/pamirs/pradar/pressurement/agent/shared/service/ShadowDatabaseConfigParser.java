@@ -204,7 +204,10 @@ public class ShadowDatabaseConfigParser {
             } else if (StringUtils.equals(entry.getKey(), "driverClassName")) {
                 shadowDatabaseConfig.setShadowDriverClassName(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "schema")) {
-                shadowDatabaseConfig.setShadowSchema(toString(entry.getValue()));
+                String schema = toString(entry.getValue());
+                if(schema != null){
+                    shadowDatabaseConfig.setShadowSchema(schema);
+                }
             } else if (StringUtils.equals(entry.getKey(), "extra")) {
                 Map<String, Object> extra = (Map)entry.getValue();
                 if (extra == null) {

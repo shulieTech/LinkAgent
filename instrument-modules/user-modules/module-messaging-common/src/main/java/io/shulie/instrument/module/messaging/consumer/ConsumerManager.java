@@ -119,7 +119,7 @@ public class ConsumerManager {
                 shadowConsumer.getShadowServer().stop();
             }
         } catch (Throwable t) {
-            logger.error("[messaging-common] release shadow consumer error, obj:{}", GsonFactory.getGson().toJson(shadowConsumer), t);
+            logger.error("[messaging-common] release shadow consumer error, obj:{}", shadowConsumer.getEnableConfigSet().iterator().next().keyOfConfig(), t);
         } finally {
             BizClassLoaderService.clearBizClassLoader();
         }
@@ -286,7 +286,7 @@ public class ConsumerManager {
                 }
             }
         } catch (Throwable e) {
-            logger.warn("start task fail,will try next time: {}", GsonFactory.getGson().toJson(consumerRegisterModule), e);
+            logger.warn("start task fail,will try next time: {}", consumerRegisterModule.getName(), e);
         }
     }
 
@@ -319,7 +319,7 @@ public class ConsumerManager {
                         stopAndClearShadowServer(shadowConsumer);
                         fetchShadowServer(shadowConsumer, configs, enableConfigSet);
                         logger.info("[messaging-common]success fetch shadowServer with config:{}", configs);
-                        doStartShadowServer(shadowConsumer);
+                        doStartShadowServer(shadowConsumer, enableConfigSet);
                         logger.info("[messaging-common]success start shadowServer with config:{}", configs);
                         shadowConsumer.setEnableConfigSet(enableConfigSet);
                     } finally {
@@ -363,11 +363,11 @@ public class ConsumerManager {
         }
     }
 
-    private static void doStartShadowServer(ShadowConsumer shadowConsumer) {
+    private static void doStartShadowServer(ShadowConsumer shadowConsumer, Set<ConsumerConfig> enableConfigSet) {
         if (!shadowConsumer.isStarted()) {
             shadowConsumer.getShadowServer().start();
         } else {
-            logger.info("shadowConsumer {} is started, will not try to start!", GsonFactory.getGson().toJson(shadowConsumer));
+            logger.info("shadowConsumer {} is started, will not try to start!", enableConfigSet.iterator().next().keyOfConfig());
         }
     }
 

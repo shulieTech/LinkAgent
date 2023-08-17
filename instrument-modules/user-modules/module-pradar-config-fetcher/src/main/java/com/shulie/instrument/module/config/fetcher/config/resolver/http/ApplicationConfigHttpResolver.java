@@ -1383,13 +1383,13 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         if (element != null && element.getAsJsonArray().size() > 0) {
             JsonArray blackList = element.getAsJsonArray();
             for (JsonElement jsonElement : blackList) {
-                Map<String, JsonArray> blackMap = GsonFactory.getGson().fromJson(jsonElement.getAsString(), new TypeToken<Map<String, JsonArray>>() {
+                Map<String, List> blackMap = GsonFactory.getGson().fromJson(jsonElement.getAsJsonObject().toString(), new TypeToken<Map<String, List>>() {
                 }.getType());
 
                 if (AppNameUtils.appName().equals(blackMap.get(APP_NAME))) {
-                    JsonArray keyObj = blackMap.get(REDIS_KEY_NEW);
-                    for (JsonElement o : keyObj) {
-                        redisKeyWhiteList.add(o.getAsString());
+                    List keyObj = blackMap.get(REDIS_KEY_NEW);
+                    for (Object o : keyObj) {
+                        redisKeyWhiteList.add(o.toString());
                     }
                 }
             }

@@ -179,7 +179,7 @@ public class ConsumerManager {
                             }
                         }
                     } catch (Throwable e) {
-                        logger.error("[messaging-common]prepare Config fail:" + GsonFactory.getGson().toJson(consumerRegisterModule.getConsumerRegister()), e);
+                        logger.error("[messaging-common]prepare Config fail:" + consumerRegisterModule.getName(), e);
                     } finally {
                         BizClassLoaderService.clearBizClassLoader();
                     }
@@ -206,7 +206,7 @@ public class ConsumerManager {
             try {
                 shadowConsumerExecute = consumerRegisterModule.getConsumerRegister().getConsumerExecuteResourceInit().init();
             } catch (Throwable e) {
-                throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + GsonFactory.getGson().toJson(consumerRegisterModule.getConsumerRegister()), e);
+                throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + consumerRegisterModule.getName(), e);
             }
             consumerRegisterModule.getSyncObjectDataMap().put(objectData, shadowConsumerExecute);
         }

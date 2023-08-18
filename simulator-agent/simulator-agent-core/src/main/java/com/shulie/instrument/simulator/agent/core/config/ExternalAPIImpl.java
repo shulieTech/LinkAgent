@@ -14,37 +14,29 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
-import java.io.File;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
-
+import com.google.gson.reflect.TypeToken;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 import com.shulie.instrument.simulator.agent.api.model.Result;
+import com.shulie.instrument.simulator.agent.core.gson.SimulatorGsonFactory;
 import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.DownloadUtils;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
-import io.shulie.takin.sdk.kafka.HttpSender;
-import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
 import io.shulie.takin.sdk.kafka.util.MessageSwitchUtil;
 import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -107,7 +99,7 @@ public class ExternalAPIImpl implements ExternalAPI {
         if (StringUtils.isNotBlank(errorMsg)) {
             body.put("errorMsg", errorMsg);
         }
-        HttpUtils.doPost(url, agentConfig.getHttpMustHeaders(), JSON.toJSONString(body));
+        HttpUtils.doPost(url, agentConfig.getHttpMustHeaders(), SimulatorGsonFactory.getGson().toJson(body));
     }
 
     @Override
@@ -147,9 +139,7 @@ public class ExternalAPIImpl implements ExternalAPI {
          * 这个地方如果服务端没有最新需要执行的命令，则建议返回空,也可以返回最后一次的命令
          */
         try {
-            Type type = new TypeReference<Result<CommandPacket>>() {
-            }.getType();
-            Result<CommandPacket> response = JSON.parseObject(resp, type);
+            Result<CommandPacket> response = SimulatorGsonFactory.getGson().fromJson(resp, new TypeToken<Result<CommandPacket>>(){}.getType());
             if (!response.isSuccess()) {
                 logger.error("fetch agent command got a fault response. resp={}", resp);
                 throw new RuntimeException(response.getError());
@@ -179,7 +169,7 @@ public class ExternalAPIImpl implements ExternalAPI {
 
         if (!MessageSwitchUtil.isKafkaSdkSwitch()) {
             HttpUtils.HttpResult resp = HttpUtils.doPost(agentHeartUrl, agentConfig.getHttpMustHeaders(),
-                    JSON.toJSONString(heartRequest));
+                    SimulatorGsonFactory.getGson().toJson(heartRequest));
 
             if (null == resp) {
                 logger.warn("AGENT: sendHeart got a err response. {}", agentHeartUrl);
@@ -191,9 +181,7 @@ public class ExternalAPIImpl implements ExternalAPI {
                 return reference.get();
             }
             try {
-                Type type = new TypeReference<Result<List<CommandPacket>>>() {
-                }.getType();
-                Result<List<CommandPacket>> response = JSON.parseObject(resp.getResult(), type);
+                Result<List<CommandPacket>> response = SimulatorGsonFactory.getGson().fromJson(resp.getResult(), new TypeToken<Result<List<CommandPacket>>>(){}.getType());
                 if (!response.isSuccess()) {
                     throw new RuntimeException(response.getError());
                 }

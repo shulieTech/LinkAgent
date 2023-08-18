@@ -14,13 +14,12 @@
  */
 package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.attach.plugin.okhttp.utils.MockReturnUtils;
 import com.pamirs.attach.plugin.okhttp.utils.RealResponseBodyUtil;
-import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
@@ -111,7 +110,7 @@ public class RealCallExecuteV3Interceptor extends TraceInterceptorAdaptor {
                             if (param instanceof String) {
                                 content = (String) param;
                             } else {
-                                content = JSONObject.toJSONString(param);
+                                content = GsonFactory.getGson().toJson(param);
                             }
                         try {
                             responseBody = RealResponseBodyUtil.buildResponseBody(content);

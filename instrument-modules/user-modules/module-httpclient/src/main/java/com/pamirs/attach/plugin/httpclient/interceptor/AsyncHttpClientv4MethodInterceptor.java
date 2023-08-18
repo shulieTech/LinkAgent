@@ -19,8 +19,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Map;
 
-import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
@@ -31,6 +29,7 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
@@ -231,7 +230,7 @@ public class AsyncHttpClientv4MethodInterceptor extends AroundInterceptor {
                         if (param instanceof String) {
                             entity = new StringEntity(String.valueOf(param));
                         } else {
-                            entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                            entity = new ByteArrayEntity(GsonFactory.getGson().toJson(param).getBytes());
                         }
                         BasicHttpResponse response = new BasicHttpResponse(statusline);
                         response.setEntity(entity);

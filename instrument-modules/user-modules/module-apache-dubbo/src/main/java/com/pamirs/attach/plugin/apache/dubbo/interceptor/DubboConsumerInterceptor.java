@@ -20,6 +20,7 @@ import com.pamirs.attach.plugin.apache.dubbo.utils.ClassTypeUtils;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -126,7 +127,7 @@ public class DubboConsumerInterceptor extends TraceInterceptorAdaptor {
                 }
             };
 
-    private static final Gson gson = new Gson();
+    private static final Gson gson = GsonFactory.getGson();
 
     private static final Object getResultByType(Class classType, String result) {
         try {

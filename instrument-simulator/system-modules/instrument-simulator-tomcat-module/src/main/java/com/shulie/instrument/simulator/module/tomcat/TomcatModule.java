@@ -14,8 +14,9 @@
  */
 package com.shulie.instrument.simulator.module.tomcat;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
@@ -43,6 +44,7 @@ public class TomcatModule extends ParamSupported implements ExtensionModule {
     private SumRateCounter tomcatErrorCounter = new SumRateCounter();
     private SumRateCounter tomcatReceivedBytesCounter = new SumRateCounter();
     private SumRateCounter tomcatSentBytesCounter = new SumRateCounter();
+    private Gson gson = new Gson();
 
     @Command(value = "info", description = "查看 tomcat 信息")
     public CommandResponse info(final Map<String, String> args) {
@@ -60,14 +62,14 @@ public class TomcatModule extends ParamSupported implements ExtensionModule {
             NetUtils.Response connectorStatResponse = NetUtils.request(connectorStatPath);
             if (connectorStatResponse.isSuccess()) {
                 List<TomcatInfo.ConnectorStats> connectorStats = new ArrayList<TomcatInfo.ConnectorStats>();
-                List<JSONObject> tomcatConnectorStats = JSON.parseArray(connectorStatResponse.getContent(), JSONObject.class);
-                for (JSONObject stat : tomcatConnectorStats) {
-                    String connectorName = stat.getString("name").replace("\"", "");
-                    long bytesReceived = stat.getLongValue("bytesReceived");
-                    long bytesSent = stat.getLongValue("bytesSent");
-                    long processingTime = stat.getLongValue("processingTime");
-                    long requestCount = stat.getLongValue("requestCount");
-                    long errorCount = stat.getLongValue("errorCount");
+                List<JsonObject> tomcatConnectorStats = gson.fromJson(connectorStatResponse.getContent(), new TypeToken<List<JsonObject>>(){}.getType());
+                for (JsonObject stat : tomcatConnectorStats) {
+                    String connectorName = stat.get("name").getAsString().replace("\"", "");
+                    long bytesReceived = stat.get("bytesReceived").getAsLong();
+                    long bytesSent = stat.get("bytesSent").getAsLong();
+                    long processingTime = stat.get("processingTime").getAsLong();
+                    long requestCount = stat.get("requestCount").getAsLong();
+                    long errorCount = stat.get("errorCount").getAsLong();
 
                     tomcatRequestCounter.update(requestCount);
                     tomcatErrorCounter.update(errorCount);
@@ -95,11 +97,11 @@ public class TomcatModule extends ParamSupported implements ExtensionModule {
             NetUtils.Response threadPoolResponse = NetUtils.request(threadPoolPath);
             if (threadPoolResponse.isSuccess()) {
                 List<TomcatInfo.ThreadPool> threadPools = new ArrayList<TomcatInfo.ThreadPool>();
-                List<JSONObject> threadPoolInfos = JSON.parseArray(threadPoolResponse.getContent(), JSONObject.class);
-                for (JSONObject info : threadPoolInfos) {
-                    String name = info.getString("name").replace("\"", "");
-                    long busy = info.getLongValue("threadBusy");
-                    long total = info.getLongValue("threadCount");
+                List<JsonObject> threadPoolInfos = gson.fromJson(threadPoolResponse.getContent(), new TypeToken<List<JsonObject>>(){}.getType());
+                for (JsonObject info : threadPoolInfos) {
+                    String name = info.get("name").getAsString().replace("\"", "");
+                    long busy = info.get("threadBusy").getAsLong();
+                    long total = info.get("threadCount").getAsLong();
                     threadPools.add(new TomcatInfo.ThreadPool(name, busy, total));
                 }
                 tomcatInfo.setThreadPools(threadPools);

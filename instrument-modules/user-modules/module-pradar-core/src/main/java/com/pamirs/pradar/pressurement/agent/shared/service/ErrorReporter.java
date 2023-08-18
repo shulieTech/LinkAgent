@@ -14,7 +14,6 @@
  */
 package com.pamirs.pradar.pressurement.agent.shared.service;
 
-import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.HashBasedTable;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
@@ -22,6 +21,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.FormatUtils;
 import com.pamirs.pradar.debug.DebugHelper;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.utils.MD5Util;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -118,7 +118,7 @@ public class ErrorReporter {
         private String detail;
 
         /**
-         * 异常细节
+         * 异常时间
          */
         private String occurTime;
 
@@ -189,7 +189,7 @@ public class ErrorReporter {
             errorReportPojo.setOccurTime(occurTime);
             errorReportPojo.setDetail(detail);
             errorReportPojo.setMessage(message);
-            return JSON.toJSONString(errorReportPojo);
+            return GsonFactory.getGson().toJson(errorReportPojo);
         }
 
         public void report() {
@@ -240,7 +240,7 @@ public class ErrorReporter {
     private static boolean checkIfEnableReport(Error error) {
         String errorCode = error.errorCode;
         // 缓存数量超过1000个,清空
-        if(reportCache.cellSet().size() > 1000){
+        if (reportCache.cellSet().size() > 1000) {
             reportCache.clear();
         }
 

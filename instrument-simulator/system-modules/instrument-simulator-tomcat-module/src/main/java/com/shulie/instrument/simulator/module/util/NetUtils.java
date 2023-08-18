@@ -14,6 +14,9 @@
  */
 package com.shulie.instrument.simulator.module.util;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,9 +25,6 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 
 /**
  * @author ralf0131 on 2015-11-11 15:39.
@@ -60,9 +60,9 @@ public class NetUtils {
             int statusCode = urlConnection.getResponseCode();
             String result = sb.toString().trim();
             if (statusCode == INTERNAL_SERVER_ERROR) {
-                JSONObject errorObj = JSON.parseObject(result);
-                if (errorObj.containsKey("errorMsg")) {
-                    return new Response(errorObj.getString("errorMsg"), false);
+                JsonObject errorObj = new Gson().fromJson(result, JsonObject.class);
+                if (errorObj.has("errorMsg")) {
+                    return new Response(errorObj.get("errorMsg").getAsString(), false);
                 }
                 return new Response(result, false);
             }
@@ -105,9 +105,9 @@ public class NetUtils {
             }
             String result = sb.toString().trim();
             if (responseCode == 500) {
-                JSONObject errorObj = JSON.parseObject(result);
-                if (errorObj.containsKey("errorMsg")) {
-                    return errorObj.getString("errorMsg");
+                JsonObject errorObj = new Gson().fromJson(result, JsonObject.class);
+                if (errorObj.has("errorMsg")) {
+                    return errorObj.get("errorMsg").getAsString();
                 }
                 return result;
             } else {

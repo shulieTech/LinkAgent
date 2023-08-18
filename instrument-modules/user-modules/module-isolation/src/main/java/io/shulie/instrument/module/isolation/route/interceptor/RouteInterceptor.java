@@ -1,9 +1,9 @@
 package io.shulie.instrument.module.isolation.route.interceptor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import io.shulie.instrument.module.isolation.proxy.ShadowProxy;
@@ -37,7 +37,7 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
                         , parameterArray == null ? null : Arrays.copyOf(parameterArray, parameterArray.length));
                 return CutOffResult.cutoff(res);
             } catch (Throwable t) {
-                logger.error("execute shadow proxy fail: {}", JSON.toJSONString(this.shadowProxy), t);
+                logger.error("execute shadow proxy fail: {}", GsonFactory.getGson().toJson(this.shadowProxy), t);
                 throw new PressureMeasureError("execute shadow proxy fail", t);
             }
         }

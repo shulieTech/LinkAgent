@@ -14,11 +14,11 @@
  */
 package com.pamirs.attach.plugin.okhttp.v3.interceptor;
 
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.attach.plugin.okhttp.utils.MockReturnUtils;
 import com.pamirs.attach.plugin.okhttp.utils.RealResponseBodyUtil;
 import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
@@ -28,13 +28,14 @@ import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
-import okhttp3.*;
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.Protocol;
+import okhttp3.Response;
 import okhttp3.internal.http.RealResponseBody;
-import okio.Buffer;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -86,7 +87,7 @@ public class RealCallEnqueueV3Interceptor extends TraceInterceptorAdaptor {
                 if (param instanceof String) {
                     content = (String) param;
                 } else {
-                    content = JSONObject.toJSONString(param);
+                    content = GsonFactory.getGson().toJson(param);
                 }
                 try {
                     responseBody = RealResponseBodyUtil.buildResponseBody(content);

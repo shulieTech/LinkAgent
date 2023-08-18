@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.async.http.client.plugin.utils;
 
-import com.alibaba.fastjson.JSON;
+import com.pamirs.pradar.gson.GsonFactory;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.cookie.Cookie;
 import org.asynchttpclient.Response;
@@ -33,7 +33,7 @@ public class DefaultAsyncResponse implements Response {
 
     @Override
     public byte[] getResponseBodyAsBytes() {
-        return result instanceof String ? ((String) result).getBytes() : JSON.toJSONBytes(result);
+        return result instanceof String ? ((String) result).getBytes() : GsonFactory.getGson().toJson(result).getBytes();
     }
 
     @Override
@@ -43,17 +43,17 @@ public class DefaultAsyncResponse implements Response {
 
     @Override
     public InputStream getResponseBodyAsStream() {
-        return new ByteArrayInputStream(result instanceof String ? ((String) result).getBytes() : JSON.toJSONBytes(result));
+        return new ByteArrayInputStream(result instanceof String ? ((String) result).getBytes() : GsonFactory.getGson().toJson(result).getBytes());
     }
 
     @Override
     public String getResponseBody(Charset charset) {
-        return result instanceof String ? (String) result : JSON.toJSONString(result);
+        return result instanceof String ? (String) result : GsonFactory.getGson().toJson(result);
     }
 
     @Override
     public String getResponseBody() {
-        return result instanceof String ? (String) result : JSON.toJSONString(result);
+        return result instanceof String ? (String) result : GsonFactory.getGson().toJson(result);
     }
 
     @Override

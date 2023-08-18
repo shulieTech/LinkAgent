@@ -14,12 +14,13 @@
  */
 package com.shulie.instrument.module.config.fetcher.config.resolver.http;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.*;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
@@ -52,7 +53,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.Map.Entry;
@@ -402,20 +402,20 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return Collections.EMPTY_SET;
             }
 
-            JSONObject dataMap = JSON.parseObject(httpResult.getResult());
-            JSONArray mapList = dataMap.getJSONArray(DATA);
-            if (mapList == null || mapList.isEmpty()) {
+            JsonObject response = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+            JsonArray mapList = response.get(DATA).getAsJsonArray();
+            if (mapList == null || mapList.size() == 0) {
                 return Collections.EMPTY_SET;
             }
 
             Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
-            for (Object obj : mapList) {
-                Map<String, Object> map = (Map<String, Object>) obj;
+            for (JsonElement element : mapList) {
+                JsonObject map = element.getAsJsonObject();
                 //禁用状态不拉取配置
-                if (map.containsKey("isEnable") && "false".equals(String.valueOf(map.get("isEnable")))) {
+                if (map.has("isEnable") && "false".equals(map.get("isEnable").getAsString())) {
                     continue;
                 }
-                String methodInfo = (String) map.get("methodInfo");
+                String methodInfo = map.get("methodInfo").getAsString();
                 if (StringUtils.isBlank(methodInfo)) {
                     continue;
                 }
@@ -440,7 +440,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     continue;
                 }
 
-                String script = (String) map.get("groovy");
+                String script = map.get("groovy").getAsString();
 
                 MockConfig mockConfig = new MockConfig();
                 mockConfig.setClassName(StringUtils.trim(classMethod[0]));
@@ -498,8 +498,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return Boolean.FALSE;
             }
 
-            JSONObject dataMap = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean) dataMap.get("success");
+            JsonObject dataMap = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+            Boolean success = dataMap.get("success").getAsBoolean();
             if (!success) {
                 logger.error("[pradar] get shadow consumer config from server with a fault response.");
                 ErrorReporter.buildError()
@@ -511,17 +511,18 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
 
-            JSONArray mapList = dataMap.getJSONArray(DATA);
-            if (mapList == null || mapList.isEmpty()) {
+            JsonArray mapList = dataMap.get(DATA).getAsJsonArray();
+            if (mapList == null || !mapList.iterator().hasNext()) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("SIMULATOR: [FetchConfig] get shadow consumer config size is null. ");
                 }
                 return Boolean.TRUE;
             }
 
-            for (int i = 0; i < mapList.size(); i++) {
-                JSONObject stringObjectMap = (JSONObject) mapList.get(i);
-                Map<String, List<String>> topicGroups = (Map<String, List<String>>) stringObjectMap.get("topicGroups");
+            for (JsonElement element : mapList) {
+                JsonObject stringObjectMap = element.getAsJsonObject();
+                Map<String, List<String>> topicGroups = GsonFactory.getGson().fromJson(stringObjectMap.get("topicGroups").toString(), new TypeToken<Map<String, List<String>>>() {
+                }.getType());
                 Set<Entry<String, List<String>>> entries = topicGroups.entrySet();
                 Set<String> mqList = applicationConfig.getMqList();
                 if (mqList == null) {
@@ -672,21 +673,20 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
     private boolean loadPluginConfig(final StringBuilder url,
                                      ApplicationConfig applicationConfig) {
         final HttpUtils.HttpResult httpResult = HttpUtils.doGet(url.toString());
-        if (!httpResult.isSuccess() || !JSON.parseObject(httpResult.getResult()).getBoolean("success")) {
-            logger.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url, JSON.toJSONString(httpResult));
+        if (!httpResult.isSuccess() || !GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class).get("success").getAsBoolean()) {
+            logger.error("[pradar] pull plugin configs error,url:{},httpResult:{}", url, GsonFactory.getGson().toJson(httpResult));
             ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.AgentError)
                     .setErrorCode("agent-0004")
                     .setMessage("获取插件配置列表失败")
-                    .setDetail(String.format("获取插件配置列表失败,接口返回值为:%s", JSON.toJSONString(httpResult)))
+                    .setDetail(String.format("获取插件配置列表失败,接口返回值为:%s", GsonFactory.getGson().toJson(httpResult)))
                     .report();
             return false;
         }
 
-        JSONObject dataMap = JSON.parseObject(httpResult.getResult());
-
+        JsonObject jsonObject = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
         try {
-            Float maxRedisExpireTime = dataMap.getFloat(DATA);
+            Float maxRedisExpireTime = jsonObject.get(DATA).getAsFloat();
             if (maxRedisExpireTime != null) {
                 applicationConfig.setPluginMaxRedisExpireTime(maxRedisExpireTime);
             }
@@ -714,8 +714,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 response = httpResult.getResult();
             }
             Map<String, ShadowEsServerConfig> shadowEsConfigMap = new HashMap<String, ShadowEsServerConfig>();
-            JSONObject res = JSON.parseObject(response);
-            Boolean success = (Boolean) res.get("success");
+
+            JsonObject jsonObject = GsonFactory.getGson().fromJson(response, JsonObject.class);
+            Boolean success = jsonObject.get("success").getAsBoolean();
             if (!success) {
                 logger.error("[pradar] get es shadow config from server with a fault response. url={}, result={}",
                         accessUrl, response);
@@ -727,18 +728,18 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return;
             }
-            JSONArray datas = res.getJSONArray(DATA);
+            JsonArray datas = jsonObject.get(DATA).getAsJsonArray();
             if (datas == null || datas.size() == 0) {
                 GlobalConfig.getInstance().setShadowEsServer(Boolean.FALSE);
                 return;
             }
-            for (Object object : datas) {
-                JSONObject data = (JSONObject) object;
+            for (JsonElement object : datas) {
+                JsonObject data = object.getAsJsonObject();
                 if (0 != Long.parseLong(data.get("status").toString())) {
                     continue;
                 }
-                String config = (String) data.get("config");
-                JSONObject configMap = JSON.parseObject(config);
+                String config = data.get("config").getAsString();
+                Map configMap = GsonFactory.getGson().fromJson(config, Map.class);
                 String businessNodes = (String) configMap.get("businessNodes");
                 String performanceTestNodes = (String) configMap.get("performanceTestNodes");
                 Object biz_cluster_name = configMap.get("businessClusterName");
@@ -782,9 +783,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             //没有配置默认为影子表
             Map<String, ShadowRedisConfig> shadowRedisConfigMap = new HashMap<String, ShadowRedisConfig>();
             //解析装入内存
-            JSONObject result = JSON.parseObject(httpResult.getResult());
-
-            Boolean success = result.getBoolean("success");
+            JsonObject result = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+            Boolean success = result.get("success").getAsBoolean();
             if (!success) {
                 logger.error("SIMULATOR: get redis shadow config from server with a fault response. url={}, result={}",
                         builder.toString(), httpResult.getResult());
@@ -797,20 +797,17 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return;
             }
 
-            Type type = new TypeReference<List<Map>>() {
-            }.getType();
-            List<Map> datas = result.getObject(DATA, type);
-
-            if (datas == null || datas.size() == 0) {
+            JsonArray jsonArray = result.get(DATA).getAsJsonArray();
+            if (jsonArray == null || jsonArray.size() == 0) {
                 GlobalConfig.getInstance().setShadowDbRedisServer(false);
                 return;
             }
-            for (Map data : datas) {
-                if (data.get("dataSourceBusiness") == null
-                        || data.get("dataSourceBusinessPerformanceTest") == null) {
+            for (JsonElement element : jsonArray) {
+                JsonObject data = element.getAsJsonObject();
+                if (data.get("dataSourceBusiness") == null || data.get("dataSourceBusinessPerformanceTest") == null) {
                     continue;
                 }
-                Map business = (Map) data.get("dataSourceBusiness");
+                Map business = GsonFactory.getGson().fromJson(data.get("dataSourceBusiness").getAsString(), Map.class);
                 StringBuilder keyBuilder = new StringBuilder();
                 if (notEmpty(business.get("master"))) {
                     String businessMaster = (String) business.get("master");
@@ -820,7 +817,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 String nodes = (String) business.get("nodes");
                 keyBuilder.append(nodes);
 
-                Map dataSourceBusinessPerformanceTest = (Map) data.get("dataSourceBusinessPerformanceTest");
+                Map dataSourceBusinessPerformanceTest = GsonFactory.getGson().fromJson(data.get("dataSourceBusinessPerformanceTest").getAsString(), Map.class);
                 ShadowRedisConfig config = new ShadowRedisConfig();
 
                 config.setShadowAccountPrefix(
@@ -885,7 +882,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             param.put("appName", AppNameUtils.appName());
             param.put("size", appInfo.getAppDetails().size() + "");
             final HttpUtils.HttpResult httpResult = HttpUtils.doPost(uploadAppInfoUrl.toString(),
-                    JSON.toJSONString(param));
+                    GsonFactory.getGson().toJson(param));
             if (!httpResult.isSuccess()) {
                 logger.warn("SIMULATOR: upload app info error. status: {}, result: {}", httpResult.getStatus(),
                         httpResult.getResult());
@@ -894,7 +891,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             if (httpResult.getResult() != null && (httpResult.getResult().contains("data=true")
                     || httpResult.getResult().contains("data:true"))) {
                 final StringBuilder url2 = new StringBuilder(troWebUrl).append(UPLOAD_APP_INFO);
-                HttpUtils.HttpResult httpResult1 = HttpUtils.doPost(url2.toString(), JSON.toJSONString(appInfo));
+                HttpUtils.HttpResult httpResult1 = HttpUtils.doPost(url2.toString(), GsonFactory.getGson().toJson(appInfo));
                 if (!httpResult1.isSuccess()) {
                     logger.warn("上传应用信息失败: {}", httpResult1.getResult());
                 }
@@ -924,16 +921,16 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         params.put("projectName", AppNameUtils.appName());
         params.put("version", getSimulatorVersion());
         params.put("effectMechanism", "1");//动态参数
-        HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
+        HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), GsonFactory.getGson().toJson(params));
         if (!httpResult.isSuccess()) {
             logger.error("获取控制台动态配置信息失败 url={}, result={}", url, httpResult.getResult());
             return;
         }
-        Map<String, String> configs = JSON.parseObject(httpResult.getResult(), Map.class);
+        Map<String, String> configs = GsonFactory.getGson().fromJson(httpResult.getResult(), Map.class);
         if (configs != null && configs.get("data") != null) {
             // 中止拉app配置时不更新
             if (!SimulatorDynamicConfig.isAbortPollingAppConfig()) {
-                GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(JSONObject.parseObject(JSON.toJSONString(configs.get("data")), Map.class)));
+                GlobalConfig.getInstance().setSimulatorDynamicConfig(new SimulatorDynamicConfig(GsonFactory.getGson().fromJson(GsonFactory.getGson().toJson(configs.get("data")), Map.class)));
             }
         } else {
             logger.error("获取探针动态参数异常");
@@ -952,7 +949,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             Map<String, Set<String>> register = new HashMap<String, Set<String>>();
             register.put(AppNameUtils.appName(), apis);
             final String url = new StringBuilder(troWeb).append(REGISTER_URL).toString();
-            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url, JSON.toJSONString(register));
+            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url, GsonFactory.getGson().toJson(register));
             uploadEntranceRule = httpResult.isSuccess();
         }
     }
@@ -974,14 +971,14 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         result.put("switchErrorMap", errorList);
         final StringBuilder url = new StringBuilder(troWeb).append(UPLOAD_ACCESS_STATUS);
         try {
-            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(result));
+            HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), GsonFactory.getGson().toJson(result));
             if (!httpResult.isSuccess()) {
                 logger.warn("上传应用接入状态失败. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
-                        JSON.toJSONString(result));
+                        GsonFactory.getGson().toJson(result));
             } else {
                 if (isInfoEnabled) {
                     logger.info("上传应用接入状态成功. url={}, result={}, param={}", url.toString(), httpResult.getResult(),
-                            JSON.toJSONString(result));
+                            GsonFactory.getGson().toJson(result));
                 }
             }
             // TODO 存在一个隐患，去除了清空内存中异常信息，改为agent全量发送异常数据
@@ -1042,7 +1039,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 params.put("id", shaDowJob.getId());
                 params.put("active", shaDowJob.getActive());
                 params.put("message", shaDowJob.getErrorMessage());
-                HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), JSON.toJSONString(params));
+                HttpUtils.HttpResult httpResult = HttpUtils.doPost(url.toString(), GsonFactory.getGson().toJson(params));
                 if (!httpResult.isSuccess()) {
                     logger.warn("上报错误的影子 job 失败. url={}, result={}", url, httpResult.getResult());
                 }
@@ -1076,8 +1073,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
 
-            JSONObject map = JSON.parseObject(httpResult.getResult());
-            Boolean success = map.getBoolean("success");
+            JsonObject map = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+            Boolean success = map.get("success").getAsBoolean();
             if (!success) {
                 logger.error(
                         "SIMULATOR: [FetchConfig] get trace regular rules config from server with a fault response. "
@@ -1091,7 +1088,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return false;
             }
-            Map<String, List<String>> data = map.getObject(DATA, new TypeReference<Map<String, List<String>>>() {
+            Map<String, List<String>> data = GsonFactory.getGson().fromJson(map.get(DATA).toString(), new TypeToken<Map<String, List<String>>>() {
             }.getType());
             if (data != null) {
                 Set<String> sets = new HashSet<String>();
@@ -1142,8 +1139,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
 
-            Map map = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean) map.get("success");
+            JsonObject jsonObject = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+            Boolean success = jsonObject.get("success").getAsBoolean();
             if (!success) {
                 logger.error(
                         "SIMULATOR: [FetchConfig] get shadow datasource config from server with a fault response. url={},"
@@ -1157,7 +1154,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return false;
             }
-            List<Map> data = (List<Map>) map.get(DATA);
+
+            List<Map> data = GsonFactory.getGson().fromJson(jsonObject.get(DATA).toString(), new TypeToken<List<Map>>() {
+            }.getType());
             if (null != data && !data.isEmpty()) {
                 for (Map datum : data) {
                     ShadowJob shaDowJob = new ShadowJob();
@@ -1165,7 +1164,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                     shaDowJob.setActive(Integer.valueOf(NumberFormat.getInstance().format(datum.get("active"))));
                     shaDowJob.setClassName((String) datum.get("name"));
                     shaDowJob.setStatus(NumberFormat.getInstance().format(datum.get("status")));
-                    Map<String, Object> configCode = JSON.parseObject(String.valueOf(datum.get("configCode")));
+
+                    Map<String, Object> configCode = GsonFactory.getGson().fromJson(String.valueOf(datum.get("configCode")), Map.class);
                     shaDowJob.setCron(configCode.get("cron") == null ? null : configCode.get("cron").toString());
                     shaDowJob.setFixedDelay(configCode.get("fixedDelay") == null ? null
                             : Long.parseLong(configCode.get("fixedDelay").toString()));
@@ -1234,8 +1234,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return false;
             }
-            Map<String, Object> resultMap = JSON.parseObject(httpResult.getResult());
-            Boolean success = (Boolean) resultMap.get("success");
+            JsonObject resultMap = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+            Boolean success = resultMap.get("success").getAsBoolean();
             if (!success) {
                 logger.warn(
                         "SIMULATOR: [FetchConfig] get shadow job config from server with a fault response. url={}, "
@@ -1251,7 +1251,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
 
-            if (!resultMap.containsKey("data")) {
+            if (!resultMap.has("data")) {
                 logger.error(
                         "SIMULATOR: get shadow db config with a err response. can't found attributes data from response. "
                                 + "url={}, status={}, result={}"
@@ -1266,7 +1266,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
             List<Map<String, Object>> dataMapList = null;
             try {
-                dataMapList = (List<Map<String, Object>>) resultMap.get("data");
+                dataMapList = GsonFactory.getGson().fromJson(resultMap.get(DATA).toString(), new TypeToken<List<Map<String, Object>>>() {
+                }.getType());
             } catch (Throwable e) {
                 logger.error(
                         "SIMULATOR: get shadow db config with a err response. can't convert attributes data to map from "
@@ -1374,52 +1375,58 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         final Set<String> blockList = new HashSet<String>();
         final Set<String> searchWhiteList = new HashSet<String>();
 
-        JSONObject dataMap = JSON.parseObject(httpResult.getResult());
-        JSONObject dataObj = dataMap.getJSONObject(DATA);
+        JsonObject dataMap = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
+        JsonObject dataObj = dataMap.get(DATA).getAsJsonObject();
 
         //按应用分的黑名单
-        List<Object> blackList = (List<Object>) dataObj.get(B_LISTS);
-        if (CollectionUtils.isNotEmpty(blackList)) {
-            for (int i = 0; i < blackList.size(); i++) {
-                Map<String, Object> blackMap = (Map<String, Object>) blackList.get(i);
+        JsonElement element = dataObj.get(B_LISTS);
+        if (element != null && element.getAsJsonArray().size() > 0) {
+            JsonArray blackList = element.getAsJsonArray();
+            for (JsonElement jsonElement : blackList) {
+                Map<String, List> blackMap = GsonFactory.getGson().fromJson(jsonElement.getAsJsonObject().toString(), new TypeToken<Map<String, List>>() {
+                }.getType());
+
                 if (AppNameUtils.appName().equals(blackMap.get(APP_NAME))) {
-                    Object keyObj = blackMap.get(REDIS_KEY_NEW);
-                    for (Object o : ((JSONArray) keyObj)) {
-                        redisKeyWhiteList.add(String.valueOf(o));
+                    List keyObj = blackMap.get(REDIS_KEY_NEW);
+                    for (Object o : keyObj) {
+                        redisKeyWhiteList.add(o.toString());
                     }
                 }
             }
         }
-        final JSONArray whitelist = dataObj.getJSONArray(W_LISTS);
-        for (int i = 0; i < whitelist.size(); i++) {
-            final JSONObject jsonObject1 = whitelist.getJSONObject(i);
-            final String name = StringUtils.trim(jsonObject1.getString(INTERFACE_NAME));
-            final String type = jsonObject1.getString(TYPE2);
-            final String checkType = jsonObject1.getString(TYPE3);
+        element = dataObj.get(W_LISTS);
+        if (element != null && element.getAsJsonArray().size() > 0) {
+            JsonArray whitelist = element.getAsJsonArray();
+            for (JsonElement jsonElement : whitelist) {
+                final JsonObject jsonObject1 = jsonElement.getAsJsonObject();
+                final String name = StringUtils.trim(jsonObject1.get(INTERFACE_NAME).getAsString());
+                final String type = jsonObject1.get(TYPE2).getAsString();
+                final String checkType = jsonObject1.get(TYPE3).getAsString();
 
-            if (HTTP.equals(type)) {
-                if (name.startsWith("mq:")) {
-                    mqList.add(name.substring(3));
-                } else if (name.startsWith("rabbitmq:")) {
-                    mqList.add(name.substring(9));
-                } else if (name.startsWith("search:")) {
-                    searchWhiteList.add(name.substring(7));
-                } else {
+                if (HTTP.equals(type)) {
+                    if (name.startsWith("mq:")) {
+                        mqList.add(name.substring(3));
+                    } else if (name.startsWith("rabbitmq:")) {
+                        mqList.add(name.substring(9));
+                    } else if (name.startsWith("search:")) {
+                        searchWhiteList.add(name.substring(7));
+                    } else {
+                        MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
+                        urlWarList.add(matchConfig);
+                    }
+                } else if (DUBBO.equals(type) || FEIGN.equals(type)) {
                     MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
-                    urlWarList.add(matchConfig);
+                    rpcClassMethodName.add(matchConfig);
+                } else if (RPC.equals(type) || GRPC.equals(type)) {
+                    MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
+                    rpcClassMethodName.add(matchConfig);
+                } else if (MQ.equals(type)) {
+                    mqList.add(name);
+                } else if (SEARCH.equals(type)) {
+                    searchWhiteList.add(name);
+                } else if ("block".equals(type)) {
+                    blockList.add(name);
                 }
-            } else if (DUBBO.equals(type) || FEIGN.equals(type)) {
-                MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
-                rpcClassMethodName.add(matchConfig);
-            } else if (RPC.equals(type) || GRPC.equals(type)) {
-                MatchConfig matchConfig = getMatchConfig(checkType, name, jsonObject1);
-                rpcClassMethodName.add(matchConfig);
-            } else if (MQ.equals(type)) {
-                mqList.add(name);
-            } else if (SEARCH.equals(type)) {
-                searchWhiteList.add(name);
-            } else if ("block".equals(type)) {
-                blockList.add(name);
             }
         }
         applicationConfig.setUrlWhiteList(urlWarList);
@@ -1431,18 +1438,18 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
         return true;
     }
 
-    public MatchConfig getMatchConfig(String type, String value, JSONObject jsonObject) {
+    public MatchConfig getMatchConfig(String type, String value, JsonObject jsonObject) {
         MatchConfig config = new MatchConfig();
         if (OperateType.mock.name().equals(type)) {
-            String content = jsonObject.getString(MOCK_CONTENT);
+            String content = jsonObject.get(MOCK_CONTENT).getAsString();
             config.setScriptContent(content);
             config.setStrategy(mockStrategy);
         } else if (OperateType.forward.name().equals(type)) {
-            String url = jsonObject.getString(FORWARD_URL);
+            String url = jsonObject.get(FORWARD_URL).getAsString();
             config.setForwarding(url);
             config.setStrategy(forwardStrategy);
         } else if (OperateType.fix_mock.name().equals(type)) {
-            String content = jsonObject.getString(MOCK_CONTENT);
+            String content = jsonObject.get(MOCK_CONTENT).getAsString();
             config.setScriptContent(content);
             config.setStrategy(jsonMockStrategy);
         } else {
@@ -1502,8 +1509,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return false;
             }
-            Map<String, Object> resultMap = JSONObject.parseObject(result.getResult());
-            Boolean success = (Boolean) resultMap.get("success");
+            JsonObject resultMap = GsonFactory.getGson().fromJson(result.getResult(), JsonObject.class);
+            Boolean success = resultMap.get("success").getAsBoolean();
             if (!success) {
                 String error = resultMap.get("error") == null ? "" : resultMap.get("error").toString();
                 ErrorReporter.buildError()
@@ -1515,7 +1522,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
 
-            if (!resultMap.containsKey("data")) {
+            if (!resultMap.has("data")) {
                 logger.error(
                         "[pradar] get shadow hbase config with a err response. can't found attributes data from response."
                                 + " url={}",
@@ -1530,7 +1537,8 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
             List<Map<String, Object>> dataMapList = null;
             try {
-                dataMapList = (List<Map<String, Object>>) resultMap.get("data");
+                dataMapList = GsonFactory.getGson().fromJson(resultMap.get(DATA).toString(), new TypeToken<List<Map<String, Object>>>() {
+                }.getType());
             } catch (Exception e) {
                 logger.error(
                         "[pradar] get shadow hbase config with a err response. can't convert attributes data to map from "
@@ -1549,7 +1557,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 Map<String, ShadowHbaseConfig> shadowHbaseConfigMap = new HashMap<String, ShadowHbaseConfig>();
 
                 for (Map<String, Object> map : dataMapList) {
-                    Map<String, Object> configMap = JSONObject.parseObject((String) map.get("config"));
+                    Map<String, Object> configMap = GsonFactory.getGson().fromJson((String) map.get("config"), Map.class);
                     if (configMap != null) {
                         Map<String, Object> business = (Map<String, Object>) configMap.get("dataSourceBusiness");
                         Map<String, Object> performance = (Map<String, Object>) configMap.get(
@@ -1563,7 +1571,6 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 }
                 if (shadowHbaseConfigMap.size() > 0) {
                     GlobalConfig.getInstance().setShadowHbaseServer(true);
-                    ;
                 }
 
                 applicationConfig.setShadowHbaseConfigs(shadowHbaseConfigMap);

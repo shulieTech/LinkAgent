@@ -1,6 +1,5 @@
 package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.constants.JdbcTypeEnum;
@@ -10,6 +9,7 @@ import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcDataSourceFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.JdbcTypeFetcher;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.ConfigPreCheckResult;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.datasource.util.DbUrlUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
@@ -177,7 +177,7 @@ public class JdbcPreCheckCommandProcessor {
     private static void ackWithBizTableNotExists(Set<String> infoTables, List<String> checkTables, ConfigPreCheckResult result) {
         checkTables.removeAll(infoTables);
         LOGGER.error("[shadow-preparation] shadow datasource config check failed, shadow table not exists: ", checkTables);
-        String msg = String.format("业务表:%s不存在", JSON.toJSONString(checkTables));
+        String msg = String.format("业务表:%s不存在", GsonFactory.getGson().toJson(checkTables));
         result.setSuccess(false);
         result.setErrorMsg(msg);
     }

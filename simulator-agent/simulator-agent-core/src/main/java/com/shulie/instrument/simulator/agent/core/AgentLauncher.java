@@ -15,13 +15,12 @@
 package com.shulie.instrument.simulator.agent.core;
 
 import cn.hutool.crypto.SecureUtil;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.core.classloader.FrameworkClassLoader;
 import com.shulie.instrument.simulator.agent.core.download.FtpOperationClient;
 import com.shulie.instrument.simulator.agent.core.download.OssOperationClient;
+import com.shulie.instrument.simulator.agent.core.gson.SimulatorGsonFactory;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.response.Response;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
@@ -219,7 +218,7 @@ public class AgentLauncher {
             if (HeartCommandConstants.PATH_TYPE_LOCAL_VALUE != (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)) {
                 int path = (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY);
                 String salt = (String) startCommand.getPacket().getExtra(HeartCommandConstants.SALT_KEY);
-                Map<String, Object> context = JSON.parseObject((String) startCommand.getPacket().getExtras().get("context"), Map.class);
+                Map<String, Object> context = SimulatorGsonFactory.getGson().fromJson((String) startCommand.getPacket().getExtras().get("context"), Map.class);
                 String upgradeBatch = (String) startCommand.getPacket().getExtra(HeartCommandConstants.UPGRADE_BATCH_KEY);
                 //清除残留的旧包
                 UpgradeFileUtils.clearOldUpgradeFileTempFile(upgradeBatch);
@@ -477,7 +476,7 @@ public class AgentLauncher {
             }
 
 
-            Response response = JSON.parseObject(content.getResult(), Response.class);
+            Response response = SimulatorGsonFactory.getGson().fromJson(content.getResult(), Response.class);
 
             if (logger.isInfoEnabled()) {
                 logger.info("commandModule successful from path={}.", moduleId);
@@ -524,7 +523,7 @@ public class AgentLauncher {
                         "AGENT: unload module err. got empty content from unload api url, path=" + moduleId);
             }
 
-            Response response = JSON.parseObject(content, Response.class);
+            Response response = SimulatorGsonFactory.getGson().fromJson(content, Response.class);
             if (response.isSuccess()) {
                 if (logger.isInfoEnabled()) {
                     logger.info("load module successful from path={}.", moduleId);
@@ -563,7 +562,7 @@ public class AgentLauncher {
                         "AGENT: unload module err. got empty content from unload api url, moduleId=" + moduleId);
             }
 
-            Response response = JSON.parseObject(content, Response.class);
+            Response response = SimulatorGsonFactory.getGson().fromJson(content, Response.class);
             if (response.isSuccess()) {
                 if (logger.isInfoEnabled()) {
                     logger.info("unload module successful {}.", moduleId);
@@ -604,7 +603,7 @@ public class AgentLauncher {
                         "AGENT: reload module err. got empty content from reload api url, moduleId=" + moduleId);
             }
 
-            Response response = JSON.parseObject(content, Response.class);
+            Response response = SimulatorGsonFactory.getGson().fromJson(content, Response.class);
             if (response.isSuccess()) {
                 if (logger.isInfoEnabled()) {
                     logger.info("reload module successful {}.", moduleId);
@@ -698,7 +697,7 @@ public class AgentLauncher {
                 return;
             }
 
-            Response response = JSON.parseObject(content, Response.class);
+            Response response = SimulatorGsonFactory.getGson().fromJson(content, Response.class);
             if (response.isSuccess()) {
                 while (true) {
                     /**

@@ -1,9 +1,9 @@
 package com.pamirs.attach.plugin.jdk.http.interceptor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
 import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
@@ -56,7 +56,7 @@ public class HttpURLConnectionGetInputStreamInterceptor extends HttpURLConnectio
             if (result.getClass().isAssignableFrom(InputStream.class)) {
                 ProcessController.returnImmediately(result);
             }
-            ProcessController.returnImmediately(new ByteArrayInputStream(JSON.toJSONBytes(result)));
+            ProcessController.returnImmediately(new ByteArrayInputStream(GsonFactory.getGson().toJson(result).getBytes()));
             return null;
         }
     };

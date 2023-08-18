@@ -14,9 +14,9 @@
  */
 package com.shulie.instrument.simulator.perf;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.CommandResponse;
@@ -149,7 +149,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     private void push(final PerfResponse response) {
         final String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
         MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
-        messageSendService.send(PUSH_URL, HttpUtils.getHttpMustHeaders(), JSON.toJSONString(response), new MessageSendCallBack() {
+        messageSendService.send(PUSH_URL, HttpUtils.getHttpMustHeaders(), GsonFactory.getGson().toJson(response), new MessageSendCallBack() {
             @Override
             public void success() {
             }
@@ -161,7 +161,7 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         }, new HttpSender() {
             @Override
             public void sendMessage() {
-                HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, JSON.toJSONString(response));
+                HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, GsonFactory.getGson().toJson(response));
                 //TODO
                 if (!result.isSuccess()) {
                     logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());

@@ -1,11 +1,11 @@
 package com.pamirs.attach.plugin.shadow.preparation.command.processor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.CommandExecuteResult;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
+import com.pamirs.attach.plugin.shadow.preparation.commons.CommandAck;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.attach.plugin.shadow.preparation.mongo.MongoClientsFetcher;
-import com.pamirs.attach.plugin.shadow.preparation.commons.CommandAck;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.agent.event.impl.preparation.ShadowMongoPreCheckEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
+import static com.pamirs.pradar.gson.GsonFactory.getGson;
 
 public class MongoPreCheckCommandProcessor {
 
@@ -33,7 +35,7 @@ public class MongoPreCheckCommandProcessor {
             LOGGER.error("[shadow-preparation] can`t find business mongo client object instance for url:{}", bizDataSource.getUrl());
             result.setSuccess(false);
             result.setResponse("mongodb业务数据源没有对象实例,请先发业务流量触发业务数据源实例化");
-            ack.setResponse(JSON.toJSONString(result));
+            ack.setResponse(getGson().toJson(result));
             callback.accept(ack);
             return;
         }
@@ -46,7 +48,7 @@ public class MongoPreCheckCommandProcessor {
             LOGGER.error("[shadow-preparation] illegal shadow type:{} for url:{}", dsType, bizDataSource.getUrl());
             result.setSuccess(false);
             result.setResponse("隔离类型不合法,只能为 0，1，2，3");
-            ack.setResponse(JSON.toJSONString(result));
+            ack.setResponse(GsonFactory.getGson().toJson(result));
             callback.accept(ack);
             return;
         }
@@ -55,7 +57,7 @@ public class MongoPreCheckCommandProcessor {
             LOGGER.error("[shadow-preparation] ds type :{} must assign shadow tables", dsType);
             result.setSuccess(false);
             result.setResponse("隔离类型为影子表时必须指定业务表名称");
-            ack.setResponse(JSON.toJSONString(result));
+            ack.setResponse(GsonFactory.getGson().toJson(result));
             callback.accept(ack);
             return;
         }
@@ -64,7 +66,7 @@ public class MongoPreCheckCommandProcessor {
             LOGGER.error("[shadow-preparation] ds type :{} must assign shadow url", dsType);
             result.setSuccess(false);
             result.setResponse("隔离类型为影子库或影子库影子表时必须指定影子url");
-            ack.setResponse(JSON.toJSONString(result));
+            ack.setResponse(GsonFactory.getGson().toJson(result));
             callback.accept(ack);
             return;
         }
@@ -81,7 +83,7 @@ public class MongoPreCheckCommandProcessor {
             }
             result.setSuccess("success".equals(event.getResult()));
             result.setResponse(event.getResult());
-            ack.setResponse(JSON.toJSONString(result));
+            ack.setResponse(GsonFactory.getGson().toJson(result));
             callback.accept(ack);
         } catch (InterruptedException e) {
             LOGGER.error("[shadow-preparation] wait for mongo precheck processing occur exception", e);

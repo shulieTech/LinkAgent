@@ -1,6 +1,5 @@
 package com.pamirs.attach.plugin.shadow.preparation.checker;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.shadow.preparation.command.JdbcPreCheckCommand;
 import com.pamirs.attach.plugin.shadow.preparation.command.processor.JdbcPreCheckCommandProcessor;
 import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.ConfigPreCheckResult;
@@ -8,6 +7,7 @@ import com.pamirs.attach.plugin.shadow.preparation.jdbc.entity.DataSourceEntity;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -84,7 +83,7 @@ public class ShadowDataSourceConfigChecker {
         }
 
         String basePath = "/api/link/ds/configs/check";
-        String messageBody = JSON.toJSONString(resultList);
+        String messageBody = GsonFactory.getGson().toJson(resultList);
 
         service.send(basePath, HttpUtils.getHttpMustHeaders(), messageBody,
                 new MessageSendCallBack() {

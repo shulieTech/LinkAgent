@@ -1,9 +1,9 @@
 package io.shulie.instrument.module.messaging.consumer;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.bean.SyncObject;
 import com.pamirs.pradar.bean.SyncObjectData;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.SilenceSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
@@ -119,7 +119,7 @@ public class ConsumerManager {
                 shadowConsumer.getShadowServer().stop();
             }
         } catch (Throwable t) {
-            logger.error("[messaging-common] release shadow consumer error, obj:{}", JSON.toJSONString(shadowConsumer), t);
+            logger.error("[messaging-common] release shadow consumer error, obj:{}", shadowConsumer.getEnableConfigSet().iterator().next().keyOfConfig(), t);
         } finally {
             BizClassLoaderService.clearBizClassLoader();
         }
@@ -179,7 +179,7 @@ public class ConsumerManager {
                             }
                         }
                     } catch (Throwable e) {
-                        logger.error("[messaging-common]prepare Config fail:" + JSON.toJSONString(consumerRegisterModule.getConsumerRegister()), e);
+                        logger.error("[messaging-common]prepare Config fail:" + consumerRegisterModule.getName(), e);
                     } finally {
                         BizClassLoaderService.clearBizClassLoader();
                     }
@@ -206,7 +206,7 @@ public class ConsumerManager {
             try {
                 shadowConsumerExecute = consumerRegisterModule.getConsumerRegister().getConsumerExecuteResourceInit().init();
             } catch (Throwable e) {
-                throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + JSON.toJSONString(consumerRegisterModule.getConsumerRegister()), e);
+                throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + consumerRegisterModule.getName(), e);
             }
             consumerRegisterModule.getSyncObjectDataMap().put(objectData, shadowConsumerExecute);
         }
@@ -286,7 +286,7 @@ public class ConsumerManager {
                 }
             }
         } catch (Throwable e) {
-            logger.warn("start task fail,will try next time: {}", JSON.toJSONString(consumerRegisterModule), e);
+            logger.warn("start task fail,will try next time: {}", consumerRegisterModule.getName(), e);
         }
     }
 
@@ -319,7 +319,7 @@ public class ConsumerManager {
                         stopAndClearShadowServer(shadowConsumer);
                         fetchShadowServer(shadowConsumer, configs, enableConfigSet);
                         logger.info("[messaging-common]success fetch shadowServer with config:{}", configs);
-                        doStartShadowServer(shadowConsumer);
+                        doStartShadowServer(shadowConsumer, enableConfigSet);
                         logger.info("[messaging-common]success start shadowServer with config:{}", configs);
                         shadowConsumer.setEnableConfigSet(enableConfigSet);
                     } finally {
@@ -363,11 +363,11 @@ public class ConsumerManager {
         }
     }
 
-    private static void doStartShadowServer(ShadowConsumer shadowConsumer) {
+    private static void doStartShadowServer(ShadowConsumer shadowConsumer, Set<ConsumerConfig> enableConfigSet) {
         if (!shadowConsumer.isStarted()) {
             shadowConsumer.getShadowServer().start();
         } else {
-            logger.info("shadowConsumer {} is started, will not try to start!", JSON.toJSONString(shadowConsumer));
+            logger.info("shadowConsumer {} is started, will not try to start!", enableConfigSet.iterator().next().keyOfConfig());
         }
     }
 

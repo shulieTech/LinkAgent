@@ -1,14 +1,11 @@
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.Gson;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
-import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
 import com.shulie.instrument.simulator.agent.core.util.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import io.shulie.takin.sdk.kafka.HttpSender;
-import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
 import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
@@ -16,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,8 +20,6 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KafkaRegister implements Register {
     private final static Logger LOGGER = LoggerFactory.getLogger(KafkaRegister.class.getName());
@@ -47,6 +41,8 @@ public class KafkaRegister implements Register {
 
     private AgentConfig agentConfig;
 
+    private static Gson gson = new Gson();
+
     public KafkaRegister(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
     }
@@ -54,12 +50,12 @@ public class KafkaRegister implements Register {
     private final String pid = String.valueOf(PidUtils.getPid());
     private final String name = PidUtils.getName();
     private String agentId = null;
-    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+    private static final String inputArgs = gson.toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 
     private String jvmArgsCheck = null;
 
     private Map<String, String> getHeartbeatDatas() {
-        jvmArgsCheck = jvmArgsCheck == null ? JSON.toJSONString(
+        jvmArgsCheck = jvmArgsCheck == null ? gson.toJson(
                 JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
 
         Map<String, String> map = new HashMap<String, String>();
@@ -90,9 +86,9 @@ public class KafkaRegister implements Register {
         map.put("userId", agentConfig.getUserId());
 
         //设置agent配置文件参数
-        //        map.put("agentFileConfigs", JSON.toJSONString(agentConfig.getAgentFileConfigs()));
+        //        map.put("agentFileConfigs", GsonFactory.getGson().toJson(agentConfig.getAgentFileConfigs()));
         //参数比较
-        //        map.put("agentFileConfigsCheck", JSON.toJSONString(checkConfigs()));
+        //        map.put("agentFileConfigsCheck", GsonFactory.getGson().toJson(checkConfigs()));
         map.put("jvmArgsCheck", jvmArgsCheck);
         if (!JvmArgsCheckUtils.getCheckJvmArgsStatus()) {
             agentStatus = AgentStatus.INSTALL_FAILED;
@@ -205,7 +201,7 @@ public class KafkaRegister implements Register {
 //            public void run() {
 //                Map<String, String> heartbeatDatas = getHeartbeatDatas();
 //                heartbeatDatas.put("appName", appName);
-////                messageSendService.send(basePath, new HashMap<String, String>(), JSON.toJSONString(heartbeatDatas), new MessageSendCallBack() {
+////                messageSendService.send(basePath, new HashMap<String, String>(), GsonFactory.getGson().toJson(heartbeatDatas), new MessageSendCallBack() {
 ////                    @Override
 ////                    public void success() {
 ////                    }

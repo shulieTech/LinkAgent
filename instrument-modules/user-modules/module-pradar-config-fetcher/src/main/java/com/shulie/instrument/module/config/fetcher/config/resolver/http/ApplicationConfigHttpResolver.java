@@ -403,7 +403,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
             }
 
             JsonObject response = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
-            JsonArray mapList = response.get(DATA).getAsJsonArray();
+            JsonElement elements = response.get(DATA);
+            if (elements == null) {
+                return Collections.EMPTY_SET;
+            }
+            JsonArray mapList = elements.getAsJsonArray();
             if (mapList == null || mapList.size() == 0) {
                 return Collections.EMPTY_SET;
             }
@@ -510,8 +514,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return false;
             }
-
-            JsonArray mapList = dataMap.get(DATA).getAsJsonArray();
+            JsonElement elements = dataMap.get(DATA);
+            if (elements == null) {
+                return Boolean.TRUE;
+            }
+            JsonArray mapList = elements.getAsJsonArray();
             if (mapList == null || !mapList.iterator().hasNext()) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("SIMULATOR: [FetchConfig] get shadow consumer config size is null. ");
@@ -728,7 +735,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return;
             }
-            JsonArray datas = jsonObject.get(DATA).getAsJsonArray();
+            JsonElement jsonElement = jsonObject.get(DATA);
+            if (jsonElement == null) {
+                return;
+            }
+            JsonArray datas = jsonElement.getAsJsonArray();
             if (datas == null || datas.size() == 0) {
                 GlobalConfig.getInstance().setShadowEsServer(Boolean.FALSE);
                 return;
@@ -796,8 +807,11 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                         .report();
                 return;
             }
-
-            JsonArray jsonArray = result.get(DATA).getAsJsonArray();
+            JsonElement elements = result.get(DATA);
+            if (elements == null) {
+                return;
+            }
+            JsonArray jsonArray = elements.getAsJsonArray();
             if (jsonArray == null || jsonArray.size() == 0) {
                 GlobalConfig.getInstance().setShadowDbRedisServer(false);
                 return;

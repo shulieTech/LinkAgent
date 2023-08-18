@@ -155,6 +155,13 @@
         </dependency>
         <!-- #################################### 在线升级探针功能废弃 #################################### -->
 
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

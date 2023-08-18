@@ -14,9 +14,8 @@ public class GsonFactory {
     private static volatile Gson gson;
 
     static {
+        GSON_BUILDER.setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE);
         GSON_BUILDER.registerTypeAdapter(Date.class, new FastjsonDateToGsonTypeAdapter());
-        List<TypeAdapterFactory> factories = ReflectionUtils.get(GSON_BUILDER, "factories");
-        factories.add(new ObjectTypeAdapterFactory(Object.class, new DataTypeAdapter()));
         gson = GSON_BUILDER.create();
     }
 

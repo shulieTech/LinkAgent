@@ -14,8 +14,6 @@
  */
 package com.shulie.instrument.module.pradar.core;
 
-import javax.annotation.Resource;
-
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
@@ -24,7 +22,10 @@ import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.degrade.CombineResourceLimitDegradeDetect;
 import com.pamirs.pradar.degrade.action.ReduceSamplingRateDegradeAction;
 import com.pamirs.pradar.degrade.action.SilenceDegradeAction;
-import com.pamirs.pradar.degrade.resources.*;
+import com.pamirs.pradar.degrade.resources.ContainerCpuUsageResourceDetector;
+import com.pamirs.pradar.degrade.resources.CpuUsageResourceDetector;
+import com.pamirs.pradar.degrade.resources.LoadResourceDetector;
+import com.pamirs.pradar.degrade.resources.MemoryResourceDetector;
 import com.pamirs.pradar.internal.GlobalConfigService;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
@@ -52,6 +53,8 @@ import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Resource;
+
 /**
  * 用于公共依赖的模块
  * 需要在module.config文件中指定要导出的包列表, 给其他的模块依赖
@@ -74,7 +77,6 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
-
         ClusterTestUtils.initSimulatorConfig(simulatorConfig);
         //将simulator home路径和plugin相关的配置全部导入到system property中
         String home = simulatorConfig.getSimulatorHome();

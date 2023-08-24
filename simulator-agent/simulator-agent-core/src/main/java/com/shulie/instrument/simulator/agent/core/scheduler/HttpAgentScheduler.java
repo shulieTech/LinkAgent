@@ -739,8 +739,8 @@ public class HttpAgentScheduler implements AgentScheduler {
             commandPacket.setExtras(extras);
             CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
             if (commandExecuteResponse.isSuccess()){
-                JsonObject jsonObject = (JsonObject) commandExecuteResponse.getResult();
-                heartRequest.setDormantStatus(jsonObject.get("isSilent").getAsInt());
+                Map<String,Object> jsonObject = (Map<String, Object>) commandExecuteResponse.getResult();
+                heartRequest.setDormantStatus(Integer.parseInt(jsonObject.get("isSilent").toString()));
             }
     }
 

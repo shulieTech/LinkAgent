@@ -404,7 +404,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
             JsonObject response = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
             JsonElement elements = response.get(DATA);
-            if (elements == null) {
+            if (elements == null && elements.isJsonNull()) {
                 return Collections.EMPTY_SET;
             }
             JsonArray mapList = elements.getAsJsonArray();
@@ -515,7 +515,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return false;
             }
             JsonElement elements = dataMap.get(DATA);
-            if (elements == null) {
+            if (elements == null || elements.isJsonNull()) {
                 return Boolean.TRUE;
             }
             JsonArray mapList = elements.getAsJsonArray();
@@ -736,7 +736,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return;
             }
             JsonElement jsonElement = jsonObject.get(DATA);
-            if (jsonElement == null) {
+            if (jsonElement == null || jsonElement.isJsonNull()) {
                 return;
             }
             JsonArray datas = jsonElement.getAsJsonArray();
@@ -808,7 +808,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
                 return;
             }
             JsonElement elements = result.get(DATA);
-            if (elements == null) {
+            if (elements == null || elements.isJsonNull()) {
                 return;
             }
             JsonArray jsonArray = elements.getAsJsonArray();
@@ -1394,7 +1394,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         //按应用分的黑名单
         JsonElement element = dataObj.get(B_LISTS);
-        if (element != null && element.getAsJsonArray().size() > 0) {
+        if (element != null && !element.isJsonNull() && element.getAsJsonArray().size() > 0) {
             JsonArray blackList = element.getAsJsonArray();
             for (JsonElement jsonElement : blackList) {
                 Map<String, Object> blackMap = GsonFactory.getGson().fromJson(jsonElement.getAsJsonObject().toString(), new TypeToken<Map<String, Object>>() {
@@ -1402,7 +1402,7 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
                 if (AppNameUtils.appName().equals(blackMap.get(APP_NAME))) {
                     Object keyObj = blackMap.get(REDIS_KEY_NEW);
-                    for (Object o : (List)keyObj) {
+                    for (Object o : (List) keyObj) {
                         redisKeyWhiteList.add(o.toString());
                     }
                 }

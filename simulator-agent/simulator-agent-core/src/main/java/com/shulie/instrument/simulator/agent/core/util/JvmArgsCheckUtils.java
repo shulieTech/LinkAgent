@@ -70,7 +70,6 @@ public class JvmArgsCheckUtils {
         //数据解析准备
         int transmittableIndex = -1;
         int simulatorLauncherInstrumentIndex = -1;
-        int maxJavaagentIndex = -1;
         int minJavaagentIndex = -2;
         boolean skyWalkingExists = false;
         boolean skyWalkingCompatibleArgsExists = false;//skywalking兼容参数
@@ -80,22 +79,23 @@ public class JvmArgsCheckUtils {
         boolean useUseParallelGC = false;
         boolean useSurvivorRatio = false;
         boolean useAdaptiveSizePolicy = false;
+        boolean delayAgent = false;
         String toolsJarPath = null;
+        List<Integer> agentIndex = new ArrayList<>();
         for (int i = 0; i < jvmArgsList.size(); i++) {
             String arg = jvmArgsList.get(i);
             if (arg.contains("transmittable-thread-local")) {
                 transmittableIndex = i;
+                agentIndex.add(i);
             } else if (arg.contains("-javaagent")) {
                 minJavaagentIndex = i;
                 if (arg.contains("simulator-launcher-instrument.jar")) {
                     simulatorLauncherInstrumentIndex = i;
                 }
-                if (maxJavaagentIndex == -1) {
-                    maxJavaagentIndex = i;
-                }
                 if (arg.contains("skywalking")) {
                     skyWalkingExists = true;
                 }
+                agentIndex.add(i);
             } else if (arg.contains("PermSize")) {
                 permSizeValue = arg;
             } else if (arg.contains("MaxMetaspaceSize")) {
@@ -113,11 +113,14 @@ public class JvmArgsCheckUtils {
             } else if (arg.contains("skywalking.agent.is_cache_enhanced_class")
                     || arg.contains("skywalking.agent.class_cache_mode")) {
                 skyWalkingCompatibleArgsExists = true;
+            } else if (arg.contains("simulator.delay")) {
+                String delay = arg.substring(arg.indexOf("=") + 1);
+                delayAgent = !"0".endsWith(delay.trim());
             }
         }
         Map<String, String> result = new HashMap<String, String>();
         //1、校验     * 1、transmittable-thread-local-2.10.2.jar参数是否放在所有agent参数前校验
-        boolean transmittableResult = transmittableCheck(result, transmittableIndex, maxJavaagentIndex);
+        boolean transmittableResult = transmittableCheck(result, transmittableIndex, delayAgent, simulatorLauncherInstrumentIndex, new ArrayList<>(agentIndex));
         //2     * 2、JDK7及以下参数是否配置-XX:PermSize=256M -XX:MaxPermSize=512M校验，参数值大小暂不校验
         boolean permSizeValueCheckResult = permSizeValueCheck(result, jdkVersion, permSizeValue);
         //3       * 3、JDK8及以上参数是否配置-XX:MetaspaceSize=256M -XX:MaxMetaspaceSize=256M参数，
@@ -133,8 +136,11 @@ public class JvmArgsCheckUtils {
         //6     * 7、-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar参数校验，包是否存在（tro端校验）
 //        boolean checkToolsJarPathResult = checkToolsJarPath(result, toolsJarPath);
         //7.-javaagent:/Users/angju/Downloads/deploy-agent/simulator-agent/simulator-launcher-instrument.jar 需要放在最后
-        boolean checkSimulatorLauncherInstrumentResult = checkSimulatorLauncherInstrument(result,
-                simulatorLauncherInstrumentIndex, minJavaagentIndex);
+        boolean checkSimulatorLauncherInstrumentResult = false;
+        if (!delayAgent) {
+            checkSimulatorLauncherInstrumentResult = checkSimulatorLauncherInstrument(result,
+                    simulatorLauncherInstrumentIndex, minJavaagentIndex);
+        }
 
         Map<String, Object> r = new HashMap<String, Object>(2, 1);
         if (skipJvmArgsCheck(agentConfig) || (transmittableResult && permSizeValueCheckResult && metaspaceSizeValueCheckResult
@@ -258,13 +264,16 @@ public class JvmArgsCheckUtils {
         return true;
     }
 
-    private static boolean transmittableCheck(Map<String, String> result, int transmittableIndex,
-                                              int maxJavaagentIndex) {
+    private static boolean transmittableCheck(Map<String, String> result, int transmittableIndex, boolean delayAgent, Integer simulatorLauncherInstrumentIndex, List<Integer> agentIndex) {
         if (transmittableIndex == -1) {
             result.put(JvmArgsConstants.transmittableCheckCode, JvmArgsConstants.transmittableCheckErrorMsg_1);
             return false;
         }
-        if (transmittableIndex > maxJavaagentIndex) {
+        // -Dsimulator.delay=0, 当有延迟时探针参数顺序可以随意
+        if (delayAgent) {
+            agentIndex.remove(simulatorLauncherInstrumentIndex);
+        }
+        if (transmittableIndex > agentIndex.get(0)) {
             result.put(JvmArgsConstants.transmittableCheckCode, JvmArgsConstants.transmittableCheckErrorMsg_2);
             return false;
         }

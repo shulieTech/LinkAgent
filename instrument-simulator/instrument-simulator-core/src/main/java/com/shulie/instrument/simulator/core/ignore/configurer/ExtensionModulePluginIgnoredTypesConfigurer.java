@@ -199,5 +199,10 @@ public class ExtensionModulePluginIgnoredTypesConfigurer implements IgnoredTypes
                 .allowClass("com.zto.consumer.KafkaConsumerProxy")
                 .allowClass("org.springframework.context.support.AbstractRefreshableApplicationContext")
                 .allowClass("org.springframework.context.support.ApplicationContextAwareProcessor");
+
+        //ots
+        builder.ignoreClass("com.alicloud.openservices.tablestore")
+                .allowClass("com.alicloud.openservices.tablestore.InternalClient")
+                .allowClass("com.alicloud.openservices.tablestore.core.LauncherFactory");
     }
 }

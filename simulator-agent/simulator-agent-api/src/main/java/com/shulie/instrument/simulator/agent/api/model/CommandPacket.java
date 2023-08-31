@@ -15,8 +15,11 @@
 package com.shulie.instrument.simulator.agent.api.model;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -33,7 +36,7 @@ public class CommandPacket extends HeartCommandPacket {
     public final static int OPERATE_TYPE_UNINSTALL = 2;
     public final static int OPERATE_TYPE_UPGRADE = 3;
 
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     /**
      * 无任何操作的命令包

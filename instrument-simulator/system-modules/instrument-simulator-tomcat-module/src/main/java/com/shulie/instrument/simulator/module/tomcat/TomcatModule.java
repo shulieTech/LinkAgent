@@ -15,7 +15,9 @@
 package com.shulie.instrument.simulator.module.tomcat;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.ToNumberPolicy;
 import com.google.gson.reflect.TypeToken;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -44,7 +46,7 @@ public class TomcatModule extends ParamSupported implements ExtensionModule {
     private SumRateCounter tomcatErrorCounter = new SumRateCounter();
     private SumRateCounter tomcatReceivedBytesCounter = new SumRateCounter();
     private SumRateCounter tomcatSentBytesCounter = new SumRateCounter();
-    private Gson gson = new Gson();
+    private Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     @Command(value = "info", description = "查看 tomcat 信息")
     public CommandResponse info(final Map<String, String> args) {

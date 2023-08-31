@@ -16,6 +16,8 @@ package com.shulie.instrument.simulator.agent.core.register.impl;
 
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
@@ -112,7 +114,7 @@ public class ZookeeperRegister implements Register {
     private final String pid = String.valueOf(PidUtils.getPid());
     private final String name = PidUtils.getName();
     private String agentId = null;
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
     private static final String inputArgs = gson.toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 
     private String jvmArgsCheck = null;

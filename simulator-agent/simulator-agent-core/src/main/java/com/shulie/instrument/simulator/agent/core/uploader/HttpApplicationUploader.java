@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.shulie.instrument.simulator.agent.core.util.HttpUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
 import io.shulie.takin.sdk.kafka.HttpSender;
@@ -49,7 +51,7 @@ public class HttpApplicationUploader implements ApplicationUploader {
     private static final String APP_COLUMN_CACHE_PATH = "cacheScriptPath";
     private static final String CLUSTER_NAME = "clusterName";
 
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     public HttpApplicationUploader(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;

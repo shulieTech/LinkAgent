@@ -37,8 +37,13 @@ public abstract class ReflectionUtils {
     public static <T> T invoke(Object target, String methodName, Object... args) {
         Class[] paramTypes = new Class[args.length];
         for (int i = 0; i < args.length; i++) {
-            Assert.notNull(args[i], "reflect invoke method args cant has null elements");
-            paramTypes[i] = args[i].getClass();
+            if (args[i] == null) {
+                paramTypes[i] = NULL.class;
+            } else if (args[i] instanceof Class) {
+                paramTypes[i] = (Class) args[i];
+            } else {
+                paramTypes[i] = args[i].getClass();
+            }
         }
         Method method = findMethod(target.getClass(), methodName, paramTypes);
         return (T) invokeMethod(method, target, args);

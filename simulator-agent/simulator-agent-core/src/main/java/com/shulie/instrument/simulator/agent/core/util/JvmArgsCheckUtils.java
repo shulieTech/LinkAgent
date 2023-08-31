@@ -136,11 +136,7 @@ public class JvmArgsCheckUtils {
         //6     * 7、-Xbootclasspath/a:$JAVA_HOME/lib/tools.jar参数校验，包是否存在（tro端校验）
 //        boolean checkToolsJarPathResult = checkToolsJarPath(result, toolsJarPath);
         //7.-javaagent:/Users/angju/Downloads/deploy-agent/simulator-agent/simulator-launcher-instrument.jar 需要放在最后
-        boolean checkSimulatorLauncherInstrumentResult = false;
-        if (!delayAgent) {
-            checkSimulatorLauncherInstrumentResult = checkSimulatorLauncherInstrument(result,
-                    simulatorLauncherInstrumentIndex, minJavaagentIndex);
-        }
+        boolean checkSimulatorLauncherInstrumentResult = delayAgent ? true : checkSimulatorLauncherInstrument(result, simulatorLauncherInstrumentIndex, minJavaagentIndex);
 
         Map<String, Object> r = new HashMap<String, Object>(2, 1);
         if (skipJvmArgsCheck(agentConfig) || (transmittableResult && permSizeValueCheckResult && metaspaceSizeValueCheckResult

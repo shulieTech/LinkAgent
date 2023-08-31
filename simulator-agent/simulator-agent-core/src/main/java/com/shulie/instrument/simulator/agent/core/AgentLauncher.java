@@ -215,8 +215,8 @@ public class AgentLauncher {
              }
              } **/
             //拉取升级包的代码
-            if (HeartCommandConstants.PATH_TYPE_LOCAL_VALUE != (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)) {
-                int path = (Integer) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY);
+            if (HeartCommandConstants.PATH_TYPE_LOCAL_VALUE != (Long) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)) {
+                int path = ((Long) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)).intValue();
                 String salt = (String) startCommand.getPacket().getExtra(HeartCommandConstants.SALT_KEY);
                 Map<String, Object> context = SimulatorGsonFactory.getGson().fromJson((String) startCommand.getPacket().getExtras().get("context"), Map.class);
                 String upgradeBatch = (String) startCommand.getPacket().getExtra(HeartCommandConstants.UPGRADE_BATCH_KEY);

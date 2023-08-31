@@ -1,6 +1,8 @@
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
@@ -41,7 +43,7 @@ public class KafkaRegister implements Register {
 
     private AgentConfig agentConfig;
 
-    private static Gson gson = new Gson();
+    private static Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     public KafkaRegister(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;

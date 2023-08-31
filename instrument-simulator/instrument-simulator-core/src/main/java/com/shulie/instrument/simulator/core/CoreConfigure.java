@@ -18,6 +18,8 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.google.gson.reflect.TypeToken;
 import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.core.util.FeatureCodec;
@@ -112,6 +114,7 @@ public class CoreConfigure {
 
     private final Map<String, String> featureMap = new LinkedHashMap<String, String>();
 
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     private final Map<String, String> simulatorFileConfigs = new LinkedHashMap<String, String>();
     private final Map<String, String> agentFileConfigs = new LinkedHashMap<String, String>();
@@ -317,7 +320,7 @@ public class CoreConfigure {
         if (StringUtils.isBlank(result)) {
             throw new RuntimeException("SIMULATOR: can't get app properties config from url:" + propertiesUrl);
         }
-        return new Gson().fromJson(result, new TypeToken<Map<String, String>>() {}.getType());
+        return gson.fromJson(result, new TypeToken<Map<String, String>>() {}.getType());
     }
 
     private Map<String, String> toFilePropertiesMap(String propertiesFilePath) {

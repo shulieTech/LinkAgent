@@ -15,7 +15,9 @@
 package com.shulie.instrument.simulator.module.util;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.ToNumberPolicy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,6 +37,8 @@ public class NetUtils {
     private static final int QOS_PORT = 12201;
     private static final String QOS_RESPONSE_START_LINE = "pandora>[QOS Response]";
     private static final int INTERNAL_SERVER_ERROR = 500;
+
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     /**
      * This implementation is based on Apache HttpClient.
@@ -60,7 +64,7 @@ public class NetUtils {
             int statusCode = urlConnection.getResponseCode();
             String result = sb.toString().trim();
             if (statusCode == INTERNAL_SERVER_ERROR) {
-                JsonObject errorObj = new Gson().fromJson(result, JsonObject.class);
+                JsonObject errorObj = gson.fromJson(result, JsonObject.class);
                 if (errorObj.has("errorMsg")) {
                     return new Response(errorObj.get("errorMsg").getAsString(), false);
                 }
@@ -105,7 +109,7 @@ public class NetUtils {
             }
             String result = sb.toString().trim();
             if (responseCode == 500) {
-                JsonObject errorObj = new Gson().fromJson(result, JsonObject.class);
+                JsonObject errorObj = gson.fromJson(result, JsonObject.class);
                 if (errorObj.has("errorMsg")) {
                     return errorObj.get("errorMsg").getAsString();
                 }

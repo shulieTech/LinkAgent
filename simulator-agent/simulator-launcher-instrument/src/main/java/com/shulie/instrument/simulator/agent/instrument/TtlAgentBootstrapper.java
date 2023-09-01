@@ -47,8 +47,8 @@ public class TtlAgentBootstrapper {
             ttlPremain.invoke(null, featureString, instrumentation);
             System.setProperty("TtlAgent_internal_bootstrapped", "true");
         } catch (Throwable t) {
-            t.printStackTrace();
             System.err.println("[Simulator-Agent]: bootstrap ttl agent internal failed");
+            t.printStackTrace();
             System.exit(1);
         }
     }

@@ -80,7 +80,6 @@ public class JvmArgsCheckUtils {
         boolean useSurvivorRatio = false;
         boolean useAdaptiveSizePolicy = false;
         boolean delayAgent = false;
-        String toolsJarPath = null;
         List<Integer> agentIndex = new ArrayList<>();
         for (int i = 0; i < jvmArgsList.size(); i++) {
             String arg = jvmArgsList.get(i);
@@ -109,7 +108,6 @@ public class JvmArgsCheckUtils {
             } else if (arg.contains("UseAdaptiveSizePolicy")) {
                 useAdaptiveSizePolicy = true;
             } else if (arg.contains("tools.jar")) {
-                toolsJarPath = arg;
             } else if (arg.contains("skywalking.agent.is_cache_enhanced_class")
                     || arg.contains("skywalking.agent.class_cache_mode")) {
                 skyWalkingCompatibleArgsExists = true;
@@ -119,8 +117,10 @@ public class JvmArgsCheckUtils {
             }
         }
         Map<String, String> result = new HashMap<String, String>();
+        // 是否已经在内部启动了ttl探针
+        boolean hasBootstrappedTtlAgent = "true".endsWith(System.getProperty("TtlAgent_internal_bootstrapped"));
         //1、校验     * 1、transmittable-thread-local-2.10.2.jar参数是否放在所有agent参数前校验
-        boolean transmittableResult = transmittableCheck(result, transmittableIndex, delayAgent, simulatorLauncherInstrumentIndex, new ArrayList<>(agentIndex));
+        boolean transmittableResult = hasBootstrappedTtlAgent ? true : transmittableCheck(result, transmittableIndex, delayAgent, simulatorLauncherInstrumentIndex, new ArrayList<>(agentIndex));
         //2     * 2、JDK7及以下参数是否配置-XX:PermSize=256M -XX:MaxPermSize=512M校验，参数值大小暂不校验
         boolean permSizeValueCheckResult = permSizeValueCheck(result, jdkVersion, permSizeValue);
         //3       * 3、JDK8及以上参数是否配置-XX:MetaspaceSize=256M -XX:MaxMetaspaceSize=256M参数，

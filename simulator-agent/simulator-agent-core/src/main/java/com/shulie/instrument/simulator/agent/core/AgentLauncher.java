@@ -193,63 +193,6 @@ public class AgentLauncher {
             if (HeartCommandConstants.startCommandId != startCommand.getPacket().getId()) {
                 throw new IllegalArgumentException("startCommand commandId is wrong " + startCommand.getPacket().getId());
             }
-            //TODO 安装卸载的代码 暂时去掉，和在线升级的功能类似
-            /**
-             if (!startCommand.getPacket().isUseLocal()) {
-             File file = new File(agentConfig.getSimulatorHome());
-             File f = DownloadUtils.download(startCommand.getPacket().getDataPath(), file.getAbsolutePath() + "_tmp",
-             agentConfig.getHttpMustHeaders());
-             if (file.exists()) {
-             FileUtils.delete(file);
-             }
-             f.renameTo(file);
-             }
-             if (!new File(agentConfig.getAgentJarPath()).exists()) {
-             if (startCommand.getPacket().isUseLocal()) {
-             logger.warn("AGENT: launch on agent failed. agent jar file is not found. ");
-             AgentStatus.uninstall();
-             return;
-             } else {
-             logger.error("AGENT: launch on agent err. agent jar file is not found. ");
-             throw new RuntimeException("AGENT: launch on agent err. agent jar file is not found.");
-             }
-             } **/
-            //拉取升级包的代码
-            if (HeartCommandConstants.PATH_TYPE_LOCAL_VALUE != (Long) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)) {
-                int path = ((Long) startCommand.getPacket().getExtras().get(HeartCommandConstants.PATH_TYPE_KEY)).intValue();
-                String salt = (String) startCommand.getPacket().getExtra(HeartCommandConstants.SALT_KEY);
-                Map<String, Object> context = SimulatorGsonFactory.getGson().fromJson((String) startCommand.getPacket().getExtras().get("context"), Map.class);
-                String upgradeBatch = (String) startCommand.getPacket().getExtra(HeartCommandConstants.UPGRADE_BATCH_KEY);
-                //清除残留的旧包
-                UpgradeFileUtils.clearOldUpgradeFileTempFile(upgradeBatch);
-                //下载
-                switch (path) {
-                    case 0://oss
-                        String accessKeyIdSource = (String) context.get(HeartCommandConstants.ACCESSKEYID_KEY);
-                        String accessKeySecretSource = (String) context.get(HeartCommandConstants.ACCESSKEYSECRET_KEY);
-                        String endpoint = (String) context.get(HeartCommandConstants.ENDPOINT_KEY);
-                        String bucketName = (String) context.get(HeartCommandConstants.BUCKETNAME_KEY);
-                        String accessKeyId = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeyIdSource);
-                        String accessKeySecret = SecureUtil.aes(salt.getBytes()).decryptStr(accessKeySecretSource);
-                        OssOperationClient.download(endpoint, accessKeyId, accessKeySecret, UpgradeFileUtils.getUpgradeFileTempSaveDir(), bucketName, UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
-                        break;
-                    case 1://ftp
-                        String basePath = (String) context.get(HeartCommandConstants.BASEPATH_KEY);
-                        String ftpHost = (String) context.get(HeartCommandConstants.FTPHOST_KEY);
-                        Integer ftpPort = (Integer) context.get(HeartCommandConstants.FTPPORT_KEY);
-                        String passwd = (String) context.get(HeartCommandConstants.PASSWD_KEY);
-                        String username = (String) context.get(HeartCommandConstants.USERNAME_KEY);
-                        String s = SecureUtil.aes(salt.getBytes()).decryptStr(passwd);
-                        FtpOperationClient.downloadFtpFile(ftpHost, username, s, ftpPort, basePath + File.separator + upgradeBatch, UpgradeFileUtils.getUpgradeFileTempSaveDir(), UpgradeFileUtils.getUpgradeFileTempFileName(upgradeBatch));
-                        break;
-                }
-                //解压
-                UpgradeFileUtils.unzipUpgradeFile(upgradeBatch);
-            } else {
-                //需要判断是否有本地版本
-                UpgradeFileUtils.checkLocal();
-            }
-
 
             if (!isRunning.compareAndSet(false, true)) {
                 return;

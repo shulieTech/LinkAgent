@@ -118,7 +118,7 @@ public class JvmArgsCheckUtils {
         }
         Map<String, String> result = new HashMap<String, String>();
         // 是否已经在内部启动了ttl探针
-        boolean hasBootstrappedTtlAgent = "true".endsWith(System.getProperty("TtlAgent_internal_bootstrapped"));
+        boolean hasBootstrappedTtlAgent = "true".equals(System.getProperty("TtlAgent_internal_bootstrapped"));
         //1、校验     * 1、transmittable-thread-local-2.10.2.jar参数是否放在所有agent参数前校验
         boolean transmittableResult = hasBootstrappedTtlAgent ? true : transmittableCheck(result, transmittableIndex, delayAgent, simulatorLauncherInstrumentIndex, new ArrayList<>(agentIndex));
         //2     * 2、JDK7及以下参数是否配置-XX:PermSize=256M -XX:MaxPermSize=512M校验，参数值大小暂不校验

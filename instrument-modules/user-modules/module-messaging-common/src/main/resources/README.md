@@ -1,1 +1,1 @@
-新版mq公共模块，参考文档：https://shulietech.feishu.cn/wiki/wikcn3PINdOtynYENE3gYFgtabe?useNewLarklet=1
+2.0.0.1 修复kafka影子消费者trace获取不到servers的问题

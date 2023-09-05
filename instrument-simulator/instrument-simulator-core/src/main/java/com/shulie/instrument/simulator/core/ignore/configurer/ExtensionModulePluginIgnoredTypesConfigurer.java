@@ -33,7 +33,8 @@ public class ExtensionModulePluginIgnoredTypesConfigurer implements IgnoredTypes
                 .allowClass("com.aliyun.openservices.shade.com.alibaba.rocketmq.client.impl.consumer.ConsumeMessageOrderlyService")
                 .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.ConsumerImpl$MessageListenerImpl")
                 .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.BatchConsumerImpl$BatchMessageListenerImpl")
-                .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.OrderConsumerImpl$MessageListenerOrderlyImpl");
+                .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.OrderConsumerImpl$MessageListenerOrderlyImpl")
+                .allowClass("com.aliyun.openservices.ons.api.impl.ONSFactoryImpl");
 
         //amazon-s3
         builder.ignoreClass("com.amazonaws.")

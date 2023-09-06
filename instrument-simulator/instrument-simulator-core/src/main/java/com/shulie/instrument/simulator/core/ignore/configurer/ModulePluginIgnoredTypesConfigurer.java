@@ -553,8 +553,10 @@ public class ModulePluginIgnoredTypesConfigurer implements IgnoredTypesConfigure
                 .allowClass("org.springframework.scheduling.support.ScheduledMethodRunnable")
                 .allowClass("org.quartz.JobExecutionContext")
                 .allowClass("org.quartz.core.JobRunShell")
+                .allowClass("org.quartz.impl.StdScheduler")
                 .allowClass("org.springframework.scheduling.config.ScheduledTaskRegistrar")
-                .allowClass("org.springframework.scheduling.concurrent.ReschedulingRunnable");
+                .allowClass("org.springframework.scheduling.concurrent.ReschedulingRunnable")
+                .allowClass("com.dangdang.ddframe.job.lite.api.JobScheduler");
 
         //spring-cache
         builder.ignoreClass("org.springframework.cache.")

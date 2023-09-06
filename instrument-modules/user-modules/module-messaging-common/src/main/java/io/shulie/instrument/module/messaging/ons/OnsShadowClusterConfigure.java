@@ -73,4 +73,21 @@ public class OnsShadowClusterConfigure {
 
     }
 
+
+    public static OnsShadowClusterConfigEntity findShadowClusterConfig(String topic, String groupId) {
+        OnsShadowClusterConfigEntity entity = OnsShadowClusterConfigure.ons_shadow_cluster_config.get(topic);
+        if (entity == null) {
+            return null;
+        }
+        if (entity.getGroupId() == null) {
+            logger.error("[aliyun-openservices]: find shadow cluster config for topic:{}, but don`t have groupId!", topic);
+            return null;
+        }
+        if (!groupId.equals(entity.getGroupId())) {
+            logger.error("[aliyun-openservices]: find shadow cluster config for topic:{}, but has different groupId:{},{}", topic, groupId, entity.getGroupId());
+            return null;
+        }
+        return entity;
+    }
+
 }

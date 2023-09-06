@@ -10,6 +10,8 @@ public class OnsShadowClusterConfigEntity {
     private String groupId;
     private String namesrvAddr;
 
+    private String shadowTopic;
+    private String shadowGroupId;
     private String shadowAccessKey;
     private String shadowSecretKey;
     private String shadowNamesrvAddr;
@@ -70,5 +72,21 @@ public class OnsShadowClusterConfigEntity {
 
     public void setShadowNamesrvAddr(String shadowNamesrvAddr) {
         this.shadowNamesrvAddr = shadowNamesrvAddr;
+    }
+
+    public String getShadowTopic() {
+        return shadowTopic;
+    }
+
+    public void setShadowTopic(String shadowTopic) {
+        this.shadowTopic = shadowTopic;
+    }
+
+    public String getShadowGroupId() {
+        return shadowGroupId;
+    }
+
+    public void setShadowGroupId(String shadowGroupId) {
+        this.shadowGroupId = shadowGroupId;
     }
 }

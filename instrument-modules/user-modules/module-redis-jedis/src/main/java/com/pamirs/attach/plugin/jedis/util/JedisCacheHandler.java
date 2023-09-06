@@ -68,7 +68,6 @@ public class JedisCacheHandler {
     public static Attachment getSentinelAttachment(JedisSentinelPool jedisSentinelPool) {
         Attachment ext = SentinelAttachmentCache.get(jedisSentinelPool);
         if (ext == null) {
-            String password = ReflectionUtils.get(jedisSentinelPool, "password");
             Integer database = ReflectionUtils.get(jedisSentinelPool, "database");
             Set set = ReflectionUtils.get(jedisSentinelPool, "masterListeners");
             Iterator iterator = set.iterator();
@@ -88,8 +87,7 @@ public class JedisCacheHandler {
                     new RedisTemplate.JedisSentinelTemplate()
                             .setMaster(masterName)
                             .setNodes(nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString())
-                            .setDatabase(database)
-                            .setPassword(password));
+                            .setDatabase(database));
 
             putData(SentinelAttachmentCache, jedisSentinelPool, ext);
         }
@@ -102,16 +100,13 @@ public class JedisCacheHandler {
 
     public static Attachment getSingleAttachment(Client client) {
         Attachment ext = SingleAttachmentCache.get(client);
-
         if (ext == null) {
-            String password = ReflectionUtils.get(client, "password");
             int db = Integer.parseInt(String.valueOf(ReflectionUtils.get(client, "db")));
             String node = client.getHost().concat(":").concat(String.valueOf(client.getPort()));
             ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
                     new String[]{RedisConstants.MIDDLEWARE_NAME}
                     , new RedisTemplate.JedisSingleTemplate()
                     .setNodes(node)
-                    .setPassword(password)
                     .setDatabase(db)
             );
 

@@ -36,7 +36,6 @@ import org.kohsuke.MetaInfServices;
 public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-
         enhanceTemplate.enhance(this, new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -142,6 +141,13 @@ public class EhcachePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                 checkMethod.addInterceptor(Listeners.of(BaseStoreCheckTypeInterceptor.class));
             }
         }, "org.ehcache.impl.internal.util.CheckerUtil", "org.ehcache.impl.store.BaseStore", "org.ehcache.impl.internal.store.heap.OnHeapStore");
+
+        enhanceTemplate.enhance(this, "net.sf.ehcache.util.PreferredLoaderObjectInputStream", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethod("resolveClass", "java.io.ObjectStreamClass").addInterceptor(Listeners.of(PreferredLoaderObjectInputStreamResolveClassInterceptor.class));
+            }
+        });
 
         return true;
     }

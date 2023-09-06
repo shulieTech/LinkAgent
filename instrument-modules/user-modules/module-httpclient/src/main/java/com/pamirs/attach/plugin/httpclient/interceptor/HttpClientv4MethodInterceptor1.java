@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
@@ -24,6 +23,7 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -60,7 +60,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     private Integer httpResponsePrintLengthLimit;
 
-    private List<String> printResponseContentType = Arrays.asList("application/json","text/plain");
+    private List<String> printResponseContentType = Arrays.asList("application/json", "text/plain");
 
     @Override
     public String getPluginName() {
@@ -98,7 +98,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                     if (HttpClientConstants.clazz == null) {
                         HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                     }
-                    Object object = ReflectionUtils.newInstance(HttpClientConstants.clazz,response, null);
+                    Object object = ReflectionUtils.newInstance(HttpClientConstants.clazz, response, null);
                     Advice advice = (Advice) config.getArgs().get("advice");
                     Object[] methodParams = advice.getParameterArray();
                     ResponseHandler responseHandler = null;
@@ -140,7 +140,7 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object[] args = advice.getParameterArray();
@@ -191,14 +191,14 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
                             if (param instanceof String) {
                                 entity = new StringEntity(String.valueOf(param), "UTF-8");
                             } else {
-                                entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                                entity = new ByteArrayEntity(GsonFactory.getGson().toJson(param).getBytes());
                             }
                             BasicHttpResponse response = new BasicHttpResponse(statusline);
                             response.setEntity(entity);
                             if (HttpClientConstants.clazz == null) {
                                 HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
                             }
-                            Object obj = ReflectionUtils.newInstance(HttpClientConstants.clazz,response, null);
+                            Object obj = ReflectionUtils.newInstance(HttpClientConstants.clazz, response, null);
 
                             Advice advice = (Advice) config.getArgs().get("advice");
                             Object[] methodParams = advice.getParameterArray();
@@ -398,8 +398,8 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
-        if(httpResponsePrintLengthLimit == null){
-            httpResponsePrintLengthLimit = simulatorConfig.getIntProperty("http.response.print.length.limit",1024);
+        if (httpResponsePrintLengthLimit == null) {
+            httpResponsePrintLengthLimit = simulatorConfig.getIntProperty("http.response.print.length.limit", 1024);
         }
         Object[] args = advice.getParameterArray();
         HttpUriRequest request = (HttpUriRequest) args[0];
@@ -408,12 +408,12 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
         if (advice.getReturnObj() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) advice.getReturnObj();
             try {
-                if(response == null){
+                if (response == null) {
                     record.setResponseSize(0);
-                }else{
+                } else {
                     long length = response.getEntity().getContentLength();
                     record.setResponseSize(length);
-                    if(length < httpResponsePrintLengthLimit && isContentTypeApplicable(response)){
+                    if (length < httpResponsePrintLengthLimit && isContentTypeApplicable(response)) {
                         BufferedHttpEntity entity = new BufferedHttpEntity(response.getEntity());
                         record.setResponse(EntityUtils.toString(entity));
                         response.setEntity(entity);
@@ -438,10 +438,10 @@ public class HttpClientv4MethodInterceptor1 extends TraceInterceptorAdaptor {
 
     }
 
-    private boolean isContentTypeApplicable(HttpResponse response){
+    private boolean isContentTypeApplicable(HttpResponse response) {
         String type = response.getHeaders("Content-Type")[0].getValue();
         for (String s : printResponseContentType) {
-            if(type.contains(s)){
+            if (type.contains(s)) {
                 return true;
             }
         }

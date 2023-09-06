@@ -16,13 +16,13 @@ package com.pamirs.attach.plugin.rabbitmq.consumer;
 
 import java.util.List;
 
-import com.alibaba.fastjson.JSON;
-
+import com.google.gson.reflect.TypeToken;
 import com.pamirs.attach.plugin.rabbitmq.common.ConsumerDetail;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.cache.CacheSupport;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
 import com.pamirs.attach.plugin.rabbitmq.utils.AdminAccessInfo;
 import com.pamirs.attach.plugin.rabbitmq.utils.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -105,6 +105,6 @@ public class AdminApiConsumerMetaDataBuilder implements ConsumerMetaDataBuilder 
     private List<ConsumerApiResult> getAllConsumers(AdminAccessInfo adminAccessInfo) {
         String url = String.format("/api/consumers/%s", adminAccessInfo.getVirtualHostEncode());
         String response = HttpUtils.doGet(adminAccessInfo, url).getResult();
-        return JSON.parseArray(response, ConsumerApiResult.class);
+        return GsonFactory.getGson().fromJson(response, new TypeToken<List<ConsumerApiResult>>(){}.getType());
     }
 }

@@ -55,6 +55,8 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
     }
 
     private void enhanceWeb() {
+
+
         this.enhanceTemplate.enhanceWithInterface(this, "javax.servlet.Servlet", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -81,6 +83,9 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             }
         });
 
+
+
+
         this.enhanceTemplate.enhanceWithInterface(this, "org.springframework.web.server.WebHandler", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -88,6 +93,9 @@ public class CheckPlugin extends ModuleLifecycleAdapter implements ExtensionModu
                 method.addInterceptor(Listeners.of(SpringWebHandlerInterceptor.class));
             }
         });
+
+
+
 
         this.enhanceTemplate.enhanceWithInterface(this, "io.netty.channel.ChannelInboundHandler", new EnhanceCallback() {
             @Override

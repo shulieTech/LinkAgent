@@ -2,6 +2,7 @@ package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.ModuleException;
 import com.shulie.instrument.simulator.api.ModuleSpec;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.resource.SwitcherManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
@@ -20,7 +21,7 @@ import java.util.List;
  * @author Licey
  * @date 2022/5/16
  */
-public class SyncModuleCoreModuleManager extends DefaultCoreModuleManager{
+public class SyncModuleCoreModuleManager extends DefaultCoreModuleManager {
     /**
      * 模块模块管理
      *
@@ -32,8 +33,8 @@ public class SyncModuleCoreModuleManager extends DefaultCoreModuleManager{
      * @param eventListenerHandler
      * @param switcherManager
      */
-    public SyncModuleCoreModuleManager(CoreConfigure config, Instrumentation inst, CoreLoadedClassDataSource classDataSource, ProviderManager providerManager, ClassLoaderService classLoaderService, EventListenerHandler eventListenerHandler, SwitcherManager switcherManager) {
-        super(config, inst, classDataSource, providerManager, classLoaderService, eventListenerHandler, switcherManager);
+    public SyncModuleCoreModuleManager(CoreConfigure config, Instrumentation inst, CoreLoadedClassDataSource classDataSource, ProviderManager providerManager, ClassLoaderService classLoaderService, EventListenerHandler eventListenerHandler, SwitcherManager switcherManager, IgnoredTypesBuilder ignoredTypesBuilder) {
+        super(config, inst, classDataSource, providerManager, classLoaderService, eventListenerHandler, ignoredTypesBuilder, switcherManager);
     }
 
     @Override
@@ -49,7 +50,7 @@ public class SyncModuleCoreModuleManager extends DefaultCoreModuleManager{
 
         // 3. 加载所有用户自定义模块, 采用异步加载方式加载用户自定义模块
         List<File> userModuleLibJars = getAllModuleLibJar(userModuleLibs);
-        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false,false);
+        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false, false);
         if (!userModuleSpecs.isEmpty()) {
             initAllModuleInfos(userModuleSpecs);
 

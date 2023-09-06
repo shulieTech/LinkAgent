@@ -1,1 +1,1 @@
-2.0.0.1  cluster-test-check class判断优化,避免出现ClassNotFoundException
+2.0.0.2  修复class判断时以来pradar-core引起的ClassNoDefError

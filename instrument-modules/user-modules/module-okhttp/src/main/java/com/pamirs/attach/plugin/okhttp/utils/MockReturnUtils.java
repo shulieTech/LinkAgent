@@ -25,17 +25,15 @@ import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import okhttp3.Call;
-import okhttp3.Headers;
 import okhttp3.Protocol;
 import okhttp3.Response;
-import okhttp3.internal.http.RealResponseBody;
-import okio.Buffer;
 
 /**
  * @author angju
  * @date 2022/2/22 15:22
  */
 public class MockReturnUtils {
+
     public static ExecutionStrategy fixJsonStrategy =
             new JsonMockStrategy() {
                 @Override
@@ -44,16 +42,11 @@ public class MockReturnUtils {
                         try {
                             MatchConfig config = (MatchConfig) params;
                             String scriptContent = config.getScriptContent().trim();
-                            Headers header = new Headers.Builder().build();
-                            Buffer buffer = new Buffer();
                             final Call call = (Call) config.getArgs().get("call");
-
                             Pradar.mockResponse(scriptContent);
 
-                            buffer.write(scriptContent.getBytes("UTF-8"));
-
                             Response response = new Response.Builder().code(200)
-                                    .body(new RealResponseBody(header, buffer))
+                                    .body(RealResponseBodyUtil.buildResponseBody(config.getScriptContent()))
                                     .request(call.request())
                                     .protocol(Protocol.HTTP_1_0)
                                     .message("OK")

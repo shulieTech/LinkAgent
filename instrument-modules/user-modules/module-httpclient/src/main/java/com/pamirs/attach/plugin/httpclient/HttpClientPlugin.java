@@ -35,7 +35,6 @@ public class HttpClientPlugin extends ModuleLifecycleAdapter implements Extensio
 
     @Override
     public boolean onActive() throws Throwable {
-
         //httpclient v3
         enhanceTemplate.enhance(this, "org.apache.commons.httpclient.HttpClient", new EnhanceCallback() {
             @Override
@@ -185,6 +184,13 @@ public class HttpClientPlugin extends ModuleLifecycleAdapter implements Extensio
 
             }
         });
+
+       /* enhanceTemplate.enhance(this, "org.apache.http.pool.AbstractConnPool", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("getPoolEntryBlocking").addInterceptor(Listeners.of(HttpClientV4ConnPoolGetConnInterceptor.class));
+            }
+        });*/
 
         return true;
     }

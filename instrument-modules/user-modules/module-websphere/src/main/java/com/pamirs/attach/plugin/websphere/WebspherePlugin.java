@@ -34,7 +34,6 @@ public class WebspherePlugin extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
-
         enhanceTemplate.enhance(this, "com.ibm.ws.webcontainer.srt.SRTServletRequest", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {

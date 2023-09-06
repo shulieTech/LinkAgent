@@ -14,11 +14,13 @@
  */
 package com.shulie.instrument.simulator.core;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
+import com.google.gson.reflect.TypeToken;
 import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.core.util.FeatureCodec;
 import com.shulie.instrument.simulator.core.util.HttpUtils;
@@ -27,6 +29,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,6 +114,7 @@ public class CoreConfigure {
 
     private final Map<String, String> featureMap = new LinkedHashMap<String, String>();
 
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     private final Map<String, String> simulatorFileConfigs = new LinkedHashMap<String, String>();
     private final Map<String, String> agentFileConfigs = new LinkedHashMap<String, String>();
@@ -316,8 +320,7 @@ public class CoreConfigure {
         if (StringUtils.isBlank(result)) {
             throw new RuntimeException("SIMULATOR: can't get app properties config from url:" + propertiesUrl);
         }
-        return JSON.parseObject(result, new TypeReference<Map<String, String>>() {
-        }.getType());
+        return gson.fromJson(result, new TypeToken<Map<String, String>>() {}.getType());
     }
 
     private Map<String, String> toFilePropertiesMap(String propertiesFilePath) {
@@ -834,7 +837,7 @@ public class CoreConfigure {
         return value;
     }
 
-    public String getPropertyInternal(String key){
+    public String getPropertyInternal(String key) {
         String value = System.getProperty(key);
         if (value == null) {
             value = featureMap.get(key);
@@ -1031,10 +1034,11 @@ public class CoreConfigure {
     }
 
     /**
-     *  在拉取app config时报错是否阻塞
+     * 在拉取app config时报错是否阻塞
+     *
      * @return
      */
-    public String getAbortedWhenPollAppConfigFailed(){
+    public String getAbortedWhenPollAppConfigFailed() {
         return getProperty(PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED);
     }
 

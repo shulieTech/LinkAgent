@@ -1,8 +1,9 @@
 package com.pamirs.attach.plugin.cus.trace;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.reflect.TypeToken;
 import com.pamirs.attach.plugin.cus.trace.interceptor.CusTraceInterceptor;
 import com.pamirs.attach.plugin.cus.trace.module.CusTraceConfig;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.Interceptors;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -19,10 +20,7 @@ import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -120,7 +118,9 @@ public class CusTracePlugin extends ModuleLifecycleAdapter implements ExtensionM
     private Set<CusTraceConfig> decodeConfig(String config) {
         Set<CusTraceConfig> configSet = new HashSet<>();
         if (!StringUtil.isEmpty(config)) {
-            configSet.addAll(JSON.parseArray(config, CusTraceConfig.class));
+            List<CusTraceConfig> cusTraceConfigs = GsonFactory.getGson().fromJson(config, new TypeToken<List<CusTraceConfig>>() {
+            }.getType());
+            configSet.addAll(cusTraceConfigs);
         }
         return configSet;
     }

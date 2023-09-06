@@ -14,7 +14,6 @@
  */
 package com.shulie.instrument.module.register.register.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.common.HttpUtils;
 import com.pamirs.pradar.common.HttpUtils.HttpResult;
@@ -24,6 +23,7 @@ import com.pamirs.pradar.event.ErrorEvent;
 import com.pamirs.pradar.event.Event;
 import com.pamirs.pradar.event.PradarSwitchEvent;
 import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.register.NodeRegisterModule;
 import com.shulie.instrument.module.register.register.Register;
@@ -101,13 +101,13 @@ public class ZookeeperRegister implements Register {
         map.put("agentLanguage", "JAVA");
         map.put("userId", Pradar.PRADAR_USER_ID);
         map.put("jars", toJarFileString(jars));
-        map.put("simulatorFileConfigs", JSON.toJSONString(simulatorConfig.getSimulatorFileConfigs()));
-        map.put("agentFileConfigs", JSON.toJSONString(simulatorConfig.getAgentFileConfigs()));
+        map.put("simulatorFileConfigs", GsonFactory.getGson().toJson(simulatorConfig.getSimulatorFileConfigs()));
+        map.put("agentFileConfigs", GsonFactory.getGson().toJson(simulatorConfig.getAgentFileConfigs()));
 
         if (!SimulatorStatus.statusCalculated()) {
             boolean moduleLoadResult = getModuleLoadResult();
             if (!moduleLoadResult) {
-                SimulatorStatus.installFailed(JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+                SimulatorStatus.installFailed(GsonFactory.getGson().toJson(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
             } else {
                 SimulatorStatus.installed();
             }
@@ -121,8 +121,8 @@ public class ZookeeperRegister implements Register {
         map.put("envCode", Pradar.PRADAR_ENV_CODE);
         map.put("moduleLoadResult", String.valueOf(getModuleLoadResult()));
         map.put("moduleLoadDetail",
-                JSON.toJSONString(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
-        String str = JSON.toJSONString(map);
+                GsonFactory.getGson().toJson(NodeRegisterModule.moduleLoadInfoManager.getModuleLoadInfos().values()));
+        String str = GsonFactory.getGson().toJson(map);
         try {
             return str.getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
@@ -466,7 +466,7 @@ public class ZookeeperRegister implements Register {
                 middlewareList.add(new MiddlewareRequest(split[1], split[0], split[2]));
             }
             final PushMiddlewareVO pushMiddlewareVO = new PushMiddlewareVO(AppNameUtils.appName(), middlewareList);
-            body = JSON.toJSONString(pushMiddlewareVO);
+            body = GsonFactory.getGson().toJson(pushMiddlewareVO);
             final HttpResult httpResult = HttpUtils.doPost(troControlWebUrl + PUSH_MIDDLEWARE_URL,
                     body);
             if (httpResult.isSuccess()) {

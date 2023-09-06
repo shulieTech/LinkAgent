@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.feign.interceptor;
 
-import com.alibaba.fastjson.JSON;
 import com.google.gson.Gson;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.feign.FeignConstants;
@@ -22,6 +21,7 @@ import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.ClassAssignableUtil;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
@@ -53,7 +53,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     private final Logger logger = LoggerFactory.getLogger(FeignMockInterceptor.class);
     private final Logger mockLogger = LoggerFactory.getLogger("FEIGN-MOCK-LOGGER");
-    private static final Gson gson = new Gson();
+    private static final Gson gson = GsonFactory.getGson();
 
     private static ExecutionStrategy fixJsonStrategy =
             new JsonMockStrategy() {
@@ -86,7 +86,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(Advice advice) throws ProcessControlException {
-        if (Pradar.isClusterTest()) {
+        if (ClusterTestUtils.enableMock()) {
             Object[] parameterArray = advice.getParameterArray();
             Method method = (Method) parameterArray[1];
             String className = method.getDeclaringClass().getName();
@@ -125,7 +125,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Method method = (Method) args[1];
         if (method == null) {
-            logger.info("[debug] feign method =null , args: [{}]", JSON.toJSONString(args));
+            logger.info("[debug] feign method =null , args: [{}]", GsonFactory.getGson().toJson(args));
             return null;
         }
         Object[] arg = (Object[]) args[2];
@@ -142,7 +142,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
                     toStringArgs.add(o);
                 }
             }
-            record.setRequest(JSON.toJSONString(toStringArgs));
+            record.setRequest(GsonFactory.getGson().toJson(toStringArgs));
         }
         if (Pradar.isClusterTest()) {
             record.setPassedCheck(true);
@@ -155,7 +155,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Method method = (Method) args[1];
         if (method == null) {
-            logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), JSON.toJSONString(args));
+            logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), GsonFactory.getGson().toJson(args));
             return null;
         }
         SpanRecord record = new SpanRecord();
@@ -190,7 +190,7 @@ public class FeignMockInterceptor extends TraceInterceptorAdaptor {
         Object[] args = advice.getParameterArray();
         Method method = (Method) args[1];
         if (method == null) {
-            logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), JSON.toJSONString(args));
+            logger.info("[debug] thread {} feign method =null , args: [{}]", Thread.currentThread(), GsonFactory.getGson().toJson(args));
             return null;
         }
         Object[] arg = (Object[]) args[2];

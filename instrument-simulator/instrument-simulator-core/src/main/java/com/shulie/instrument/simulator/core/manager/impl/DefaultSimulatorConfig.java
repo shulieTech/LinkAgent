@@ -29,7 +29,7 @@ import java.util.*;
 /**
  * 默认配置信息实现
  */
-class DefaultSimulatorConfig implements SimulatorConfig {
+public class DefaultSimulatorConfig implements SimulatorConfig {
 
     private final CoreConfigure config;
     private final String version;

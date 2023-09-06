@@ -57,7 +57,6 @@ public class DefaultEnhanceTemplate implements EnhanceTemplate {
         if (classNames == null || classNames.length == 0) {
             throw new IllegalArgumentException("classNames can't be empty.");
         }
-
         IClassMatchBuilder iClassMatchBuilder = new EventWatchBuilder(moduleEventWatcher)
                 .onClass(dealClassName(classNames));
         final DefaultInstrumentClass instrumentClass = new DefaultInstrumentClass(iClassMatchBuilder);

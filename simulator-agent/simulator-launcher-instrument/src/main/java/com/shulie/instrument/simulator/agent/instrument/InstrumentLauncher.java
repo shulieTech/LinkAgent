@@ -194,6 +194,9 @@ public class InstrumentLauncher {
      * @param inst          Instrumentation
      */
     public static void start(String featureString, Instrumentation inst) {
+        // 先尝试启动ttl探针
+        TtlAgentBootstrapper.tryToBootstrapTtlAgent(featureString, inst, InstrumentLauncher.class.getClassLoader());
+
         final Map<String, String> args = toFeatureMap(featureString);
         final Integer delay = getDelay(args, null);
         final TimeUnit timeUnit = getTimeUnit(args, null);

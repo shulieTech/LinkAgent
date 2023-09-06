@@ -22,10 +22,10 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipException;
 
-import com.alibaba.fastjson.JSON;
-
+import com.google.gson.reflect.TypeToken;
 import com.pamirs.attach.plugin.rabbitmq.consumer.admin.support.ConsumerApiResult;
 import com.pamirs.pradar.exception.PradarException;
+import com.pamirs.pradar.gson.GsonFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessLock;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
@@ -144,7 +144,7 @@ public class ZkWithIpCacheSupport extends AbstractCacheSupport implements CacheS
             Map<String, List<ConsumerApiResult>> ipGroupMap = ipGroup(consumerApiResults);
             for (Entry<String, List<ConsumerApiResult>> entry : ipGroupMap.entrySet()) {
                 String ip = entry.getKey();
-                String jsonStr = JSON.toJSONString(entry.getValue());
+                String jsonStr = GsonFactory.getGson().toJson(entry.getValue());
                 byte[] bytes = jsonStr.getBytes("UTF-8");
                 logger.info("[RabbitMQ] prepare put consumers data to zk ip {} total bytes(uncompressed) : {}", ip,
                     bytes.length);
@@ -180,7 +180,7 @@ public class ZkWithIpCacheSupport extends AbstractCacheSupport implements CacheS
                 .decompressed().forPath(zkIpPath(connectionLocalIp));
             logger.info("[RabbitMQ] get consumers data from zk ip total bytes(uncompressed) : {}", bytes.length);
             String jsonStr = new String(bytes, "UTF-8");
-            return JSON.parseArray(jsonStr, ConsumerApiResult.class);
+            return GsonFactory.getGson().fromJson(jsonStr, new TypeToken<List<ConsumerApiResult>>(){}.getType());
         } catch (KeeperException.NoNodeException e) {
             return null;
         } catch (ZipException e) {

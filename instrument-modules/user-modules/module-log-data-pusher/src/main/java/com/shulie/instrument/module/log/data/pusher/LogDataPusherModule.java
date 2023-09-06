@@ -14,9 +14,10 @@
  */
 package com.shulie.instrument.module.log.data.pusher;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.reflect.TypeToken;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.log.parser.DataType;
 import com.pamirs.pradar.remoting.protocol.ProtocolCode;
 import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
@@ -252,7 +253,7 @@ public class LogDataPusherModule extends ModuleLifecycleAdapter implements Exten
             return CommandResponse.failure("rowNum invalid");
         }
         List<String> grepParam = StringUtils.isEmpty(params.get("grepParam")) ? Collections.EMPTY_LIST
-                : JSON.parseArray(params.get("grepParam"), String.class);
+                : GsonFactory.getGson().fromJson(params.get("grepParam"), new TypeToken<List<String>>() {}.getType());
         try {
             File file = FileReaderUtils.findNewestFile(simulatorConfig.getLogPath(), fileRegx);
             if (file == null) {

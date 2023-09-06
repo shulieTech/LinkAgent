@@ -29,7 +29,6 @@ import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissionSingleTe
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissonMasterSlaveTemplate;
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate.RedissonReplicatedTemplate;
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
-import com.pamirs.attach.plugin.redisson.utils.RedissonUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -258,12 +257,6 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
             ClusterServersConfig config1 = null;
             Reflect reflect = Reflect.on(config);
 
-            String password = null;
-            try {
-                password = reflect.get("password");
-            } catch (Throwable t) {
-
-            }
             Integer database = null;
             try {
                 database = Integer.parseInt(String.valueOf(reflect.get("database")));
@@ -288,7 +281,7 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
 
                 }
                 String nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
-                template = new RedisTemplate.RedissionClusterTemplate().setNodes(nodes).setPassword(password);
+                template = new RedisTemplate.RedissionClusterTemplate().setNodes(nodes);
             } else if (config instanceof MasterSlaveServersConfig) {
                 Set nodeAddresses = reflect.get("slaveAddresses");
                 StringBuilder nodeBuilder = new StringBuilder();
@@ -320,7 +313,6 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                 }
                 template = new RedissonMasterSlaveTemplate().setMaster(
                         masterAddr).setNodes(nodes)
-                        .setPassword(password)
                         .setDatabase(database);
             } else if (config instanceof SingleServerConfig) {
 
@@ -333,7 +325,7 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                     nodes = uri.getHost().concat(":").concat(String.valueOf(uri.getPort()));
 
                 }
-                template = new RedissionSingleTemplate().setNodes(nodes).setPassword(password)
+                template = new RedissionSingleTemplate().setNodes(nodes)
                         .setDatabase(database);
             } else if (config instanceof SentinelServersConfig) {
 
@@ -379,8 +371,7 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
 
 
                 template = new RedissonReplicatedTemplate().setDatabase(database)
-                        .setNodes(nodes)
-                        .setPassword(password);
+                        .setNodes(nodes);
             } else {
                 LOGGER.error("Redisson not instanceof any know config:{}", config);
                 return;

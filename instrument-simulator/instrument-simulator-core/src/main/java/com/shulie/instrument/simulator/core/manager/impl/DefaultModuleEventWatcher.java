@@ -21,6 +21,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Progress;
 import com.shulie.instrument.simulator.api.listener.ext.WatchCallback;
 import com.shulie.instrument.simulator.api.resource.DumpResult;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.api.util.Sequencer;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
@@ -98,19 +99,10 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private void reTransformClasses(
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
-            final Progress progress) {
+            final Progress progress,
+            SimulatorClassFileTransformer transformer) {
 
-        reTransformClasses(watchId, waitingReTransformClasses, progress, false);
-
-        String pauseTime = System.getProperty("reTransform.pause.time.ms");
-        if (pauseTime == null) {
-            return;
-        }
-        try {
-            Thread.sleep(Integer.parseInt(pauseTime));
-        } catch (Exception e) {
-
-        }
+        reTransformClasses(watchId, waitingReTransformClasses, progress, false, transformer);
     }
 
     /**
@@ -119,7 +111,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private void reTransformClasses(
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
-            final Progress progress, boolean delete) {
+            final Progress progress, boolean delete,
+            SimulatorClassFileTransformer transformer) {
         // 需要形变总数
         final int total = waitingReTransformClasses.size();
 
@@ -267,7 +260,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         try {
 
             // 应用JVM
-            reTransformClasses(watchId, waitingReTransformClasses, progress);
+            reTransformClasses(watchId, waitingReTransformClasses, progress, null);
             // 计数
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
             effectMethodCount += proxy.getAffectStatistic().getEffectMethodCount();
@@ -289,12 +282,16 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private int watch(final Matcher matcher,
                       final Progress progress,
                       final boolean needReTransformer) {
+        SimulatorConfig simulatorConfig = coreModule.getSimulatorConfig();
+
         final int watchId = watchIdSequencer.next();
         // 给对应的模块追加ClassFileTransformer
-        final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(this,
+        final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(
                 watchId, coreModule, matcher, isEnableUnsafe);
 
-        SimulatorClassFileTransformer proxy = CostDumpTransformer.wrap(BytecodeDumpTransformer.wrap(transformer, coreModule.getSimulatorConfig()), coreModule.getSimulatorConfig());
+        Boolean costDumpEnable = simulatorConfig.getBooleanProperty(CostDumpTransformer.ENABLED_COST_DUMP, false);
+        SimulatorClassFileTransformer proxy = costDumpEnable ? CostDumpTransformer.wrap(transformer, simulatorConfig) : transformer;
+
         // 注册到CoreModule中
         coreModule.getSimulatorClassFileTransformers().add(proxy);
 
@@ -323,7 +320,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         try {
 
             // 应用JVM
-            reTransformClasses(watchId, waitingReTransformClasses, progress);
+            reTransformClasses(watchId, waitingReTransformClasses, progress, proxy);
 
             // 计数
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
@@ -402,7 +399,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         beginProgress(progress, waitingReTransformClasses.size());
         try {
             // 应用JVM
-            reTransformClasses(watcherId, waitingReTransformClasses, progress, true);
+            reTransformClasses(watcherId, waitingReTransformClasses, progress, true, null);
         } catch (Throwable e) {
             logger.error("delete transformer error. watcherId={}, waitingReTransformClasses={}", watcherId, waitingReTransformClasses, e);
         } finally {
@@ -445,5 +442,4 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     public static boolean isEmpty(Collection coll) {
         return (coll == null || coll.isEmpty());
     }
-
 }

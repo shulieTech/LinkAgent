@@ -1,10 +1,10 @@
 package com.pamirs.attach.plugin.cus.trace.interceptor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.cus.trace.module.CusTraceConfig;
 import com.pamirs.attach.plugin.cus.trace.module.CusTraceConstans;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.utils.ObjectMatchers;
@@ -69,7 +69,7 @@ public class CusTraceInterceptor extends TraceInterceptorAdaptor {
         }
         SpanRecord record = new SpanRecord();
         if (config.isResponseOn()) {
-            record.setResponse(JSON.toJSONString(advice.getReturnObj()));
+            record.setResponse(GsonFactory.getGson().toJson(advice.getReturnObj()));
         }
         return record;
     }

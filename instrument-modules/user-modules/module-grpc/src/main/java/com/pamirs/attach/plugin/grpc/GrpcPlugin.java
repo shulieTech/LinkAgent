@@ -35,7 +35,6 @@ import org.kohsuke.MetaInfServices;
 public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-
         /* *****GRPC client**** */
         enhanceNewCall("io.grpc.internal.ManagedChannelImpl$RealChannel");
         enhanceNewCall("io.grpc.internal.OobChannel");

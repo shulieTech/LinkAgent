@@ -15,6 +15,7 @@
 package com.shulie.instrument.simulator.core.manager;
 
 import com.shulie.instrument.simulator.api.ModuleException;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 

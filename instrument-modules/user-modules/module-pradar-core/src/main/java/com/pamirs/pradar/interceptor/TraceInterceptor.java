@@ -14,12 +14,11 @@
  */
 package com.pamirs.pradar.interceptor;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
@@ -209,7 +208,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
     @Override
     public void doBefore(Advice advice) throws Throwable {
         // 业务流量,且业务trace开关关闭,不执行trace interceptor
-        if(!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()){
+        if (!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()) {
             return;
         }
         ClusterTestUtils.validateClusterTest();
@@ -286,12 +285,12 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 } finally {
                     advice.unMark(BEFORE_TRACE_SUCCESS);
                 }
-            } else {
+            } else if (!Pradar.hasMockResponse()) {
                 LOGGER.error("trace throw exception, but not BEFORE_TRACE_SUCCESS in {}.beforeTrace(...). loss trace log!", getClass().getName(), throwable);
             }
 
             //压测流量抛出异常，  业务流量只做记录
-            if (isClusterTest) {
+            if (isClusterTest || ClusterTestUtils.enableBizRequestMock()) {
                 throw throwable;
             }
         }
@@ -500,7 +499,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
         InvokeContext invokeContext = Pradar.getInvokeContext();
         InvokeContext adviceInvokeContext = (InvokeContext) advice.getInvokeContext();
         if (invokeContext != adviceInvokeContext) {
-            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), JSON.toJSONString(invokeContext), JSON.toJSONString(adviceInvokeContext));
+            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), GsonFactory.getGson().toJson(invokeContext), GsonFactory.getGson().toJson(adviceInvokeContext));
 
             try {
                 Pradar.setInvokeContext(adviceInvokeContext);

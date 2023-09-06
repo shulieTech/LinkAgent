@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -91,7 +91,16 @@ public class ConsumerMultiRecordEntryPointInterceptor extends TraceInterceptorAd
         String group = null;
         String remoteAddress = null;
         if (args.length >= 3) {
-            group = manager.getDynamicField(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP);
+            if (ReflectionUtils.existsField(consumer, "groupId")) {
+                Object groupIdValue = ReflectionUtils.get(consumer, "groupId");
+                if (groupIdValue.getClass().getName().equals("java.util.Optional")) {
+                    group = ReflectionUtils.get(groupIdValue, "value");
+                } else {
+                    group = (String) groupIdValue;
+                }
+            } else if (ReflectionUtils.existsField(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP)) {
+                group = ReflectionUtils.get(consumer, KafkaConstants.DYNAMIC_FIELD_GROUP);
+            }
             remoteAddress = KafkaUtils.getRemoteAddress(consumer, manager);
         }
         SpanRecord spanRecord = new SpanRecord();

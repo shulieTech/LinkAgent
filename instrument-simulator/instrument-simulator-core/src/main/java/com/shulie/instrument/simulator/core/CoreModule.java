@@ -18,6 +18,7 @@ import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleException;
 import com.shulie.instrument.simulator.api.ModuleSpec;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.resource.*;
 import com.shulie.instrument.simulator.core.classloader.ClassLoaderFactory;
@@ -139,6 +140,11 @@ public class CoreModule {
      * 扩展模板
      */
     private ExtensionTemplate extensionTemplate;
+
+    /**
+     * 模块class transform ignore配置
+     */
+    private IgnoredTypesBuilder ignoredTypesBuilder;
 
     /**
      * 模块业务对象
@@ -549,5 +555,13 @@ public class CoreModule {
 
     public ExtensionTemplate getExtensionTemplate() {
         return extensionTemplate;
+    }
+
+    public IgnoredTypesBuilder getIgnoredTypesBuilder() {
+        return ignoredTypesBuilder;
+    }
+
+    public void setIgnoredTypesBuilder(IgnoredTypesBuilder ignoredTypesBuilder) {
+        this.ignoredTypesBuilder = ignoredTypesBuilder;
     }
 }

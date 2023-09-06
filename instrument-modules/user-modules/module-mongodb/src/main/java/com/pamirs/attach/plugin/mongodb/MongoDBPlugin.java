@@ -43,6 +43,7 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
+
         /**
          * 因为这个插件与mongodb322插件冲突，所以当mongodb322插件启用时此插件禁用
          */

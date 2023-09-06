@@ -49,7 +49,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
             }
             Object t = advice.getTarget();
             String nodes = null;
-            String password = null;
             Integer db = null;
 
             StringBuilder nodeBuilder = new StringBuilder();
@@ -64,8 +63,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
                     List<RedisURI> sentinels = redisUri.getSentinels();
                     StringBuilder builder = new StringBuilder();
                     for (RedisURI sentinel : sentinels) {
-                        password = sentinel.getPassword()
-                                == null ? null : new String(sentinel.getPassword());
                         db = sentinel.getDatabase();
                         String node = sentinel.getHost().concat(":").concat(String.valueOf(sentinel.getPort()));
                         indexes.add(node);
@@ -81,7 +78,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
                             .setMaster(masterId)
                             .setDatabase(db)
                             .setNodes(nodes)
-                            .setPassword(password)
                     ));
 
                 }
@@ -102,7 +98,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
                     indexes.add(node);
                     nodeBuilder.append(node)
                             .append(",");
-                    password = redisURI.getPassword() == null ? null : new String(redisURI.getPassword());
                     db = redisURI.getDatabase();
                 }
                 nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
@@ -111,8 +106,7 @@ public class ConnectionInterceptor extends AroundInterceptor {
                         new String[]{"redis"},
                         new RedisTemplate.LettuceClusterTemplate()
                                 .setDatabase(db)
-                                .setNodes(nodes)
-                                .setPassword(password));
+                                .setNodes(nodes));
 
                 ResourceManager.set(attachment);
 
@@ -121,14 +115,12 @@ public class ConnectionInterceptor extends AroundInterceptor {
                 RedisURI redisURI = ReflectionUtils.get(client,"redisURI");
                 nodes = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
                 String index = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
-                password = redisURI.getPassword() == null ? null : new String(redisURI.getPassword());
                 db = redisURI.getDatabase();
                 Attachment attachment = new Attachment(index, "redis-lettuce",
                         new String[]{"redis"},
                         new RedisTemplate.LettuceSingleTemplate()
                                 .setDatabase(db)
-                                .setNodes(nodes)
-                                .setPassword(password));
+                                .setNodes(nodes));
                 ResourceManager.set(attachment);
             }
         } catch (Throwable t) {

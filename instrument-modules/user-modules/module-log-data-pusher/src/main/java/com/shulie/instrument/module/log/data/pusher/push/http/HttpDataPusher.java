@@ -15,9 +15,9 @@
 
 package com.shulie.instrument.module.log.data.pusher.push.http;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.JsonObject;
 import com.pamirs.pradar.PradarCoreUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.remoting.protocol.CommandCode;
 import com.shulie.instrument.module.log.data.pusher.enums.DataPushEnum;
 import com.shulie.instrument.module.log.data.pusher.log.callback.LogCallback;
@@ -207,8 +207,8 @@ public class HttpDataPusher implements DataPusher {
                     if (StringUtil.isEmpty(content)) {
                         return false;
                     }
-                    JSONObject jsonObject = JSON.parseObject(content);
-                    Integer responseCode = jsonObject.getInteger("responseCode");
+                    JsonObject jsonObject = GsonFactory.getGson().fromJson(content, JsonObject.class);;
+                    Integer responseCode = jsonObject.get("responseCode").getAsInt();
                     if (responseCode == CommandCode.SUCCESS) {
                         return true;
                     }

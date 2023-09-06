@@ -14,7 +14,6 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import com.alibaba.fastjson.JSONObject;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
 import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
@@ -25,6 +24,7 @@ import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -147,7 +147,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         final Object[] args = advice.getParameterArray();
@@ -221,7 +221,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
                             if (param instanceof String) {
                                 entity = new StringEntity(String.valueOf(param), "UTF-8");
                             } else {
-                                entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                                entity = new ByteArrayEntity(GsonFactory.getGson().toJson(param).getBytes());
                             }
                             BasicHttpResponse response = new BasicHttpResponse(statusline);
                             response.setEntity(entity);

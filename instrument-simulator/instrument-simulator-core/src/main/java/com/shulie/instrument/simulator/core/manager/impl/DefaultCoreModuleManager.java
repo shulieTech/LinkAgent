@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.core.manager.impl;
 import com.shulie.instrument.simulator.api.*;
 import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
@@ -30,6 +31,11 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.ClassLoaderFactoryImpl;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
+import com.shulie.instrument.simulator.core.ignore.*;
+import com.shulie.instrument.simulator.core.ignore.configurer.AdditionalLibraryIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.GlobalIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.InstrumentSimulatorIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.ModulePluginIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
@@ -129,6 +135,11 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     protected ModuleLoader moduleLoader;
 
     /**
+     * transform class config
+     */
+    protected IgnoredTypesBuilder ignoredTypesBuilder;
+
+    /**
      * 模块模块管理
      *
      * @param config          模块核心配置
@@ -142,6 +153,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                     final ProviderManager providerManager,
                                     final ClassLoaderService classLoaderService,
                                     final EventListenerHandler eventListenerHandler,
+                                    final IgnoredTypesBuilder ignoredTypesBuilder,
                                     final SwitcherManager switcherManager) {
         this.config = config;
         this.simulatorConfig = new DefaultSimulatorConfig(config);
@@ -157,6 +169,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         this.disabledModules = config.getDisabledModules();
         this.classInjector = new ModuleJarClassInjector(this.simulatorConfig);
         this.eventListenerHandler = eventListenerHandler;
+        this.ignoredTypesBuilder = ignoredTypesBuilder;
     }
 
     @Override
@@ -267,14 +280,15 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
                 case MODULE_ACTIVE: {
                     ModuleLoadInfo moduleLoadInfo = DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
-                        getModuleLoadInfos().get(moduleId);
-                    if(moduleLoadInfo == null){
+                            getModuleLoadInfos().get(moduleId);
+                    if (moduleLoadInfo == null) {
                         throw new ModuleException(moduleId,
                                 MODULE_LOAD_ERROR,
                                 String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId));
                     }
 
-                    ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();;
+                    ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();
+                    ;
                     try {
                         Thread.currentThread().setContextClassLoader(coreModule.getClassLoaderFactory().getClassLoader(null));
                         boolean result = moduleLifecycle.onActive();
@@ -292,7 +306,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                         logger.error("fail to active module :{}", moduleId, throwable);
                         moduleLoadInfo.setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
-                    }finally {
+                    } finally {
                         Thread.currentThread().setContextClassLoader(threadClassLoader);
                     }
                     break;
@@ -446,6 +460,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
         coreModule.setExtensionTemplate(new DefaultExtensionTemplate());
+        coreModule.setIgnoredTypesBuilder(ignoredTypesBuilder);
     }
 
     private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -557,8 +572,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 // inject switcher manager
                 else if (SwitcherManager.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, switcherManager, true);
-                }
-                else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
+                } else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, coreModule.getExtensionTemplate(), true);
                 }
                 // 其他情况需要输出日志警告
@@ -1260,6 +1274,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         //加载
         loadModules(systemModuleSpecs, "load");
         loadModules(userModuleSpecs, "load");
+
         if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules finished :{}", loadedModuleMap.keySet());
         }

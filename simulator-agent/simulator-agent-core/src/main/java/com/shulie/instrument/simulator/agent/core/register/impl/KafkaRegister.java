@@ -1,14 +1,13 @@
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
-import com.alibaba.fastjson.JSON;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
-import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
 import com.shulie.instrument.simulator.agent.core.register.RegisterOptions;
 import com.shulie.instrument.simulator.agent.core.util.*;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import io.shulie.takin.sdk.kafka.HttpSender;
-import io.shulie.takin.sdk.kafka.MessageSendCallBack;
 import io.shulie.takin.sdk.kafka.MessageSendService;
 import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.apache.commons.lang.StringUtils;
@@ -16,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,8 +22,6 @@ import java.util.Properties;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KafkaRegister implements Register {
     private final static Logger LOGGER = LoggerFactory.getLogger(KafkaRegister.class.getName());
@@ -47,6 +43,8 @@ public class KafkaRegister implements Register {
 
     private AgentConfig agentConfig;
 
+    private static Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
+
     public KafkaRegister(AgentConfig agentConfig) {
         this.agentConfig = agentConfig;
     }
@@ -54,12 +52,12 @@ public class KafkaRegister implements Register {
     private final String pid = String.valueOf(PidUtils.getPid());
     private final String name = PidUtils.getName();
     private String agentId = null;
-    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+    private static final String inputArgs = gson.toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 
     private String jvmArgsCheck = null;
 
     private Map<String, String> getHeartbeatDatas() {
-        jvmArgsCheck = jvmArgsCheck == null ? JSON.toJSONString(
+        jvmArgsCheck = jvmArgsCheck == null ? gson.toJson(
                 JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
 
         Map<String, String> map = new HashMap<String, String>();
@@ -90,14 +88,15 @@ public class KafkaRegister implements Register {
         map.put("userId", agentConfig.getUserId());
 
         //设置agent配置文件参数
-        //        map.put("agentFileConfigs", JSON.toJSONString(agentConfig.getAgentFileConfigs()));
+        //        map.put("agentFileConfigs", GsonFactory.getGson().toJson(agentConfig.getAgentFileConfigs()));
         //参数比较
-        //        map.put("agentFileConfigsCheck", JSON.toJSONString(checkConfigs()));
+        //        map.put("agentFileConfigsCheck", GsonFactory.getGson().toJson(checkConfigs()));
         map.put("jvmArgsCheck", jvmArgsCheck);
         if (!JvmArgsCheckUtils.getCheckJvmArgsStatus()) {
             agentStatus = AgentStatus.INSTALL_FAILED;
             errorMsg.append("启动参数校验失败：").append(jvmArgsCheck);
             AgentStatus.checkError("启动参数校验失败：" + jvmArgsCheck);
+            LOGGER.info("启动参数校验失败：" + jvmArgsCheck);
         }
         //校验日志目录是否存在并且有权限
         String checkSimulatorLogPathResult = checkSimulatorLogPath(agentConfig.getLogPath());
@@ -105,7 +104,7 @@ public class KafkaRegister implements Register {
             agentStatus = AgentStatus.INSTALL_FAILED;
             errorMsg.append("启动参数日志目录校验异常：").append(checkSimulatorLogPathResult);
             AgentStatus.checkError("启动参数日志目录校验异常：" + checkSimulatorLogPathResult);
-
+            LOGGER.info("启动参数日志目录校验异常：" + checkSimulatorLogPathResult);
         }
         map.put("agentStatus", agentStatus);
         map.put("errorMsg", errorMsg.toString());
@@ -198,27 +197,28 @@ public class KafkaRegister implements Register {
 
     @Override
     public void start() {
-        executorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                Map<String, String> heartbeatDatas = getHeartbeatDatas();
-                heartbeatDatas.put("appName", appName);
-                messageSendService.send(basePath, new HashMap<String, String>(), JSON.toJSONString(heartbeatDatas), new MessageSendCallBack() {
-                    @Override
-                    public void success() {
-                    }
-
-                    @Override
-                    public void fail(String errorMessage) {
-                        LOGGER.error("心跳信息发送失败，节点路径为:{},errorMessage为:{}", basePath, errorMessage);
-                    }
-                }, new HttpSender() {
-                    @Override
-                    public void sendMessage() {
-                    }
-                });
-            }
-        }, 60,60, TimeUnit.SECONDS);
+        Map<String, String> heartbeatDatas = getHeartbeatDatas();
+//        executorService.scheduleAtFixedRate(new Runnable() {
+//            @Override
+//            public void run() {
+//                Map<String, String> heartbeatDatas = getHeartbeatDatas();
+//                heartbeatDatas.put("appName", appName);
+////                messageSendService.send(basePath, new HashMap<String, String>(), GsonFactory.getGson().toJson(heartbeatDatas), new MessageSendCallBack() {
+////                    @Override
+////                    public void success() {
+////                    }
+////
+////                    @Override
+////                    public void fail(String errorMessage) {
+////                        LOGGER.error("心跳信息发送失败，节点路径为:{},errorMessage为:{}", basePath, errorMessage);
+////                    }
+////                }, new HttpSender() {
+////                    @Override
+////                    public void sendMessage() {
+////                    }
+////                });
+//            }
+//        }, 60,60, TimeUnit.SECONDS);
     }
 
     @Override

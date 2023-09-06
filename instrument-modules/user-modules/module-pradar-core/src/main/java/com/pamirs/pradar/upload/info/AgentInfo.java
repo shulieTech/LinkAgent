@@ -14,10 +14,10 @@
  */
 package com.pamirs.pradar.upload.info;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.AppNameUtils;
 import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.common.ServerDetector;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.shulie.druid.util.Utils;
 import org.apache.commons.lang.StringUtils;
 
@@ -265,7 +265,7 @@ public class AgentInfo {
     }
 
     public String toJson() {
-        return JSON.toJSONString(AgentInfo.INSTANCE);
+        return GsonFactory.getGson().toJson(AgentInfo.INSTANCE);
     }
 
     // ================== getter ============================

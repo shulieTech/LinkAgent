@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -26,16 +26,17 @@ import org.kohsuke.MetaInfServices;
 
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = "catalina", version = "1.0.0", author = " xiaobin@shulie.io",
-    description = "catalina 服务器,支持 tomcat 和 jboss")
+        description = "catalina 服务器,支持 tomcat 和 jboss")
 public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
 
     @Override
     public boolean onActive() throws Throwable {
+
         enhanceTemplate.enhance(this, "org.apache.catalina.core.StandardHostValve", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethod("invoke", "org.apache.catalina.connector.Request",
-                    "org.apache.catalina.connector.Response");
+                        "org.apache.catalina.connector.Response");
                 method.addInterceptor(Listeners.of(StandardHostValveInvokeInterceptor.class));
             }
         });
@@ -44,34 +45,27 @@ public class CatalinaPlugin extends ModuleLifecycleAdapter implements ExtensionM
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod method = target.getDeclaredMethod("startAsync", "javax.servlet.ServletRequest",
-                    "javax.servlet.ServletResponse");
+                        "javax.servlet.ServletResponse");
                 method.addInterceptor(Listeners.of(RequestStartAsyncInterceptor.class));
             }
         });
 
         //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.MappingRegistry.getMappingsByUrl
         enhanceTemplate.enhance(this,
-            "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByUrl",
-                        "java.lang.String");
-                    getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
-                }
-            });
+                "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
+                new EnhanceCallback() {
+                    @Override
+                    public void doEnhance(InstrumentClass target) {
+                        InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByUrl",
+                                "java.lang.String");
+                        getMethod.addInterceptor(Listeners.of(SpringMvcInterceptor.class));
 
-        //org.springframework.web.servlet.handler.AbstractHandlerMethodMapping.MappingRegistry.getMappingsByDirectPath
-        enhanceTemplate.enhance(this,
-            "org.springframework.web.servlet.handler.AbstractHandlerMethodMapping$MappingRegistry",
-            new EnhanceCallback() {
-                @Override
-                public void doEnhance(InstrumentClass target) {
-                    InstrumentMethod getMethod = target.getDeclaredMethod("getMappingsByDirectPath",
-                        "java.lang.String");
-                    getMethod.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
-                }
-            });
+                        InstrumentMethod getMappingsByDirectPath = target.getDeclaredMethod("getMappingsByDirectPath",
+                                "java.lang.String");
+                        getMappingsByDirectPath.addInterceptor(Listeners.of(SpringMvcApiInterceptor.class));
+                    }
+                });
+        
         return true;
     }
 }

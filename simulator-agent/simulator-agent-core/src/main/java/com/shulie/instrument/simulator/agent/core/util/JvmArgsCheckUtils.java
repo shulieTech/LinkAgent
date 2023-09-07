@@ -15,7 +15,10 @@
 package com.shulie.instrument.simulator.agent.core.util;
 
 import com.shulie.instrument.simulator.agent.core.gson.SimulatorGsonFactory;
+import com.shulie.instrument.simulator.agent.core.register.impl.KafkaRegister;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -25,6 +28,8 @@ import java.util.*;
  * @date 2021/8/18 13:55
  */
 public class JvmArgsCheckUtils {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(JvmArgsCheckUtils.class.getName());
 
     /**
      * 获取toolsJarPath路径
@@ -119,6 +124,9 @@ public class JvmArgsCheckUtils {
         Map<String, String> result = new HashMap<String, String>();
         // 是否已经在内部启动了ttl探针
         boolean hasBootstrappedTtlAgent = "true".equals(System.getProperty("TtlAgent_internal_bootstrapped"));
+        if(hasBootstrappedTtlAgent){
+            LOGGER.info("Ttl Agent bootstrap in LinkAgent successful!!!");
+        }
         //1、校验     * 1、transmittable-thread-local-2.10.2.jar参数是否放在所有agent参数前校验
         boolean transmittableResult = hasBootstrappedTtlAgent ? true : transmittableCheck(result, transmittableIndex, delayAgent, simulatorLauncherInstrumentIndex, new ArrayList<>(agentIndex));
         //2     * 2、JDK7及以下参数是否配置-XX:PermSize=256M -XX:MaxPermSize=512M校验，参数值大小暂不校验

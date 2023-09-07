@@ -15,7 +15,9 @@ public class ExtensionModulePluginIgnoredTypesConfigurer implements IgnoredTypes
 
         //aliyun-ons
         builder.ignoreClass("com.aliyun.openservices.")
-                .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.ConsumerImpl");
+                .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.ConsumerImpl")
+                .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.OrderConsumerImpl")
+                .allowClass("com.aliyun.openservices.ons.api.impl.rocketmq.BatchConsumerImpl");
 
         //aliyun-openservices
         builder.ignoreClass("com.aliyun.openservices.")
@@ -72,7 +74,8 @@ public class ExtensionModulePluginIgnoredTypesConfigurer implements IgnoredTypes
                 .allowClass("com.sf.push.nserviceimpl.PushCustomPrivateReadThread")
                 .allowClass("com.sf.push.nserviceimpl.PushCustomPrivateSendThread")
                 .allowClass("com.sf.push.serviceimpl.PushCustomPrivateReadThread")
-                .allowClass("com.sf.push.serviceimpl.PushCustomPrivateSendThread");
+                .allowClass("com.sf.push.serviceimpl.PushCustomPrivateSendThread")
+                .allowClass("com.sf.timer.push.job.CommonUploadOrderDataJob");
 
         //fandeng-kafka
         builder.ignoreClass("com.soybean.")
@@ -205,5 +208,8 @@ public class ExtensionModulePluginIgnoredTypesConfigurer implements IgnoredTypes
         builder.ignoreClass("com.alicloud.openservices.tablestore")
                 .allowClass("com.alicloud.openservices.tablestore.InternalClient")
                 .allowClass("com.alicloud.openservices.tablestore.core.LauncherFactory");
+
+        //liantong-kafka
+        builder.allowClass("com.tianyan.kafka.consumer.KafkaMsgSend");
     }
 }

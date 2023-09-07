@@ -40,6 +40,7 @@ public class TtlAgentBootstrapper {
             String ttlAgentPath = agentHome + File.separator + "bootstrap" + File.separator + "transmittable-thread-local-2.12.1.jar";
             JarFile ttlJar = new JarFile((new File(ttlAgentPath)));
             instrumentation.appendToBootstrapClassLoaderSearch(ttlJar);
+            instrumentation.appendToSystemClassLoaderSearch(ttlJar);
 
             Class<?> ttlLauncherClass = Class.forName("com.alibaba.ttl.threadpool.agent.TtlAgent", false, parentClassLoader);
             Method ttlPremain = ttlLauncherClass.getDeclaredMethod("premain", String.class, Instrumentation.class);

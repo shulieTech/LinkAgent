@@ -39,5 +39,9 @@ public class TraceTimerTask implements TimerTask {
         this.busTimerTask = BUSTimerTask;
         this.rpcContext = rpcContext;
     }
+
+    public TimerTask getBusTimerTask() {
+        return busTimerTask;
+    }
 }
 

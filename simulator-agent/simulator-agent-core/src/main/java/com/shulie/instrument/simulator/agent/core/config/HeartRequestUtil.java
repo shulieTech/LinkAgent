@@ -39,7 +39,7 @@ public class HeartRequestUtil {
 
     public static String getUpgradeFileTempSaveDir() {
         return new File(CoreLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                .getParent();
+                .getParentFile().getParent();
     }
 
 
@@ -55,8 +55,8 @@ public class HeartRequestUtil {
         heartRequest.setAgentVersion(agentConfig.getAgentVersion());
         heartRequest.setSimulatorVersion(HeartCommandUtils.SIMULATOR_VERSION);
         if (HeartCommandConstants.UN_INIT_UPGRADE_BATCH.equals(heartRequest.getCurUpgradeBatch())) {
-            String agentBasePath = getUpgradeFileTempSaveDir().replace("core", "");
-            File localFile = new File(agentBasePath + "agent/simulator_-1");
+            String agentBasePath = getUpgradeFileTempSaveDir();
+            File localFile = new File(agentBasePath , "agent/simulator_-1");
             if (!localFile.exists()) {
                 heartRequest.setDependencyInfo(HeartCommandUtils.allModuleVersionDetail);
             }
@@ -71,9 +71,9 @@ public class HeartRequestUtil {
 //            return;
 //        }
 //        //后面的代码只需要校验一次
-//        String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+//        String inputArgs = GsonFactory.getGson().toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 //
-//        String jvmArgsCheckResult = JSON.toJSONString(
+//        String jvmArgsCheckResult = GsonFactory.getGson().toJson(
 //                JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig));
 //
 //

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,24 +14,18 @@
  */
 package com.pamirs.attach.plugin.jedis.util;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Throwables;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.BinaryJedis;
 import redis.clients.jedis.Client;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author vincent
@@ -263,6 +257,11 @@ public final class RedisUtils {
         METHOD_NAMES.put("xclaim", READ);
         METHOD_NAMES.put("xpending", READ);
 
+        // HyperLogLog的命令
+        METHOD_NAMES.put("pfadd", WRITE);
+        METHOD_NAMES.put("pfcount", READ);
+//        METHOD_NAMES.put("pfmerge", READ);
+
         //METHOD_NAMES.put("info", READ);
 
         // 韵达特有的方法
@@ -294,6 +293,7 @@ public final class RedisUtils {
 
         IGNORE_NAME.add("mqserverinfos");
         IGNORE_NAME.add("scriptLoad");
+        IGNORE_NAME.add("unwatch");
 
     }
 
@@ -391,16 +391,16 @@ public final class RedisUtils {
         try {
             if (maxRedisExpireTime != null && maxRedisExpireTime > -1f) {
                 if ((methodName.equals("setex") && args[1] instanceof Integer) || (methodName.equals("expire")
-                    && args[1] instanceof Integer)) {
+                        && args[1] instanceof Integer)) {
                     args[1] = Math.min((Integer) args[1], Float.valueOf(maxRedisExpireTime * 60 * 60).intValue());
                 } else if ((methodName.equals("pexpire") && args[1] instanceof Long) || (methodName.equals("psetex")
-                    && args[1] instanceof Long)) {
+                        && args[1] instanceof Long)) {
                     args[1] = Math.min((Long) args[1], Float.valueOf(maxRedisExpireTime * 60 * 60 * 1000).longValue());
                 } else if (methodName.equals("set") && args.length == 3 && args[2].getClass().getName().equals(
                         "redis.clients.jedis.params.SetParams")) {
                     Map<String, Object> params;
                     try {
-                        params = (Map<String, Object>) ReflectionUtils.getFieldValue(args[2], "params");
+                        params = ReflectionUtils.get(args[2], "params");
                     } catch (Exception e) {
                         LOGGER.error("get redis set params error", e);
                         return;
@@ -437,8 +437,8 @@ public final class RedisUtils {
             }
         } catch (Exception exception) {
             LOGGER.error("jedis maxRedisExpireTime -method: {},new args:{},maxRedisExpireTime:{},exception:{}",
-                methodName, Arrays.toString(args), maxRedisExpireTime,
-                Throwables.getStackTraceAsString(exception));
+                    methodName, Arrays.toString(args), maxRedisExpireTime,
+                    Throwables.getStackTraceAsString(exception));
         }
     }
 

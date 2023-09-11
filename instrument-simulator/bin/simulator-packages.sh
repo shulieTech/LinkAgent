@@ -35,6 +35,7 @@ mkdir -p ${SIMULATOR_TARGET_DIR}/modules
 cp ../instrument-simulator-core/target/instrument-simulator-core-*-jar-with-dependencies.jar ${SIMULATOR_TARGET_DIR}/lib/instrument-simulator-core.jar &&
   cp ../instrument-simulator-agent/target/instrument-simulator-agent-*-jar-with-dependencies.jar ${SIMULATOR_TARGET_DIR}/instrument-simulator-agent.jar &&
   cp ../instrument-simulator-messager/target/instrument-simulator-messager-*-jar-with-dependencies.jar ${SIMULATOR_TARGET_DIR}/bootstrap/instrument-simulator-messager.jar &&
+  cp ../target/bootstrap/*.jar ${SIMULATOR_TARGET_DIR}/bootstrap/ &&
   cp simulator-logback.xml ${SIMULATOR_TARGET_DIR}/config/simulator-logback.xml &&
   cp simulator.properties ${SIMULATOR_TARGET_DIR}/config/simulator.properties &&
   cp dump.sh ${SIMULATOR_TARGET_DIR}/bin/dump.sh

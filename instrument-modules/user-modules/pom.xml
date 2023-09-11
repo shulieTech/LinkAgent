@@ -89,6 +89,21 @@
         <module>module-spring-cloud-gateway</module>
         <module>module-netty-time-wheel</module>
         <module>module-spring-web</module>
+        <module>module-sync-fetch-obj</module>
+        <module>module-isolation</module>
+        <module>module-messaging-common</module>
+        <module>module-spring-kafka</module>
+        <module>module-alibaba-rocketmqv2</module>
+        <module>module-apache-rocketmqv2</module>
+        <module>module-apache-kafka-streamv2</module>
+        <module>module-apache-kafkav2</module>
+        <module>module-spring-rabbitmq</module>
+        <module>module-rabbitmqv2</module>
+        <module>module-cluster-test-check</module>
+        <module>module-jdbc-trace</module>
+        <module>module-shadow-preparation</module>
+        <module>module-tomcat-dbcp</module>
+        <module>module-cus-trace</module>
     </modules>
 
     <build>
@@ -98,13 +113,6 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.2.4</version>
                 <configuration>
-                    <relocations>
-                        <relocation>
-                            <!-- 修改 guava 包名 -->
-                            <pattern>com.google.common</pattern>
-                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common</shadedPattern>
-                        </relocation>
-                    </relocations>
                     <shadedArtifactAttached>true</shadedArtifactAttached>
                     <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
                     <filters>
@@ -128,28 +136,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!--            <plugin>-->
-            <!--                <groupId>org.apache.maven.plugins</groupId>-->
-            <!--                <artifactId>maven-assembly-plugin</artifactId>-->
-            <!--                <version>2.2-beta-5</version>-->
-            <!--                <configuration>-->
-            <!--                    <appendAssemblyId>false</appendAssemblyId>-->
-            <!--                    <outputDirectory>../../target/modules/${module-name}</outputDirectory>-->
-            <!--                </configuration>-->
-            <!--                <executions>-->
-            <!--                    <execution>-->
-            <!--                        <goals>-->
-            <!--                            <goal>attached</goal>-->
-            <!--                        </goals>-->
-            <!--                        <phase>package</phase>-->
-            <!--                        <configuration>-->
-            <!--                            <descriptorRefs>-->
-            <!--                                <descriptorRef>jar-with-dependencies</descriptorRef>-->
-            <!--                            </descriptorRefs>-->
-            <!--                        </configuration>-->
-            <!--                    </execution>-->
-            <!--                </executions>-->
-            <!--            </plugin>-->
         </plugins>
     </build>
+
 </project>

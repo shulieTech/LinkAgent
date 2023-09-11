@@ -16,6 +16,7 @@ package com.shulie.instrument.module.config.fetcher;
 
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.internal.PradarInternalService;
+import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.module.config.fetcher.config.ConfigManager;
 import com.shulie.instrument.module.config.fetcher.config.DefaultConfigFetcher;
 import com.shulie.instrument.module.config.fetcher.config.SimulatorDetail;
@@ -57,7 +58,6 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
 
     private ConfigManager configManager;
 
-
     /**
      * 获取simulator配置的接口，目前只获取静默开关状态
      * @param args
@@ -66,7 +66,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
     @Command("getSimulatorDetail")
     public CommandResponse<Object> getSimulatorDetail(Map<String, String> args){
         SimulatorDetail simulatorDetail = new SimulatorDetail();
-        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() == true ? 1 : 0);
+        simulatorDetail.setIsSilent(PradarSwitcher.silenceSwitchOn() ? 1 : 0);
         CommandResponse<Object> commandResponse = new CommandResponse<Object>();
         commandResponse.setSuccess(true);
         commandResponse.setResult(simulatorDetail);
@@ -105,6 +105,7 @@ public class ConfigFetcherModule extends ModuleLifecycleAdapter implements Exten
         }, 10, TimeUnit.SECONDS);
 
         PradarInternalService.registerConfigFetcher(new DefaultConfigFetcher());
+
         return true;
     }
 

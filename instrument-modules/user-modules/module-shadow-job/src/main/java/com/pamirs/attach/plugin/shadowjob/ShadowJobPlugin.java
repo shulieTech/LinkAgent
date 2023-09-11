@@ -15,11 +15,14 @@
 package com.pamirs.attach.plugin.shadowjob;
 
 import com.pamirs.attach.plugin.shadowjob.adapter.XxlJobAdapter;
+import com.pamirs.attach.plugin.shadowjob.cache.ElasticJobCache;
 import com.pamirs.attach.plugin.shadowjob.interceptor.*;
 import com.pamirs.attach.plugin.shadowjob.util.ElasticJobRegisterUtil;
+import com.pamirs.pradar.internal.config.ShadowJob;
 import com.pamirs.pradar.pressurement.agent.event.IEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOffEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ClusterTestSwitchOnEvent;
+import com.pamirs.pradar.pressurement.agent.event.impl.SilenceSwitchOnEvent;
 import com.pamirs.pradar.pressurement.agent.listener.EventResult;
 import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.listener.impl.ShadowImplListener;
@@ -35,6 +38,8 @@ import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import org.kohsuke.MetaInfServices;
 
+import java.util.Collection;
+
 
 /**
  * @author vincent
@@ -45,6 +50,7 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
 
     @Override
     public boolean onActive() throws Throwable {
+
         final ShadowImplListener shaDowImplListener = new ShadowImplListener();
 
         try {
@@ -113,7 +119,7 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         enhanceTemplate.enhance(this, "com.xxl.job.core.executor.XxlJobExecutor", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
-                InstrumentMethod declaredMethod = target.getDeclaredMethod("loadJobThread","int");
+                InstrumentMethod declaredMethod = target.getDeclaredMethod("loadJobThread", "int");
                 declaredMethod.addInterceptor(Listeners.of(XxlOptionInterceptor.class));
             }
         });
@@ -246,14 +252,13 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         });
 
 
-        //
-//        enhanceTemplate.enhance(this, "org.springframework.scheduling.quartz.QuartzJobBean", new EnhanceCallback() {
-//            @Override
-//            public void doEnhance(InstrumentClass target) {
-//                InstrumentMethod getMethod = target.getDeclaredMethod("execute", "org.quartz.JobExecutionContext");
-//                getMethod.addInterceptor(Listeners.of(QuartzJobBeanExecuteInterceptor.class));
-//            }
-//        });
+        /*enhanceTemplate.enhance(this, "org.springframework.scheduling.quartz.QuartzJobBean", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("execute", "org.quartz.JobExecutionContext");
+                getMethod.addInterceptor(Listeners.of(QuartzJobBeanExecuteInterceptor.class));
+            }
+        });*/
 
 
         enhanceTemplate.enhance(this, "org.quartz.JobExecutionContext", new EnhanceCallback() {
@@ -284,6 +289,23 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
             }
         });
 
+        enhanceTemplate.enhance(this, "org.springframework.scheduling.config.ScheduledTaskRegistrar", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod declaredMethods = target.getDeclaredMethods("scheduleTriggerTask", "scheduleCronTask",
+                        "scheduleFixedRateTask", "scheduleFixedDelayTask");
+                declaredMethods.addInterceptor(Listeners.of(ScheduledTaskRegistrarInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "org.springframework.scheduling.concurrent.ReschedulingRunnable", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod getMethod = target.getDeclaredMethod("run");
+                getMethod.addInterceptor(Listeners.of(ReschedulingRunnableInterceptor.class));
+            }
+        });
+
         try {
             Class.forName("com.dangdang.ddframe.job.spring.schedule.SpringJobScheduler");
             PradarSpringUtil.onApplicationContextLoad(new Runnable() {
@@ -295,7 +317,39 @@ public class ShadowJobPlugin extends ModuleLifecycleAdapter implements Extension
         } catch (ClassNotFoundException e) {
             // do nothing
         }
+
+        registerSilenceListener();
+
         return true;
+    }
+
+    /**
+     * 注册静默事件处理器
+     */
+    private void registerSilenceListener() {
+        PradarEventListener silenceListener = new PradarEventListener() {
+            @Override
+            public EventResult onEvent(IEvent event) {
+                if (event instanceof SilenceSwitchOnEvent) {
+                    Collection<ShadowJob> shadowJobs = GlobalConfig.getInstance().getRegisteredJobs().values();
+                    for (ShadowJob shadowJob : shadowJobs) {
+                        GlobalConfig.getInstance().addNeedStopJobs(shadowJob);
+                    }
+                }
+                return EventResult.IGNORE;
+            }
+
+            @Override
+            public int order() {
+                return 50;
+            }
+        };
+        EventRouter.router().addListener(silenceListener);
+    }
+
+    @Override
+    public void onUnload() throws Throwable {
+        ElasticJobCache.release();
     }
 
 }

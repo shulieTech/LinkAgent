@@ -14,14 +14,14 @@
  */
 package com.shulie.instrument.simulator.agent.core.scheduler;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.JsonObject;
 import com.shulie.instrument.simulator.agent.api.ExternalAPI;
 import com.shulie.instrument.simulator.agent.api.model.CommandExecuteKey;
 import com.shulie.instrument.simulator.agent.api.model.CommandPacket;
 import com.shulie.instrument.simulator.agent.api.model.HeartRequest;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandConstants;
 import com.shulie.instrument.simulator.agent.api.utils.HeartCommandUtils;
+import com.shulie.instrument.simulator.agent.core.gson.SimulatorGsonFactory;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.spi.AgentScheduler;
 import com.shulie.instrument.simulator.agent.spi.CommandExecutor;
@@ -309,11 +309,10 @@ public class HttpAgentScheduler implements AgentScheduler {
         if (commandPacket == null) {
             installLocalOrRemote();
         } else {
-            logger.error("卸载命令未清除,无法安装探针,命令详情:" + JSON.toJSONString(commandPacket));
+            logger.error("卸载命令未清除,无法安装探针,命令详情:" + SimulatorGsonFactory.getGson().toJson(commandPacket));
         }
 
-
-    startScheduler();
+        startScheduler();
     }
 
     private List<CommandExecuteResponse> handleCommandExecuteResponse(CommandExecuteResponse commandExecuteResponse){
@@ -436,7 +435,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             commandPacketList.add(commandPacket);
         }
         if (commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY) == null){
-            logger.error("版本批次号获取失败，无法在线升级操作!");
+//            logger.error("版本批次号获取失败，无法在线升级操作!");
         } else {
             HeartCommandConstants.setCurUpgradeBatch((String) commandPacketList.get(0).getExtras().get(HeartCommandConstants.UPGRADE_BATCH_KEY));
         }
@@ -455,7 +454,7 @@ public class HttpAgentScheduler implements AgentScheduler {
             preCommandExecuteResponseList = handleCommandExecuteResponse(preCommandExecuteResultsResponse);
             if (preCommandExecuteResponseList.size() > 0){
                 for (CommandExecuteResponse commandExecuteResponse : preCommandExecuteResponseList){
-                    logger.info("上报执行任务结果:{}", JSON.toJSONString(commandExecuteResponse));
+                    logger.info("上报执行任务结果:{}", SimulatorGsonFactory.getGson().toJson(commandExecuteResponse));
                 }
             }
         }
@@ -494,7 +493,7 @@ public class HttpAgentScheduler implements AgentScheduler {
      */
     private CommandPacket getLatestCommandPacket() {
         CommandPacket commandPacket = externalAPI.getLatestCommandPacket();
-        if (commandPacket == null || commandPacket == CommandPacket.NO_ACTION_PACKET) {
+        if (commandPacket == null || (commandPacket.getCommandType() == CommandPacket.COMMAND_TYPE_FRAMEWORK && commandPacket.getOperateType() == CommandPacket.OPERATE_TYPE_INSTALL)) {
             return null;
         }
         if (commandPacket.getLiveTime() != -1
@@ -509,15 +508,35 @@ public class HttpAgentScheduler implements AgentScheduler {
      * use local jar installed if exists
      */
     private void installLocalOrRemote() {
-        CommandPacket startCommandPacket;
+        CommandPacket startCommandPacket = null;
         //直到成功为止，控制台可能重启、网络问题等原因
         //TODO
+        int time = 0;
         while ((startCommandPacket = getStartCommandPacket()) == null){
             try {
+                time ++;
+                if(time == 20){
+                    String defaultRegister = "zookeeper";
+                    String register = agentConfig.getProperty("register.name", defaultRegister);
+                    if(defaultRegister.equals(register)){
+                        logger.error("经过10s尝试启动simulator失败, 请确认控制台是否正常");
+                    }
+                    break;
+                }
                 logger.error("启动simulator获取远程失败,休眠500ms重试，请确认控制台是否正常");
                 Thread.sleep(500 );
             } catch (InterruptedException ignore) {
             }
+        }
+
+        if(startCommandPacket == null){
+            startCommandPacket = new CommandPacket();
+            // 启动
+            startCommandPacket.setId(HeartCommandConstants.startCommandId);
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put(HeartCommandConstants.PATH_TYPE_KEY, HeartCommandConstants.PATH_TYPE_LOCAL_VALUE);
+            // 使用本地探针包
+            startCommandPacket.setExtras(extras);
         }
         install(startCommandPacket);
     }
@@ -720,8 +739,8 @@ public class HttpAgentScheduler implements AgentScheduler {
             commandPacket.setExtras(extras);
             CommandExecuteResponse commandExecuteResponse = commandExecutor.execute(new HeartCommand(commandPacket));
             if (commandExecuteResponse.isSuccess()){
-                JSONObject jsonObject = (JSONObject) commandExecuteResponse.getResult();
-                heartRequest.setDormantStatus(jsonObject.getInteger("isSilent"));
+                Map<String,Object> jsonObject = (Map<String, Object>) commandExecuteResponse.getResult();
+                heartRequest.setDormantStatus(Integer.parseInt(jsonObject.get("isSilent").toString()));
             }
     }
 

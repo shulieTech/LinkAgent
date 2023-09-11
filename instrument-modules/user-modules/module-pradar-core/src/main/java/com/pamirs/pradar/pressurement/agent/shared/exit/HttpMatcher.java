@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -127,34 +127,10 @@ public class HttpMatcher implements Matcher {
                     return true;
                 }
             }
-            // /app/add/{name}
-            // /app/add/1
 
-            // /app/{name}/add
-            // /app/1/add
+            // restful风格对比
             if (expression.contains("/{") && expression.contains("}")) {
-                String subApi = expression.substring(0, expression.indexOf("/{"));
-                //如果包含前缀
-                if (!StringUtil.isEmpty(subApi) && res.startsWith(subApi)) {
-                    //获取后缀
-                    String suffixApi = expression.substring(expression.indexOf("}") + 1);
-                    String tempStr = null;
-                    if (suffixApi.length() != 0) {
-                        tempStr = res.substring(0 + subApi.length() + 1);
-                    } else {
-                        //如果后缀为空,需要继续比较位数
-                        if (expression.split("/").length != res.split("/").length)
-                            return false;
-                    }
-
-                    // add rules:如果属于格式2 同时匹配后缀api
-                    if (!(tempStr == null ? true :
-                            (!tempStr.contains("/") ? false :
-                                    tempStr.substring(tempStr.indexOf("/")).equals(suffixApi)))) {
-                        return false;
-                    }
-                    return true;
-                }
+                return matchRestfulUrl(expression, res);
             }
             if (!StringUtil.isEmpty(temp)) {
                 return true;
@@ -162,6 +138,32 @@ public class HttpMatcher implements Matcher {
         } catch (Throwable t) {
         }
         return false;
+    }
+
+    private static boolean matchRestfulUrl(String expression, String url) {
+        int i1 = 0, i2 = 0;
+        while (true) {
+            if (i1 >= expression.length() && i2 >= url.length()) {
+                return true;
+            } else if (i1 >= expression.length() || i2 >= url.length()) {
+                return false;
+            }
+            char c1 = expression.charAt(i1);
+            char c2 = url.charAt(i2);
+            if (c1 == '{') {
+                i1 = expression.indexOf("}", i1) + 1;
+                i2 = url.indexOf("/", i2);
+                if (i1 >= expression.length() || i2 == -1) {
+                    return true;
+                }
+                continue;
+            } else if (c1 != c2) {
+                return false;
+            } else {
+                i1++;
+                i2++;
+            }
+        }
     }
 
 }

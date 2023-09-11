@@ -30,7 +30,6 @@ public abstract class AbstractReadRequestIndexRename extends AbstractRequestInde
 
     @Override
     public final List<String> reindex(Object target) {
-        //TODO
         return reindex0(target);
     }
 
@@ -38,7 +37,6 @@ public abstract class AbstractReadRequestIndexRename extends AbstractRequestInde
 
     @Override
     public final List<String> getIndex(Object target) {
-        //TODO
         return getIndex0(target);
     }
 
@@ -46,7 +44,6 @@ public abstract class AbstractReadRequestIndexRename extends AbstractRequestInde
 
     @Override
     protected String[] toClusterTestIndex(String[] indexes) {
-
         String[] newIndexes = new String[indexes.length];
         for (int i = 0; i < indexes.length; i++) {
             /**

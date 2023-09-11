@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -57,63 +57,63 @@ public class SqlParser {
     private final static Logger LOGGER = LoggerFactory.getLogger(SqlParser.class);
     public static String lowerCase;
     private static LoadingCache<String, TableParserResult> cacheSqlTablesBuilder = CacheBuilder.newBuilder()
-        .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
-            new CacheLoader<String, TableParserResult>() {
-                @Override
-                public TableParserResult load(String name) throws Exception {
-                    try {
-                        String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
-                        String sql = args[0];
-                        String dbType = args[1];
-                        if("null".equals(dbType)){
-                            dbType = null;
+                    new CacheLoader<String, TableParserResult>() {
+                        @Override
+                        public TableParserResult load(String name) throws Exception {
+                            try {
+                                String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
+                                String sql = args[0];
+                                String dbType = args[1];
+                                if ("null".equals(dbType)) {
+                                    dbType = null;
+                                }
+                                return parseTables(sql, dbType);
+                            } catch (SQLException e) {
+                                return TableParserResult.EMPTY;
+                            }
                         }
-                        return parseTables(sql, dbType);
-                    } catch (SQLException e) {
-                        return TableParserResult.EMPTY;
                     }
-                }
-            }
 
-        );
+            );
     private static LoadingCache<String, String> cacheTableModeBuilder = CacheBuilder.newBuilder()
-        .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
-            new CacheLoader<String, String>() {
-                @Override
-                public String load(String name) throws Exception {
-                    String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
-                    String sql = args[0];
-                    String key = args[1];
-                    String dbType = args[2];
-                    if("null".equals(dbType)){
-                        dbType = null;
+                    new CacheLoader<String, String>() {
+                        @Override
+                        public String load(String name) throws Exception {
+                            String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
+                            String sql = args[0];
+                            String key = args[1];
+                            String dbType = args[2];
+                            if ("null".equals(dbType)) {
+                                dbType = null;
+                            }
+                            String midType = args[3];
+                            return parseAndReplaceTableNames(sql, key, dbType, midType);
+                        }
                     }
-                    String midType = args[3];
-                    return parseAndReplaceTableNames(sql, key, dbType, midType);
-                }
-            }
 
-        );
+            );
     private static LoadingCache<String, String> cacheSchemaModeBuilder = CacheBuilder.newBuilder()
-        .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
+            .maximumSize(300).expireAfterAccess(5 * 60, TimeUnit.SECONDS).build(
 
-            new CacheLoader<String, String>() {
-                @Override
-                public String load(String name) throws Exception {
-                    String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
-                    String sql = args[0];
-                    String key = args[1];
-                    String dbType = args[2];
-                    if("null".equals(dbType)){
-                        dbType = null;
+                    new CacheLoader<String, String>() {
+                        @Override
+                        public String load(String name) throws Exception {
+                            String[] args = StringUtils.splitByWholeSeparator(name, "$$$$");
+                            String sql = args[0];
+                            String key = args[1];
+                            String dbType = args[2];
+                            if ("null".equals(dbType)) {
+                                dbType = null;
+                            }
+                            return parseAndReplaceSchema(sql, key, dbType);
+                        }
                     }
-                    return parseAndReplaceSchema(sql, key, dbType);
-                }
-            }
 
-        );
+            );
 
     public static void clear() {
         cacheSchemaModeBuilder.invalidateAll();
@@ -145,7 +145,7 @@ public class SqlParser {
         if (parser == null) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring("dbType not support dbType" + dbTypeName + " sql" + sql, 0, 1995));
+                        StringUtils.substring("dbType not support dbType" + dbTypeName + " sql" + sql, 0, 1995));
             }
             throw new SQLException("dbType not support dbType" + dbTypeName + " sql" + sql);
         }
@@ -184,7 +184,7 @@ public class SqlParser {
         } catch (Throwable e) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
+                        StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
             }
             throw new SQLException("Wrong sql:" + sql, e);
         }
@@ -202,15 +202,15 @@ public class SqlParser {
             return cacheTableModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype + "$$$$" + midType);
         } catch (Throwable e) {
             LOGGER.error("replace table to shadow table error. sql={}, key={}, dbType={}", sql, dbConnectionKey, dbType,
-                e);
+                    e);
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
             }
             SQLException exception = null;
             if (e instanceof SQLException) {
-                exception = (SQLException)e;
+                exception = (SQLException) e;
             } else if (e.getCause() != null && e.getCause() instanceof SQLException) {
-                exception = (SQLException)e.getCause();
+                exception = (SQLException) e.getCause();
             } else {
                 exception = new SQLException(e);
             }
@@ -230,7 +230,7 @@ public class SqlParser {
             return cacheSchemaModeBuilder.get(sql + "$$$$" + key + "$$$$" + innerDbtype);
         } catch (Throwable e) {
             LOGGER.error("replace schema to shadow schema error. sql={}, key={}, dbType={}", sql, dbConnectionKey,
-                dbType, e);
+                    dbType, e);
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(StringUtils.substring(sql, 0, 1995));
             }
@@ -269,7 +269,7 @@ public class SqlParser {
             return2log = returnObj;
         }
         String content = String.format(pattern, method, SqlParser.class, SqlParser.class.getClassLoader().toString(),
-            parameterArray, return2log);
+                parameterArray, return2log);
         DebugHelper.addDebugInfo(level, content);
     }
 
@@ -362,7 +362,7 @@ public class SqlParser {
      * @throws SQLException
      */
     public static String parseAndReplaceSchema(String sql, String key, String dbTypeName) throws SQLException {
-        sql = sql.replaceAll("<  >","<>");
+        sql = sql.replaceAll("<  >", "<>");
         ShadowDatabaseConfig config = GlobalConfig.getInstance().getShadowDatabaseConfig(key);
         if (config == null) {
             return sql;
@@ -373,7 +373,7 @@ public class SqlParser {
         if (parser == null) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
+                        StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
             }
             throw new SQLException("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql);
         }
@@ -421,7 +421,7 @@ public class SqlParser {
         } catch (Throwable e) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
+                        StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
             }
             throw new SQLException("Wrong sql:" + sql, e);
         }
@@ -429,35 +429,14 @@ public class SqlParser {
         return val.toString();
     }
 
-    public static void main(String[] args) throws SQLException {
-        //        String sql = "insert into \"C##PYT_TEST\".M_USER(id,name,age) values(?,?,?)";
-        //        System.out.println(parseAndReplaceSchema(sql, "aaa", "oracle"));
-        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>(), false);
-        ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
-        shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
-        shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");
-        shadowDatabaseConfig.getBusinessShadowTables().put("user2", "pt_user2");
-        GlobalConfig.getInstance().getShadowDatasourceConfigs().put("jdbc:mysql://127.0.0.1:3306/testdb|root",
-            shadowDatabaseConfig);
-        System.out.println(parseAndReplaceTableNames(
-            " select `testdb`.`user`.`id`, `testdb`.`user`.`name`, `testdb`.`user`.`password`, `testdb`.`user`"
-                + ".`createTime`, `testdb`.`user`.`updateTime` from `testdb`.`user` limit ? ",
-            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "druid"));
-
-        System.out.println(parseAndReplaceTableNames(
-            "SELECT r.*, c.org_name, c.org_code, (SELECT org_name FROM t_city WHERE org_code = c.parent_code) "
-                + "provinceName FROM t_route_rule r LEFT JOIN t_city c ON c.sys_tenant_id = 'CLOVER_T3' AND r"
-                + ".city_uuid = c.uuid WHERE r.sys_tenant_id = 'CLOVER_T3' AND r.status != -1 AND r.uuid = ? AND r"
-                + ".status = ? AND r.rule_name LIKE CONCAT('%', ?, '%') AND r.rule_type = ? AND r.type_time = ? AND r"
-                + ".business_type = ? AND r.car_level = ? AND c.org_code = ? AND r.city_uuid = ? AND r.area_type = ? "
-                + "AND r.city_uuid IN (?) AND content->'$.examineYear' = ? AND r.type_trip = ? AND r.extend_biz_type "
-                + "= ? ORDER BY r.status DESC, r.effective_time DESC, r.version_number DESC, r.update_time DESC",
-            "jdbc:mysql://127.0.0.1:3306/testdb|root", "mysql", "other"));
-    }
-
     public static String parseAndReplaceTableNames(String sql, String key, String dbTypeName, String midType) throws SQLException {
-        sql = sql.replaceAll("<  >","<>");
+
+        sql = sql.replaceAll("<  >", "<>");
         DbType dbType = DbType.of(dbTypeName);
+        // gbase8t 类型的sql如果 sql里又 from dual则直接return
+        if (dbType == DbType.gbase8t && sql.toUpperCase().contains("FROM DUAL")) {
+            return sql;
+        }
         Map<String, String> mappingTable = getMappingTables(key);
         if (SqlParser.lowerCase != null && "Y".equals(SqlParser.lowerCase)) {
             Map<String, String> mappingTableLower = new ConcurrentHashMap<String, String>();
@@ -475,7 +454,7 @@ public class SqlParser {
         if (parser == null) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
+                        StringUtils.substring("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql, 0, 1995));
             }
             throw new SQLException("dbType not support" + key + " dbType" + dbTypeName + " sql" + sql);
         }
@@ -529,7 +508,11 @@ public class SqlParser {
                         if (StringUtils.equalsIgnoreCase(nameTemp, mappingName)) {
                             String value = mappingTable.get(mappingName);
                             if (StringUtils.isNotBlank(schema)) {
-                                additionalTableNames.put(schema + "." + nameTemp, schema + "." + value);
+                                if (dbType.equals(DbType.gbase8t)) {
+                                    additionalTableNames.put(schema + "." + nameTemp, schema + ":" + value);
+                                } else {
+                                    additionalTableNames.put(schema + "." + nameTemp, schema + "." + value);
+                                }
                             } else {
                                 additionalTableNames.put(nameTemp, value);
                             }
@@ -549,23 +532,23 @@ public class SqlParser {
         } catch (Throwable e) {
             if (GlobalConfig.getInstance().getWrongSqlDetail().size() < 10) {
                 GlobalConfig.getInstance().addWrongSqlDetail(
-                    StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
+                        StringUtils.substring(("Exception:" + e + " sql" + sql), 0, 1995));
             }
             throw new SQLException("Wrong sql:" + sql, e);
         }
 
         SQLStatementParser parser2 = SQLParserUtils
-            .createSQLStatementParser(val.toString(), dbTypeName);
+                .createSQLStatementParser(val.toString(), dbTypeName);
         final List<SQLStatement> sqlStatements2 = parser2.parseStatementList();
 
         for (final SQLStatement sqlStatement : sqlStatements2) {
             if (sqlStatement instanceof SQLInsertStatement
-                || sqlStatement instanceof SQLUpdateStatement
-                || sqlStatement instanceof SQLDeleteStatement
-                || sqlStatement instanceof SQLAlterTableStatement
-                || sqlStatement instanceof SQLDropTableStatement
-                || sqlStatement instanceof SQLCreateTableStatement
-                || sqlStatement instanceof MySqlRenameTableStatement) {
+                    || sqlStatement instanceof SQLUpdateStatement
+                    || sqlStatement instanceof SQLDeleteStatement
+                    || sqlStatement instanceof SQLAlterTableStatement
+                    || sqlStatement instanceof SQLDropTableStatement
+                    || sqlStatement instanceof SQLCreateTableStatement
+                    || sqlStatement instanceof MySqlRenameTableStatement) {
                 SchemaStatVisitor visitor = SQLUtils.createSchemaStatVisitor(dbType);
                 sqlStatement.accept(visitor);
 
@@ -597,27 +580,27 @@ public class SqlParser {
                         }
 
                         int idx = key.lastIndexOf('|');
-                        String userName = idx > 0 ? key.substring(idx+1) : "未知";
+                        String userName = idx > 0 ? key.substring(idx + 1) : "未知";
 
                         ErrorReporter.buildError()
-                            .setErrorType(ErrorTypeEnum.DataSource)
-                            .setErrorCode("datasource-0004")
-                            .setMessage(String
-                                .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s, userName:%s, 中间件类型:%s", url,
-                                    name.getName(),
-                                    getDriverClassName(url), dbType, userName, midType))
-                            .setDetail(
-                                String.format(
-                                    "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
-                                        + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
-                                    name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql,
-                                    val))
-                            .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
-                            .report();
+                                .setErrorType(ErrorTypeEnum.DataSource)
+                                .setErrorCode("datasource-0004")
+                                .setMessage(String
+                                        .format("没有配置对应的影子表! url:%s, table:%s, driverClassName:%s, dbType:%s, userName:%s, 中间件类型:%s", url,
+                                                name.getName(),
+                                                getDriverClassName(url), dbType, userName, midType))
+                                .setDetail(
+                                        String.format(
+                                                "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
+                                                        + "driverClassName:%s, dbType:%s, [sql] %s [new sql] %s",
+                                                name.getName(), url, name.getName(), getDriverClassName(url), dbType, sql,
+                                                val))
+                                .closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS)
+                                .report();
                         throw new SQLException(String.format(
-                            "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
-                                + "driverClassName:%s, dbType:%s, username:%s, 中间件类型:%s, [sql] %s [new sql] %s",
-                            name.getName(), url, name.getName(), getDriverClassName(url), dbType, userName, midType, sql, val));
+                                "The business table [%s] doesn't has shadow mapping table! url:%s, table:%s, "
+                                        + "driverClassName:%s, dbType:%s, username:%s, 中间件类型:%s, [sql] %s [new sql] %s",
+                                name.getName(), url, name.getName(), getDriverClassName(url), dbType, userName, midType, sql, val));
                     }
                 }
             }
@@ -631,5 +614,37 @@ public class SqlParser {
         } catch (SQLException e) {
             return "unknow";
         }
+    }
+
+    public static void main(String[] args) throws SQLException {
+        String mysqlKey = "jdbc:mysql://127.0.0.1:3306/testdb|root";
+        String gbase8tKey = "jdbc:gbasedbt-sqli:/db_card:XXXXXXXXX|gbasedbt";
+
+        GlobalConfig.getInstance().setShadowDatabaseConfigs(new HashMap<String, ShadowDatabaseConfig>(), false);
+        ShadowDatabaseConfig shadowDatabaseConfig = new ShadowDatabaseConfig();
+        shadowDatabaseConfig.setBusinessShadowTables(new ConcurrentHashMap<String, String>());
+        shadowDatabaseConfig.getBusinessShadowTables().put("user", "pt_user");
+        shadowDatabaseConfig.getBusinessShadowTables().put("user2", "pt_user2");
+        shadowDatabaseConfig.getBusinessShadowTables().put("task", "pt_task");
+        shadowDatabaseConfig.getBusinessShadowTables().put("ZHXX", "pt_ZHXX");
+        GlobalConfig.getInstance().getShadowDatasourceConfigs().put(mysqlKey, shadowDatabaseConfig);
+        GlobalConfig.getInstance().getShadowDatasourceConfigs().put(gbase8tKey, shadowDatabaseConfig);
+
+
+//        String sql = "select id,name from app_service:ZHXX";
+//        String sql = "select * from ZHXX a where a.name='xt'";
+//        String sql = "select app_service:ZHXX.nextval from dual";
+//        String sql = "select lpad(app_service:ZHXX.nextval,32,'@') from dual";
+        String sql = "insert into app_service:ZHXX(id) values (123)";
+//        String sql = "update chn_data:ZHXX set TMXX_SX = 111 where TMXX_SX = 222";
+//        String sql = "delete from app_service:ZHXX where rywybs = 11";
+
+//        System.out.println(sql);
+//        System.out.println("================");
+//        System.out.println(parseAndReplaceSchema(sql, mysqlKey, "mysql"));
+//
+//        System.out.println("================");
+
+        System.out.println(parseAndReplaceTableNames(sql, gbase8tKey, "gbase8t", "druid"));
     }
 }

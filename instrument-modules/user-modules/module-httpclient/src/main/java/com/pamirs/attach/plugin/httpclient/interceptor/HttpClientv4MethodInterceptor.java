@@ -14,13 +14,17 @@
  */
 package com.pamirs.attach.plugin.httpclient.interceptor;
 
-import com.alibaba.fastjson.JSONObject;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.httpclient.HttpClientConstants;
+import com.pamirs.attach.plugin.httpclient.utils.BlackHostChecker;
+import com.pamirs.attach.plugin.httpclient.utils.HttpRequestUtil;
+import com.pamirs.attach.plugin.httpclient.utils.ResponseHandlerUtil;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.common.HeaderMark;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.ContextTransfer;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -33,14 +37,16 @@ import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.*;
+import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.*;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
+import org.apache.http.util.EntityUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -48,18 +54,20 @@ import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by xiaobin on 2016/12/15.
  */
 public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
+
+    private Integer httpResponsePrintLengthLimit;
+
+    private List<String> printResponseContentType = Arrays.asList("application/json","text/plain");
+
     @Override
     public String getPluginName() {
         return HttpClientConstants.PLUGIN_NAME;
-
     }
 
     @Override
@@ -75,58 +83,91 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         return url + path;
     }
 
-    private static ExecutionStrategy fixJsonStrategy =
-            new JsonMockStrategy() {
-                @Override
-                public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
-                    if (params instanceof MatchConfig) {
-                        try {
-                            MatchConfig config = (MatchConfig) params;
-                            if (config.getScriptContent().contains("return")) {
-                                return null;
-                            }
-                            StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+    private static ExecutionStrategy fixJsonStrategy = new JsonMockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            if (params instanceof MatchConfig) {
+                try {
+                    MatchConfig config = (MatchConfig) params;
+                    StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
 
+                    String content = config.getScriptContent();
 
-                            HttpEntity entity = null;
-                            entity = new StringEntity(String.valueOf(config.getScriptContent()), "UTF-8");
+                    Pradar.mockResponse(content);
 
-                            BasicHttpResponse response = new BasicHttpResponse(statusline);
-                            response.setEntity(entity);
+                    HttpEntity entity = null;
+                    entity = new StringEntity(String.valueOf(content), "UTF-8");
 
-                            if (HttpClientConstants.clazz == null) {
-                                HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
-                            }
-                            Object object = Reflect.on(HttpClientConstants.clazz).create(response, null).get();
-                            ProcessController.returnImmediately(returnType, object);
-                        } catch (ProcessControlException pe) {
-                            throw pe;
-                        } catch (Throwable t) {
-                            throw new PressureMeasureError(t);
+                    BasicHttpResponse response = new BasicHttpResponse(statusline);
+                    response.setEntity(entity);
+
+                    if (HttpClientConstants.clazz == null) {
+                        HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                    }
+                    Object object = ReflectionUtils.newInstance(HttpClientConstants.clazz, response, null);
+                    Advice advice = (Advice) config.getArgs().get("advice");
+                    Object[] methodParams = advice.getParameterArray();
+                    ResponseHandler responseHandler = null;
+                    for (Object methodParam : methodParams) {
+                        if (methodParam instanceof ResponseHandler) {
+                            responseHandler = (ResponseHandler) methodParam;
+                            break;
                         }
                     }
-                    return null;
+                    if (responseHandler == null) {
+                        ProcessController.returnImmediately(returnType, object);
+                    }
+                    Object result = ResponseHandlerUtil.handleResponse(responseHandler, (CloseableHttpResponse) object);
+                    ProcessController.returnImmediately(result);
+                } catch (ProcessControlException pe) {
+                    throw pe;
+                } catch (Throwable t) {
+                    throw new PressureMeasureError(t);
                 }
-            };
+            }
+            return null;
+        }
+    };
 
     @Override
-    public void beforeLast(Advice advice) throws ProcessControlException {
+    public void beforeFirst(Advice advice) throws Exception {
         final Object[] args = advice.getParameterArray();
         HttpHost httpHost = (HttpHost) args[0];
         final HttpRequest request = (HttpRequest) args[1];
         if (httpHost == null) {
             return;
         }
-
         String host = httpHost.getHostName();
-        int port = httpHost.getPort();
-        String path = httpHost.getHostName();
-        if (request instanceof HttpUriRequest) {
-            path = ((HttpUriRequest) request).getURI().getPath();
+        String url = getUrl(httpHost, request, host);
+        advice.attach(url);
+        if (BlackHostChecker.isBlackHost(url)) {
+            advice.mark(BlackHostChecker.BLACK_HOST_MARK);
         }
-        //判断是否在白名单中
-        String url = getService(httpHost.getSchemeName(), host, port, path);
+    }
 
+    @Override
+    public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!ClusterTestUtils.enableMock()) {
+            return;
+        }
+        final Object[] args = advice.getParameterArray();
+        final HttpRequest request = (HttpRequest) args[1];
+        String url = advice.attachment();
+        if (url == null) {
+            return;
+        }
+        httpClusterTest(advice, args, request, url);
+    }
+
+    private String getUrl(HttpHost httpHost, HttpRequest request, String host) {
+        int port = httpHost.getPort();
+        String path = HttpRequestUtil.findPath(request);
+        //判断是否在白名单中
+        return getService(httpHost.getSchemeName(), host, port, path);
+    }
+
+    private void httpClusterTest(Advice advice, final Object[] args, final HttpRequest request, String url)
+            throws ProcessControlException {
         final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
         Header[] headers = request.getHeaders(PradarService.PRADAR_WHITE_LIST_CHECK);
         if (headers != null && headers.length > 0) {
@@ -136,63 +177,78 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         config.addArgs("request", request);
         config.addArgs("method", "uri");
         config.addArgs("isInterface", Boolean.FALSE);
+        config.addArgs("advice", advice);
         if (config.getStrategy() instanceof JsonMockStrategy) {
             fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
         }
-        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config, new ExecutionForwardCall() {
-            @Override
-            public Object forward(Object param) {
-                if (Pradar.isClusterTest()) {
-                    String forwarding = config.getForwarding();
-                    try {
-                        if (null != forwarding && null != request) {
-                            URI uri = new URI(forwarding);
-                            HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
-                            args[0] = httpHost1;
+        config.getStrategy().processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config,
+                new ExecutionForwardCall() {
+                    @Override
+                    public Object forward(Object param) {
+                        if (Pradar.isClusterTest()) {
+                            String forwarding = config.getForwarding();
+                            try {
+                                if (null != forwarding && null != request) {
+                                    URI uri = new URI(forwarding);
+                                    HttpHost httpHost1 = new HttpHost(uri.getHost(), uri.getPort(), uri.getScheme());
+                                    args[0] = httpHost1;
 
-                            Object uriField = Reflect.on(request).get("uri");
-                            if (uriField instanceof String) {
-                                Reflect.on(request).set("uri", uri.toASCIIString());
-                            } else {
-                                try {
-                                    Reflect.on(request).set("uri", uri);
-                                } catch (Exception e) {
-                                    URL url = new URL(forwarding);
-                                    Reflect.on(request).set("uri", url);
+                                    Object uriField = ReflectionUtils.get(request,"uri");
+                                    if (uriField instanceof String) {
+                                        ReflectionUtils.set(request,"uri", uri.toASCIIString());
+                                    } else {
+                                        try {
+                                            ReflectionUtils.set(request,"uri", uri);
+                                        } catch (Exception e) {
+                                            URL url = new URL(forwarding);
+                                            ReflectionUtils.set(request,"uri", url);
+                                        }
+                                    }
                                 }
+                            } catch (Throwable t) {
+                                throw new PressureMeasureError("not support forward type. params: " + param);
                             }
                         }
-                    } catch (Throwable t) {
-                        throw new PressureMeasureError("not support forward type. params: " + param);
+                        return null;
                     }
-                }
-                return null;
-            }
 
-            @Override
-            public Object call(Object param) {
-                StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
+                    @Override
+                    public Object call(Object param) {
+                        StatusLine statusline = new BasicStatusLine(HttpVersion.HTTP_1_1, 200, "");
 
-                try {
-                    HttpEntity entity = null;
-                    if (param instanceof String) {
-                        entity = new StringEntity(String.valueOf(param), "UTF-8");
-                    } else {
-                        entity = new ByteArrayEntity(JSONObject.toJSONBytes(param));
+                        try {
+                            HttpEntity entity = null;
+                            if (param instanceof String) {
+                                entity = new StringEntity(String.valueOf(param), "UTF-8");
+                            } else {
+                                entity = new ByteArrayEntity(GsonFactory.getGson().toJson(param).getBytes());
+                            }
+                            BasicHttpResponse response = new BasicHttpResponse(statusline);
+                            response.setEntity(entity);
+
+                            if (HttpClientConstants.clazz == null) {
+                                HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
+                            }
+                            Object obj = ReflectionUtils.newInstance(HttpClientConstants.clazz, response, null);
+
+                            Advice advice = (Advice) config.getArgs().get("advice");
+                            Object[] methodParams = advice.getParameterArray();
+                            ResponseHandler responseHandler = null;
+                            for (Object methodParam : methodParams) {
+                                if (methodParam instanceof ResponseHandler) {
+                                    responseHandler = (ResponseHandler) methodParam;
+                                    break;
+                                }
+                            }
+                            if (responseHandler != null) {
+                                obj = ResponseHandlerUtil.handleResponse(responseHandler, (CloseableHttpResponse) obj);
+                            }
+                            return obj;
+                        } catch (Exception e) {
+                        }
+                        return null;
                     }
-                    BasicHttpResponse response = new BasicHttpResponse(statusline);
-                    response.setEntity(entity);
-
-                    if (HttpClientConstants.clazz == null) {
-                        HttpClientConstants.clazz = Class.forName("org.apache.http.impl.execchain.HttpResponseProxy");
-                    }
-                    return Reflect.on(HttpClientConstants.clazz).create(response, null).get();
-
-                } catch (Exception e) {
-                }
-                return null;
-            }
-        });
+                });
     }
 
     private Map toMap(String queryString) {
@@ -326,11 +382,14 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         if (httpHost == null) {
             return null;
         }
+        if (advice.hasMark(BlackHostChecker.BLACK_HOST_MARK)) {
+            return null;
+        }
         return new ContextTransfer() {
             @Override
             public void transfer(String key, String value) {
-                if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null ||
-                        request.getHeaders(HeaderMark.DONT_MODIFY_HEADER).length == 0) {
+                if (request.getHeaders(HeaderMark.DONT_MODIFY_HEADER) == null || request.getHeaders(
+                        HeaderMark.DONT_MODIFY_HEADER).length == 0) {
                     request.setHeader(key, value);
                 }
             }
@@ -348,10 +407,7 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
         InnerWhiteListCheckUtil.check();
         String host = httpHost.getHostName();
         int port = httpHost.getPort();
-        String path = httpHost.getHostName();
-        if (request instanceof HttpUriRequest) {
-            path = ((HttpUriRequest) request).getURI().getPath();
-        }
+        String path = HttpRequestUtil.findPath(request);
         SpanRecord record = new SpanRecord();
         record.setService(path);
         String reqStr = request.toString();
@@ -375,13 +431,26 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public SpanRecord afterTrace(Advice advice) {
+        if(httpResponsePrintLengthLimit == null){
+            httpResponsePrintLengthLimit = simulatorConfig.getIntProperty("http.response.print.length.limit",1024);
+        }
         Object[] args = advice.getParameterArray();
         HttpRequest request = (HttpRequest) args[1];
         SpanRecord record = new SpanRecord();
         if (advice.getReturnObj() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) advice.getReturnObj();
             try {
-                record.setResponseSize(response == null ? 0 : response.getEntity().getContentLength());
+                if(response == null){
+                    record.setResponseSize(0);
+                }else{
+                    long length = response.getEntity().getContentLength();
+                    record.setResponseSize(length);
+                    if(length < httpResponsePrintLengthLimit && isContentTypeApplicable(response)){
+                        BufferedHttpEntity entity = new BufferedHttpEntity(response.getEntity());
+                        record.setResponse(EntityUtils.toString(entity));
+                        response.setEntity(entity);
+                    }
+                }
             } catch (Throwable e) {
                 record.setResponseSize(0);
             }
@@ -397,6 +466,15 @@ public class HttpClientv4MethodInterceptor extends TraceInterceptorAdaptor {
 
     }
 
+    private boolean isContentTypeApplicable(HttpResponse response){
+        String type = response.getHeaders("Content-Type")[0].getValue();
+        for (String s : printResponseContentType) {
+            if(type.contains(s)){
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Override
     public SpanRecord exceptionTrace(Advice advice) {

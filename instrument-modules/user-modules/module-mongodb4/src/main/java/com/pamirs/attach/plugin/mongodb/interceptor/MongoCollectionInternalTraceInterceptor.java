@@ -21,12 +21,12 @@ import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.internal.MongoClientDelegate;
 import com.mongodb.connection.ClusterSettings;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.mongodb.MongodbConstants;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,7 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
     public SpanRecord beforeTrace(Advice advice) {
         Object target = advice.getTarget();
         if(executorField == null){
-            final Field tempField = ReflectionUtils.getDeclaredField(target, "executor");
+            final Field tempField = ReflectionUtils.findField(target.getClass(), "executor");
             tempField.setAccessible(true);
             this.executorField = tempField;
         }
@@ -80,7 +80,7 @@ public class MongoCollectionInternalTraceInterceptor extends TraceInterceptorAda
         }
         MongoCollection mongoCollection = (MongoCollection)target;
         SpanRecord record = new SpanRecord();
-        ClusterSettings clusterSettings = (ClusterSettings)ReflectionUtils.getFieldValue(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"),"settings");
+        ClusterSettings clusterSettings = ReflectionUtils.get(ReflectionUtils.get(mongoClientDelegate,"cluster"),"settings");
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         record.setService(mongoCollection.getNamespace().getFullName());
         record.setRequest(advice.getParameterArray());

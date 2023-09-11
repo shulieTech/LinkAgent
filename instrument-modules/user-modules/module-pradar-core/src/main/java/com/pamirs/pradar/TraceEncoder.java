@@ -14,12 +14,14 @@
  */
 package com.pamirs.pradar;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.Converter;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.json.ResultSerializer;
 import com.shulie.instrument.simulator.api.util.StringUtil;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestTraceData;
+import io.shulie.takin.pinpoint.thrift.dto.TStressTestTracePayloadData;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.IOException;
@@ -72,7 +74,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                 .append(PradarCoreUtils.makeLogSafe(AppNameUtils.appName())).append('|')
                 .append(ctx.getLogTime() - ctx.getStartTime()).append('|')
                 .append(PradarCoreUtils.makeLogSafe(ctx.getMiddlewareName() == null ? "" : ctx.getMiddlewareName())).append(
-                '|')
+                        '|')
                 .append(PradarCoreUtils.makeLogSafe(ctx.getServiceName() == null ? "" : ctx.getServiceName())).append('|')
                 .append(PradarCoreUtils.makeLogSafe(ctx.getMethodName() == null ? "" : ctx.getMethodName())).append('|')
                 .append(ctx.getResultCode() == null ? "" : ctx.getResultCode()).append('|')
@@ -80,7 +82,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                         ResultSerializer.serializeRequest(ctx.getRequest() == null ? "" : ctx.getRequest(),
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(PradarCoreUtils.makeLogSafe(
-                        ResultSerializer.serializeRequest(ctx.getResponse() == null ? "" : ctx.getResponse(),
+                        ResultSerializer.serializeRequest(ctx.getMockResponse() != null ? ctx.getMockResponse() : ctx.getResponse() != null ? ctx.getResponse() : "" ,
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(TraceCoreUtils.combineString(ctx.isClusterTest(), ctx.isDebug(),
                         "0".equals(ctx.invokeId),
@@ -88,7 +90,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                 .append("|")
                 .append(PradarCoreUtils.makeLogSafe(ctx.getCallBackMsg() == null ? "" : ctx.getCallBackMsg()));
         int samplingInterval;
-        if (ctx.isClusterTest()){
+        if (ctx.isClusterTest()) {
             samplingInterval = PradarSwitcher.getClusterTestSamplingInterval();
         } else {
             samplingInterval = PradarSwitcher.getSamplingInterval();
@@ -97,7 +99,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
         buffer.append("|@").append(TraceCoreUtils.attributes(ctx.traceAppName, ctx.traceServiceName, ctx.traceMethod))
                 .append("|@")
                 .append(TraceCoreUtils.localAttributes(
-                        ctx.upAppName, ctx.remoteIp, ctx.getPort(), ctx.requestSize, ctx.responseSize))
+                        ctx.upAppName, ctx.remoteIp, ctx.getPort(), ctx.requestSize, ctx.responseSize, ctx.mockResponse != null))
                 .append("|")
                 .append(ctx.ext == null ? "" : ctx.ext);
         ctx.logContextData(buffer);
@@ -119,7 +121,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                             .ofClass(
                                     attachment.getExt().getClass()
                             ).getKey();
-                    ctx.ext = key + "@##" + JSON.toJSONString(attachment);
+                    ctx.ext = key + "@##" + GsonFactory.getGson().toJson(attachment);
                 }
                 return;
             }
@@ -155,7 +157,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                         .ofClass(
                                 attachment.getExt().getClass()
                         ).getKey();
-                ctx.ext = key + "@##" + JSON.toJSONString(ctx.ext);
+                ctx.ext = key + "@##" + GsonFactory.getGson().toJson(ctx.ext);
             }
         } catch (Throwable t) {
 
@@ -207,5 +209,135 @@ class TraceTraceEncoder extends TraceEncoder {
         }
         buffer.append(PradarCoreUtils.NEWLINE);
         eea.append(buffer.toString());
+    }
+}
+
+class TraceCollectorInvokeEncoder extends TraceEncoder {
+    private int DEFAULT_BUFFER_SIZE = 256;
+    private StringBuilder buffer = new StringBuilder(DEFAULT_BUFFER_SIZE);
+
+    @Override
+    public void encode(BaseContext base, PradarAppender appender) throws IOException {
+        AbstractContext ctx;
+        if (base instanceof AbstractContext) {
+            ctx = (AbstractContext) base;
+        } else {
+            return;
+        }
+        attachment(ctx);
+
+        StringBuilder buffer = this.buffer;
+        buffer.delete(0, buffer.length());
+
+        TStressTestTraceData traceData = new TStressTestTraceData();
+        traceData.setTraceId(ctx.getTraceId() == null ? "" : ctx.getTraceId());
+        traceData.setTimestamp(ctx.getStartTime());
+        traceData.setAgentId(Pradar.AGENT_ID_NOT_CONTAIN_USER_INFO);
+        traceData.setInvokeId(ctx.getInvokeId() == null ? "" : ctx.getInvokeId());
+        traceData.setInvokeType((byte) ctx.getInvokeType());
+        traceData.setAppName(PradarCoreUtils.makeLogSafe(AppNameUtils.appName()));
+        traceData.setCost((int) (ctx.getLogTime() - ctx.getStartTime()));
+        traceData.setMiddlewareName(PradarCoreUtils.makeLogSafe(ctx.getMiddlewareName() == null ? "" : ctx.getMiddlewareName()));
+        traceData.setServiceName(ctx.getServiceName() == null ? "" : ctx.getServiceName());
+        traceData.setMethodName(PradarCoreUtils.makeLogSafe(ctx.getMethodName() == null ? "" : ctx.getMethodName()));
+        traceData.setResultCode(ctx.getResultCode() == null ? "" : ctx.getResultCode());
+        traceData.setPressureTest(ctx.isClusterTest());
+        traceData.setDebugTest(ctx.isDebug());
+        traceData.setEntrance("0".equals(ctx.invokeId));
+        traceData.setServer(TraceCoreUtils.isServer(ctx));
+        traceData.setUpAppName(ctx.upAppName);
+        traceData.setRemoteIp(ctx.remoteIp);
+        traceData.setPort(StringUtils.isBlank(ctx.getPort()) ? 0 : Integer.parseInt(ctx.getPort()));
+        if (ctx.attributes != null && ctx.attributes.containsKey(PradarService.PRADAR_TRACE_NODE_KEY)){
+            traceData.setEntranceId(ctx.attributes.get(PradarService.PRADAR_TRACE_NODE_KEY));
+        }
+
+        TStressTestTracePayloadData tracePayloadData = new TStressTestTracePayloadData();
+        tracePayloadData.setTraceId(traceData.getTraceId());
+        tracePayloadData.setTimestamp(traceData.getTimestamp());
+        tracePayloadData.setAgentId(traceData.getAgentId());
+        tracePayloadData.setInvokeId(traceData.getInvokeId());
+        tracePayloadData.setInvokeType(traceData.getInvokeType());
+        tracePayloadData.setAppName(traceData.getAppName());
+        tracePayloadData.setMiddlewareName(traceData.getMiddlewareName());
+        tracePayloadData.setServiceName(traceData.getServiceName());
+        tracePayloadData.setMethodName(traceData.getMethodName());
+        tracePayloadData.setPressureTest(traceData.isPressureTest());
+        tracePayloadData.setEntrance(traceData.isEntrance());
+        tracePayloadData.setServer(traceData.isServer());
+        tracePayloadData.setRequest(PradarCoreUtils.makeLogSafe(
+                ResultSerializer.serializeRequest(ctx.getRequest() == null ? "" : ctx.getRequest(),
+                        Pradar.getPluginRequestSize())));
+        tracePayloadData.setResponse(PradarCoreUtils.makeLogSafe(
+                ResultSerializer.serializeRequest(ctx.getResponse() == null ? "" : ctx.getResponse(),
+                        Pradar.getPluginRequestSize())));
+        tracePayloadData.setCallbackMsg(PradarCoreUtils.makeLogSafe(ctx.getCallBackMsg() == null ? "" : ctx.getCallBackMsg()));
+        tracePayloadData.setRequestSize((int) ctx.requestSize);
+        tracePayloadData.setResponseSize((int) ctx.responseSize);
+        tracePayloadData.setExt(ctx.ext == null ? "" : ctx.ext + "");
+
+        ctx.logContextData(buffer);
+        tracePayloadData.setRpcContent(buffer.toString());
+        ctx.destroy();
+
+        appender.appendObject(traceData);
+        appender.appendObject(tracePayloadData);
+    }
+
+    void attachment(AbstractContext ctx) {
+        if (ctx.isClusterTest) {
+            return;
+        }
+        try {
+            if (ctx.ext != null) {
+                Object t = ctx.ext;
+                if (Attachment.class.isAssignableFrom(t.getClass())) {
+                    Attachment attachment = (Attachment) t;
+                    Object key = Converter.TemplateConverter
+                            .ofClass(
+                                    attachment.getExt().getClass()
+                            ).getKey();
+                    ctx.ext = key + "@##" + GsonFactory.getGson().toJson(attachment);
+                }
+                return;
+            }
+
+            String middleware = PradarCoreUtils.makeLogSafe(ctx.getMiddlewareName()
+                    == null
+                    ? "" : ctx.getMiddlewareName());
+            if (StringUtil.isEmpty(middleware)) {
+                return;
+            }
+
+            Object t = ResourceManager.get(ctx.index, middleware);
+            if (t == null) {
+                String serviceName = PradarCoreUtils.makeLogSafe(
+                        ctx.getServiceName() == null ? "" : ctx.getServiceName());
+
+                t = ResourceManager.get(serviceName, middleware);
+
+                if (t == null) {
+                    String methodName = PradarCoreUtils.makeLogSafe(
+                            ctx.getMethodName() == null ? "" : ctx.getMethodName());
+
+                    t = ResourceManager.get(serviceName + methodName, middleware);
+                    if (t == null) {
+                        return;
+                    }
+                }
+            }
+            ctx.ext = t;
+            if (ctx.ext instanceof Attachment) {
+                Attachment attachment = (Attachment) ctx.ext;
+                Object key = Converter.TemplateConverter
+                        .ofClass(
+                                attachment.getExt().getClass()
+                        ).getKey();
+                ctx.ext = key + "@##" + GsonFactory.getGson().toJson(ctx.ext);
+            }
+        } catch (Throwable t) {
+
+        }
+
     }
 }

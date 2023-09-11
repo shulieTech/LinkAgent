@@ -1,1 +1,1 @@
-修改spring-cloud-gateway切点，提前将context放入当前线程中
+2.0.1.5   调整spring BeanFactory内部的增强点，防止出现应用没用spring-cloud-gateway而出现的ClassNotFound异常

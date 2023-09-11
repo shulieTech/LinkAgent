@@ -32,8 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class HeartCommandUtils {
 
-    public static String SIMULATOR_VERSION = null;
-
     /**
      * 是否已经执行成功startCommandId名
      */
@@ -41,13 +39,9 @@ public class HeartCommandUtils {
 
     public static String allModuleVersionDetail = null;
 
-
-
-
-
+    public static String SIMULATOR_VERSION = null;
 
     private static final Map<CommandExecuteKey, CommandExecuteResponse> futureMap = new ConcurrentHashMap<CommandExecuteKey, CommandExecuteResponse>(16, 1);
-
 
     private static final Map<CommandExecuteKey, CommandExecuteResponse> completedMap = new ConcurrentHashMap<CommandExecuteKey, CommandExecuteResponse>(16, 1);
 
@@ -55,34 +49,73 @@ public class HeartCommandUtils {
         //.../.../.../simulator-agent/
         String defaultAgentHome
                 = new File(HeartCommandUtils.class.getProtectionDomain().getCodeSource().getLocation().getFile())
-                .getParent().replace("core", "");
-        String agentModuleProperties = defaultAgentHome + "module.properties";
-        String simulatorModuleProperties = defaultAgentHome + "agent/simulator/module.properties";
-        String userModuleProperties = defaultAgentHome + "agent/simulator/modules/module.properties";
-        String simulatorVersion = defaultAgentHome + "agent/simulator/config/version";
-        File agentModulePropertiesFile = new File(agentModuleProperties);
-        File simulatorModulePropertiesFile = new File(simulatorModuleProperties);
-        File userModulePropertiesFile = new File(userModuleProperties);
-        File simulatorVersionFile = new File(simulatorVersion);
-        if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
-            || !userModulePropertiesFile.exists() || !simulatorVersionFile.exists()){
-            throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");
+                .getParentFile().getParent();
+
+//        File agentModulePropertiesFile = new File(defaultAgentHome , "module.properties");
+//        File simulatorModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/module.properties");
+//        File userModulePropertiesFile = new File(defaultAgentHome , "agent/simulator/modules/module.properties");
+        File simulatorVersionFile = new File(defaultAgentHome , "agent/simulator/config/version");
+//        if (!agentModulePropertiesFile.exists() || !simulatorModulePropertiesFile.exists()
+//                || !userModulePropertiesFile.exists()) {
+//            throw new IllegalArgumentException("模块文件module.properties不完整，请检查探针包是否完整");
+//        } else {
+//            List<String> agentModulePropertiesLines = readFile(agentModulePropertiesFile);
+//            List<String> simulatorModulePropertiesLines = readFile(simulatorModulePropertiesFile);
+//            List<String> userModulePropertiesLines = readFile(userModulePropertiesFile);
+//            agentModulePropertiesLines.addAll(simulatorModulePropertiesLines);
+//            agentModulePropertiesLines.addAll(userModulePropertiesLines);
+//            Collections.sort(agentModulePropertiesLines);
+//            StringBuilder stringBuilder = new StringBuilder();
+//            for (String s : agentModulePropertiesLines) {
+//                stringBuilder.append(s).append(";");
+//            }
+//            allModuleVersionDetail = stringBuilder.toString();
+//        }
+        if (!simulatorVersionFile.exists()) {
+            throw new IllegalArgumentException("agent/simulator/config/version 文件不存在，请检查探针包是否完整");
         } else {
-            List<String> agentModulePropertiesLines = readFile(agentModulePropertiesFile);
-            List<String> simulatorModulePropertiesLines = readFile(simulatorModulePropertiesFile);
-            List<String> userModulePropertiesLines = readFile(userModulePropertiesFile);
-            SIMULATOR_VERSION = readLine(simulatorVersionFile);
-            agentModulePropertiesLines.addAll(userModulePropertiesLines);
-            Collections.sort(agentModulePropertiesLines);
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String s : agentModulePropertiesLines){
-                stringBuilder.append(s).append(";");
+            FileInputStream inputStream = null;
+            InputStreamReader inputStreamReader = null;
+            BufferedReader bufferedReader = null;
+
+            try {
+                inputStream = new FileInputStream(simulatorVersionFile);
+                inputStreamReader = new InputStreamReader(inputStream);
+                bufferedReader = new BufferedReader(inputStreamReader);
+
+                SIMULATOR_VERSION = bufferedReader.readLine();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (inputStream != null) {
+                    try {
+                        inputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                if (inputStreamReader != null) {
+                    try {
+                        inputStreamReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                if (bufferedReader != null) {
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-            allModuleVersionDetail = stringBuilder.toString();
         }
     }
 
-    private static List<String> readFile(File file){
+
+    private static List<String> readFile(File file) {
         FileInputStream inputStream = null;
         List<String> result = new ArrayList<String>();
         try {
@@ -90,8 +123,7 @@ public class HeartCommandUtils {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
             String str;
-            while((str = bufferedReader.readLine()) != null)
-            {
+            while ((str = bufferedReader.readLine()) != null) {
                 //只取模块名称和版本
                 String[] temp = str.split(";");
                 result.add(temp[0] + "," + temp[1]);
@@ -108,78 +140,57 @@ public class HeartCommandUtils {
         }
     }
 
-    private static String readLine(File file){
-        FileInputStream inputStream = null;
-       String result = "";
-        try {
-            inputStream = new FileInputStream(file);
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-            result = bufferedReader.readLine();
-            //close
-            inputStream.close();
-            bufferedReader.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            return result;
-        }
-    }
-
-
-
-    public static final Map<CommandExecuteKey, CommandExecuteResponse> getCompletedMap(){
+    public static final Map<CommandExecuteKey, CommandExecuteResponse> getCompletedMap() {
         return completedMap;
     }
 
-    public static final Map<CommandExecuteKey, CommandExecuteResponse> getFutureMap(){
+    public static final Map<CommandExecuteKey, CommandExecuteResponse> getFutureMap() {
         return futureMap;
     }
 
-    public static int futureMapSize(){
+    public static int futureMapSize() {
         return futureMap.size();
     }
 
-    public static int completedMapSize(){
+    public static int completedMapSize() {
         return completedMap.size();
     }
 
-    public static boolean futureMapEmpty(){
+    public static boolean futureMapEmpty() {
         return futureMap.isEmpty();
     }
 
-    public static boolean completedMapEmpty(){
+    public static boolean completedMapEmpty() {
         return completedMap.isEmpty();
     }
 
-    public static CommandExecuteResponse getCommandExecuteResponseFuture(long commandId, String taskId){
+    public static CommandExecuteResponse getCommandExecuteResponseFuture(long commandId, String taskId) {
         CommandExecuteKey commandExecuteKey = new CommandExecuteKey(commandId, taskId);
         return futureMap.get(commandExecuteKey);
     }
 
-    public static CommandExecuteResponse getCommandExecuteResponse(long commandId, String taskId){
+    public static CommandExecuteResponse getCommandExecuteResponse(long commandId, String taskId) {
         CommandExecuteKey commandExecuteKey = new CommandExecuteKey(commandId, taskId);
         return completedMap.get(commandExecuteKey);
     }
 
 
-    public static CommandExecuteResponse putCommandExecuteResponseFuture(long commandId, String taskId, CommandExecuteResponse commandExecuteResponse){
+    public static CommandExecuteResponse putCommandExecuteResponseFuture(long commandId, String taskId, CommandExecuteResponse commandExecuteResponse) {
         return futureMap.put(new CommandExecuteKey(commandId, taskId), commandExecuteResponse);
     }
 
 
-    public static CommandExecuteResponse putCommandExecuteResponse(long commandId, String taskId, CommandExecuteResponse commandExecuteResponse){
+    public static CommandExecuteResponse putCommandExecuteResponse(long commandId, String taskId, CommandExecuteResponse commandExecuteResponse) {
         return completedMap.put(new CommandExecuteKey(commandId, taskId), commandExecuteResponse);
     }
 
 
-    public static CommandExecuteResponse removeCommandExecuteResponseFuture(long commandId, String taskId){
+    public static CommandExecuteResponse removeCommandExecuteResponseFuture(long commandId, String taskId) {
         return futureMap.remove(new CommandExecuteKey(commandId, taskId));
     }
 
 
-    public static CommandExecuteResponse removeCommandExecuteResponse(long commandId, String taskId){
+    public static CommandExecuteResponse removeCommandExecuteResponse(long commandId, String taskId) {
         return completedMap.remove(new CommandExecuteKey(commandId, taskId));
     }
 }

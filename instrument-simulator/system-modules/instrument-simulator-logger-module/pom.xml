@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.shulie.instrument.simulator</groupId>
         <artifactId>system-modules</artifactId>
-        <version>5.1.0</version>
+        <version>5.3.4</version>
     </parent>
     <artifactId>instrument-simulator-logger-module</artifactId>
     <name>instrument-simulator-logger-module ${simulator.major.version}</name>
@@ -89,24 +89,15 @@
 
     <dependencies>
 
-        <!-- DEBUG工程公共依赖模块，Simulator父工程托管 -->
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-        </dependency>
-
-        <!-- 给DEBUG模块单独配置一个日志 -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>

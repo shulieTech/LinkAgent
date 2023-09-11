@@ -45,6 +45,8 @@ import java.util.Map;
 public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
     private final static Logger LOGGER = LoggerFactory.getLogger(SendMessageHookImpl.class.getName());
 
+    private static ThreadLocal<MQTraceContext> traceContextThreadLocal = new ThreadLocal<MQTraceContext>();
+
     @Override
     public String hookName() {
         return "PradarSendMessageHook";
@@ -93,7 +95,8 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             traceBeans.add(traceBean);
 
             MQTraceContext mqTraceContext = new MQTraceContext();
-            context.setMqTraceContext(mqTraceContext);
+//            context.setMqTraceContext(mqTraceContext);
+            traceContextThreadLocal.set(mqTraceContext);
             mqTraceContext.setMqType(MQType.ROCKETMQ);
             mqTraceContext.setGroup(context.getProducerGroup());
             mqTraceContext.setAsync(CommunicationMode.ASYNC == context.getCommunicationMode());
@@ -146,7 +149,11 @@ public class SendMessageHookImpl implements SendMessageHook, MQTraceConstants {
             if (context == null || context.getMessage() == null) {
                 return;
             }
-            MQTraceContext mqTraceContext = (MQTraceContext)context.getMqTraceContext();
+            MQTraceContext mqTraceContext = traceContextThreadLocal.get();
+            if(mqTraceContext == null){
+                return;
+            }
+//            MQTraceContext mqTraceContext = (MQTraceContext)context.getMqTraceContext();
             MQTraceBean traceBean = mqTraceContext.getTraceBeans().get(0);
 
             if (traceBean != null && context.getSendResult() != null) {

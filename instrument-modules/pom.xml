@@ -11,9 +11,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <simulator.version>5.1.0</simulator.version>
-        <pradar.core.version>2.0.1.0</pradar.core.version>
-        <pradar.register.version>2.0.0.0</pradar.register.version>
+        <simulator.version>5.3.4</simulator.version>
+        <pradar.core.version>2.0.2.0</pradar.core.version>
+        <pradar.register.version>2.0.0.1</pradar.register.version>
         <simulator.bootstrap.api.version>1.0.0</simulator.bootstrap.api.version>
         <simulator.internal.bootstrap.api.version>1.0.0</simulator.internal.bootstrap.api.version>
         <biz.classloader.inject.shadow.job.version>1.0.0</biz.classloader.inject.shadow.job.version>
@@ -21,6 +21,8 @@
         <module.servlet.common.version>2.0.0.0</module.servlet.common.version>
         <module.log.data.pusher>2.0.1.0</module.log.data.pusher>
         <module.pradar.config.fetcher>2.0.1.0</module.pradar.config.fetcher>
+        <module.messaging.common.version>1.0.0</module.messaging.common.version>
+        <module.isolation.version>1.0.0</module.isolation.version>
     </properties>
 
     <profiles>
@@ -276,7 +278,6 @@
     </dependencies>
 
     <modules>
-        <module>bootstrap-inject</module>
         <module>user-modules</module>
         <module>biz-classloader-inject</module>
     </modules>

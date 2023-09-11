@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,13 +14,10 @@
  */
 package com.pamirs.pradar.interceptor;
 
-import com.alibaba.fastjson.JSON;
-import com.pamirs.pradar.InvokeContext;
-import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.TraceIdGenerator;
+import com.pamirs.pradar.*;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
@@ -210,6 +207,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
+        // 业务流量,且业务trace开关关闭,不执行trace interceptor
+        if (!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()) {
+            return;
+        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {
@@ -251,7 +252,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor beforeLast exec err, class:" +  this.getClass().getName(), t);
+                if (!(t instanceof ProcessControlException)) {
+                    LOGGER.error("TraceInterceptor beforeLast exec err, class:" + this.getClass().getName(), t);
+                }
                 throwable = t;
             }
         }
@@ -259,8 +262,14 @@ abstract class TraceInterceptor extends BaseInterceptor {
             boolean isClusterTest = Pradar.isClusterTest();
             if (advice.hasMark(BEFORE_TRACE_SUCCESS)) {
                 try {
+                    String resultCode = ResultCode.INVOKE_RESULT_FAILED;
                     if (Pradar.isExceptionOn()) {
-                        Pradar.response(throwable);
+                        if (throwable instanceof ProcessControlException) {
+                            Pradar.response(((ProcessControlException) throwable).getResult());
+                            resultCode = ResultCode.INVOKE_RESULT_SUCCESS;
+                        } else {
+                            Pradar.response(throwable);
+                        }
                     }
                     boolean isClient = true;
                     try {
@@ -269,19 +278,19 @@ abstract class TraceInterceptor extends BaseInterceptor {
                         LOGGER.error("Trace {} isClient execute error. use default value instead. {}", getClass().getName(), isClient, e);
                     }
                     if (isClient) {
-                        endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType(), advice);
+                        endClientInvoke(resultCode, getPluginType(), advice);
                     } else {
-                        endServerInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType(), advice);
+                        endServerInvoke(resultCode, getPluginType(), advice);
                     }
                 } finally {
                     advice.unMark(BEFORE_TRACE_SUCCESS);
                 }
-            } else {
+            } else if (!Pradar.hasMockResponse()) {
                 LOGGER.error("trace throw exception, but not BEFORE_TRACE_SUCCESS in {}.beforeTrace(...). loss trace log!", getClass().getName(), throwable);
             }
 
             //压测流量抛出异常，  业务流量只做记录
-            if (isClusterTest) {
+            if (isClusterTest || ClusterTestUtils.enableBizRequestMock()) {
                 throw throwable;
             }
         }
@@ -454,6 +463,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (record.getCallbackMsg() != null) {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
@@ -486,7 +499,7 @@ abstract class TraceInterceptor extends BaseInterceptor {
         InvokeContext invokeContext = Pradar.getInvokeContext();
         InvokeContext adviceInvokeContext = (InvokeContext) advice.getInvokeContext();
         if (invokeContext != adviceInvokeContext) {
-            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), JSON.toJSONString(invokeContext), JSON.toJSONString(adviceInvokeContext));
+            LOGGER.error("invokeContext is not same, thread: {}, class : {},  \n\rthread context: {}, \n\radvice context: {}", Thread.currentThread(), this.getClass(), GsonFactory.getGson().toJson(invokeContext), GsonFactory.getGson().toJson(adviceInvokeContext));
 
             try {
                 Pradar.setInvokeContext(adviceInvokeContext);
@@ -563,6 +576,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setCallBackMsg(record.getCallbackMsg());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (isTrace) {
                 endTrace(record.getResultCode(), getPluginType(), advice);
             } else {
@@ -593,7 +610,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable t) {
-            LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), t);
+            if (!(t instanceof ProcessControlException)) {
+                LOGGER.error("TraceInterceptor afterFirst exec err:{}", this.getClass().getName(), t);
+            }
             throwable = t;
         }
         boolean clusterTest = Pradar.isClusterTest();
@@ -628,7 +647,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 LOGGER.error("TraceInterceptor afterLast exec err:{}", this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor afterLast exec err:{}", this.getClass().getName(), t);
+                if (!(t instanceof ProcessControlException)) {
+                    LOGGER.error("TraceInterceptor afterLast exec err:{}", this.getClass().getName(), t);
+                }
                 throwable = t;
             }
         }
@@ -649,7 +670,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
             LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), e);
             throwable = e;
         } catch (Throwable t) {
-            LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), t);
+            if (!(t instanceof ProcessControlException)) {
+                LOGGER.error("TraceInterceptor exceptionFirst exec err:{}", this.getClass().getName(), t);
+            }
             throwable = t;
         }
         boolean clusterTest = Pradar.isClusterTest();
@@ -684,7 +707,9 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 LOGGER.error("TraceInterceptor exceptionLast exec err:{}", this.getClass().getName(), e);
                 throwable = e;
             } catch (Throwable t) {
-                LOGGER.error("TraceInterceptor exceptionLast exec err:{}", this.getClass().getName(), t);
+                if (!(t instanceof ProcessControlException)) {
+                    LOGGER.error("TraceInterceptor exceptionLast exec err:{}", this.getClass().getName(), t);
+                }
                 throwable = t;
             }
         }
@@ -731,6 +756,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
                 invokeContext.setPort(record.getPort());
             }
 
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
+            }
+
             if (record.getMiddlewareName() != null) {
                 invokeContext.setMiddlewareName(record.getMiddlewareName());
             }
@@ -771,6 +800,10 @@ abstract class TraceInterceptor extends BaseInterceptor {
             Object response = record.getResponse();
             if (response != null && response instanceof Throwable) {
                 advice.attach(response);
+            }
+
+            if (record.getMethod() != null) {
+                invokeContext.setMethodName(record.getMethod());
             }
 
             if (Pradar.isExceptionOn()) {

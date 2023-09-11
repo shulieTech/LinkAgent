@@ -19,8 +19,8 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
 
+import com.shulie.instrument.simulator.agent.core.util.IOUtils;
 import com.shulie.instrument.simulator.agent.spi.config.AgentConfig;
-import org.apache.commons.io.IOUtils;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -177,6 +177,21 @@ public class AgentConfigImpl implements AgentConfig {
     }
 
     @Override
+    public String getTenantCode() {
+        return coreConfig.getTenantCode();
+    }
+
+    @Override
+    public String getAgentManagerUrl() {
+        return coreConfig.getAgentManagerUrl();
+    }
+
+    @Override
+    public String getShadowPreparationEnable() {
+        return coreConfig.getShadowPreparationEnable();
+    }
+
+    @Override
     public Map<String, String> getHttpMustHeaders() {
         return coreConfig.getHttpMustHeaders();
     }
@@ -184,6 +199,41 @@ public class AgentConfigImpl implements AgentConfig {
     @Override
     public Map<String, String> getAgentFileConfigs() {
         return Collections.unmodifiableMap(coreConfig.getAgentFileConfigs());
+    }
+
+    @Override
+    public String getNacosTimeout() {
+        return coreConfig.getNacosTimeout();
+    }
+
+    @Override
+    public String getNacosServerAddr() {
+        return coreConfig.getNacosServerAddr();
+    }
+
+    @Override
+    public String getClusterName() {
+        return coreConfig.getClusterName();
+    }
+
+    @Override
+    public String getKafkaSdkSwitch() {
+        return coreConfig.getKafkaSdkSwitch();
+    }
+
+    @Override
+    public String getPinpointCollectorAddress() {
+        return coreConfig.getPinpointCollectorAddress();
+    }
+
+    @Override
+    public String getPradarTraceFileSize() {
+        return coreConfig.getPradarTraceFileSize();
+    }
+
+    @Override
+    public String getPradarMonitorFileSize() {
+        return coreConfig.getPradarMonitorFileSize();
     }
 
     /**

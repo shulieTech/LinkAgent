@@ -5,7 +5,7 @@
     <parent>
         <artifactId>system-modules</artifactId>
         <groupId>io.shulie.instrument.simulator</groupId>
-        <version>5.1.0</version>
+        <version>5.3.4</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -17,11 +17,6 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
         </dependency>
 
         <dependency>

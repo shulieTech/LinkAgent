@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -40,6 +40,7 @@ import static com.shulie.instrument.simulator.api.util.StringUtil.getJavaClassNa
 public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
     private final File moduleJarFile;
     private final File tempModuleJarFile;
+    private Set<String> importResources;
     private final long checksumCRC32;
     private final String bizClassLoader;
 
@@ -57,13 +58,29 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
         return tempFile;
     }
 
-    public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, final String moduleId, final String bizClassLoader) throws IOException {
-        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), moduleId, bizClassLoader);
+    private static URL[] buildResourceUrls(final File tempModuleJarFile, Set<String> importArtifacts) throws IOException {
+        List<File> jarFiles = new ArrayList<File>();
+        jarFiles.add(tempModuleJarFile);
+        if (importArtifacts != null && !importArtifacts.isEmpty()) {
+            for (String resource : importArtifacts) {
+                jarFiles.add(new File(resource));
+            }
+        }
+        URL[] urls = new URL[jarFiles.size()];
+        for (int i = 0; i < jarFiles.size(); i++) {
+            urls[i] = new URL("file:" + jarFiles.get(i).getCanonicalPath());
+        }
+        return urls;
+    }
+
+    public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, Set<String> importArtifacts, final String moduleId, final String bizClassLoader) throws IOException {
+        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), importArtifacts, moduleId, bizClassLoader);
     }
 
     private ModuleClassLoader(final ClassLoaderService classLoaderService,
                               final File moduleJarFile,
                               final File tempModuleJarFile,
+                              Set<String> importArtifacts,
                               final String moduleId,
                               final String bizClassLoader) throws IOException {
         /**
@@ -72,7 +89,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
          */
         super(moduleId,
                 classLoaderService,
-                new URL[]{new URL("file:" + tempModuleJarFile.getCanonicalPath())},
+                buildResourceUrls(tempModuleJarFile, importArtifacts),
                 new Routing(
                         ModuleClassLoader.class.getClassLoader(),
                         //声明所有模块需要找框架加载的类列表,模块类加载会优先从这份列表中加载
@@ -88,6 +105,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
         this.checksumCRC32 = FileUtils.checksumCRC32(moduleJarFile);
         this.moduleJarFile = moduleJarFile;
         this.tempModuleJarFile = tempModuleJarFile;
+        this.importResources = importResources;
         this.bizClassLoader = bizClassLoader;
 
         try {

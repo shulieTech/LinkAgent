@@ -18,7 +18,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ServerAddress;
 import com.mongodb.operation.*;
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
@@ -123,7 +123,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             throw new PressureMeasureError("mongo 未配置对应影子表或者影子库");
         }
 
-        if (shadowDatabaseConfig.isShadowDatabase()) {
+        if (shadowDatabaseConfig.isShadowDatabase() && !shadowDatabaseConfig.isShadowDatabaseWithTable()) {
             return advice.getParameterArray();
         }
 
@@ -212,7 +212,7 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
                 break;
             case AGGREGATE_OPERATION:
                 objectFieldMapAdd(AggregateOperation.class);
-                busMongoNamespace = Reflect.on(args[0]).get("namespace");
+                busMongoNamespace = ReflectionUtils.get(args[0], "namespace");
                 setReadPtMongoNamespace(AggregateOperation.class, args[0], busMongoNamespace, shadowDatabaseConfig);
                 break;
             default:
@@ -257,7 +257,14 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
             error.report();
             throw new PressureMeasureError("mongo 未配置对应影子表2:" + busMongoNamespace.getFullName());
         }
-        String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        String shadowTableName = null;
+        if (shadowDatabaseConfig.isShadowTable()) {
+            shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        } else if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
+            if (!Pradar.isClusterTestPrefix(busMongoNamespace.getCollectionName())) {
+                shadowTableName = Pradar.addClusterTestPrefix(busMongoNamespace.getCollectionName());
+            }
+        }
         if (shadowTableName == null) {
             ErrorReporter.Error error = ErrorReporter.buildError()
                     .setErrorType(ErrorTypeEnum.DataSource)
@@ -273,7 +280,14 @@ public class MongoExecuteInterceptor extends ParametersWrapperInterceptorAdaptor
 
     private void setReadPtMongoNamespace(Class operationClass, Object target, MongoNamespace busMongoNamespace, ShadowDatabaseConfig shadowDatabaseConfig) throws IllegalAccessException, NoSuchFieldException {
         //读操作不包含则直接读取业务表
-        String shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        String shadowTableName = null;
+        if (shadowDatabaseConfig.isShadowTable()) {
+            shadowTableName = getShadowTableName(shadowDatabaseConfig, busMongoNamespace.getCollectionName());
+        } else if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
+            if (!Pradar.isClusterTestPrefix(busMongoNamespace.getCollectionName())) {
+                shadowTableName = Pradar.addClusterTestPrefix(busMongoNamespace.getCollectionName());
+            }
+        }
         if (shadowTableName == null) {
             return;
         }

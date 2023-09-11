@@ -21,8 +21,10 @@ import com.mongodb.ServerAddress;
 import com.mongodb.client.internal.OperationExecutor;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.internal.connection.Cluster;
+import com.mongodb.internal.operation.AggregateOperation;
 import com.mongodb.internal.operation.ReadOperation;
 import com.mongodb.internal.operation.WriteOperation;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.mongodb.utils.Caches;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessor;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
@@ -37,7 +39,6 @@ import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Resource;
@@ -84,7 +85,7 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
                     .setErrorType(ErrorTypeEnum.DataSource)
                     .setErrorCode("datasource-0005")
                     .setMessage("mongodb 不存在对应影子表或影子库:" + busMongoNamespace.getFullName())
-                        .setDetail("mongodb "+StringUtils.join(((Cluster)(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"))).getSettings().getHosts(), ",")+"不存在对应影子表或影子库:" + busMongoNamespace.getFullName());
+                        .setDetail("mongodb "+StringUtils.join(((Cluster)(ReflectionUtils.get(mongoClientDelegate, "cluster"))).getSettings().getHosts(), ",")+"不存在对应影子表或影子库:" + busMongoNamespace.getFullName());
                 error.closePradar(ConfigNames.SHADOW_DATABASE_CONFIGS);
                 error.report();
                 throw new PressureMeasureError("mongo 对应影子表或影子库:" + busMongoNamespace.getFullName());
@@ -125,7 +126,7 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
     }
 
     private ShadowDatabaseConfig getShadowDatabaseConfig(Object mongoClientDelegate) {
-        ClusterSettings clusterSettings = ((Cluster)(ReflectionUtils.getFieldValue(mongoClientDelegate,"cluster"))).getSettings();
+        ClusterSettings clusterSettings = ((Cluster)(ReflectionUtils.get(mongoClientDelegate, "cluster"))).getSettings();
         List<ServerAddress> serverAddresses = clusterSettings.getHosts();
         ShadowDatabaseConfig shadowDatabaseConfig = null;
         for (ShadowDatabaseConfig config : GlobalConfig.getInstance().getShadowDatasourceConfigs().values()) {
@@ -172,6 +173,9 @@ public class DelegateOperationExecutorInterceptor extends CutoffInterceptorAdapt
             }
         }
         MongoNamespace ptMongoNamespace = new MongoNamespace(busMongoNamespace.getDatabaseName(), shadowTableName);
+        if(operation instanceof AggregateOperation){
+            operation = ReflectionUtils.get(operation, "wrapped");
+        }
         operationAccessor.setMongoNamespace(operation, ptMongoNamespace);
     }
 

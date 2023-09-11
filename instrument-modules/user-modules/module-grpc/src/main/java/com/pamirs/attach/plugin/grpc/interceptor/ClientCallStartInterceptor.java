@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,6 +14,7 @@
  */
 package com.pamirs.attach.plugin.grpc.interceptor;
 
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.grpc.GrpcConstants;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
@@ -28,10 +29,15 @@ import com.shulie.instrument.simulator.api.ProcessControlException;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
 import io.grpc.ClientCall;
+import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * GRPC调用服务端
@@ -41,6 +47,11 @@ import java.net.SocketTimeoutException;
  * @Date 2020-03-13 15:36
  */
 public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClientCallStartInterceptor.class);
+
+    private AtomicInteger warnTimes = new AtomicInteger(3);
+
     @Resource
     protected DynamicFieldManager manager;
 
@@ -52,7 +63,7 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeFirst(final Advice advice) throws Exception {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         /**
@@ -200,6 +211,19 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         if (remoteAddress != null) {
             return remoteAddress;
         }
+        try {
+            Object clientStreamProvider = ReflectionUtils.get(target, "clientStreamProvider");
+            Object channel = ReflectionUtils.get(clientStreamProvider, "this$0");
+            String endPoint = ReflectionUtils.get(channel, "target");
+            if (endPoint != null) {
+                manager.setDynamicField(target, GrpcConstants.DYNAMIC_FIELD_REMOTE_ADDRESS, endPoint);
+                return endPoint;
+            }
+        } catch (Exception e) {
+            if (warnTimes.getAndAdd(1) < 3) {
+                logger.warn("get remote address by reflection failed", e);
+            }
+        }
         return "Unknown";
     }
 
@@ -208,6 +232,12 @@ public class ClientCallStartInterceptor extends TraceInterceptorAdaptor {
         if (methodName != null) {
             return methodName;
         }
+        MethodDescriptor descriptor = ReflectionUtils.get(target, "method");
+        if (descriptor != null) {
+            manager.setDynamicField(target, GrpcConstants.DYNAMIC_FIELD_METHOD_NAME, descriptor.getFullMethodName());
+            return descriptor.getFullMethodName();
+        }
         return "UnknownMethod";
     }
+
 }

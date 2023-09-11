@@ -14,11 +14,16 @@
  */
 package com.shulie.instrument.simulator.module.util;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.util.IOUtils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.ToNumberPolicy;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URL;
@@ -33,8 +38,11 @@ public class NetUtils {
     private static final String QOS_RESPONSE_START_LINE = "pandora>[QOS Response]";
     private static final int INTERNAL_SERVER_ERROR = 500;
 
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
+
     /**
      * This implementation is based on Apache HttpClient.
+     *
      * @param urlString the requested url
      * @return the response string of given url
      */
@@ -56,9 +64,9 @@ public class NetUtils {
             int statusCode = urlConnection.getResponseCode();
             String result = sb.toString().trim();
             if (statusCode == INTERNAL_SERVER_ERROR) {
-                JSONObject errorObj = JSON.parseObject(result);
-                if (errorObj.containsKey("errorMsg")) {
-                    return new Response(errorObj.getString("errorMsg"), false);
+                JsonObject errorObj = gson.fromJson(result, JsonObject.class);
+                if (errorObj.has("errorMsg")) {
+                    return new Response(errorObj.get("errorMsg").getAsString(), false);
                 }
                 return new Response(result, false);
             }
@@ -66,7 +74,12 @@ public class NetUtils {
         } catch (IOException e) {
             return new Response(e.getMessage(), false);
         } finally {
-            IOUtils.close(in);
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignore) {
+                }
+            }
             if (urlConnection != null) {
                 urlConnection.disconnect();
             }
@@ -74,17 +87,16 @@ public class NetUtils {
     }
 
     /**
-     * @deprecated
-     * This implementation is based on HttpURLConnection,
-     * which can not detail with status code other than 200.
      * @param url the requested url
      * @return the response string of given url
+     * @deprecated This implementation is based on HttpURLConnection,
+     * which can not detail with status code other than 200.
      */
     public static String simpleRequest(String url) {
         BufferedReader br = null;
         try {
             URL obj = new URL(url);
-            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+            HttpURLConnection con = (HttpURLConnection)obj.openConnection();
             con.setRequestProperty("Accept", "application/json");
             int responseCode = con.getResponseCode();
 
@@ -97,9 +109,9 @@ public class NetUtils {
             }
             String result = sb.toString().trim();
             if (responseCode == 500) {
-                JSONObject errorObj = JSON.parseObject(result);
-                if (errorObj.containsKey("errorMsg")) {
-                    return errorObj.getString("errorMsg");
+                JsonObject errorObj = gson.fromJson(result, JsonObject.class);
+                if (errorObj.has("errorMsg")) {
+                    return errorObj.get("errorMsg").getAsString();
                 }
                 return result;
             } else {
@@ -125,6 +137,7 @@ public class NetUtils {
      * and display the response.
      * Note that pandora qos response is not fully HTTP compatible under version 2.1.0,
      * so we filtered some of the content and only display useful content.
+     *
      * @param path the path relative to http://localhost:12201
      *             e.g. /pandora/ls
      *             For commands that requires arguments, use the following format
@@ -194,7 +207,6 @@ public class NetUtils {
         }
     }
 
-
     /**
      * Test if a port is open on the give host
      */
@@ -215,6 +227,5 @@ public class NetUtils {
             }
         }
     }
-
 
 }

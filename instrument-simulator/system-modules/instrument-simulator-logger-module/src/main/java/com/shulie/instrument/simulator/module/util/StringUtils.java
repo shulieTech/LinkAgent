@@ -14,8 +14,6 @@
  */
 package com.shulie.instrument.simulator.module.util;
 
-import org.apache.commons.lang.ArrayUtils;
-
 import java.lang.reflect.Modifier;
 import java.util.*;
 
@@ -549,7 +547,7 @@ public abstract class StringUtils {
     }
 
     public static Properties splitArrayElementsIntoProperties(String[] array, String delimiter, String charsToDelete) {
-        if (ArrayUtils.isEmpty(array)) {
+        if (array == null || array.length == 0) {
             return null;
         } else {
             Properties result = new Properties();

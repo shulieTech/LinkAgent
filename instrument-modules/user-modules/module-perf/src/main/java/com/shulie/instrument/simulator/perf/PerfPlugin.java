@@ -14,9 +14,10 @@
  */
 package com.shulie.instrument.simulator.perf;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.base.util.PropertyUtil;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.ExtensionModule;
@@ -30,6 +31,10 @@ import com.shulie.instrument.simulator.module.model.memory.MemoryInfo;
 import com.shulie.instrument.simulator.module.model.thread.ThreadInfo;
 import com.shulie.instrument.simulator.perf.builder.PerfResponseBuilder;
 import com.shulie.instrument.simulator.perf.entity.PerfResponse;
+import io.shulie.takin.sdk.kafka.HttpSender;
+import io.shulie.takin.sdk.kafka.MessageSendCallBack;
+import io.shulie.takin.sdk.kafka.MessageSendService;
+import io.shulie.takin.sdk.pinpoint.impl.PinpointSendServiceFactory;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -52,6 +58,8 @@ import java.util.concurrent.TimeUnit;
 public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private final static Logger logger = LoggerFactory.getLogger(PerfPlugin.class);
     private final static String PUSH_URL = "/api/agent/performance/basedata";
+
+    private final static AtomicLong threadInfoCollectTime = new AtomicLong(System.currentTimeMillis());
 
     @Resource
     private ModuleCommandInvoker moduleCommandInvoker;
@@ -90,7 +98,8 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                     /**
                      * 如果当前有压测流量请求，则收集
                      */
-                    if (Pradar.clearHasPressureRequest()) {
+                    String bizEnable = System.getProperty(PerfConstants.BIZ_REQUEST_ENABLE_PERF_KEY);
+                    if("true".equals(bizEnable) || Pradar.clearHasPressureRequest()){
                         collect();
                     }
                 } catch (Throwable e) {
@@ -103,15 +112,21 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     private void collect() {
 
-        CommandResponse<List<ThreadInfo>> threadResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_THREAD, PerfConstants.MODULE_COMMAND_THREAD_INFO, threadParams);
+        // thread信息有可能数据量很大所以不需要每次都采集
+        long threadCollectInterval = GlobalConfig.getInstance().getSimulatorDynamicConfig().perfThreadCollectInterval() * 1000;
+        List<ThreadInfo> threadInfos = Collections.EMPTY_LIST;
+        if ((threadInfoCollectTime.get() + threadCollectInterval) <= System.currentTimeMillis()) {
+            threadInfoCollectTime.set(System.currentTimeMillis());
+            CommandResponse<List<ThreadInfo>> threadResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_THREAD, PerfConstants.MODULE_COMMAND_THREAD_INFO, threadParams);
+            if (!threadResp.isSuccess()) {
+                logger.error("Perf: collect perf thread info err! {}", threadResp.getMessage());
+            } else {
+                threadInfos = threadResp.getResult();
+            }
+        }
+
         CommandResponse<GcInfo> gcResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_GC, PerfConstants.MODULE_COMMAND_GC_INFO);
         CommandResponse<MemoryInfo> memoryResp = moduleCommandInvoker.invokeCommand(PerfConstants.MODULE_ID_MEMORY, PerfConstants.MODULE_COMMAND_MEMORY_INFO);
-        List<ThreadInfo> threadInfos = Collections.EMPTY_LIST;
-        if (!threadResp.isSuccess()) {
-            logger.error("Perf: collect perf thread info err! {}", threadResp.getMessage());
-        } else {
-            threadInfos = threadResp.getResult();
-        }
 
         GcInfo gcInfo = null;
         if (!gcResp.isSuccess()) {
@@ -131,13 +146,29 @@ public class PerfPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         push(response);
     }
 
-    private void push(PerfResponse response) {
-        String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
-        HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, JSON.toJSONString(response));
-        //TODO
-        if (!result.isSuccess()) {
-            logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());
-        }
+    private void push(final PerfResponse response) {
+        final String troControlWebUrl = PropertyUtil.getTroControlWebUrl();
+        MessageSendService messageSendService = new PinpointSendServiceFactory().getKafkaMessageInstance();
+        messageSendService.send(PUSH_URL, HttpUtils.getHttpMustHeaders(), GsonFactory.getGson().toJson(response), new MessageSendCallBack() {
+            @Override
+            public void success() {
+            }
+
+            @Override
+            public void fail(String errorMessage) {
+                logger.error("Perf: push perf info to tro error, errorMessage: {}", errorMessage);
+            }
+        }, new HttpSender() {
+            @Override
+            public void sendMessage() {
+                HttpUtils.HttpResult result = HttpUtils.doPost(troControlWebUrl + PUSH_URL, GsonFactory.getGson().toJson(response));
+                //TODO
+                if (!result.isSuccess()) {
+                    logger.error("Perf: push perf info to tro error, status: {}, result: {}", result.getStatus(), result.getResult());
+                }
+            }
+        });
+
     }
 
     @Command("info")

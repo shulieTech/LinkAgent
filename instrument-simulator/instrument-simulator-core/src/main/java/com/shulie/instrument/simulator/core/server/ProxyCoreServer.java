@@ -29,6 +29,10 @@ public class ProxyCoreServer implements CoreServer {
         this.proxy = proxy;
     }
 
+    @Override
+    public void prepareSyncModule(CoreConfigure config, Instrumentation inst) throws IOException {
+        proxy.prepareSyncModule(config, inst);
+    }
 
     @Override
     public boolean isBind() {

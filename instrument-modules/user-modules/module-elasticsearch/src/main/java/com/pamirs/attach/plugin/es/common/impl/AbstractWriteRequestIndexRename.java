@@ -31,7 +31,6 @@ public abstract class AbstractWriteRequestIndexRename extends AbstractRequestInd
 
     @Override
     public final List<String> reindex(Object target) {
-        //TODO
         return reindex0(target);
     }
 
@@ -39,7 +38,6 @@ public abstract class AbstractWriteRequestIndexRename extends AbstractRequestInd
 
     @Override
     public final List<String> getIndex(Object target) {
-        //TODO
         return getIndex0(target);
     }
 

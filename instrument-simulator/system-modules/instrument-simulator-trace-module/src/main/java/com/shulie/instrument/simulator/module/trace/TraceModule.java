@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,7 +21,6 @@ import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.filter.ClassDescriptor;
 import com.shulie.instrument.simulator.api.filter.ExtFilter;
-import com.shulie.instrument.simulator.api.filter.Filter;
 import com.shulie.instrument.simulator.api.filter.MethodDescriptor;
 import com.shulie.instrument.simulator.api.listener.Listeners;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
@@ -32,7 +31,6 @@ import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.util.ParameterUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 import com.shulie.instrument.simulator.module.util.ConcurrentHashSet;
-import org.apache.commons.lang.ArrayUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +90,7 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
                 if (interfaceClass == null) {
                     return false;
                 }
-                return ArrayUtils.contains(interfaces, interfaceClass.getName());
+                return indexOf(interfaces, interfaceClass.getName(), 0) >= 0;
             }
 
             @Override
@@ -265,7 +263,7 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public boolean doClassFilter(ClassDescriptor classDescriptor) {
                 String[] interfaces = classDescriptor.getInterfaceTypeJavaClassNameArray();
-                return ArrayUtils.contains(interfaces, clazz.getName());
+                return indexOf(interfaces, clazz.getName(), 0) >= 0;
             }
 
             @Override
@@ -353,4 +351,26 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
         }
     }
 
+    public static int indexOf(Object[] array, Object objectToFind, int startIndex) {
+        if (array == null) {
+            return -1;
+        }
+        if (startIndex < 0) {
+            startIndex = 0;
+        }
+        if (objectToFind == null) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (array[i] == null) {
+                    return i;
+                }
+            }
+        } else if (array.getClass().getComponentType().isInstance(objectToFind)) {
+            for (int i = startIndex; i < array.length; i++) {
+                if (objectToFind.equals(array[i])) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
 }

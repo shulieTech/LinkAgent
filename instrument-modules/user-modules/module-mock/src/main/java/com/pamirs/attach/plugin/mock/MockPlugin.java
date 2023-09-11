@@ -14,6 +14,19 @@
  */
 package com.pamirs.attach.plugin.mock;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.pamirs.attach.plugin.mock.interceptor.MockAdviceListener;
 import com.pamirs.pradar.ConfigNames;
 import com.pamirs.pradar.ErrorTypeEnum;
@@ -40,14 +53,24 @@ import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = MockConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io",
-        description = "mock挡板,使用 groovy 脚本编写 mock 内容,以方法为维度，支持方法精确到参数指定,如 com.shulie.test.Test#doTest(int,java.lang.String)")
+    description = "mock挡板,使用 groovy 脚本编写 mock 内容,以方法为维度，支持方法精确到参数指定,如 com.shulie.test.Test#doTest(int,java.lang.String)")
 public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     private final static Logger LOGGER = LoggerFactory.getLogger(MockPlugin.class);
     private Map<String, EventWatcher> watchers;
+    private final ScheduledExecutorService executor = new ScheduledThreadPoolExecutor(1, new ThreadFactory() {
+
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "simulator_module_mockInit" + threadNumber.getAndIncrement());
+            if (t.getPriority() != Thread.NORM_PRIORITY)
+                t.setPriority(Thread.NORM_PRIORITY);
+            return t;
+        }
+    });
 
     @Override
     public boolean onActive() throws Throwable {
@@ -109,45 +132,39 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                 }
             });
 
-            Thread thread = new Thread(new Runnable() {
+            executor.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
-                    while (true) {
-                        try {
-                            Thread.sleep(60000);
-                            synchronized (LOGGER) {
-                                Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
-                                HashSet<MockConfig> set = new HashSet<MockConfig>(GlobalConfig.getInstance().getMockConfigs());
-                                for (MockConfig mockConfig : set) {
-                                    if (watchers.containsKey(mockConfig.getKey())) {
-                                        continue;
-                                    }
-                                    mockConfigs.add(mockConfig);
+                    try {
+                        synchronized (LOGGER) {
+                            Set<MockConfig> mockConfigs = new HashSet<MockConfig>();
+                            HashSet<MockConfig> set = new HashSet<MockConfig>(GlobalConfig.getInstance().getMockConfigs());
+                            for (MockConfig mockConfig : set) {
+                                if (watchers.containsKey(mockConfig.getKey())) {
+                                    continue;
                                 }
-                                if (CollectionUtils.isNotEmpty(mockConfigs)) {
-                                    Map<String, Set<MockConfig>> map = groupByClass(mockConfigs);
-                                    watchers.putAll(enhanceClassMethod(map));
-                                }
+                                mockConfigs.add(mockConfig);
                             }
-                        } catch (Throwable throwable) {
-                            LOGGER.warn("try mock catch error", throwable);
+                            if (CollectionUtils.isNotEmpty(mockConfigs)) {
+                                Map<String, Set<MockConfig>> map = groupByClass(mockConfigs);
+                                watchers.putAll(enhanceClassMethod(map));
+                            }
                         }
+                    } catch (Throwable throwable) {
+                        LOGGER.warn("try mock catch error", throwable);
                     }
-
                 }
-            });
-            thread.setName("simulator_module_mockInit");
-            thread.start();
+            }, 5, 10, TimeUnit.MINUTES);
 
         } catch (Throwable e) {
             LOGGER.warn("挡板增强失败", e);
             ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
-                    .setErrorCode("mock-enhance-0001")
-                    .setMessage("挡板增强失败！")
-                    .setDetail("挡板增强失败:" + e.getMessage())
-                    .closePradar(ConfigNames.LINK_GUARD_CONFIG)
-                    .report();
+                .setErrorType(ErrorTypeEnum.LinkGuardEnhance)
+                .setErrorCode("mock-enhance-0001")
+                .setMessage("挡板增强失败！")
+                .setDetail("挡板增强失败:" + e.getMessage())
+                .closePradar(ConfigNames.LINK_GUARD_CONFIG)
+                .report();
             throw e;
         }
         return true;
@@ -166,25 +183,28 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
         return map;
     }
 
-
     public Map<String, EventWatcher> enhanceClassMethod(Map<String, Set<MockConfig>> configs) {
         if (configs == null || configs.isEmpty()) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         Map<String, EventWatcher> watchers = new HashMap<String, EventWatcher>();
         for (Map.Entry<String, Set<MockConfig>> entry : configs.entrySet()) {
             if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("pre enhance class:{} ,configs:{}", entry.getKey(), entry.getValue());
+                LOGGER.info("[mock plugin] pre enhance class:{} ,configs:{}", entry.getKey(), entry.getValue());
             }
             for (MockConfig mockConfig : entry.getValue()) {
                 IClassMatchBuilder buildingForClass = new EventWatchBuilder(moduleEventWatcher).onClass(entry.getKey());
                 IBehaviorMatchBuilder buildingForBehavior = buildingForClass.onAnyBehavior(mockConfig.getMethodName());
                 if (mockConfig.getMethodArgClasses() != null && !mockConfig.getMethodArgClasses().isEmpty()) {
-                    buildingForBehavior.withParameterTypes(mockConfig.getMethodArgClasses().toArray(new String[mockConfig.getMethodArgClasses().size()]));
+                    buildingForBehavior.withParameterTypes(
+                        mockConfig.getMethodArgClasses().toArray(new String[mockConfig.getMethodArgClasses().size()]));
                 }
-                buildingForBehavior.onListener(Listeners.of(MockAdviceListener.class, new Object[]{mockConfig.getCodeScript()}));
+                buildingForBehavior.onListener(
+                    Listeners.of(MockAdviceListener.class, new Object[] {mockConfig.getCodeScript()}));
+                LOGGER.info("[mock plugin] enhance class:{} method : {} configs:{}", entry.getKey(), mockConfig.getMethodName(), mockConfig);
                 watchers.put(mockConfig.getKey(), buildingForClass.onWatch());
             }
+            LOGGER.info("[mock plugin] enhance class:{} successful!", entry.getKey());
         }
         return watchers;
     }
@@ -202,5 +222,6 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
     @Override
     public void onUnload() throws Throwable {
         this.watchers = null;
+        this.executor.shutdownNow();
     }
 }

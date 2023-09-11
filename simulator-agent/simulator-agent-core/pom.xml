@@ -5,7 +5,7 @@
     <parent>
         <artifactId>simulator-agent</artifactId>
         <groupId>io.shulie.instrument.simulator</groupId>
-        <version>5.1.0</version>
+        <version>5.3.4</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -17,14 +17,10 @@
         <build.time>${timestamp}</build.time>
         <!--suppress UnresolvedMavenProperty -->
         <jdk.8.home>${env.JAVA_8_HOME}</jdk.8.home>
+        <scope.prop>provided</scope.prop>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>5.5.9</version>
-        </dependency>
         <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-agent-provider</artifactId>
@@ -39,33 +35,12 @@
             <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-agent-api</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.68</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.30</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.2.1</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>gson</artifactId>
+                    <groupId>com.google.code.gson</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -76,6 +51,23 @@
             <systemPath>${jdk.8.home}/lib/tools.jar</systemPath>
         </dependency>
 
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.2</version>
+        </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.curator/curator-framework -->
         <dependency>
@@ -92,34 +84,84 @@
         </dependency>
 
         <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-message-sdk-collector</artifactId>
+            <version>2.0.4.7</version>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-message-sdk</artifactId>
+            <version>2.0.4.7</version>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>pinpoint-collector-client</artifactId>
+            <version>1.0.2</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.5.9</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+
+        <!-- #################################### 在线升级探针功能废弃 #################################### -->
+        <dependency>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
             <version>1.10.11</version>
+            <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>1.21</version>
-        </dependency>
-
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-            <version>1.2</version>
-        </dependency>
-
-
         <dependency>
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
             <version>3.11.3</version>
+            <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/commons-net/commons-net -->
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
             <version>3.8.0</version>
+            <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.21</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- #################################### 在线升级探针功能废弃 #################################### -->
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -132,6 +174,8 @@
                     <include>**/logo</include>
                     <include>agent.properties</include>
                     <include>simulator-agent-logback.xml</include>
+                    <include>import-dependencies.config</include>
+                    <include>META-INF/**</include>
                 </includes>
                 <filtering>true</filtering>
             </resource>
@@ -156,8 +200,12 @@
                         <relocation>
                             <!-- 修改 guava 包名 -->
                             <pattern>com.google.common</pattern>
-                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common
-                            </shadedPattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <!-- 修改 guava 包名 -->
+                            <pattern>org.apache.http</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.org.apache.http</shadedPattern>
                         </relocation>
                     </relocations>
                     <shadedArtifactAttached>true</shadedArtifactAttached>
@@ -231,6 +279,14 @@
                     </execution>
                 </executions>
                 <inherited>false</inherited>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>7</source>
+                    <target>7</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>

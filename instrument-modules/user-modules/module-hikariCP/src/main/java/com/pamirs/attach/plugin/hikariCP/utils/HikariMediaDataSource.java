@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,8 +21,10 @@ import com.pamirs.attach.plugin.common.datasource.pressure.PressureConnection;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.pressurement.agent.shared.service.DataSourceMeta;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.shulie.druid.util.JdbcUtils;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +55,9 @@ public class HikariMediaDataSource extends WrappedDbMediatorDataSource<HikariDat
 
     @Override
     public String getDriverClassName(HikariDataSource datasource) {
-        return datasource.getDriverClassName();
+        // 因为低版本Hikaricp没有getDriverClassName方法 所以通过反射获取
+        // 因为这个方法只会init的时候调用一次所以不需要考虑性能问题
+        return Reflect.on(datasource).get("driverClassName");
     }
 
     @Override
@@ -73,8 +77,11 @@ public class HikariMediaDataSource extends WrappedDbMediatorDataSource<HikariDat
                     }
                     Connection hikariConnection = dataSourceBusiness.getConnection();
                     return new NormalConnection(dataSourceBusiness, hikariConnection, dbConnectionKey, url, username, dbType,
-                        getMidType());
+                            getMidType());
                 } else {
+                    if (dataSourcePerformanceTest == null) {
+                        DataSourceWrapUtil.retryInitPerformanceTest(this);
+                    }
                     if (dataSourcePerformanceTest == null) {
                         throw new RuntimeException("pressure dataSource is null.");
                     }

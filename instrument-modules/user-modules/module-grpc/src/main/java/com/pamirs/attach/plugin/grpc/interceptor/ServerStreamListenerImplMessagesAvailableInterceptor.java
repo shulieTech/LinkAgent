@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,6 +21,7 @@ import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import com.shulie.instrument.simulator.api.util.StringUtil;
 
 import javax.annotation.Resource;
 import java.net.SocketTimeoutException;
@@ -71,15 +72,17 @@ public class ServerStreamListenerImplMessagesAvailableInterceptor extends TraceI
         final Map<String, String> invokeContext = manager.getDynamicField(advice.getTarget(), GrpcConstants.DYNAMIC_FIELD_INVOKE_CONTEXT);
         SpanRecord record = new SpanRecord();
         String rpcId = invokeContext.get(Pradar.getInvokeIdKey());
-        String[] rpcIds = rpcId.split("\\.");
-        String lastRpcId = Integer.valueOf(rpcIds[rpcIds.length -1]) + 1 + "";
-        StringBuilder newRpcId = new StringBuilder();
-        for (int i = 0; i < rpcIds.length - 1 ; i ++ ){
-            newRpcId.append(rpcIds[i]).append(".");
+        if (!StringUtil.isEmpty(rpcId)) {
+            String[] rpcIds = rpcId.split("\\.");
+            String lastRpcId = Integer.valueOf(rpcIds[rpcIds.length - 1]) + 1 + "";
+            StringBuilder newRpcId = new StringBuilder();
+            for (int i = 0; i < rpcIds.length - 1; i++) {
+                newRpcId.append(rpcIds[i]).append(".");
+            }
+            newRpcId.append(lastRpcId);
+            invokeContext.put(Pradar.getInvokeIdKey(), newRpcId.toString());
+            record.setContext(invokeContext);
         }
-        newRpcId.append(lastRpcId);
-        invokeContext.put(Pradar.getInvokeIdKey(), newRpcId.toString());
-        record.setContext(invokeContext);
 
         String method = fullMethodName;
         String service = "";

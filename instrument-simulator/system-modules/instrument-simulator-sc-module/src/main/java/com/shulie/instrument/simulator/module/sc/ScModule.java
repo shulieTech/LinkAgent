@@ -23,7 +23,6 @@ import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
 import com.shulie.instrument.simulator.module.ParamSupported;
 import com.shulie.instrument.simulator.module.util.InterfaceNameRegexFilter;
 import com.shulie.instrument.simulator.module.util.SuperNameRegexFilter;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 import javax.annotation.Resource;
@@ -50,7 +49,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
         try {
             final String cnPattern = getParameter(param, "class");
             final String type = getParameter(param, "type");
-            if (StringUtils.isBlank(type)) {
+            if (type == null || type.length() == 0) {
                 Set<Class<?>> classes = loadedClassDataSource.find(new NameRegexFilter(cnPattern, ".*", true, true));
                 List<String> classNames = new ArrayList<String>();
                 for (Class<?> clazz : classes) {
@@ -58,7 +57,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
                     classNames.add(name);
                 }
                 return CommandResponse.success(classNames);
-            } else if (StringUtils.equals("s", type)) {
+            } else if ("s".equals(type)) {
                 Set<Class<?>> classes = loadedClassDataSource.find(new SuperNameRegexFilter(cnPattern, ".*", true, true));
                 List<String> classNames = new ArrayList<String>();
                 for (Class<?> clazz : classes) {
@@ -66,7 +65,7 @@ public class ScModule extends ParamSupported implements ExtensionModule {
                     classNames.add(name);
                 }
                 return CommandResponse.success(classNames);
-            } else if (StringUtils.equals("i", type)) {
+            } else if ("i".equals(type)) {
                 Set<Class<?>> classes = loadedClassDataSource.find(new InterfaceNameRegexFilter(cnPattern, ".*", true, true));
                 List<String> classNames = new ArrayList<String>();
                 for (Class<?> clazz : classes) {

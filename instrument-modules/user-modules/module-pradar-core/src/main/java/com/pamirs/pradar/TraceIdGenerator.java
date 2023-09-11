@@ -100,7 +100,16 @@ public class TraceIdGenerator {
         if (samplingInterval < 0 || samplingInterval > 10000) {
             return "0000";
         }
-        return String.format("%04d", samplingInterval);
+        if (samplingInterval < 10){
+            return "000" + samplingInterval;
+        }
+        if (samplingInterval < 100){
+            return "00" + samplingInterval;
+        }
+        if (samplingInterval < 1000){
+            return "0" + samplingInterval;
+        }
+        return samplingInterval + "";
     }
 
     /**

@@ -26,13 +26,13 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
@@ -48,6 +48,12 @@
                     <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

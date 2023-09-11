@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,14 +16,23 @@ package com.pamirs.attach.plugin.saturn.interceptor;
 
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.vip.saturn.job.basic.SaturnExecutionContext;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+
+import java.lang.reflect.Field;
 
 /**
  * Create by xuyh at 2020/8/17 10:57.
  */
 public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
+
+    private Field namespace;
+    private Field jobConfiguration;
+    private Field jobClass;
+    private Field jobParameter;
+
 
     @Override
     public String getPluginName() {
@@ -35,30 +44,100 @@ public class SaturnJavaJobInterceptor extends TraceInterceptorAdaptor {
         return MiddlewareType.TYPE_JOB;
     }
 
+    /**
+     * 为了解决有系统抛NoClassDefFoundError，所以值全部改成反射获取
+     *
+     * @param advice
+     */
     @Override
     public void beforeFirst(Advice advice) {
         Object[] args = advice.getParameterArray();
         String methodName = advice.getBehaviorName();
-        Object target = advice.getTarget();
         Pradar.setClusterTest(false);
-        if (target instanceof com.vip.saturn.job.java.SaturnJavaJob) {
-            if (methodName.equals("doExecution") && args.length == 5) {
-                Object shardingContextObj = args[3];
-                SaturnExecutionContext context = (SaturnExecutionContext) shardingContextObj;
-                String serviceName = context.getNamespace() + "-" + context.getJobName();
-                String methodNameS = context.getJobConfiguration().getJobClass();
-                Pradar.startTrace(null, serviceName, methodNameS);
-                Pradar.middlewareName(getPluginName());
-                String jobParam = context.getJobConfiguration().getJobParameter();
-                if (jobParam.contains(Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
-                    Pradar.setClusterTest(true);
-                }
+        if ("doExecution".equals(methodName) && args.length == 5) {
+            Object shardingContextObj = args[3];
+
+            initContextField(shardingContextObj);
+            Object jobConfigurationObj = Reflect.on(shardingContextObj).get(jobConfiguration);
+            initConfigField(jobConfigurationObj);
+
+            String serviceName = Reflect.on(shardingContextObj).get(namespace);
+            String methodNameS = Reflect.on(jobConfigurationObj).get(jobClass);
+            Pradar.startTrace(null, serviceName, methodNameS);
+            Pradar.middlewareName(getPluginName());
+            String jobParam = Reflect.on(jobConfigurationObj).get(jobParameter);
+            if (jobParam.contains(PradarService.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX)) {
+                Pradar.setClusterTest(true);
             }
         }
+
     }
 
     @Override
     public void afterLast(Advice advice) {
         Pradar.endTrace();
+    }
+
+    @Override
+    public void exceptionLast(Advice advice) {
+        Pradar.endTrace();
+    }
+
+    private void initContextField(Object context) {
+        initNameSpace(context);
+        initJobConfiguration(context);
+    }
+
+    private void initConfigField(Object jobConfig) {
+        initJobClass(jobConfig);
+        initJobParameter(jobConfig);
+    }
+
+    private void initNameSpace(Object context) {
+        if (namespace != null) {
+            return;
+        }
+        try {
+            namespace = context.getClass().getDeclaredField("namespace");
+            namespace.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
+
+    private void initJobConfiguration(Object context) {
+        if (jobConfiguration != null) {
+            return;
+        }
+        try {
+            jobConfiguration = context.getClass().getDeclaredField("jobConfiguration");
+            jobConfiguration.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
+
+    private void initJobClass(Object jobConfig) {
+        if (jobClass != null) {
+            return;
+        }
+        try {
+            jobClass = jobConfig.getClass().getDeclaredField("jobClass");
+            jobClass.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
+    }
+
+    private void initJobParameter(Object jobConfig) {
+        if (jobParameter != null) {
+            return;
+        }
+        try {
+            jobParameter = jobConfig.getClass().getDeclaredField("jobParameter");
+            jobParameter.setAccessible(true);
+        } catch (Throwable e) {
+            //ignore
+        }
     }
 }

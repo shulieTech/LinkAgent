@@ -16,13 +16,13 @@
 package com.pamirs.attach.plugin.apache.hbase.interceptor;
 
 import com.pamirs.attach.plugin.apache.hbase.utils.ShadowConnectionHolder;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -52,6 +52,9 @@ public class TableCutoffInterceptor extends CutoffInterceptorAdaptor {
         if ("hbase:meta".equals(tableName)) {
             return CutOffResult.PASSED;
         }
+        if (!Pradar.isClusterTest()) {
+            return CutOffResult.PASSED;
+        }
         // 是否用影子表
         if (GlobalConfig.getInstance().isShadowTableReplace() && Pradar.isClusterTestPrefix(tableName)) {
             return CutOffResult.PASSED;
@@ -73,8 +76,8 @@ public class TableCutoffInterceptor extends CutoffInterceptorAdaptor {
                             if (ptConfiguration != null) {
                                 try {
                                     Connection prefConnection = ConnectionFactory.createConnection(ptConfiguration,
-                                            (ExecutorService) Reflect.on(busClusterConnection).get("batchPool"),
-                                            (User) Reflect.on(busClusterConnection).get("user"));
+                                            (ExecutorService) ReflectionUtils.get(busClusterConnection, "batchPool"),
+                                            (User) ReflectionUtils.get(busClusterConnection, "user"));
                                     return (ClusterConnection) prefConnection;
                                 } catch (IOException e) {
                                     throw new RuntimeException("[hbase-htable] create shadow connection fail!", e);

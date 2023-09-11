@@ -25,6 +25,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowDataSourceConfigMod
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.datasource.SqlParser;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +57,6 @@ public class ShadowDatabaseConfigs implements IChange<Map<String, ShadowDatabase
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig,
         Map<String, ShadowDatabaseConfig> newValue) {
-
         Set<ShadowDatabaseConfig> needCloseDataSource = new HashSet<ShadowDatabaseConfig>();
         // 同名配置比对
         for (Map.Entry<String, ShadowDatabaseConfig> old : GlobalConfig.getInstance().getShadowDatasourceConfigs()

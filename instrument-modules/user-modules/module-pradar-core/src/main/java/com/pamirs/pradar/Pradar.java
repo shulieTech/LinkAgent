@@ -14,7 +14,6 @@
  */
 package com.pamirs.pradar;
 
-import com.alibaba.fastjson.JSON;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -22,16 +21,19 @@ import com.pamirs.pradar.common.PropertyPlaceholderHelper;
 import com.pamirs.pradar.common.RuntimeUtils;
 import com.pamirs.pradar.debug.DebugHelper;
 import com.pamirs.pradar.exception.PressureMeasureError;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
-import com.pamirs.pradar.pressurement.datasource.TableParserResult;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -83,7 +85,7 @@ public final class Pradar {
      * trace日志版本号
      */
     static public final int PRADAR_TARCE_LOG_VERSION = getPradarTraceLogVersion();
-    static public final int DEFAULT_PRADAR_MONITOR_LOG_VERSION = 13;
+    static public final int DEFAULT_PRADAR_MONITOR_LOG_VERSION = 14;
     /**
      * monitor日志版本号
      */
@@ -155,6 +157,10 @@ public final class Pradar {
      */
     static AsyncAppender serverMonitorAppender;
 
+    static AsyncCollectorAppender collectorAppender;
+
+    static AsyncCollectorAppender collectorMonitorAppender;
+
     /**
      * 正常 TRACE 开始的 InvokeId
      */
@@ -180,6 +186,21 @@ public final class Pradar {
      * 全链路压测前缀
      */
     static public final String CLUSTER_TEST_PREFIX = getClusterTestPrefix();
+
+    /**
+     * 使用collector直接推送，还是落盘
+     */
+    static public final boolean COLLECTOR_PUSH = isCollectorPush();
+
+    /**
+     * 使用雪花算法生成GeneratreId
+     */
+    static public final boolean SNOWFLAKE_GENERATE_ID = isSnowflakeGenerateId();
+
+    /**
+     * collector每次发送的条数
+     */
+    static public final int TRACE_CHUNK_SIZE = getTraceChunkSize();
 
     /**
      * 全链路压测前缀
@@ -250,7 +271,6 @@ public final class Pradar {
     /**
      * http 请求时统一的压测后缀
      */
-    public static final String PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX = "PerfomanceTest";
     static public final char ENTRY_SEPARATOR = (char)0x12;
     static public final char KV_SEPARATOR = (char)0x1;   // METAQ 不允许使用的分隔符，不能在 UserData 中使用
     static public final char KV_SEPARATOR2 = (char)0x14;
@@ -260,6 +280,13 @@ public final class Pradar {
      * 忽略不处理，用于防御某些不配对的调用埋点
      */
     static final int LOG_TYPE_EVENT_ILLEGAL = -255;
+
+    private static Boolean isRunningDocker = null;
+
+    /**
+     * 是否静默降级
+     */
+    private static boolean isSilenceDegraded;
 
     /**
      * 用于记录当前时段内是否有压测流量请求
@@ -295,10 +322,15 @@ public final class Pradar {
      */
     static {
         LOGGER.info("Pradar started ({})", getPradarLocation());
-
         try {
-            pradarAppender = createPradarLoggers();
-            monitorAppender = createMonitorLoggers();
+            LOGGER.info("是否落盘处理日志:{}", !COLLECTOR_PUSH);
+            if (COLLECTOR_PUSH) {
+                createPradarCollectorLoggers();
+                createMonitorCollectorLoggers();
+            } else {
+                pradarAppender = createPradarLoggers();
+                monitorAppender = createMonitorLoggers();
+            }
         } catch (Throwable e) {
             LOGGER.error("fail to create Pradar logger", e);
         }
@@ -731,7 +763,11 @@ public final class Pradar {
      */
     public static void commitMonitorLog(String monitorLog) {
         if (!PradarSwitcher.isMonitorOff()) {
-            serverMonitorAppender.append(monitorLog);
+            if (COLLECTOR_PUSH) {
+                collectorMonitorAppender.append(monitorLog);
+            } else {
+                serverMonitorAppender.append(monitorLog);
+            }
         }
     }
 
@@ -777,6 +813,26 @@ public final class Pradar {
         }
         System.out.println("SIMULATOR: cluster test prefix lower is:" + prefix);
         return prefix;
+    }
+
+    private static boolean isSnowflakeGenerateId() {
+        String isCollectorPush = System.getProperty("pradar.snowflake.generate.create");
+        return "true".equals(isCollectorPush);
+    }
+
+    private static int getTraceChunkSize() {
+        String chunkSize = System.getProperty("pradar.data.pusher.pinpoint.collector.trace.chunksize", "1");
+        int size = 1;
+        try {
+            size = Integer.parseInt(chunkSize);
+        } catch (Exception e) {
+        }
+        return size;
+    }
+
+    private static boolean isCollectorPush() {
+        String isCollectorPush = System.getProperty("pradar.collector.push");
+        return "true".equals(isCollectorPush);
     }
 
     /**
@@ -904,7 +960,7 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarTenantKey() {
+    public static final String getPradarTenantKey() {
         return getSystemProperty(Pradar.TENANT_APP_KEY);
     }
 
@@ -913,7 +969,7 @@ public final class Pradar {
      *
      * @return
      */
-    static final String getPradarUserId() {
+    public static final String getPradarUserId() {
         return getSystemProperty("pradar.user.id");
     }
 
@@ -922,7 +978,7 @@ public final class Pradar {
      *
      * @return 当前环境变量
      */
-    static final String getEnvCode() {
+    public static final String getEnvCode() {
         return getSystemProperty(Pradar.ENV_CODE);
     }
 
@@ -1030,6 +1086,27 @@ public final class Pradar {
         } catch (Throwable e) {
             return null;
         }
+    }
+
+    static private PradarRollingCollectorAppender createPradarCollectorLoggers() {
+        // 配置日志输出
+        collectorAppender = new AsyncCollectorAppender(getTraceQueueSize(), 0, TRACE_CHUNK_SIZE);
+        PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 1, Pradar.PRADAR_TARCE_LOG_VERSION);
+        collectorAppender.start(rpcLogger, new TraceCollectorInvokeEncoder(), "RpcLog");
+        PradarLogDaemon.watch(collectorAppender);
+        return rpcLogger;
+
+    }
+
+    static private PradarRollingCollectorAppender createMonitorCollectorLoggers() {
+        // 配置日志输出
+        collectorMonitorAppender = new AsyncCollectorAppender(getMonitorQueueSize(), 0, TRACE_CHUNK_SIZE);
+
+        PradarRollingCollectorAppender rpcLogger = new PradarRollingCollectorAppender((byte) 3, Pradar.PRADAR_MONITOR_LOG_VERSION);
+        collectorMonitorAppender.start(rpcLogger, new TraceInvokeContextEncoder(), "MonitorLog");
+        PradarLogDaemon.watch(collectorMonitorAppender);
+        return rpcLogger;
+
     }
 
     static private final PradarRollingFileAppender createPradarLoggers() {
@@ -1364,6 +1441,7 @@ public final class Pradar {
      * @see #getInvokeContext() 直接获取 InvokeContext 对象
      */
     static public void setInvokeContext(InvokeContext context) {
+
         /**
          * 如果相同则忽略
          */
@@ -1747,7 +1825,7 @@ public final class Pradar {
 
             if (PradarService.isSilence() && Pradar.isClusterTest()) {
                 LOGGER.error("[pradar2]silence module ! can not handle cluster test data in startInvoke: {}",
-                    JSON.toJSONString(childCtx));
+                    GsonFactory.getGson().toJson(childCtx));
             }
             return childCtx;
         } catch (Throwable re) {
@@ -1818,6 +1896,7 @@ public final class Pradar {
             }
             // 弹出当前 ctx
             InvokeContext.set(ctx.parentInvokeContext);
+            Pradar.setClusterTest(ctx.isClusterTest);
         } catch (Throwable re) {
             LOGGER.error("rpcClientRecv", re);
         }
@@ -1952,7 +2031,7 @@ public final class Pradar {
             }
             if (PradarService.isSilence() && Pradar.isClusterTest()) {
                 LOGGER.error("[pradar]silence module ! can not handle cluster test data in startInvoke: {}",
-                    JSON.toJSONString(ctx));
+                    GsonFactory.getGson().toJson(ctx));
             }
             return ctx;
         } catch (PressureMeasureError e) {
@@ -2189,6 +2268,21 @@ public final class Pradar {
         if (ctx != null && GlobalConfig.getInstance().allowTraceRequestResponse()) {
             ctx.response = response;
         }
+    }
+
+    /**
+     * 设置mock脚本响应
+     */
+    static public void mockResponse(Object mockResponse) {
+        InvokeContext ctx = InvokeContext.get();
+        if (ctx != null && GlobalConfig.getInstance().allowTraceRequestResponse()) {
+            ctx.mockResponse = mockResponse;
+        }
+    }
+
+    static public boolean hasMockResponse(){
+        InvokeContext ctx = InvokeContext.get();
+        return ctx != null && ctx.mockResponse != null;
     }
 
     /**
@@ -2481,7 +2575,11 @@ public final class Pradar {
         }
 
         if (!isFilterContext(ctx)) {
-            rpcAppender.append(ctx);
+            if (COLLECTOR_PUSH) {
+                collectorAppender.append(ctx);
+            } else {
+                rpcAppender.append(ctx);
+            }
         }
         /**
          * 如果是压测流量，则设置有压测流量
@@ -2666,5 +2764,55 @@ public final class Pradar {
      */
     public static Boolean getBooleanProperty(String key) {
         return getBooleanProperty(key, null);
+    }
+
+    /**
+     * 判断是否运行在docker环境中
+     *
+     * @return true or false
+     */
+    public static boolean isRunningInsideDocker() {
+        if (isRunningDocker != null) {
+            return isRunningDocker;
+        }
+        try {
+            File file = new File("/proc/1/cgroup");
+            if (!file.exists()) {
+                isRunningDocker = false;
+                return isRunningDocker;
+            }
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new FileReader(file));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("/docker")) {
+                        isRunningDocker = true;
+                        return isRunningDocker;
+                    }
+                }
+            } catch (Exception e) {
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+            isRunningDocker = false;
+            return isRunningDocker;
+        } catch (Throwable e) {
+            isRunningDocker = false;
+            return isRunningDocker;
+        }
+    }
+
+    public static boolean isSilenceDegraded(){
+        return isSilenceDegraded;
+    }
+
+    public static void setSilenceDegradeStatus(boolean degraded){
+        isSilenceDegraded = degraded;
     }
 }

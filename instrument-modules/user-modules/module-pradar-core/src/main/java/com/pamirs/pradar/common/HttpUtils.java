@@ -14,11 +14,13 @@
  */
 package com.pamirs.pradar.common;
 
-import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import com.pamirs.pradar.Throwables;
+import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
+import com.shulie.instrument.simulator.api.util.StringUtil;
+import org.apache.commons.lang.StringUtils;
+
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -30,17 +32,19 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.pamirs.pradar.Throwables;
-import com.shulie.instrument.simulator.api.util.StringUtil;
-import org.apache.commons.lang.StringUtils;
-
 public abstract class HttpUtils {
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 
+    private static final String POLL_APP_CONFIG_FAILED_ABORTED = System.getProperty("poll.app.config.failed.aborted");
+
     public static HttpResult doGet(String url) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
-        return doGet(hostPort.host, hostPort.port, hostPort.url);
+        HttpResult httpResult = doGet(hostPort.host, hostPort.port, hostPort.url);
+        if (httpResult.status == 511 && POLL_APP_CONFIG_FAILED_ABORTED != null) {
+            SimulatorDynamicConfig.setAbortPollingAppConfig(true);
+        }
+        return httpResult;
     }
 
     public static HttpResult doGet(String host, int port, String url) {
@@ -87,7 +91,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (Throwable e) {
-            return HttpResult.result(500, Throwables.getStackTraceAsString(e));
+            return HttpResult.result(511, Throwables.getStackTraceAsString(e));
         } finally {
             closeQuietly(input);
             closeQuietly(output);
@@ -105,7 +109,11 @@ public abstract class HttpUtils {
 
     public static HttpResult doPost(String url, String body) {
         HostPort hostPort = getHostPortUrlFromUrl(url);
-        return doPost(hostPort.host, hostPort.port, hostPort.url, body);
+        HttpResult httpResult = doPost(hostPort.host, hostPort.port, hostPort.url, body);
+        if (httpResult.status == 500 && POLL_APP_CONFIG_FAILED_ABORTED != null) {
+            SimulatorDynamicConfig.setAbortPollingAppConfig(true);
+        }
+        return httpResult;
     }
 
     public static HttpResult doPost(String host, int port, String url, String body) {
@@ -133,7 +141,7 @@ public abstract class HttpUtils {
             }
 
             if (body != null && !body.isEmpty()) {
-                request.append("Content-Length: ").append(body.getBytes().length).append("\r\n")
+                request.append("Content-Length: ").append(body.getBytes(UTF_8).length).append("\r\n")
                         .append("Content-Type: application/json\r\n");
             }
 
@@ -159,7 +167,7 @@ public abstract class HttpUtils {
             String result = toString(input);
             return HttpResult.result(status, result);
         } catch (IOException e) {
-            return HttpResult.result(500, Throwables.getStackTraceAsString(e));
+            return HttpResult.result(511, Throwables.getStackTraceAsString(e));
         } finally {
             closeQuietly(input);
             closeQuietly(output);
@@ -219,7 +227,7 @@ public abstract class HttpUtils {
     }
 
     public static InputStream wrapperInput(Map<String, List<String>> headers, InputStream input) {
-        List<String> transferEncodings = headers.get("Transfer-Encoding");
+        List<String> transferEncodings = headers.get("transfer-encoding");
         if (transferEncodings != null && !transferEncodings.isEmpty()) {
             String encodings = transferEncodings.get(0);
             String[] elements = StringUtils.split(encodings, ';');
@@ -229,7 +237,7 @@ public abstract class HttpUtils {
             }
             return input;
         }
-        List<String> contentLengths = headers.get("Content-Length");
+        List<String> contentLengths = headers.get("content-length");
         if (contentLengths != null && !contentLengths.isEmpty()) {
             long length = -1;
             for (String contentLength : contentLengths) {
@@ -253,7 +261,7 @@ public abstract class HttpUtils {
         String line = readLine(input);
         while (line != null && !line.isEmpty()) {
             String[] headerPair = StringUtils.split(line, ':');
-            String name = headerPair[0].trim();
+            String name = headerPair[0].trim().toLowerCase();
             String value = headerPair[1].trim();
             List<String> values = headers.get(name);
             if (values == null) {
@@ -335,6 +343,8 @@ public abstract class HttpUtils {
 
     private final static String PRADAR_USER_APP_KEY = "user.app.key";
 
+    private final static String SHULIE_AGENT_EXPAND = "pradar.agent.expand";
+
     private static String getProperty(String key) {
         String val = System.getProperty(key);
         if (StringUtil.isEmpty(val)) {
@@ -352,13 +362,14 @@ public abstract class HttpUtils {
         return value == null ? defaultValue : value;
     }
 
-    private static Map<String, String> getHttpMustHeaders() {
+    public static Map<String, String> getHttpMustHeaders() {
         Map<String, String> headers = new HashMap<String, String>();
         String envCode = getProperty(PRADAR_ENV_CODE_STR);
         // 新探针兼容老版本的控制台，所以userAppKey和tenantAppKey都传
         headers.put("userAppKey", getProperty(PRADAR_USER_APP_KEY, getProperty(TENANT_APP_KEY_STR)));
         headers.put("tenantAppKey", getProperty(TENANT_APP_KEY_STR, getProperty(PRADAR_USER_APP_KEY)));
         headers.put("userId", getProperty(PRADAR_USER_ID_STR));
+        headers.put("agentExpand", getProperty(SHULIE_AGENT_EXPAND));
         headers.put("envCode", envCode);
         return headers;
     }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DataSourceWrapUtil {
     private final static Logger LOGGER = LoggerFactory.getLogger(DataSourceWrapUtil.class.getName());
+    private final static Object lock = new Object();
 
     public static final ConcurrentHashMap<DataSourceMeta, TomcatJdbcMediatorDataSource> pressureDataSources = new ConcurrentHashMap<DataSourceMeta, TomcatJdbcMediatorDataSource>();
 
@@ -56,62 +57,66 @@ public class DataSourceWrapUtil {
         if (isPerformanceDataSource(target)) {
             return;
         }
-
-        if (!TomcatJdbcDatasourceUtils.configured(target)) {//没有配置对应的影子表或影子库
-            LOGGER.error("[tomcat-jdbc] No configuration found for datasource, url:{} username:{}", target.getUrl(), target.getUsername());
-            ErrorReporter.buildError()
-                    .setErrorType(ErrorTypeEnum.DataSource)
-                    .setErrorCode("datasource-0002")
-                    .setMessage("没有配置对应的影子表或影子库！")
-                    .setDetail("业务库配置:::url: " + target.getUrl() + " ; username: " + target.getUsername() + "; 中间件类型：other")
-                    .report();
-            TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
-                }
-                old.close();
+        synchronized (lock) {
+            if (pressureDataSources.containsKey(dataSourceMeta) && pressureDataSources.get(dataSourceMeta) != null) {
+                return;
             }
-            return;
-        }
-
-        if (TomcatJdbcDatasourceUtils.shadowTable(target)) {//影子表
-            TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
-                }
-                old.close();
-            }
-        } else {//影子库
-            // 初始化影子数据源配置
-            TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
-            dbMediatorDataSource.setDataSourceBusiness(target);
-            DataSource ptDataSource = TomcatJdbcDatasourceUtils.generateDatasourceFromConfiguration(target, GlobalConfig.getInstance().getShadowDatasourceConfigs());
-            if (ptDataSource == null) {
-                LOGGER.error("[tomcat-jdbc] Configuration error for datasource, url: {} username:{} configurations:{}", target.getUrl(), target.getUsername(), GlobalConfig.getInstance().getShadowDatasourceConfigs());
+            if (!TomcatJdbcDatasourceUtils.configured(target)) {//没有配置对应的影子表或影子库
+                LOGGER.error("[tomcat-jdbc] No configuration found for datasource, url:{} username:{}", target.getUrl(), target.getUsername());
                 ErrorReporter.buildError()
                         .setErrorType(ErrorTypeEnum.DataSource)
                         .setErrorCode("datasource-0002")
                         .setMessage("没有配置对应的影子表或影子库！")
-                        .setDetail("TomcatJdbcDataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "; username: " + target.getUsername() + "; 中间件类型：other")
+                        .setDetail("业务库配置:::url: " + target.getUrl() + " ; username: " + target.getUsername() + "; 中间件类型：other")
                         .report();
+                TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
+                dbMediatorDataSource.setDataSourceBusiness(target);
+                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                if (old != null) {
+                    if (LOGGER.isInfoEnabled()) {
+                        LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    }
+                    old.close();
+                }
                 return;
             }
-            dbMediatorDataSource.setDataSourcePerformanceTest(ptDataSource);
-            DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
-            if (old != null) {
-                if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+
+            if (TomcatJdbcDatasourceUtils.shadowTable(target)) {//影子表
+                TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
+                dbMediatorDataSource.setDataSourceBusiness(target);
+                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                if (old != null) {
+                    if (LOGGER.isInfoEnabled()) {
+                        LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    }
+                    old.close();
                 }
-                old.close();
-            }
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("[tomcat-jdbc] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+            } else {//影子库
+                // 初始化影子数据源配置
+                TomcatJdbcMediatorDataSource dbMediatorDataSource = new TomcatJdbcMediatorDataSource();
+                dbMediatorDataSource.setDataSourceBusiness(target);
+                DataSource ptDataSource = TomcatJdbcDatasourceUtils.generateDatasourceFromConfiguration(target, GlobalConfig.getInstance().getShadowDatasourceConfigs());
+                if (ptDataSource == null) {
+                    LOGGER.error("[tomcat-jdbc] Configuration error for datasource, url: {} username:{} configurations:{}", target.getUrl(), target.getUsername(), GlobalConfig.getInstance().getShadowDatasourceConfigs());
+                    ErrorReporter.buildError()
+                            .setErrorType(ErrorTypeEnum.DataSource)
+                            .setErrorCode("datasource-0002")
+                            .setMessage("没有配置对应的影子表或影子库！")
+                            .setDetail("TomcatJdbcDataSourceWrapUtil:业务库配置:::url: " + target.getUrl() + "; username: " + target.getUsername() + "; 中间件类型：other")
+                            .report();
+                    return;
+                }
+                dbMediatorDataSource.setDataSourcePerformanceTest(ptDataSource);
+                DbMediatorDataSource old = pressureDataSources.put(dataSourceMeta, dbMediatorDataSource);
+                if (old != null) {
+                    if (LOGGER.isInfoEnabled()) {
+                        LOGGER.info("[tomcat-jdbc] destroyed shadow table datasource success. url:{} ,username:{}", target.getUrl(), target.getUsername());
+                    }
+                    old.close();
+                }
+                if (LOGGER.isInfoEnabled()) {
+                    LOGGER.info("[tomcat-jdbc] create shadow datasource success. target:{} url:{} ,username:{} shadow-url:{},shadow-username:{}", target.hashCode(), target.getUrl(), target.getUsername(), ptDataSource.getUrl(), ptDataSource.getUsername());
+                }
             }
         }
     }
@@ -135,5 +140,17 @@ public class DataSourceWrapUtil {
             }
         }
         return false;
+    }
+
+    public static void retryInitPerformanceTest(TomcatJdbcMediatorDataSource mediaDataSource) {
+        synchronized (DataSourceWrapUtil.class) {
+            if (mediaDataSource.getDataSourcePerformanceTest() != null) {
+                return;
+            }
+            DataSource ptDataSource = TomcatJdbcDatasourceUtils.generateDatasourceFromConfiguration(mediaDataSource.getDataSourceBusiness(),GlobalConfig.getInstance().getShadowDatasourceConfigs());
+            if (ptDataSource != null) {
+                mediaDataSource.setDataSourcePerformanceTest(ptDataSource);
+            }
+        }
     }
 }

@@ -158,7 +158,6 @@ public class RestHighLevelClientInterceptor extends TraceInterceptorAdaptor {
         record.setRequest(args[0]);
         //record.setResponse(result);
         return record;
-
     }
 
     @Override

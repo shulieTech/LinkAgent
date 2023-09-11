@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.core.manager.impl;
 import com.shulie.instrument.simulator.api.*;
 import com.shulie.instrument.simulator.api.extension.ExtensionTemplate;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
 import com.shulie.instrument.simulator.api.instrument.EnhanceTemplate;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.obj.ModuleLoadInfo;
@@ -30,6 +31,11 @@ import com.shulie.instrument.simulator.core.classloader.ClassLoaderService;
 import com.shulie.instrument.simulator.core.classloader.impl.ClassLoaderFactoryImpl;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
 import com.shulie.instrument.simulator.core.extension.DefaultExtensionTemplate;
+import com.shulie.instrument.simulator.core.ignore.*;
+import com.shulie.instrument.simulator.core.ignore.configurer.AdditionalLibraryIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.GlobalIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.InstrumentSimulatorIgnoredTypesConfigurer;
+import com.shulie.instrument.simulator.core.ignore.configurer.ModulePluginIgnoredTypesConfigurer;
 import com.shulie.instrument.simulator.core.inject.ClassInjector;
 import com.shulie.instrument.simulator.core.inject.impl.ModuleJarClassInjector;
 import com.shulie.instrument.simulator.core.instrument.DefaultEnhanceTemplate;
@@ -38,7 +44,6 @@ import com.shulie.instrument.simulator.core.manager.*;
 import com.shulie.instrument.simulator.core.util.DefaultModuleLoadInfoManagerUtils;
 import com.shulie.instrument.simulator.core.util.ModuleSpecUtils;
 import com.shulie.instrument.simulator.core.util.VersionUtils;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.lang.StringUtils;
@@ -65,69 +70,74 @@ import static org.apache.commons.lang.reflect.FieldUtils.writeField;
  */
 public class DefaultCoreModuleManager implements CoreModuleManager {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final boolean isDebugEnabled = logger.isDebugEnabled();
-    private final boolean isInfoEnabled = logger.isInfoEnabled();
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
+    protected final boolean isDebugEnabled = logger.isDebugEnabled();
+    protected final boolean isInfoEnabled = logger.isInfoEnabled();
 
-    private CoreConfigure config;
-    private Instrumentation inst;
-    private ClassFileTransformer defaultClassFileTransformer;
-    private ClassInjector classInjector;
-    private CoreLoadedClassDataSource classDataSource;
-    private ProviderManager providerManager;
+    protected CoreConfigure config;
+    protected Instrumentation inst;
+    protected ClassFileTransformer defaultClassFileTransformer;
+    protected ClassInjector classInjector;
+    protected CoreLoadedClassDataSource classDataSource;
+    protected ProviderManager providerManager;
 
     /**
      * 系统模块目录列表
      */
-    private File[] systemModuleLibs;
+    protected File[] systemModuleLibs;
 
     /**
      * 用户模块目录列表
      */
-    private File[] userModuleLibs;
+    protected File[] userModuleLibs;
 
     /**
      * 类加载器服务
      */
-    private ClassLoaderService classLoaderService;
+    protected ClassLoaderService classLoaderService;
 
     /**
      * 仿真器配置
      */
-    private SimulatorConfig simulatorConfig;
+    protected SimulatorConfig simulatorConfig;
 
     /**
      * 模块命令调用器
      */
-    private ModuleCommandInvoker moduleCommandInvoker;
+    protected ModuleCommandInvoker moduleCommandInvoker;
 
     /**
      * switcher manager
      */
-    private SwitcherManager switcherManager;
+    protected SwitcherManager switcherManager;
 
     /**
      * 禁用的模块列表
      */
-    private List<String> disabledModules;
+    protected List<String> disabledModules;
 
     /**
      * event listener handler
      */
-    private EventListenerHandler eventListenerHandler;
+    protected EventListenerHandler eventListenerHandler;
 
     // 已加载的模块集合
-    private Map<String, CoreModule> loadedModuleMap = new ConcurrentHashMap<String, CoreModule>();
+    protected Map<String, CoreModule> loadedModuleMap = new ConcurrentHashMap<String, CoreModule>();
 
     /**
      * 所有等待加载的模块
      */
-    private Queue<Runnable> waitLoadModules = new ConcurrentLinkedQueue<Runnable>();
+    protected Queue<Runnable> waitLoadModules = new ConcurrentLinkedQueue<Runnable>();
 
     /**
      * module loader
      */
-    private ModuleLoader moduleLoader;
+    protected ModuleLoader moduleLoader;
+
+    /**
+     * transform class config
+     */
+    protected IgnoredTypesBuilder ignoredTypesBuilder;
 
     /**
      * 模块模块管理
@@ -143,6 +153,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                                     final ProviderManager providerManager,
                                     final ClassLoaderService classLoaderService,
                                     final EventListenerHandler eventListenerHandler,
+                                    final IgnoredTypesBuilder ignoredTypesBuilder,
                                     final SwitcherManager switcherManager) {
         this.config = config;
         this.simulatorConfig = new DefaultSimulatorConfig(config);
@@ -158,6 +169,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         this.disabledModules = config.getDisabledModules();
         this.classInjector = new ModuleJarClassInjector(this.simulatorConfig);
         this.eventListenerHandler = eventListenerHandler;
+        this.ignoredTypesBuilder = ignoredTypesBuilder;
     }
 
     @Override
@@ -174,7 +186,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
          */
         for (Map.Entry<String, List<File>> entry : simulatorConfig.getBizClassLoaderInjectFiles().entrySet()) {
             List<Class<?>> classes = classDataSource.findForReTransform(entry.getKey());
-            if (CollectionUtils.isNotEmpty(classes)) {
+            if (!isEmpty(classes)) {
                 for (Class<?> clazz : classes) {
                     classInjector.injectClass(clazz.getClassLoader(), entry.getKey());
                 }
@@ -268,14 +280,19 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
                 case MODULE_ACTIVE: {
                     ModuleLoadInfo moduleLoadInfo = DefaultModuleLoadInfoManagerUtils.getDefaultModuleLoadInfoManager().
-                        getModuleLoadInfos().get(moduleId);
-                    if(moduleLoadInfo == null){
-                        throw new ModuleException(String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId),
-                            MODULE_LOAD_ERROR);
+                            getModuleLoadInfos().get(moduleId);
+                    if (moduleLoadInfo == null) {
+                        throw new ModuleException(moduleId,
+                                MODULE_LOAD_ERROR,
+                                String.format("moduleId : %s can not find, please check id set in @ModuleInfo and id set in module.config is same", moduleId));
                     }
-                    try {
 
+                    ClassLoader threadClassLoader = Thread.currentThread().getContextClassLoader();
+                    ;
+                    try {
+                        Thread.currentThread().setContextClassLoader(coreModule.getClassLoaderFactory().getClassLoader(null));
                         boolean result = moduleLifecycle.onActive();
+
                         if (result) {
                             moduleLoadInfo.setStatus(ModuleLoadStatusEnum.LOAD_SUCCESS);
                         } else {
@@ -289,6 +306,8 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                         logger.error("fail to active module :{}", moduleId, throwable);
                         moduleLoadInfo.setErrorMsg(ModuleLoadStatusEnum.LOAD_FAILED, throwable.getMessage());
                         throw new ModuleException(coreModule.getModuleId(), MODULE_ACTIVE_ERROR, throwable);
+                    } finally {
+                        Thread.currentThread().setContextClassLoader(threadClassLoader);
                     }
                     break;
                 }
@@ -441,6 +460,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         coreModule.setClassInjector(new ModuleJarClassInjector(coreModule.getSimulatorConfig()));
         coreModule.setDynamicFieldManager(new DefaultDynamicFieldManager(coreModule.getModuleId()));
         coreModule.setExtensionTemplate(new DefaultExtensionTemplate());
+        coreModule.setIgnoredTypesBuilder(ignoredTypesBuilder);
     }
 
     private static List<Field> getFieldsListWithAnnotation(final Class<?> cls, final Class<? extends Annotation> annotationCls) {
@@ -552,8 +572,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
                 // inject switcher manager
                 else if (SwitcherManager.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, switcherManager, true);
-                }
-                else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
+                } else if (ExtensionTemplate.class.isAssignableFrom(fieldType)) {
                     writeField(resourceField, target, coreModule.getExtensionTemplate(), true);
                 }
                 // 其他情况需要输出日志警告
@@ -869,7 +888,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         // 激活所有监听器
         for (final SimulatorClassFileTransformer simulatorClassFileTransformer : coreModule.getSimulatorClassFileTransformers()) {
             List<BuildingForListeners> list = simulatorClassFileTransformer.getAllListeners();
-            if (CollectionUtils.isNotEmpty(list)) {
+            if (!isEmpty(list)) {
                 for (BuildingForListeners buildingForListeners : list) {
                     eventListenerHandler.active(
                             buildingForListeners.getListenerId(),
@@ -1084,7 +1103,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
     }
 
-    private List<File> getAllModuleLibJar(File[] libDirs) {
+    protected List<File> getAllModuleLibJar(File[] libDirs) {
         List<File> files = new ArrayList<File>();
         for (File file : libDirs) {
             loadJar(file, files);
@@ -1169,7 +1188,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
 
         try {
-            final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule());
+            final ClassLoaderFactory moduleClassLoader = new ClassLoaderFactoryImpl(classLoaderService, config, moduleSpec.getFile(), moduleSpec.getModuleId(), moduleSpec.isMiddlewareModule(), moduleSpec.getImportArtifacts());
             classLoaderService.load(moduleSpec, moduleClassLoader);
         } catch (Throwable e) {
             logger.info("load module [{}] fail, set module invalid", moduleSpec.getModuleId(), e);
@@ -1178,7 +1197,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         if (isInfoEnabled) {
             logger.info("SIMULATOR: {} modules[{}]: load module success. module-lib={}", action, moduleSpec.getModuleId(), moduleSpec.getFile());
         }
-        if (CollectionUtils.isNotEmpty(moduleSpec.getDependencies())) {
+        if (!isEmpty(moduleSpec.getDependencies())) {
             /**
              * 如果开关已经是开启状态，则直接执行即可
              */
@@ -1218,7 +1237,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         }
     }
 
-    private void loadModules(List<ModuleSpec> moduleSpecs, String action) {
+    protected void loadModules(List<ModuleSpec> moduleSpecs, String action) {
         for (ModuleSpec moduleSpec : moduleSpecs) {
             loadModule(moduleSpec, action);
         }
@@ -1244,17 +1263,18 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
 
         // 2. 先加载所有的系统模块
         List<File> systemModuleLibJars = getAllModuleLibJar(systemModuleLibs);
-        List<ModuleSpec> systemModuleSpecs = ModuleSpecUtils.loadModuleSpecs(systemModuleLibJars, true);
+        List<ModuleSpec> systemModuleSpecs = ModuleSpecUtils.loadModuleSpecs(systemModuleLibJars, true, true);
 
         // 3. 加载所有用户自定义模块, 采用异步加载方式加载用户自定义模块
         List<File> userModuleLibJars = getAllModuleLibJar(userModuleLibs);
-        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false);
+        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false, true);
         initAllModuleInfos(systemModuleSpecs);
         initAllModuleInfos(userModuleSpecs);
 
         //加载
         loadModules(systemModuleSpecs, "load");
         loadModules(userModuleSpecs, "load");
+
         if (isInfoEnabled) {
             logger.info("SIMULATOR: resetting all loaded modules finished :{}", loadedModuleMap.keySet());
         }
@@ -1264,7 +1284,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
     /**
      * 初始化所有要加载的模块
      */
-    private void initAllModuleInfos(List<ModuleSpec> moduleSpecList) {
+    protected void initAllModuleInfos(List<ModuleSpec> moduleSpecList) {
         for (ModuleSpec moduleSpec : moduleSpecList) {
             ModuleLoadInfo moduleLoadInfo = new ModuleLoadInfo();
             moduleLoadInfo.setModuleId(moduleSpec.getModuleId());
@@ -1387,7 +1407,7 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
             }
 
             // 3. 加载所有用户自定义模块
-            List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(appendJarFiles, false);
+            List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(appendJarFiles, false, true);
             loadModules(userModuleSpecs, "soft-flush");
         } catch (Throwable cause) {
             logger.warn("SIMULATOR: soft-flushing modules: occur error.", cause);
@@ -1439,8 +1459,13 @@ public class DefaultCoreModuleManager implements CoreModuleManager {
         // 对模块访问权限进行校验
         // 用户模块目录
         List<File> userModuleLibJars = getAllModuleLibJar(userModuleLibs);
-        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false);
+        List<ModuleSpec> userModuleSpecs = ModuleSpecUtils.loadModuleSpecs(userModuleLibJars, false, true);
         loadModules(userModuleSpecs, "force-flush");
 
     }
+
+    public static boolean isEmpty(Collection coll) {
+        return (coll == null || coll.isEmpty());
+    }
+
 }

@@ -31,6 +31,9 @@ import org.apache.commons.lang.StringUtils;
  * @since 2020/9/10 12:31 下午
  */
 public class ShadowDatabaseConfigParser {
+
+    public static final String PT_PRESSURE_TABLE_PREFIX_ENV_CONFIG = "PT_PRESSURE_TABLE_PREFIX";
+
     private static ShadowDatabaseConfigParser INSTANCE;
 
     public static ShadowDatabaseConfigParser getInstance() {
@@ -115,6 +118,9 @@ public class ShadowDatabaseConfigParser {
         final String url = StringUtils.trim(toString(map.get("url")));
         shadowDatabaseConfig.setUrl(url);
 
+        final String username = StringUtils.trim(toString(map.get("username")));
+        shadowDatabaseConfig.setUsername(username);
+
         if (StringUtils.isNotBlank(shadowTableConfig)) {
             String[] arr = StringUtils.split(shadowTableConfig, ',');
             if (arr != null && arr.length != 0) {
@@ -124,7 +130,8 @@ public class ShadowDatabaseConfigParser {
                         /**
                          * 现在配置不支持影子表名的自定义，由系统自动生成，后面如果控制台支持后，修改会非常容易
                          */
-                        businessTables.put(StringUtils.trim(str), Pradar.addClusterTestPrefix(StringUtils.trim(str)));
+//                        businessTables.put(StringUtils.trim(str), Pradar.addClusterTestPrefix(StringUtils.trim(str)));
+                        businessTables.put(StringUtils.trim(str), getShadowTablePrefix() + StringUtils.trim(str));
                     }
                 }
                 shadowDatabaseConfig.setBusinessShadowTables(businessTables);
@@ -197,7 +204,10 @@ public class ShadowDatabaseConfigParser {
             } else if (StringUtils.equals(entry.getKey(), "driverClassName")) {
                 shadowDatabaseConfig.setShadowDriverClassName(toString(entry.getValue()));
             } else if (StringUtils.equals(entry.getKey(), "schema")) {
-                shadowDatabaseConfig.setShadowSchema(toString(entry.getValue()));
+                String schema = toString(entry.getValue());
+                if(schema != null){
+                    shadowDatabaseConfig.setShadowSchema(schema);
+                }
             } else if (StringUtils.equals(entry.getKey(), "extra")) {
                 Map<String, Object> extra = (Map)entry.getValue();
                 if (extra == null) {
@@ -226,5 +236,16 @@ public class ShadowDatabaseConfigParser {
             shadowDatabaseConfig.setSchema(shadowSchema);
         }
         return shadowDatabaseConfig;
+    }
+
+    private String getShadowTablePrefix() {
+        String pressureTablePrefix = System.getProperty(PT_PRESSURE_TABLE_PREFIX_ENV_CONFIG);
+        if (StringUtils.isBlank(pressureTablePrefix)){
+            pressureTablePrefix = System.getenv(PT_PRESSURE_TABLE_PREFIX_ENV_CONFIG);
+        }
+        if (StringUtils.isNotBlank(pressureTablePrefix)){
+            return pressureTablePrefix;
+        }
+        return Pradar.CLUSTER_TEST_PREFIX;
     }
 }

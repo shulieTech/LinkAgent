@@ -1,0 +1,1 @@
+2.0.0.5  移除agent-management-client依赖

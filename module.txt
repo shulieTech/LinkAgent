@@ -67,3 +67,7 @@ module-netty-time-wheel
 module-proxool
 module-shadow-job
 module-spring-cloud-gateway
+module-cluster-test-check
+module-jdbc-trace
+module-shadow-preparation
+module-tomcat-dbcp

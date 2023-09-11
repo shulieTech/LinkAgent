@@ -15,7 +15,7 @@
 package com.pamirs.attach.plugin.jedis.shadowserver;
 
 import com.pamirs.attach.plugin.common.datasource.redisserver.RedisServerNodesStrategy;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,11 +39,11 @@ public class JedisSentinelNodesStrategy implements RedisServerNodesStrategy {
         String master = null;
         try {
             if (Jedis.class.isAssignableFrom(obj.getClass())) {
-                Object datasource = Reflect.on(obj).get("dataSource");
+                Object datasource = ReflectionUtils.get(obj,"dataSource");
                 if (datasource == null || !(datasource instanceof JedisSentinelPool)) {
                     return Collections.emptyList();
                 }
-                HashSet masterListeners = Reflect.on(datasource).get("masterListeners");
+                HashSet masterListeners = ReflectionUtils.get(datasource,"masterListeners");
                 if (CollectionUtils.isEmpty(masterListeners)) {
                     return nodes;
                 }
@@ -52,10 +52,9 @@ public class JedisSentinelNodesStrategy implements RedisServerNodesStrategy {
 
                 while (iterator.hasNext()) {
                     Object next = iterator.next();
-                    Reflect t = Reflect.on(next);
-                    master = t.get("masterName");
-                    String host = t.get("host");
-                    String port = String.valueOf(t.get("port"));
+                    master = ReflectionUtils.get(next,"masterName");
+                    String host = ReflectionUtils.get(next,"host");
+                    String port = String.valueOf(ReflectionUtils.get(next,"port"));
                     nodes.add(host.concat(":").concat(port));
                 }
             }

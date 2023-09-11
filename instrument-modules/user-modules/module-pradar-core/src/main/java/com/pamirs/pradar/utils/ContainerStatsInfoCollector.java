@@ -24,6 +24,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -40,6 +41,11 @@ import java.util.List;
 public class ContainerStatsInfoCollector {
 
     private final static Logger logger = LoggerFactory.getLogger(ContainerStatsInfoCollector.class.getName());
+
+    /**
+     * k8s平台限制cpu核心数, 在控制台仿真系统配置的key
+     */
+    private String k8s_container_cpu_limit_key = "k8s.containers.resources.limits.cpu";
 
     /**
      * 偶数次采集数据
@@ -87,21 +93,30 @@ public class ContainerStatsInfoCollector {
         long timeDiff = latest.collectingTime - previous.collectingTime;
 
         ContainerStatsInfo statsInfo = new ContainerStatsInfo();
-        statsInfo.coresNum = this.coresNum;
+
+        // 是否在控制台对k8s cpu做限制
+        Double k8sCpuLimit = getK8sCpuNum();
+        statsInfo.coresNum = k8sCpuLimit != null ? k8sCpuLimit : this.coresNum;
 
         DecimalFormat format = new DecimalFormat("0.00");
 
         // 100% * 容器使用cpu时间 / 系统使用cpu时间
         //cpu使用率是整体的, 上限就是100，所以不乘核数
         BigDecimal containerCpuDelta = latest.containerCpuValue.subtract(previous.containerCpuValue);
-        BigDecimal systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
+
+        BigDecimal systemCpuDelta;
+        if (k8sCpuLimit != null) {
+            systemCpuDelta = new BigDecimal(statsInfo.coresNum * timeDiff).multiply(new BigDecimal(1000 * 1000));
+        } else {
+            systemCpuDelta = new BigDecimal(latest.systemCpuValue - previous.systemCpuValue).multiply(new BigDecimal(1000 * 1000 * 1000 / userHz));
+        }
 
         statsInfo.cpuUsagePercent = containerCpuDelta.multiply(new BigDecimal(100)).divide(systemCpuDelta, 2, BigDecimal.ROUND_HALF_UP).doubleValue();
-        if (statsInfo.cpuUsagePercent  < 2){
+        if (statsInfo.cpuUsagePercent < 2) {
             OperatingSystemMXBean osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
             double systemCpuLoad = osBean.getSystemCpuLoad();
-            if (systemCpuLoad != 0){
-                statsInfo.cpuUsagePercent = new BigDecimal(systemCpuLoad).multiply(new BigDecimal(100),new MathContext(2, RoundingMode.HALF_UP)).doubleValue();
+            if (systemCpuLoad != 0) {
+                statsInfo.cpuUsagePercent = new BigDecimal(systemCpuLoad).multiply(new BigDecimal(100), new MathContext(2, RoundingMode.HALF_UP)).doubleValue();
             }
         }
 
@@ -126,7 +141,13 @@ public class ContainerStatsInfoCollector {
         statsInfo.networkSpeed = this.networkSpeed;
         statsInfo.networkUsage = Double.parseDouble(new DecimalFormat("0.0000000").format(100 * (statsInfo.rxRate + statsInfo.txRate) / (networkSpeed / 8.0 * 1024 * 1024)));
 
+        statsInfo.youngGcCount = latest.youngGcCount - previous.youngGcCount;
+        statsInfo.youngGcCost = latest.youngGcCost - previous.youngGcCost;
+        statsInfo.oldGcCount = latest.oldGcCount - previous.oldGcCount;
+        statsInfo.oldGcCost = latest.oldGcCost - previous.oldGcCost;
+
         this.previousRecord = latest;
+
         return statsInfo;
     }
 
@@ -160,7 +181,7 @@ public class ContainerStatsInfoCollector {
             List<String> eths = execCommand("ip -o -4 route show to default | awk '{print $5}'");
             if (!eths.isEmpty()) {
                 this.eth = eths.get(0);
-            }else if(new File("/sys/class/net/eth0/speed").exists()){
+            } else if (new File("/sys/class/net/eth0/speed").exists()) {
                 // 看看是否存在eth0网口,存在则用这个
                 this.eth = "eth0";
             }
@@ -270,6 +291,13 @@ public class ContainerStatsInfoCollector {
                 break;
             }
         }
+
+        List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        statsInfo.youngGcCount = garbageCollectorMXBeans.get(0).getCollectionCount();
+        statsInfo.youngGcCost = garbageCollectorMXBeans.get(0).getCollectionTime();
+        statsInfo.oldGcCount = garbageCollectorMXBeans.get(1).getCollectionCount();
+        statsInfo.oldGcCost = garbageCollectorMXBeans.get(1).getCollectionTime();
+
         return statsInfo;
     }
 
@@ -295,6 +323,18 @@ public class ContainerStatsInfoCollector {
 
             return memory;
         }
+    }
+
+    private Double getK8sCpuNum() {
+        String k8sCpuLimit = System.getProperty(k8s_container_cpu_limit_key);
+        try {
+            if (k8sCpuLimit != null && Double.parseDouble(k8sCpuLimit) > 0) {
+                return Double.parseDouble(k8sCpuLimit);
+            }
+        } catch (Exception e) {
+            logger.error("[k8s-container-monitor] parse k8s cpu limit num error , config value:" + k8sCpuLimit);
+        }
+        return null;
     }
 
     private static class StatsInfo {
@@ -376,6 +416,14 @@ public class ContainerStatsInfoCollector {
         private float latest5MinLoadAvg;
         private float latest15MinLoadAvg;
 
+        /**
+         * gc次数和耗时
+         */
+        private long oldGcCount;
+        private long oldGcCost;
+        private long youngGcCount;
+        private long youngGcCost;
+
     }
 
     public static class ContainerStatsInfo {
@@ -387,7 +435,7 @@ public class ContainerStatsInfoCollector {
         private long totalMemory;
         private long availableMemory;
         private double memoryUsagePercent;
-        private int coresNum;
+        private double coresNum;
         private long totalDiskSpace;
         private long usableDiskSpace;
         private long diskReadBytes;
@@ -400,6 +448,10 @@ public class ContainerStatsInfoCollector {
         private long txRate;
         private long networkSpeed;
         private double networkUsage;
+        private long oldGcCount;
+        private long oldGcCost;
+        private long youngGcCount;
+        private long youngGcCost;
 
         public double getCpuUsagePercent() {
             return cpuUsagePercent;
@@ -433,7 +485,7 @@ public class ContainerStatsInfoCollector {
             return memoryUsagePercent;
         }
 
-        public int getCoresNum() {
+        public double getCoresNum() {
             return coresNum;
         }
 
@@ -483,6 +535,22 @@ public class ContainerStatsInfoCollector {
 
         public double getNetworkUsage() {
             return networkUsage;
+        }
+
+        public long getoldGcCost() {
+            return oldGcCost;
+        }
+
+        public long getyoungGcCost() {
+            return youngGcCost;
+        }
+
+        public long getOldGcCount() {
+            return oldGcCount;
+        }
+
+        public long getYoungGcCount() {
+            return youngGcCount;
         }
     }
 

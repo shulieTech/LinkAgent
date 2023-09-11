@@ -4,23 +4,15 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package com.pamirs.attach.plugin.es.shadowserver;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.pamirs.attach.plugin.es.shadowserver.rest.RestClientDefinitionStrategy;
 import com.pamirs.attach.plugin.es.shadowserver.rest.definition.RestClientDefinition;
@@ -38,6 +30,7 @@ import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpHost;
 import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.transport.TransportClient;
@@ -46,6 +39,12 @@ import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -57,14 +56,18 @@ public class ShadowEsClientHolder {
     protected final static Logger LOGGER = LoggerFactory.getLogger(ShadowEsClientHolder.class.getName());
 
     private final static Map<TransportClient, TransportClient> transportClientMapping =
-        new ConcurrentHashMap<TransportClient, TransportClient>();
+            new ConcurrentHashMap<TransportClient, TransportClient>();
 
     private final static Map<RestClient, RestClient> restClientMapping =
-        new ConcurrentHashMap<RestClient, RestClient>();
+            new ConcurrentHashMap<RestClient, RestClient>();
 
     private static final AtomicBoolean isAdded = new AtomicBoolean(false);
 
     private static boolean isLowVersionRestClient = false;
+
+    private static boolean IS_REST_CLIENT_614 = false;
+
+    private static boolean JUDGE_IS_614 = false;
 
     public static void addListener() {
         if (!isAdded.compareAndSet(false, true)) {
@@ -75,8 +78,8 @@ public class ShadowEsClientHolder {
             @Override
             public EventResult onEvent(IEvent event) {
                 if (event instanceof ShadowEsServerDisableEvent
-                    || event instanceof ShadowEsServerRegisterEvent) {
-                    List<ShadowEsServerConfig> shadowEsServerConfigs = (List<ShadowEsServerConfig>)event.getTarget();
+                        || event instanceof ShadowEsServerRegisterEvent) {
+                    List<ShadowEsServerConfig> shadowEsServerConfigs = (List<ShadowEsServerConfig>) event.getTarget();
                     synchronized (ShadowEsClientHolder.class) {
                         for (ShadowEsServerConfig config : shadowEsServerConfigs) {
                             for (Entry<TransportClient, TransportClient> entry : transportClientMapping.entrySet()) {
@@ -149,7 +152,7 @@ public class ShadowEsClientHolder {
         ShadowEsServerConfig shadowEsServerConfig = findMatchShadowEsServerConfig(nodesAddressAsString);
         if (shadowEsServerConfig == null) {
             throw new PressureMeasureError(String.format(
-                "影子集群未配置，业务节点：%s", StringUtils.join(nodesAddressAsString, ",")
+                    "影子集群未配置，业务节点：%s", StringUtils.join(nodesAddressAsString, ",")
             ));
         }
         RestClientDefinition restClientDefinition = RestClientDefinitionStrategy.match(target);
@@ -161,7 +164,7 @@ public class ShadowEsClientHolder {
         ShadowEsServerConfig shadowEsServerConfig = findMatchShadowEsServerConfig(nodesAddressAsString);
         if (shadowEsServerConfig == null) {
             throw new PressureMeasureError(String.format(
-                "影子集群未配置，业务节点：%s", StringUtils.join(nodesAddressAsString, ",")
+                    "影子集群未配置，业务节点：%s", StringUtils.join(nodesAddressAsString, ",")
             ));
         }
         TransportClientDefinition transportClientDefinition = TransportClientDefinitionStrategy.match(target);
@@ -170,7 +173,7 @@ public class ShadowEsClientHolder {
 
     private static ShadowEsServerConfig findMatchShadowEsServerConfig(List<String> nodesAsString) {
         for (Entry<String, ShadowEsServerConfig> entry : GlobalConfig.getInstance().getShadowEsServerConfigs()
-            .entrySet()) {
+                .entrySet()) {
             ShadowEsServerConfig shadowEsServerConfig = entry.getValue();
             if (shadowEsServerConfig.matchBusinessNodes(nodesAsString)) {
                 return shadowEsServerConfig;
@@ -185,10 +188,10 @@ public class ShadowEsClientHolder {
         for (DiscoveryNode node : nodes) {
             Object object = node.getAddress();
             if (HostAndPort.usingInetSocket) {
-                InetSocketTransportAddress address = (InetSocketTransportAddress)object;
+                InetSocketTransportAddress address = (InetSocketTransportAddress) object;
                 nodesAddressAsString.add(address.getAddress() + ":" + address.getPort());
             } else {
-                TransportAddress address = (TransportAddress)object;
+                TransportAddress address = (TransportAddress) object;
                 nodesAddressAsString.add(address.getAddress() + ":" + address.getPort());
             }
         }
@@ -196,10 +199,45 @@ public class ShadowEsClientHolder {
     }
 
     private static List<String> getNodesAddressAsString(RestClient target) {
+        judgeIs614(target);
+        List<String> nodesAddressAsString;
+        if (IS_REST_CLIENT_614) {
+            nodesAddressAsString = getLowLevelNodesAddressAsString(target);
+        } else {
+            nodesAddressAsString = getHighLevelNodesAddressAsString(target);
+        }
+        return nodesAddressAsString;
+    }
+
+    private static void judgeIs614(RestClient target) {
+        if (!JUDGE_IS_614) {
+            try {
+                // 低版本没有 org.elasticsearch.client.Node 类
+                target.getClass()
+                        .getClassLoader()
+                        .loadClass("org.elasticsearch.client.Node");
+                IS_REST_CLIENT_614 = Boolean.FALSE;
+            } catch (Throwable t) {
+                IS_REST_CLIENT_614 = Boolean.TRUE;
+            }
+        }
+        JUDGE_IS_614 = Boolean.TRUE;
+    }
+
+    private static List<String> getHighLevelNodesAddressAsString(RestClient target) {
         List<Node> nodes = getNodes(target);
         List<String> nodesAddressAsString = new ArrayList<String>(nodes.size());
         for (Node node : nodes) {
             nodesAddressAsString.add(node.getHost().getHostName() + ":" + node.getHost().getPort());
+        }
+        return nodesAddressAsString;
+    }
+
+    private static List<String> getLowLevelNodesAddressAsString(RestClient target) {
+        Set<HttpHost> httpHosts = Reflect.on(Reflect.on(target).get("hostTuple")).get("hosts");
+        List<String> nodesAddressAsString = new ArrayList<String>(httpHosts.size());
+        for (HttpHost httpHost : httpHosts) {
+            nodesAddressAsString.add(httpHost.getHostName() + ":" + httpHost.getPort());
         }
         return nodesAddressAsString;
     }
@@ -224,4 +262,54 @@ public class ShadowEsClientHolder {
         restClientMapping.clear();
     }
 
+    /**
+     * 通过影子node字符串来关闭影子client
+     *
+     * @param shadowHosts
+     */
+    public static void closeShadowClient(Set<String> shadowHosts) {
+        for (String host : shadowHosts) {
+            List<String> nodes = Arrays.asList(host.split(","));
+            for (Entry<TransportClient, TransportClient> entry : transportClientMapping.entrySet()) {
+                List<String> nodesAddressAsString = getNodesAddressAsString(entry.getValue());
+                if (matchNodes(nodesAddressAsString, nodes)) {
+                    TransportClient transportClient = transportClientMapping.remove(entry.getKey());
+                    if (transportClient != null) {
+                        transportClient.close();
+                    }
+                }
+            }
+            for (Entry<RestClient, RestClient> entry : restClientMapping.entrySet()) {
+                List<String> nodesAddressAsString = getNodesAddressAsString(entry.getValue());
+                if (matchNodes(nodesAddressAsString, nodes)) {
+                    RestClient restClient = restClientMapping.remove(entry.getKey());
+                    if (restClient != null) {
+                        try {
+                            restClient.close();
+                        } catch (IOException e) {
+                            LOGGER.error("shadow restClient close fail!", e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean matchNodes(List<String> nodesAsString, List<String> businessNodes) {
+        String[] nodeArray = sort(nodesAsString);
+        String[] businessNodeArray = sort(businessNodes);
+        return Arrays.equals(nodeArray, businessNodeArray);
+    }
+
+    private static String[] sort(List<String> list) {
+        String[] array = new String[list.size()];
+        list.toArray(array);
+        Arrays.sort(array, new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return o1.compareTo(o2);
+            }
+        });
+        return array;
+    }
 }

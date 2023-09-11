@@ -14,7 +14,7 @@
     <properties>
         <module-name>dbcp2</module-name>
     </properties>
-    <version>2.0.1.0</version>
+    <version>2.0.1.2</version>
 
     <dependencies>
         <dependency>
@@ -39,9 +39,21 @@
         </dependency>
 
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-internal-bootstrap-api</artifactId>
             <version>${simulator.internal.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6.2</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

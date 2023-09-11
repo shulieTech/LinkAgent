@@ -25,7 +25,7 @@
         </dependency>
 
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>simulator-bootstrap-api</artifactId>
             <version>${simulator.bootstrap.api.version}</version>
             <scope>provided</scope>
@@ -34,6 +34,12 @@
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-actor_2.12</artifactId>
             <version>2.5.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

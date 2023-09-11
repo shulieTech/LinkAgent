@@ -14,8 +14,8 @@
  */
 package com.pamirs.pradar;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.JsonObject;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import org.apache.commons.lang.StringUtils;
 
@@ -42,6 +42,11 @@ abstract class BaseContext {
     String serviceName = PradarCoreUtils.EMPTY_STRING;
     String methodName = PradarCoreUtils.EMPTY_STRING;
     String callBackMsg = null;
+
+    /**
+     * mock内容
+     */
+    Object mockResponse;
 
     /**
      * 中间件名称
@@ -268,6 +273,13 @@ abstract class BaseContext {
         return request;
     }
 
+    public Object getMockResponse() {
+        return mockResponse;
+    }
+
+    public void setMockResponse(String mockResponse) {
+        this.mockResponse = mockResponse;
+    }
 
     /**
      * 脱敏
@@ -278,21 +290,16 @@ abstract class BaseContext {
     public Object encript(Object arg) {
 
         if (PradarSwitcher.securityFieldOpen()) {
-            if (arg != null &&
-                    String.class.isAssignableFrom(arg.getClass())
-            ) {
+            if (arg != null && String.class.isAssignableFrom(arg.getClass())) {
                 String context = (String) arg;
                 if (context.startsWith("{") && context.endsWith("}")
                         || (context.startsWith("[") && context.endsWith("]"))) {
                     try {
-                        JSONObject jsonObject =
-                                JSON.parseObject((String) arg);
-                        List<String> fieldCollection =
-                                GlobalConfig.getInstance()
-                                        .getSimulatorDynamicConfig().getSecurityFieldCollection();
+                        JsonObject jsonObject = GsonFactory.getGson().fromJson((String) arg, JsonObject.class);
+                        List<String> fieldCollection = GlobalConfig.getInstance().getSimulatorDynamicConfig().getSecurityFieldCollection();
                         for (String field : fieldCollection) {
-                            if (jsonObject.containsKey(field)) {
-                                jsonObject.put(field, CRIPTTEXT);
+                            if (jsonObject.has(field)) {
+                                jsonObject.addProperty(field, CRIPTTEXT);
                             }
                         }
                         return jsonObject.toString();

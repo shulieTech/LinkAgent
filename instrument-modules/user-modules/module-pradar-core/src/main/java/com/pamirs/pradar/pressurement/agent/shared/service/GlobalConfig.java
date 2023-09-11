@@ -75,6 +75,11 @@ public final class GlobalConfig {
     private Set<String> mqWhiteList = new HashSet<String>();
 
     /**
+     * 业务topic#group >> 自定义影子topic#group 的映射
+     */
+    private Map<String, String> shadowTopicGroupMappings = new HashMap<>();
+
+    /**
      * 所有的入口规则
      */
     private Set<String> traceRules = new HashSet<String>();
@@ -91,7 +96,7 @@ public final class GlobalConfig {
     private Map<String, ShadowRedisConfig> shadowRedisConfigs = new ConcurrentHashMap<String, ShadowRedisConfig>();
     private Map<String, ShadowEsServerConfig> shadowEsServerConfigs = new ConcurrentHashMap<String, ShadowEsServerConfig>();
     public static Map<String, ShadowHbaseConfig> shadowHbaseServerConfigs
-        = new ConcurrentHashMap<String, ShadowHbaseConfig>();
+            = new ConcurrentHashMap<String, ShadowHbaseConfig>();
 
     //应用启动特定埋点状态信息，如数据库启动对应影子库数据源加入应用是否正常
     private Map<String, String> applicationAccessStatus = new ConcurrentHashMap<String, String>();
@@ -107,6 +112,9 @@ public final class GlobalConfig {
      */
     private volatile boolean isShadowDbRedisServer = false;
 
+    /**
+     * es默认影子表
+     */
     private volatile boolean isShadowEsServer = Boolean.FALSE;
 
     private volatile boolean isShadowHbaseServer = Boolean.FALSE;
@@ -347,6 +355,14 @@ public final class GlobalConfig {
         this.mqWhiteList = mqWhiteList;
     }
 
+    public Map<String, String> getShadowTopicGroupMappings() {
+        return shadowTopicGroupMappings;
+    }
+
+    public void setShadowTopicGroupMappings(Map<String, String> shadowTopicGroupMappings) {
+        this.shadowTopicGroupMappings = shadowTopicGroupMappings;
+    }
+
     public Set<String> getContextPathBlockList() {
         return contextPathBlockList;
     }
@@ -384,7 +400,7 @@ public final class GlobalConfig {
     }
 
     public void setShadowEsServerConfigs(
-        Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
+            Map<String, ShadowEsServerConfig> shadowEsServerConfigs) {
         this.shadowEsServerConfigs = shadowEsServerConfigs;
     }
 
@@ -419,16 +435,11 @@ public final class GlobalConfig {
         if (StringUtils.isNotBlank(s)) {
             return Boolean.parseBoolean(s);
         }
-        s = getSystemProperty("shadowtable_in_shadowdbhbaseserver_mode", "false");
-        return Boolean.parseBoolean(s);
-    }
-
-    static private String getSystemProperty(String key, String defau) {
-        try {
-            return System.getProperty(key, defau);
-        } catch (Exception e) {
-            return null;
+        s = System.getProperty("shadowtable_in_shadowdbhbaseserver_mode");
+        if(StringUtils.isNotEmpty(s)){
+            return Boolean.parseBoolean(s);
         }
+        throw new IllegalStateException("[hbase] shadow table config must assign if shadow table mode or not! Add -Dshadowtable_in_shadowdbhbaseserver_mode=true or false in jvm arguments");
     }
 
     public void setShadowHbaseServer(boolean shadowHbaseServer) {
@@ -457,8 +468,8 @@ public final class GlobalConfig {
 
     public boolean allowTraceRequestResponse() {
         return (Pradar.isClusterTest() &&
-            GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
-            || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig()
-            .isBusRequestResponseDataAllowTrace());
+                GlobalConfig.getInstance().getSimulatorDynamicConfig().isShadowRequestResponseDataAllowTrace())
+                || (!Pradar.isClusterTest() && GlobalConfig.getInstance().getSimulatorDynamicConfig()
+                .isBusRequestResponseDataAllowTrace());
     }
 }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,8 +14,12 @@
  */
 package com.pamirs.attach.plugin.alibaba.druid;
 
+import com.pamirs.attach.plugin.alibaba.druid.interceptor.DruidGetConnectionDirectInterceptor;
 import com.pamirs.attach.plugin.alibaba.druid.interceptor.DruidInjectGetConnectionInterceptor;
+import com.pamirs.attach.plugin.alibaba.druid.listener.DruidShadowActiveEventListener;
+import com.pamirs.attach.plugin.alibaba.druid.listener.DruidShadowDisableEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -43,8 +47,18 @@ public class AlibabaDruidPlugin extends ModuleLifecycleAdapter implements Extens
                 InstrumentMethod getConnectionMethod = instrumentClass.getDeclaredMethod("getConnection", "long");
                 getConnectionMethod.addInterceptor(Listeners.of(DruidInjectGetConnectionInterceptor.class, "Druid_Get_Connection_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
+                InstrumentMethod getConnectionDirect = instrumentClass.getDeclaredMethod("getConnectionDirect", "long");
+                getConnectionDirect.addInterceptor(Listeners.of(DruidGetConnectionDirectInterceptor.class));
             }
         });
+
+//        addListener();
         return true;
+    }
+
+    private void addListener() {
+        EventRouter.router()
+                .addListener(new DruidShadowDisableEventListener())
+                .addListener(new DruidShadowActiveEventListener());
     }
 }

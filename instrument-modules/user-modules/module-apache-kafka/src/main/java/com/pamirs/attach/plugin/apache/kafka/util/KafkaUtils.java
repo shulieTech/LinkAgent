@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,17 +14,16 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.util;
 
-import java.util.Map;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
-import com.pamirs.pradar.exception.PressureMeasureError;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.shulie.instrument.module.messaging.kafka.util.ConsumerConfigHolder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -36,14 +35,16 @@ public class KafkaUtils {
 
     public static String getRemoteAddress(Object remoteAddressFieldAccessor, DynamicFieldManager manager) {
         String remoteAddress = manager.getDynamicField(remoteAddressFieldAccessor,
-            KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS);
-
+                KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS);
         if (StringUtils.isEmpty(remoteAddress)) {
             if (remoteAddressFieldAccessor instanceof KafkaConsumer) {
                 try {
-                    remoteAddress = KafkaUtils.getBootstrapServers((KafkaConsumer<?, ?>)remoteAddressFieldAccessor);
-                    manager.setDynamicField(remoteAddressFieldAccessor, KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS,
-                        remoteAddress);
+                    remoteAddress = ConsumerConfigHolder.getBootstrapServers((KafkaConsumer<?, ?>) remoteAddressFieldAccessor);
+                    if (remoteAddress.contains(",")) {
+                        String[] split = remoteAddress.split(",");
+                        remoteAddress = Arrays.stream(split).sorted().collect(Collectors.joining(","));
+                    }
+                    manager.setDynamicField(remoteAddressFieldAccessor, KafkaConstants.DYNAMIC_FIELD_REMOTE_ADDRESS, remoteAddress);
                     return remoteAddress;
                 } catch (Throwable e) {
                     LOGGER.warn("can not get remoteAddress", e);
@@ -55,33 +56,4 @@ public class KafkaUtils {
         }
     }
 
-    public static String getBootstrapServers(KafkaConsumer<?, ?> consumer) {
-        Object metadata = Reflect.on(consumer).get("metadata");
-
-        Object cluster = ReflectUtil.reflectSlience(metadata, "cluster");
-        Iterable<Node> nodes;
-        if (cluster != null) {
-            nodes = Reflect.on(cluster).get("nodes");
-        } else {
-            Object cache = ReflectUtil.reflectSlience(metadata, "cache");
-            if (cache != null) {
-                Object tmpNodes = Reflect.on(cache).get("nodes");
-                if (tmpNodes instanceof Iterable) {
-                    nodes = (Iterable<Node>)tmpNodes;
-                } else if (tmpNodes instanceof Map) {
-                    nodes = ((Map<?, Node>)tmpNodes).values();
-                } else {
-                    throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
-                }
-            } else {
-                throw new PressureMeasureError("未支持的kafka版本！未能获取nodes");
-            }
-        }
-        StringBuilder sb = new StringBuilder();
-        for (Node node : nodes) {
-            sb.append(Reflect.on(node).get("host").toString()).append(":").append(Reflect.on(node).get("port")
-                .toString()).append(",");
-        }
-        return sb.substring(0, sb.length() - 1);
-    }
 }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -22,6 +22,7 @@ public class ListenersUtil {
     public static final int FILTER_CLUSTER_TEST_INDEX = 1;
     public static final int FILTER_BUSINESS_DATA_INDEX = 2;
     public static final int FILTER_NO_SILENCE_INDEX = 3;
+    public static final int EXECUTE_WITH_CLUSTER_TEST_DISABLE = 4;
 
     public static boolean isFilterClusterTest(int data) {
         return TagUtil.checkTag(FILTER_CLUSTER_TEST_INDEX, data);
@@ -33,5 +34,9 @@ public class ListenersUtil {
 
     public static boolean isNoSilence(int data) {
         return TagUtil.checkTag(FILTER_NO_SILENCE_INDEX, data);
+    }
+
+    public static boolean isExecuteWithClusterTestDisable(int data) {
+        return TagUtil.checkTag(EXECUTE_WITH_CLUSTER_TEST_DISABLE, data);
     }
 }

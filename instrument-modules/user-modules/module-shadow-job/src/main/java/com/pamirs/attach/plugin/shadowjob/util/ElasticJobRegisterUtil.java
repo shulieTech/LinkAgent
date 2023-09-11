@@ -30,10 +30,10 @@ import com.dangdang.ddframe.job.api.config.impl.SimpleJobConfiguration;
 import com.dangdang.ddframe.job.api.listener.ElasticJobListener;
 import com.dangdang.ddframe.job.internal.executor.JobExecutor;
 import com.dangdang.ddframe.job.spring.schedule.SpringJobScheduler;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.PradarInternalService;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -46,7 +46,7 @@ public class ElasticJobRegisterUtil {
         for (Map.Entry<String, SpringJobScheduler> entry : beanFactory.getBeansOfType(SpringJobScheduler.class)
             .entrySet()) {
             SpringJobScheduler springJobScheduler = entry.getValue();
-            JobExecutor jobExecutor = (JobExecutor)ReflectionUtils.getFieldValue(springJobScheduler, "jobExecutor");
+            JobExecutor jobExecutor = ReflectionUtils.get(springJobScheduler, "jobExecutor");
             JobConfiguration jobConfiguration = (JobConfiguration)ReflectionUtils.getFieldValues(jobExecutor,
                 "schedulerFacade", "configService", "jobNodeStorage", "jobConfiguration");
             JobConfiguration jobConfigurationPT = null;
@@ -87,7 +87,7 @@ public class ElasticJobRegisterUtil {
                 elasticJobListeners.toArray(new ElasticJobListener[0]));
             PradarSpringUtil.getBeanFactory().registerSingleton(Pradar.addClusterTestPrefix(entry.getKey()),
                 jobScheduler);
-            JobExecutor ptJobExecutor = (JobExecutor)ReflectionUtils.getFieldValue(jobScheduler, "jobExecutor");
+            JobExecutor ptJobExecutor = ReflectionUtils.get(jobScheduler, "jobExecutor");
             Class<?> elasticJobClass = null;
             try {
                 elasticJobClass = Class.forName("com.dangdang.ddframe.job.api.ElasticJob");
@@ -113,7 +113,7 @@ public class ElasticJobRegisterUtil {
                         }
                     }
                 });
-            ReflectionUtils.setFieldValue(ptJobExecutor, "elasticJob", o);
+            ReflectionUtils.set(ptJobExecutor, "elasticJob", o);
             jobScheduler.init();
         }
     }

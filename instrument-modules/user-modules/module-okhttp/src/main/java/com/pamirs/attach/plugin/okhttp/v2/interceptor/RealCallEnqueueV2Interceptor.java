@@ -16,10 +16,9 @@ package com.pamirs.attach.plugin.okhttp.v2.interceptor;
 
 import java.io.IOException;
 
-import com.alibaba.fastjson.JSONObject;
-
 import com.pamirs.attach.plugin.okhttp.OKHttpConstants;
 import com.pamirs.pradar.PradarService;
+import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.pamirs.pradar.internal.adapter.ExecutionForwardCall;
@@ -92,7 +91,7 @@ public class RealCallEnqueueV2Interceptor extends TraceInterceptorAdaptor {
                     if (param instanceof String) {
                         buffer.write(String.valueOf(param).getBytes("UTF-8"));
                     } else {
-                        buffer.write(JSONObject.toJSONBytes(param));
+                        buffer.write(GsonFactory.getGson().toJson(param).getBytes());
                     }
                 } catch (IOException e) {
                 }

@@ -29,7 +29,7 @@ import java.util.*;
 /**
  * 默认配置信息实现
  */
-class DefaultSimulatorConfig implements SimulatorConfig {
+public class DefaultSimulatorConfig implements SimulatorConfig {
 
     private final CoreConfigure config;
     private final String version;
@@ -356,6 +356,12 @@ class DefaultSimulatorConfig implements SimulatorConfig {
     @Override
     public Map<String, String> getAgentFileConfigs() {
         return Collections.unmodifiableMap(config.getAgentFileConfigs());
+    }
+
+    @Override
+    public Boolean getAbortedWhenAppConfigPollFailed() {
+        String value = config.getAbortedWhenPollAppConfigFailed();
+        return "true".equals(value);
     }
 
 

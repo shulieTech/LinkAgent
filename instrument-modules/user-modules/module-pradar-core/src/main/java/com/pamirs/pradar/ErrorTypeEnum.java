@@ -28,6 +28,7 @@ public enum ErrorTypeEnum {
     RedisServer("redisServer", "redis影子数据源异常"),
     ShadowEsServer("shadowEsServer", "es影子数据源异常"),
     mock("mock", "mock处理异常"),
+    DEGRADE("degrade", "资源紧张触发降级"),
     ;
 
     private String errorType;

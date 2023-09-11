@@ -14,30 +14,18 @@
  */
 package com.shulie.instrument.simulator.agent.core.config;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-
-import com.alibaba.fastjson.JSONObject;
-
 import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
-import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.PidUtils;
 import com.shulie.instrument.simulator.agent.core.util.PropertyPlaceholderHelper;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * agent 配置
@@ -46,7 +34,6 @@ import org.slf4j.LoggerFactory;
  * @since 2020/11/17 8:09 下午
  */
 public class CoreConfig {
-    private final Logger logger = LoggerFactory.getLogger(CoreConfig.class);
 
     private final static String CONFIG_PATH_NAME = "config";
     private final static String AGENT_PATH_NAME = "agent";
@@ -155,52 +142,6 @@ public class CoreConfig {
                 }
             }
         }
-    }
-
-    private void initFetchConfigTask() {
-        this.service = Executors.newScheduledThreadPool(1, new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread(r, "Pradar-agent-Fetch-Config-Service");
-                t.setDaemon(true);
-                t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                    @Override
-                    public void uncaughtException(Thread t, Throwable e) {
-                        logger.error("Thread {} caught a Unknown exception with UncaughtExceptionHandler", t.getName(),
-                            e);
-                    }
-                });
-                return t;
-            }
-        });
-
-        service.scheduleAtFixedRate(getRunnableTask(), 60 * 3, 60 * 3, TimeUnit.SECONDS);
-    }
-
-    private Runnable getRunnableTask() {
-        return new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Map<String, Object> dynamicConfigs = ConfigUtils.getDynamicAgentConfigFromUrl(getTroWebUrl(),
-                        getAppName(), "", getHttpMustHeaders());
-                    if (dynamicConfigs == null
-                        || dynamicConfigs.get("success") == null
-                        || !Boolean.parseBoolean(dynamicConfigs.get("success").toString())) {
-                        logger.error("getDynamicAgentConfigFromUrl failed");
-                        return;
-                    }
-                    JSONObject jsonObject = (JSONObject)dynamicConfigs.get("data");
-                    //                    for (Map.Entry<String, String> entry : jsonObject){
-                    //                        if (!agentFileConfigs.containsKey(entry.getKey())){
-                    //                            configs.put(entry.getKey(), entry.getValue());
-                    //                        }
-                    //                    }
-                } catch (Throwable e) {
-                    logger.error("CoreConfig getRunnableTask error ", e);
-                }
-            }
-        };
     }
 
     public boolean isMultiAppSwitch() {
@@ -507,6 +448,50 @@ public class CoreConfig {
         return getProperty("pradar.env.code");
     }
 
+    public String getAgentExpand() {
+        return getProperty("pradar.agent.expand");
+    }
+
+    public String getTenantCode(){
+        return getProperty("shulie.agent.tenant.code");
+    }
+
+    public String getAgentManagerUrl(){
+        return getProperty("shulie.agent.manager.url");
+    }
+
+    public String getNacosTimeout(){
+        return getProperty("nacos.timeout");
+    }
+
+    public String getNacosServerAddr(){
+        return getProperty("nacos.serverAddr");
+    }
+
+    public String getClusterName(){
+        return getProperty("cluster.name");
+    }
+
+    public String getShadowPreparationEnable(){
+        return getProperty("shadow.preparation.enabled");
+    }
+
+    public String getKafkaSdkSwitch() {
+        return getProperty("kafka.sdk.switch");
+    }
+
+    public String getPinpointCollectorAddress() {
+        return getProperty("pradar.data.pusher.pinpoint.collector.address");
+    }
+
+    public String getPradarTraceFileSize(){
+        return getProperty("pradar.trace.max.file.size");
+    }
+
+    public String getPradarMonitorFileSize(){
+        return getProperty("pradar.monitor.max.file.size");
+    }
+
     /**
      * 获取发起http请求中必须包含的head
      *
@@ -519,7 +504,7 @@ public class CoreConfig {
         headerMap.put("tenantAppKey", getTenantAppKey());
         headerMap.put("userId", getUserId());
         headerMap.put("envCode", getEnvCode());
-
+        headerMap.put("agentExpand", getAgentExpand());
         return headerMap;
     }
 

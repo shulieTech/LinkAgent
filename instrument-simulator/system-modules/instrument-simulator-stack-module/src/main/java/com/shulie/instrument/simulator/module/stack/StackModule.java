@@ -31,7 +31,6 @@ import com.shulie.instrument.simulator.api.resource.LoadedClassDataSource;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
 import com.shulie.instrument.simulator.api.util.ParameterUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 
 import javax.annotation.Resource;
@@ -64,11 +63,11 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
         final String type = args.get("pattenType");
         final int wait = ParameterUtils.getInt(args, "wait", 5000);
         final int patternType = PatternType.of(type);
-        if (StringUtils.isBlank(classPattern)) {
+        if (isBlank(classPattern)) {
             return CommandResponse.failure("class can't be empty.");
         }
 
-        if (StringUtils.isBlank(methodPattern)) {
+        if (isBlank(methodPattern)) {
             return CommandResponse.failure("method can't be empty.");
         }
 
@@ -148,7 +147,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
                                            final int patternType) {
         switch (patternType) {
             case WILDCARD:
-                if (StringUtils.isBlank(pattern)) {
+                if (isBlank(pattern)) {
                     return false;
                 }
                 boolean matches = StringUtil.matching(string, pattern);
@@ -157,7 +156,7 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
                 }
                 return false;
             case REGEX:
-                if (StringUtils.isBlank(pattern)) {
+                if (isBlank(pattern)) {
                     return false;
                 }
                 if (".*".equals(pattern)) {
@@ -171,5 +170,9 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
             default:
                 return false;
         }
+    }
+
+    private static boolean isBlank(String str){
+        return str == null || str.length() == 0;
     }
 }

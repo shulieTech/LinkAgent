@@ -19,6 +19,7 @@ import com.pamirs.pradar.pressurement.agent.event.impl.ShadowHbaseDisableEvent;
 import com.pamirs.pradar.pressurement.agent.event.impl.ShadowHbaseDynamicEvent;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.shulie.instrument.module.config.fetcher.ConfigFetcherModule;
 import com.shulie.instrument.module.config.fetcher.config.impl.ApplicationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,9 @@ public class ShadowHbaseConfigs implements IChange<Map<String, ShadowHbaseConfig
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig currentValue, Map<String, ShadowHbaseConfig> newValue) {
+        /*if (ConfigFetcherModule.shadowPreparationEnabled) {
+            return true;
+        }*/
         Map<String, ShadowHbaseConfig> old = GlobalConfig.getInstance().getShadowHbaseServerConfigs();
         boolean change = false;
 

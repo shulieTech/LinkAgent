@@ -46,6 +46,7 @@ import static java.lang.String.format;
 public class AgentLauncher {
     private final static BootLogger LOGGER = BootLogger.getLogger(AgentLauncher.class.getName());
 
+    private static boolean isAppendedBootstropJars;
     // Simulator默认主目录
     private static final String DEFAULT_SIMULATOR_HOME
         = new File(AgentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
@@ -123,6 +124,37 @@ public class AgentLauncher {
 
     private static final String KEY_ENV_CODE = "envCode";
     private static final String DEFAULT_ENV_CODE = "";
+
+    private static final String KEY_TENANT_CODE = "tenantCode";
+    private static final String DEFAULT_TENANT_CODE = "";
+
+
+    private static final String KEY_AGENT_MANAGER_URL = "agentManagerUrl";
+    private static final String DEFAULT_AGENT_MANAGER_URL = "";
+
+    private static final String KEY_SHADOW_PREPARATION_ENABLED = "shadowPreparationEnabled";
+    private static final String DEFAULT_SHADOW_PREPARATION_ENABLED = "false";
+
+    private static final String KEY_NACOS_TIMEOUT = "nacosTimeout";
+    private static final String DEFAULT_NACOS_TIMEOUT = "";
+
+    private static final String KEY_NACOS_SERVER_ADDR = "nacosServerAddr";
+    private static final String DEFAULT_NACOS_SERVER_ADDR = "";
+
+    private static final String KEY_CLUSTER_NAME = "clusterName";
+    private static final String DEFAULT_CLUSTER_NAME = "";
+
+    private static final String KEY_PINPOINT_COLLECTOR_ADDRESS = "pradar.data.pusher.pinpoint.collector.address";
+    private static final String DEFAULT_PINPOINT_COLLECTOR_ADDRESS = "";
+
+    private static final String KEY_KAFKA_SDK_SWITCH = "kafka.sdk.switch";
+    private static final String DEFAULT_KAFKA_SDK_SWITCH = "false";
+
+    private static final String KEY_TRACE_MAX_FILE_SIZE = "traceFileSize";
+    private static final String DEFAULT_TRACE_MAX_FILE_SIZE = "";
+
+    private static final String KEY_MONITOR_MAX_FILE_SIZE = "monitorFileSize";
+    private static final String DEFAULT_MONITOR_MAX_FILE_SIZE = "";
 
     private static final String KEY_APP_NAME = "app.name";
     private static final String DEFAULT_APP_NAME = "";
@@ -203,8 +235,8 @@ public class AgentLauncher {
             final Map<String, String> featureMap = toFeatureMap(featureString);
             String appName = featureMap.get(KEY_APP_NAME);
             writeAttachResult(
-                appName,
-                install(featureMap, inst)
+                    appName,
+                    install(featureMap, inst, false)
             );
         } catch (Throwable e) {
             System.out.println("========" + e.getMessage());
@@ -213,6 +245,26 @@ public class AgentLauncher {
         } finally {
             LOGGER.info(
                 "simulator server start successful. cost:" + ((System.nanoTime() - startTime) / 1000000000) + "s");
+        }
+    }
+
+    public static void syncModulePremain(String featureString, Instrumentation inst) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info(
+                "SIMULATOR-sync: agent starting with premain mode. args=" + (featureString == null ? "" : featureString));
+        }
+        LAUNCH_MODE = LAUNCH_MODE_AGENT;
+        long startTime = System.nanoTime();
+        try {
+            final Map<String, String> featureMap = toFeatureMap(featureString);
+            install(featureMap, inst, true);
+        } catch (Throwable e) {
+            System.out.println("========" + e.getMessage());
+            e.printStackTrace();
+            LOGGER.error("SIMULATOR-sync: premain execute error!", e);
+        } finally {
+            LOGGER.info(
+                "simulator-sync start successful. cost:" + ((System.nanoTime() - startTime) / 1000000000) + "s");
         }
     }
 
@@ -234,8 +286,8 @@ public class AgentLauncher {
             final Map<String, String> featureMap = toFeatureMap(featureString);
             String appName = featureMap.get(KEY_APP_NAME);
             writeAttachResult(
-                appName,
-                install(featureMap, inst)
+                    appName,
+                    install(featureMap, inst, false)
             );
         } catch (Throwable e) {
             e.printStackTrace();
@@ -290,7 +342,9 @@ public class AgentLauncher {
     }
 
     private static synchronized ClassLoader defineClassLoader(final String coreJar) throws Throwable {
-        simulatorClassLoader = new SimulatorClassLoader(coreJar);
+        if (simulatorClassLoader == null) {
+            simulatorClassLoader = new SimulatorClassLoader(coreJar);
+        }
         return simulatorClassLoader;
     }
 
@@ -330,30 +384,35 @@ public class AgentLauncher {
      * @return serverIP :PORT
      */
     private static synchronized InstallInfo install(final Map<String, String> featureMap,
-        final Instrumentation inst) {
+        final Instrumentation inst,boolean isOnlySyncModule) {
 
         final String propertiesFilePath = getPropertiesFilePath(featureMap);
+        String config = System.getProperty("config");
         final String coreFeatureString = toFeatureString(featureMap);
         final String agentConfigFilePath = getAgentConfigFilePath(featureMap);
 
         try {
             final String home = getSimulatorHome(featureMap);
-            // 将bootstrap下所有的jar注入到BootstrapClassLoader
-            List<File> bootstrapFiles = getSimulatorBootstrapJars(home);
-            for (File file : bootstrapFiles) {
-                if (file.isHidden()) {
-                    LOGGER.warn(
-                        "prepare to append bootstrap file " + file.getAbsolutePath()
-                            + " but found a hidden file. skip it.");
-                    continue;
+
+            if (!isAppendedBootstropJars) {
+                // 将bootstrap下所有的jar注入到BootstrapClassLoader
+                List<File> bootstrapFiles = getSimulatorBootstrapJars(home);
+                for (File file : bootstrapFiles) {
+                    if (file.isHidden()) {
+                        LOGGER.warn(
+                                "prepare to append bootstrap file " + file.getAbsolutePath()
+                                        + " but found a hidden file. skip it.");
+                        continue;
+                    }
+                    if (!file.isFile()) {
+                        LOGGER.warn("prepare to append bootstrap file " + file.getAbsolutePath()
+                                + " but found a directory file. skip it.");
+                        continue;
+                    }
+                    LOGGER.info("append bootstrap file=" + file.getAbsolutePath());
+                    inst.appendToBootstrapClassLoaderSearch(new JarFile(file));
                 }
-                if (!file.isFile()) {
-                    LOGGER.warn("prepare to append bootstrap file " + file.getAbsolutePath()
-                        + " but found a directory file. skip it.");
-                    continue;
-                }
-                LOGGER.info("append bootstrap file=" + file.getAbsolutePath());
-                inst.appendToBootstrapClassLoaderSearch(new JarFile(file));
+                isAppendedBootstropJars = true;
             }
 
             // 构造自定义的类加载器，尽量减少Simulator对现有工程的侵蚀
@@ -383,46 +442,60 @@ public class AgentLauncher {
 
                 // 反序列化成CoreConfigure类实例
                 final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", Class.class,
-                        String.class,
-                        String.class, String.class, Instrumentation.class)
-                    .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, agentConfigFilePath,
-                        inst);
-
+                                String.class,
+                                String.class, String.class, Instrumentation.class)
+                        .invoke(null, AgentLauncher.class, coreFeatureString, propertiesFilePath, agentConfigFilePath,
+                                inst);
                 // CoreServer类定义
                 final Class<?> classOfProxyServer = simulatorClassLoader.loadClass(CLASS_OF_PROXY_CORE_SERVER);
 
                 // 获取CoreServer单例
                 final Object objectOfProxyServer = classOfProxyServer
-                    .getMethod("getInstance")
-                    .invoke(null);
+                        .getMethod("getInstance")
+                        .invoke(null);
 
-                // CoreServer.isBind()
-                final boolean isBind = (Boolean)classOfProxyServer.getMethod("isBind").invoke(objectOfProxyServer);
-
-                // 如果未绑定,则需要绑定一个地址
-                if (!isBind) {
-                    try {
-                        classOfProxyServer
-                            .getMethod("bind", classOfConfigure, Instrumentation.class)
+                if (isOnlySyncModule) {
+                    LOGGER.info("to start syncModule ###########################################");
+                    classOfProxyServer
+                            .getMethod("prepareSyncModule", classOfConfigure, Instrumentation.class)
                             .invoke(objectOfProxyServer, objectOfCoreConfigure, inst);
-                    } catch (Throwable t) {
-                        LOGGER.error("AGENT: agent bind error {}", t);
-                        classOfProxyServer.getMethod("destroy").invoke(objectOfProxyServer);
-                        throw t;
+                    LOGGER.info("syncModule end ###########################################");
+                    return null;
+                }else{
+                    // CoreServer.isBind()
+                    final boolean isBind = (Boolean)classOfProxyServer.getMethod("isBind").invoke(objectOfProxyServer);
+
+                    // 如果未绑定,则需要绑定一个地址
+                    if (!isBind) {
+                        try {
+                            classOfProxyServer
+                                    .getMethod("bind", classOfConfigure, Instrumentation.class)
+                                    .invoke(objectOfProxyServer, objectOfCoreConfigure, inst);
+                        } catch (Throwable t) {
+                            LOGGER.error("AGENT: agent bind error {}", t);
+                            classOfProxyServer.getMethod("destroy").invoke(objectOfProxyServer);
+                            throw t;
+                        }
+
+                    } else {
+                        LOGGER.warn("AGENT: agent start already. skip it. ");
                     }
 
-                } else {
-                    LOGGER.warn("AGENT: agent start already. skip it. ");
-                }
+                    // 返回服务器绑定的地址
+                    InetSocketAddress inetSocketAddress = (InetSocketAddress)classOfProxyServer
+                            .getMethod("getLocal")
+                            .invoke(objectOfProxyServer);
+                    String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure)
+                            .toString();
+                    return new InstallInfo(inetSocketAddress, version);
 
-                // 返回服务器绑定的地址
-                InetSocketAddress inetSocketAddress = (InetSocketAddress)classOfProxyServer
-                    .getMethod("getLocal")
-                    .invoke(objectOfProxyServer);
-                String version = classOfConfigure.getMethod("getSimulatorVersion").invoke(objectOfCoreConfigure)
-                    .toString();
-                return new InstallInfo(inetSocketAddress, version);
+                }
             } finally {
+                if(config != null){
+                    System.setProperty("config",config);
+                }else{
+                    System.clearProperty("config");
+                }
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
 
@@ -563,6 +636,45 @@ public class AgentLauncher {
         return getDefault(featureMap, KEY_ENV_CODE, DEFAULT_ENV_CODE);
     }
 
+    private static String getTenantCode(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_TENANT_CODE, DEFAULT_TENANT_CODE);
+    }
+
+    private static String getAgentManagerUrl(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_AGENT_MANAGER_URL, DEFAULT_AGENT_MANAGER_URL);
+    }
+
+    private static String getNacosTimeout(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_TIMEOUT, DEFAULT_NACOS_TIMEOUT);
+    }
+
+    private static String getNacosServerAddr(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_NACOS_SERVER_ADDR, DEFAULT_NACOS_SERVER_ADDR);
+    }
+
+    private static String getClusterName(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_CLUSTER_NAME, DEFAULT_CLUSTER_NAME);
+    }
+    private static String getKafkaSdkSwitch(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_KAFKA_SDK_SWITCH, DEFAULT_KAFKA_SDK_SWITCH);
+    }
+
+    private static String getPinpointCollectorAddress(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_PINPOINT_COLLECTOR_ADDRESS, DEFAULT_PINPOINT_COLLECTOR_ADDRESS);
+    }
+
+    private static String getTraceMaxFileSize(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_TRACE_MAX_FILE_SIZE, DEFAULT_TRACE_MAX_FILE_SIZE);
+    }
+
+    private static String getMonitorMaxFileSize(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_MONITOR_MAX_FILE_SIZE, DEFAULT_MONITOR_MAX_FILE_SIZE);
+    }
+
+    private static String getShadowPreparationEnabled(Map<String, String> featureMap) {
+        return getDefault(featureMap, KEY_SHADOW_PREPARATION_ENABLED, DEFAULT_SHADOW_PREPARATION_ENABLED);
+    }
+
     private static String getAppName(final Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_APP_NAME, DEFAULT_APP_NAME);
     }
@@ -613,7 +725,9 @@ public class AgentLauncher {
                     + "classloader_jars=%s;provider=%s;module_repository_mode=%s;"
                     + "module_repository_addr=%s;log_path=%s;log_level=%s;zk_servers=%s;register_path=%s;"
                     + "zk_connection_timeout=%s;zk_session_timeout=%s;agent_version=%s;tenant.app.key=%s;pradar.user"
-                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s",
+                    + ".id=%s;tro.web.url=%s;pradar.env.code=%s;shulie.agent.tenant.code=%s;shulie.agent.manager.url=%s;"
+                    + "shadow.preparation.enabled=%s;nacos.timeout=%s;nacos.serverAddr=%s;cluster.name=%s;kafka.sdk.switch=%s;pradar.data.pusher.pinpoint.collector.address=%s;"
+                    + "pradar.trace.max.file.size=%s;pradar.monitor.max.file.size=%s",
                 getAppName(featureMap),
                 getAgentId(featureMap),
                 getSimulatorConfigPath(simulatorHome),
@@ -651,7 +765,27 @@ public class AgentLauncher {
                 //TRO WEB
                 getTroWebUrl(featureMap),
                 // CURRENT ENV
-                getEnvCode(featureMap)
+                getEnvCode(featureMap),
+                // TENANT CODE
+                getTenantCode(featureMap),
+                // agent manager url
+                getAgentManagerUrl(featureMap),
+                // shadow.preparation.enabled
+                getShadowPreparationEnabled(featureMap),
+                // nacos.timeout
+                getNacosTimeout(featureMap),
+                // nacos.serverAddr
+                getNacosServerAddr(featureMap),
+                // cluster.name
+                getClusterName(featureMap),
+                //kafka sdk开关
+                getKafkaSdkSwitch(featureMap),
+                //pinpoint地址
+                getPinpointCollectorAddress(featureMap),
+                //获取trace文件大小
+                getTraceMaxFileSize(featureMap),
+                //获取monitor文件大小
+                getMonitorMaxFileSize(featureMap)
             )
         );
 

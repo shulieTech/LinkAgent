@@ -15,7 +15,6 @@
 package com.pamirs.attach.plugin.grpc.interceptor;
 import com.pamirs.attach.plugin.grpc.GrpcConstants;
 import com.pamirs.pradar.Pradar;
-import com.pamirs.pradar.PradarCoreUtils;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.interceptor.SpanRecord;
 import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
@@ -74,10 +73,7 @@ public class ServerTransportListenerImplStartCallInterceptor extends TraceInterc
         final String fullMethodName = (String) advice.getParameterArray()[1];
         Metadata headers = (Metadata) advice.getParameterArray()[3];
         SpanRecord record = new SpanRecord();
-
-
         record.setContext(generateInvokeContext(headers));
-
         String method = fullMethodName;
         String service = "";
         if (fullMethodName.indexOf("/") != -1) {

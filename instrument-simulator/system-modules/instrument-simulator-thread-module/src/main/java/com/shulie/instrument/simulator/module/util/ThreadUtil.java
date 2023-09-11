@@ -17,7 +17,6 @@ package com.shulie.instrument.simulator.module.util;
 import com.shulie.instrument.simulator.module.model.thread.StackElement;
 import com.shulie.instrument.simulator.module.model.thread.ThreadStack;
 import com.shulie.instrument.simulator.module.model.thread.ThreadStat;
-import org.apache.commons.lang.StringUtils;
 
 import java.lang.management.*;
 import java.lang.reflect.Field;
@@ -113,7 +112,7 @@ abstract public class ThreadUtil {
         }
 
         Collection<Thread> resultThreads = new ArrayList<Thread>();
-        if (StringUtils.isNotBlank(state)) {
+        if (state != null && state.length() > 0) {
             state = state.toUpperCase();
             if (states.contains(state)) {
                 for (Thread thread : threads.values()) {

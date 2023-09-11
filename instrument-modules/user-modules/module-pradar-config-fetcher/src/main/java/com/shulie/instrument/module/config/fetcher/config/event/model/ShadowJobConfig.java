@@ -58,6 +58,11 @@ public class ShadowJobConfig implements IChange<Set<ShadowJob>, ApplicationConfi
 
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig, Set<ShadowJob> newValue) {
+        // 静默时job配置不生效
+        String silenceSwitch = System.getProperty("pradar.switch.silence");
+        if("true".equals(silenceSwitch)){
+            return false;
+        }
         Set<ShadowJob> oldShadowJobs = new HashSet<ShadowJob>(GlobalConfig.getInstance().getRegisteredJobs().values());
         /**
          * 影子job不支持热更新, 即不支持如果job已经存在，不支持该job的配置更新

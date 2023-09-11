@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,15 +14,21 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.origin;
 
+import com.pamirs.attach.plugin.apache.kafka.util.AopTargetUtil;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
+import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
+import io.shulie.instrument.module.messaging.kafka.ApacheKafkaHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -44,10 +50,13 @@ public class ConsumerHolder {
         }
     }
 
-    private static final Set<Consumer<?, ?>> WORK_WITH_SPRING = Collections.synchronizedSet(
-            new HashSet<Consumer<?, ?>>());
+    private static final Set<String> SHADOW_CONTAINER_BEAN_NAMES = new HashSet<String>();
+
+    private static final Map<Consumer<?, ?>, String> WORK_WITH_SPRING = new ConcurrentHashMap<>();
 
     private static final Map<Integer, ConsumerProxy> PROXY_MAPPING = new HashMap<Integer, ConsumerProxy>();
+
+    private static final AtomicBoolean spring_kafka_consumer_init_flag = new AtomicBoolean();
     /**
      * key topic+groupid
      * value 业务消费组consumer对象的hashcode
@@ -57,7 +66,6 @@ public class ConsumerHolder {
     private final static Map<Integer, ConsumerMetaData> cache = new ConcurrentHashMap();
 
     public static void release() {
-        WORK_WITH_SPRING.clear();
         cache.clear();
         Iterator<Map.Entry<Integer, ConsumerProxy>> it = PROXY_MAPPING.entrySet().iterator();
         while (it.hasNext()) {
@@ -69,14 +77,30 @@ public class ConsumerHolder {
             }
         }
         PROXY_MAPPING.clear();
+
+        for (String beanName : SHADOW_CONTAINER_BEAN_NAMES) {
+            ConcurrentMessageListenerContainer container = PradarSpringUtil.getBeanFactory().getBean(beanName, ConcurrentMessageListenerContainer.class);
+            container.stop();
+        }
+        SHADOW_CONTAINER_BEAN_NAMES.clear();
+        for (Consumer<?, ?> consumer : WORK_WITH_SPRING.keySet()) {
+            consumer.close();
+        }
+        WORK_WITH_SPRING.clear();
     }
 
     public static void addWorkWithSpring(Consumer<?, ?> consumer) {
-        ConsumerHolder.WORK_WITH_SPRING.add((Consumer<?, ?>) consumer);
+        ConsumerHolder.WORK_WITH_SPRING.put(consumer, "");
     }
 
     public static boolean isWorkWithOtherFramework(Consumer<?, ?> consumer) {
-        return WORK_WITH_SPRING.contains(consumer) && !ConsumerHolder.isZTO;
+        extractSpringKafkaConsumersFromSpringContext();
+        return (WORK_WITH_SPRING.get(consumer) != null || ApacheKafkaHandler.isWorkWithOther(consumer)) && !ConsumerHolder.isZTO;
+    }
+
+    public static boolean isWorkWithSpring(Consumer<?, ?> consumer) {
+        extractSpringKafkaConsumersFromSpringContext();
+        return WORK_WITH_SPRING.get(consumer) != null && !ConsumerHolder.isZTO;
     }
 
     public static ConsumerProxy getProxy(Object target) {
@@ -84,22 +108,23 @@ public class ConsumerHolder {
     }
 
     public static ConsumerMetaData getConsumerMetaData(KafkaConsumer consumer) {
-        ConsumerMetaData consumerMetaData = cache.get(consumer);
+        int hashCode = System.identityHashCode(consumer);
+        ConsumerMetaData consumerMetaData = cache.get(hashCode);
         if (consumerMetaData == null) {
             synchronized (cache) {
-                consumerMetaData = cache.get(consumer);
+                consumerMetaData = cache.get(hashCode);
                 if (consumerMetaData == null) {
                     consumerMetaData = ConsumerMetaData.build(consumer);
-                    cache.put(System.identityHashCode(consumer), consumerMetaData);
+                    cache.put(hashCode, consumerMetaData);
                 }
             }
         }
         return consumerMetaData;
     }
 
-    private static String getConsumerMetaDataKey(ConsumerMetaData consumerMetaData){
-        StringBuilder s= new StringBuilder();
-        for (Object key : consumerMetaData.getTopics().toArray()){
+    private static String getConsumerMetaDataKey(ConsumerMetaData consumerMetaData) {
+        StringBuilder s = new StringBuilder();
+        for (Object key : consumerMetaData.getTopics().toArray()) {
             s.append(key).append("#");
         }
         s.append(consumerMetaData.getGroupId());
@@ -155,5 +180,70 @@ public class ConsumerHolder {
             }
         }
         return maxLagMillSecond;
+    }
+
+    private static void extractSpringKafkaConsumersFromSpringContext() {
+        if (spring_kafka_consumer_init_flag.get()) {
+            return;
+        }
+        Object factory = PradarSpringUtil.getBeanFactory();
+        if (factory == null) {
+            return;
+        }
+        Object containsBean = ReflectionUtils.invoke(factory,"containsBean","org.springframework.kafka.config.internalKafkaListenerEndpointRegistry");
+        if (Boolean.FALSE.equals(containsBean)) {
+            spring_kafka_consumer_init_flag.set(true);
+            return;
+        }
+        Object endpointRegistry = ReflectionUtils.invoke(factory,"getBean", "org.springframework.kafka.config.internalKafkaListenerEndpointRegistry");
+        Map<String, Object> listenerContainers = ReflectionUtils.get(endpointRegistry,"listenerContainers");
+        if (listenerContainers.isEmpty()) {
+            spring_kafka_consumer_init_flag.set(true);
+            return;
+        }
+        for (Object container : listenerContainers.values()) {
+            if ("ConcurrentMessageListenerContainer".equals(container.getClass().getSimpleName())) {
+                List containers = ReflectionUtils.get(container,"containers");;
+                // 说明某些container还没初始化完全
+                if (containers.isEmpty()) {
+                    return;
+                }
+                for (Object innerContainer : containers) {
+                    Consumer consumer = extractKafkaConsumer(innerContainer);
+                    if (consumer == null) {
+                        return;
+                    }
+                    WORK_WITH_SPRING.put(consumer, "");
+                }
+            } else if ("KafkaMessageListenerContainer".equals(container.getClass().getSimpleName())) {
+                Consumer consumer = extractKafkaConsumer(container);
+                if (consumer == null) {
+                    return;
+                }
+                WORK_WITH_SPRING.put(consumer, "");
+            }
+        }
+        spring_kafka_consumer_init_flag.set(true);
+    }
+
+    private static Consumer extractKafkaConsumer(Object kafkaMessageListenerContainer) {
+        Object listenerConsumer = ReflectionUtils.get(kafkaMessageListenerContainer,"listenerConsumer");
+        // container没初始化好
+        if (listenerConsumer == null) {
+            return null;
+        }
+        Consumer consumer = ReflectionUtils.get(listenerConsumer,"consumer");
+        if (AopTargetUtil.isAopProxy(consumer)) {
+            try {
+                return (Consumer) AopTargetUtil.getTarget(consumer);
+            } catch (Exception e) {
+                logger.error("extract kafka consumer from spring-kafka-container occur exception", e);
+            }
+        }
+        return consumer;
+    }
+
+    public static void addShadowContainerBeanName(String name) {
+        SHADOW_CONTAINER_BEAN_NAMES.add(name);
     }
 }

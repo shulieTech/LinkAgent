@@ -35,7 +35,6 @@ import org.kohsuke.MetaInfServices;
 public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModule {
     @Override
     public boolean onActive() throws Throwable {
-
         /* *****GRPC client**** */
         enhanceNewCall("io.grpc.internal.ManagedChannelImpl$RealChannel");
         enhanceNewCall("io.grpc.internal.OobChannel");
@@ -88,6 +87,16 @@ public class GrpcPlugin extends ModuleLifecycleAdapter implements ExtensionModul
                         "io.grpc.internal.ServerStream", "java.lang.String",
                         "io.grpc.ServerMethodDefinition", "io.grpc.Metadata", "io.grpc.Context$CancellableContext",
                         "io.grpc.internal.StatsTraceContext");
+                streamCreatedMethod.addInterceptor(Listeners.of(ServerTransportListenerImplStartCallInterceptor.class));
+            }
+        });
+        enhanceTemplate.enhance(this, className, new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                InstrumentMethod streamCreatedMethod = target.getDeclaredMethod("startCall",
+                        "io.grpc.internal.ServerStream", "java.lang.String",
+                        "io.grpc.ServerMethodDefinition", "io.grpc.Metadata", "io.grpc.Context$CancellableContext",
+                        "io.grpc.internal.StatsTraceContext", "io.perfmark.Tag");
                 streamCreatedMethod.addInterceptor(Listeners.of(ServerTransportListenerImplStartCallInterceptor.class));
             }
         });

@@ -1,0 +1,1 @@
+2.0.0.1 修复kafka影子消费者trace获取不到servers的问题

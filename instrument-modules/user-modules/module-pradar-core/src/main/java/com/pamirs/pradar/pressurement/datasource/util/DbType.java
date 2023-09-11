@@ -420,6 +420,22 @@ public enum DbType {
             }
         }
     },
+    GBASE("jdbc:gbasedbt-sqli:") {
+        @Override
+        public SqlMetaData readMetaData(String url) {
+            try {
+                SqlMetaData sqlMetaData = new SqlMetaData();
+                sqlMetaData.setDbType(DbType.GBASE);
+                sqlMetaData.setHost("unknown");
+                sqlMetaData.setPort("unknown");
+                sqlMetaData.setDbName("unknown");
+                sqlMetaData.setUrl(url);
+                return sqlMetaData;
+            } catch (Throwable e) {
+                return null;
+            }
+        }
+    },
     ;
 
 

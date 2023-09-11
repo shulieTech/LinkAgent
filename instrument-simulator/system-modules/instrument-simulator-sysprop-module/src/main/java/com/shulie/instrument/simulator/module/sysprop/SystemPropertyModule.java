@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -19,7 +19,6 @@ import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.module.ParamSupported;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +50,7 @@ public class SystemPropertyModule extends ParamSupported implements ExtensionMod
 
     private Map<String, String> getSystemProperties(String key) {
         Map<String, String> result = new HashMap<String, String>();
-        if (StringUtils.isNotBlank(key)) {
+        if (!isBlank(key)) {
             result.put(key, System.getProperty(key));
         } else {
             Properties props = System.getProperties();
@@ -70,7 +69,7 @@ public class SystemPropertyModule extends ParamSupported implements ExtensionMod
         String propertyValue = args.get("propertyValue");
         try {
 
-            if (StringUtils.isBlank(propertyName) || StringUtils.isBlank(propertyValue)) {
+            if (isBlank(propertyName) || isBlank(propertyValue)) {
                 return CommandResponse.failure("propertyName and propertyValue must not be empty." + propertyName + " = " + propertyValue);
             }
             System.setProperty(propertyName, propertyValue);
@@ -79,5 +78,9 @@ public class SystemPropertyModule extends ParamSupported implements ExtensionMod
             logger.warn("sysprop: set system property err:{}={}", propertyName, propertyValue);
             return CommandResponse.failure(e);
         }
+    }
+
+    private boolean isBlank(String str) {
+        return str == null || str.length() == 0;
     }
 }

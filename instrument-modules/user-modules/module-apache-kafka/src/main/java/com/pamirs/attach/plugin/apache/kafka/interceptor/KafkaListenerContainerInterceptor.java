@@ -17,7 +17,9 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 import com.pamirs.attach.plugin.apache.kafka.ConfigCache;
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
+import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerHolder;
 import com.pamirs.attach.plugin.apache.kafka.util.ShadowConsumerHolder;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.ErrorTypeEnum;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarSwitcher;
@@ -27,8 +29,6 @@ import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.pressurement.agent.shared.util.PradarSpringUtil;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.ModuleController;
 import com.shulie.instrument.simulator.api.resource.ReleaseResource;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
@@ -46,6 +46,7 @@ import org.springframework.kafka.listener.KafkaMessageListenerContainer;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 创建影子Consumer
@@ -61,7 +62,6 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
     @Resource
     private ModuleController moduleController;
-
 
     @Override
     public void doBefore(Advice advice) {
@@ -80,8 +80,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         }
         Object externalContainer = null;
         try {
-            externalContainer = Reflect.on(thisObj).get("this$0");
-        } catch (ReflectException e) {
+            externalContainer = ReflectionUtils.get(thisObj, "this$0");
+        } catch (Exception e) {
             logger.warn("SIMULATOR: kafka consumer register error. can't found field this$0. {}",
                     thisObj.getClass().getName());
             return;
@@ -97,14 +97,14 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         Object container = null;
         try {
-            container = Reflect.on(externalContainer).get(KafkaConstants.REFLECT_FIELD_THIS_OR_PARENT_CONTAINER);
-        } catch (ReflectException e) {
+            container = ReflectionUtils.get(externalContainer, KafkaConstants.REFLECT_FIELD_THIS_OR_PARENT_CONTAINER);
+        } catch (Exception e) {
         }
 
         if (container == null) {
             try {
-                container = Reflect.on(externalContainer).get(KafkaConstants.REFLECT_FIELD_CONTAINER);
-            } catch (ReflectException e) {
+                container = ReflectionUtils.get(externalContainer, KafkaConstants.REFLECT_FIELD_CONTAINER);
+            } catch (Exception e) {
             }
         }
 
@@ -117,14 +117,13 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         Object containerProperties = null;
         try {
-            containerProperties = Reflect.on(container).get(KafkaConstants.REFLECT_FIELD_CONTAINER_PROPERTIES);
-        } catch (ReflectException e) {
+            containerProperties = ReflectionUtils.get(container, KafkaConstants.REFLECT_FIELD_CONTAINER_PROPERTIES);
+        } catch (Exception e) {
         }
         if (containerProperties == null) {
             try {
-                containerProperties = Reflect.on(container).call(KafkaConstants.REFLECT_METHOD_GET_CONTAINER_PROPERTIES)
-                        .get();
-            } catch (ReflectException e) {
+                containerProperties = ReflectionUtils.get(container, KafkaConstants.REFLECT_METHOD_GET_CONTAINER_PROPERTIES);
+            } catch (Exception e) {
             }
         }
 
@@ -136,9 +135,18 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         String groupId = null;
         try {
-            groupId = Reflect.on(containerProperties).call(KafkaConstants.REFLECT_METHOD_GET_GROUP_ID).get();
-        } catch (ReflectException e) {
+            groupId = ReflectionUtils.invoke(containerProperties, KafkaConstants.REFLECT_METHOD_GET_GROUP_ID);
+        } catch (Exception e) {
         }
+        if (groupId == null) {
+            groupId = fetchGroupIdFromConfig(containerProperties);
+        }
+        if (groupId == null) {
+            logger.warn("SIMULATOR: shadow kafka consumer config cant find groupId, containerProperties : {}", containerProperties);
+            return;
+        }
+        ReflectionUtils.invoke(containerProperties, "setGroupId", groupId);
+        logger.info("SIMULATOR: shadow kafka consumer groupId: {}", groupId);
         /**
          * 如果是影子 topic，则不需要再创建对应的消费者
          */
@@ -150,8 +158,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         }
         Object messageListener = null;
         try {
-            messageListener = Reflect.on(containerProperties).call(KafkaConstants.REFLECT_METHOD_GET_MESSAGE_LISTENER).get();
-        } catch (ReflectException e) {
+            messageListener = ReflectionUtils.invoke(containerProperties, KafkaConstants.REFLECT_METHOD_GET_MESSAGE_LISTENER);
+        } catch (Exception e) {
         }
 
         if (null == messageListener) {
@@ -162,9 +170,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
         Object ptObject = null;
         try {
-            ptObject = Reflect.on(containerProperties.getClass()).create(new Object[]{topicList.toArray(new String[0])})
-                    .get();
-        } catch (ReflectException e) {
+            ptObject = ReflectionUtils.newInstance(containerProperties.getClass(), topicList.toArray(new String[0]));
+        } catch (Exception e) {
         }
         if (null == ptObject) {
             logger.warn("SIMULATOR: kafka consumer register error. got a null messageListener from {}.",
@@ -175,8 +182,8 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         // 设置业务Consumer属性
         setContainerProperties(ptObject, containerProperties);
         try {
-            Reflect.on(ptObject).call(KafkaConstants.REFLECT_METHOD_SET_MESSAGE_LISTENER, messageListener);
-        } catch (ReflectException e) {
+            ReflectionUtils.invoke(ptObject, KafkaConstants.REFLECT_METHOD_SET_MESSAGE_LISTENER, messageListener);
+        } catch (Exception e) {
         }
 
         final DefaultListableBeanFactory defaultListableBeanFactory = PradarSpringUtil.getBeanFactory();
@@ -184,16 +191,16 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         final String beanName = toShadowTopicString(topicList) + groupId + container.getClass().getSimpleName();
         int concurrency = 0;
         try {
-            concurrency = Reflect.on(container).call(KafkaConstants.REFLECT_METHOD_GET_CONCURRENCY).get();
-        } catch (ReflectException e) {
+            concurrency = ReflectionUtils.invoke(container, KafkaConstants.REFLECT_METHOD_GET_CONCURRENCY);
+        } catch (Exception e) {
             //低版本spring-kafka无法获取到该值,TODO 考虑是否通过配置的方式
             concurrency = 1;
         }
 
         Object consumerFactory = null;
         try {
-            consumerFactory = Reflect.on(container).get(KafkaConstants.REFLECT_FIELD_CONSUMER_FACTORY);
-        } catch (ReflectException e) {
+            consumerFactory = ReflectionUtils.get(container, KafkaConstants.REFLECT_FIELD_CONSUMER_FACTORY);
+        } catch (Exception e) {
         }
         if (consumerFactory == null) {
             logger.warn("SIMULATOR: kafka consumer register error. got a null consumerFactory from {}.", container);
@@ -201,7 +208,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         }
 
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(
-                ConcurrentMessageListenerContainer.class)
+                        ConcurrentMessageListenerContainer.class)
                 .setInitMethodName("doStart")
                 .addConstructorArgValue(consumerFactory)
                 .addConstructorArgValue(ptObject)
@@ -220,14 +227,15 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
                 Object bean = defaultListableBeanFactory.getBean(beanName);
                 if (bean != null) {
                     try {
-                        Reflect.on(bean).call(KafkaConstants.REFLECT_METHOD_STOP);
-                    } catch (ReflectException e) {
+                        ReflectionUtils.invoke(bean, KafkaConstants.REFLECT_METHOD_STOP);
+                    } catch (Exception e) {
                     }
                 }
                 defaultListableBeanFactory.removeBeanDefinition(beanName);
             }
         });
         PradarSpringUtil.getBeanFactory().getBean(beanName);
+        ConsumerHolder.addShadowContainerBeanName(beanName);
         ConfigCache.setInited(advice.getTarget());
         if (logger.isInfoEnabled()) {
             logger.info("SIMULATOR: kafka consumer register successful!. groupId : {}, topic : {}",
@@ -251,7 +259,7 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
 
     private boolean tryRefreshBeanFactory(Object target) {
         try {
-            KafkaMessageListenerContainer kafkaMessageListenerContainer = Reflect.on(target).get("this$0");
+            KafkaMessageListenerContainer kafkaMessageListenerContainer = ReflectionUtils.get(target, "this$0");
             ApplicationEventPublisher applicationEventPublisher
                     = kafkaMessageListenerContainer.getApplicationEventPublisher();
             if (applicationEventPublisher instanceof AnnotationConfigApplicationContext) {
@@ -265,10 +273,9 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             } else {
                 try {
                     PradarSpringUtil.refreshBeanFactory(
-                            (DefaultListableBeanFactory) Reflect.on(applicationEventPublisher)
-                                    .call("getAutowireCapableBeanFactory").get());
+                            (DefaultListableBeanFactory) ReflectionUtils.invoke(applicationEventPublisher, "getAutowireCapableBeanFactory"));
                     return true;
-                } catch (ReflectException e) {
+                } catch (Exception e) {
                     logger.warn(
                             "tryRefreshBeanFactory fail spring-kafka version is not support, applicationEventPublisher is a "
                                     + applicationEventPublisher.getClass().getName());
@@ -302,58 +309,58 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         // 设置AckTime 属性
         Object ackTime = null;
         try {
-            ackTime = Reflect.on(orgContainerProperties).call(KafkaConstants.REFLECT_METHOD_GET_ACK_TIME).get();
-        } catch (ReflectException e) {
+            ackTime = ReflectionUtils.invoke(orgContainerProperties, KafkaConstants.REFLECT_METHOD_GET_ACK_TIME);
+        } catch (Exception e) {
         }
         if (ackTime != null) {
             long ackTimeLong = Long.valueOf(String.valueOf(ackTime));
             try {
-                Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_ACK_TIME, ackTimeLong);
-            } catch (ReflectException e) {
+                ReflectionUtils.invoke(ptContainerProperties, KafkaConstants.REFLECT_METHOD_SET_ACK_TIME, ackTimeLong);
+            } catch (Exception e) {
             }
         }
 
         // 设置groupid 属性
         String groupId = null;
         try {
-            groupId = Reflect.on(orgContainerProperties).call(KafkaConstants.REFLECT_METHOD_GET_GROUP_ID).get();
-        } catch (ReflectException e) {
+            groupId = ReflectionUtils.invoke(orgContainerProperties, KafkaConstants.REFLECT_METHOD_GET_GROUP_ID);
+        } catch (Exception e) {
         }
 
         if (groupId != null && !Pradar.isClusterTestPrefix(groupId)) {
             try {
-                Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_GROUP_ID,
+                ReflectionUtils.invoke(ptContainerProperties, KafkaConstants.REFLECT_METHOD_SET_GROUP_ID,
                         Pradar.addClusterTestPrefix(groupId));
-            } catch (ReflectException e) {
+            } catch (Exception e) {
             }
         }
 
         // 设置AckMode 属性
         Object ackMode = null;
         try {
-            ackMode = Reflect.on(orgContainerProperties).call(KafkaConstants.REFLECT_METHOD_GET_ACK_MODE).get();
-        } catch (ReflectException e) {
+            ackMode = ReflectionUtils.invoke(orgContainerProperties, KafkaConstants.REFLECT_METHOD_GET_ACK_MODE);
+        } catch (Exception e) {
         }
 
         if (ackMode != null) {
             try {
-                Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_ACK_MODE, ackMode);
-            } catch (ReflectException e) {
+                ReflectionUtils.invoke(ptContainerProperties, KafkaConstants.REFLECT_METHOD_SET_ACK_MODE, ackMode);
+            } catch (Exception e) {
             }
         }
 
         // 设置AckMode 属性
         Long pollTimeout = null;
         try {
-            pollTimeout = Reflect.on(orgContainerProperties).call(KafkaConstants.REFLECT_METHOD_GET_POLL_TIMEOUT).get();
-        } catch (ReflectException e) {
+            pollTimeout = ReflectionUtils.invoke(orgContainerProperties, KafkaConstants.REFLECT_METHOD_GET_POLL_TIMEOUT);
+        } catch (Exception e) {
         }
 
         // 设置PollTimeout 属性
         if (pollTimeout != null) {
             try {
-                Reflect.on(ptContainerProperties).call(KafkaConstants.REFLECT_METHOD_SET_POLL_TIMEOUT, pollTimeout);
-            } catch (ReflectException e) {
+                ReflectionUtils.invoke(ptContainerProperties, KafkaConstants.REFLECT_METHOD_SET_POLL_TIMEOUT, pollTimeout);
+            } catch (Exception e) {
             }
         }
     }
@@ -368,13 +375,13 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
         List<String> topicList = new ArrayList<String>();
         String[] topics = null;
         try {
-            topics = Reflect.on(object).call(KafkaConstants.REFLECT_METHOD_GET_TOPICS).get();
-        } catch (ReflectException e) {
+            topics = ReflectionUtils.invoke(object, KafkaConstants.REFLECT_METHOD_GET_TOPICS);
+        } catch (Exception e) {
         }
         if (topics == null) {
             try {
-                topics = Reflect.on(object).get(KafkaConstants.REFLECT_FIELD_TOPICS);
-            } catch (ReflectException e) {
+                topics = ReflectionUtils.get(object, KafkaConstants.REFLECT_FIELD_TOPICS);
+            } catch (Exception e) {
             }
         }
         if (topics != null) {
@@ -391,6 +398,47 @@ public class KafkaListenerContainerInterceptor extends AroundInterceptor {
             }
         }
         return topicList;
+    }
+
+    /**
+     * 如果最终都没有取到groupId, 则从控制台配置上获取
+     *
+     * @param object
+     * @return
+     */
+    private String fetchGroupIdFromConfig(Object object) {
+        String[] topics = null;
+        try {
+            topics = ReflectionUtils.invoke(object, KafkaConstants.REFLECT_METHOD_GET_TOPICS);
+        } catch (Exception e) {
+        }
+        if (topics == null) {
+            try {
+                topics = ReflectionUtils.get(object, KafkaConstants.REFLECT_FIELD_TOPICS);
+            } catch (Exception e) {
+            }
+        }
+        if (!PradarSwitcher.whiteListSwitchOn()) {
+            return null;
+        }
+        if (topics != null) {
+            Set<String> mqWhiteList = GlobalConfig.getInstance().getMqWhiteList();
+            for (String topic : topics) {
+                /**
+                 * topic 都需要在白名单中配置好才可以启动
+                 */
+                if (StringUtils.isNotBlank(topic) && !Pradar.isClusterTestPrefix(topic)) {
+                    for (String mq : mqWhiteList) {
+                        String[] list = mq.split("#");
+                        if (list.length == 2 && topic.equals(list[0])) {
+                            return list[1];
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+
     }
 
     @Override

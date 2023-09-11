@@ -55,6 +55,9 @@ public class EsShadowServerConfig implements IChange<Map<String, ShadowEsServerC
     @Override
     public Boolean compareIsChangeAndSet(ApplicationConfig applicationConfig,
                                          Map<String, ShadowEsServerConfig> newConfig) {
+       /* if (ConfigFetcherModule.shadowPreparationEnabled) {
+            return true;
+        }*/
         Map<String, ShadowEsServerConfig> old = applicationConfig.getShadowEsServerConfigs();
         List<ShadowEsServerConfig> removes = getRemoves(newConfig, old);
         List<ShadowEsServerConfig> adds = getAdds(newConfig, old);

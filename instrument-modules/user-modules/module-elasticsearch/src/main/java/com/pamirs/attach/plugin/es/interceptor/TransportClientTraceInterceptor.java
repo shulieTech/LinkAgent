@@ -14,8 +14,6 @@
  */
 package com.pamirs.attach.plugin.es.interceptor;
 
-import java.util.List;
-
 import com.pamirs.attach.plugin.es.ElasticsearchConstants;
 import com.pamirs.attach.plugin.es.common.RequestIndexRename;
 import com.pamirs.attach.plugin.es.common.RequestIndexRenameProvider;
@@ -73,7 +71,6 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
         record.setMethod(advice.getBehaviorName());
         record.setRemoteIp(parseAddressAndPort(client));
         return record;
-
     }
 
     @Override
@@ -103,7 +100,6 @@ public class TransportClientTraceInterceptor extends TraceInterceptorAdaptor {
         record.setRequest(args[1]);
         //record.setResponse(result);
         return record;
-
     }
 
     @Override

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,13 +14,11 @@
  */
 package com.pamirs.attach.plugin.jedis.interceptor;
 
-import com.pamirs.attach.plugin.dynamic.Attachment;
-import com.pamirs.attach.plugin.dynamic.resource.ConcurrentWeakHashMap;
-import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.jedis.RedisConstants;
 import com.pamirs.attach.plugin.jedis.destroy.JedisDestroyed;
+import com.pamirs.attach.plugin.jedis.util.JedisCacheHandler;
 import com.pamirs.attach.plugin.jedis.util.Model;
-import com.pamirs.attach.plugin.jedis.util.RedisUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
 import com.pamirs.pradar.exception.PressureMeasureError;
@@ -29,13 +27,8 @@ import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.annotation.ListenerBehavior;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import redis.clients.jedis.*;
 import redis.clients.jedis.commands.ProtocolCommand;
-
-import java.lang.reflect.Field;
-import java.util.Iterator;
-import java.util.Set;
 
 /**
  * @author vincent
@@ -45,12 +38,11 @@ import java.util.Set;
 @ListenerBehavior(isFilterBusinessData = true)
 public class JedisInterceptor extends TraceInterceptorAdaptor {
     Model model = Model.INSTANCE();
-    private static ConcurrentWeakHashMap<Class, Field> pipelineClientFieldCache = new ConcurrentWeakHashMap<Class, Field>();
 
     /**
      * 防止{@link redis.clients.jedis.Client#set(byte[], byte[])}等方法和{@link redis.clients.jedis.Connection#sendCommand(ProtocolCommand)}增强方法重复执行
      */
-    public static ThreadLocal<Boolean> interceptorApplied = new ThreadLocal<Boolean>(){
+    public static ThreadLocal<Boolean> interceptorApplied = new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
             return false;
@@ -77,9 +69,9 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
             if (arg instanceof String) {
                 ret[i] = arg;
             } else if (arg instanceof byte[]) {
-                ret[i] = new String((byte[])arg);
+                ret[i] = new String((byte[]) arg);
             } else if (arg instanceof char[]) {
-                ret[i] = new String((char[])arg);
+                ret[i] = new String((char[]) arg);
             } else {
                 ret[i] = arg;
             }
@@ -95,7 +87,9 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
             }
 
             Jedis jedis = (Jedis) advice.getTarget();
-            Client client = Reflect.on(jedis).get("client");
+//            Client client = Reflect.on(jedis).get("client");
+            Client client = JedisCacheHandler.getClientByJedis(jedis);
+
             String node = client.getHost().concat(":").concat(String.valueOf(client.getPort()));
             Object dataSource = null;
             boolean isSentinel = false;
@@ -104,7 +98,9 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
                 /**
                  * 哨兵模式的端口会经过处理，不是配置的，所以这里判断一下
                  */
-                dataSource = Reflect.on(jedis).get("dataSource");
+//                dataSource = Reflect.on(jedis).get("dataSource");
+                dataSource = JedisCacheHandler.getDbByJedis(jedis);
+
                 if (dataSource != null &&
                         JedisSentinelPool.class.isAssignableFrom(dataSource.getClass())) {
                     isSentinel = true;
@@ -161,43 +157,44 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
                         /**
                          * 哨兵模式
                          */
-                        JedisSentinelPool jedisSentinelPool = (JedisSentinelPool) dataSource;
-                        String password = Reflect.on(jedisSentinelPool).get("password");
-                        Integer database = Reflect.on(jedisSentinelPool).get("database");
-                        Set set = Reflect.on(jedisSentinelPool).get("masterListeners");
-                        Iterator iterator = set.iterator();
-                        StringBuilder nodeBuilder = new StringBuilder();
-                        String masterName = null;
-                        while (iterator.hasNext()) {
-                            Object t = iterator.next();
-                            Reflect ref = Reflect.on(t);
-                            masterName = ref.get("masterName");
-                            String host = ref.get("host");
-                            String port = String.valueOf(ref.get("port"));
-                            nodeBuilder.append(host.concat(":").concat(port))
-                                    .append(",");
+//                        JedisSentinelPool jedisSentinelPool = (JedisSentinelPool) dataSource;
+//                        String password = Reflect.on(jedisSentinelPool).get("password");
+//                        Integer database = Reflect.on(jedisSentinelPool).get("database");
+//                        Set set = Reflect.on(jedisSentinelPool).get("masterListeners");
+//                        Iterator iterator = set.iterator();
+//                        StringBuilder nodeBuilder = new StringBuilder();
+//                        String masterName = null;
+//                        while (iterator.hasNext()) {
+//                            Object t = iterator.next();
+//                            Reflect ref = Reflect.on(t);
+//                            masterName = ref.get("masterName");
+//                            String host = ref.get("host");
+//                            String port = String.valueOf(ref.get("port"));
+//                            nodeBuilder.append(host.concat(":").concat(port))
+//                                    .append(",");
+//
+//                        }
+//                        Attachment ext = new Attachment(
+//                                null, RedisConstants.PLUGIN_NAME, new String[]{RedisConstants.MIDDLEWARE_NAME},
+//                                new RedisTemplate.JedisSentinelTemplate()
+//                                        .setMaster(masterName)
+//                                        .setNodes(nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString())
+//                                        .setDatabase(database)
+//                                        .setPassword(password));
 
-                        }
-                        Attachment ext = new Attachment(
-                                null, RedisConstants.PLUGIN_NAME, new String[]{RedisConstants.MIDDLEWARE_NAME},
-                                new RedisTemplate.JedisSentinelTemplate()
-                                        .setMaster(masterName)
-                                        .setNodes(nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString())
-                                        .setDatabase(database)
-                                        .setPassword(password));
-                        Pradar.getInvokeContext().setExt(ext);
+                        Pradar.getInvokeContext().setExt(JedisCacheHandler.getSentinelAttachment((JedisSentinelPool) dataSource));
                     } else {
                         //单机模式
-                        String password = Reflect.on(client).get("password");
-                        int db = Integer.parseInt(String.valueOf(Reflect.on(client).get("db")));
-                        Attachment ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
-                                new String[]{RedisConstants.MIDDLEWARE_NAME}
-                                , new RedisTemplate.JedisSingleTemplate()
-                                .setNodes(node)
-                                .setPassword(password)
-                                .setDatabase(db)
-                        );
-                        Pradar.getInvokeContext().setExt(ext);
+//                        String password = Reflect.on(client).get("password");
+//                        int db = Integer.parseInt(String.valueOf(Reflect.on(client).get("db")));
+//                        Attachment ext = new Attachment(node, RedisConstants.PLUGIN_NAME,
+//                                new String[]{RedisConstants.MIDDLEWARE_NAME}
+//                                , new RedisTemplate.JedisSingleTemplate()
+//                                .setNodes(node)
+//                                .setPassword(password)
+//                                .setDatabase(db)
+//                        );
+                        Pradar.getInvokeContext().setExt(JedisCacheHandler.getSingleAttachment(client));
                         break;
                     }
 
@@ -241,18 +238,7 @@ public class JedisInterceptor extends TraceInterceptorAdaptor {
         if (target == null) {
             return null;
         }
-        Field field = pipelineClientFieldCache.get(target.getClass());
-        if (field == null) {
-            Field oldField = pipelineClientFieldCache.putIfAbsent(target.getClass(), Reflect.on(target).field0("client"));
-            if (oldField != null) {
-                field = oldField;
-            }
-        }
-        try {
-            return (Client) field.get(target);
-        } catch (Throwable e) {
-            return Reflect.on(target).get("client");
-        }
+        return ReflectionUtils.get(target, "client");
     }
 
     @Override

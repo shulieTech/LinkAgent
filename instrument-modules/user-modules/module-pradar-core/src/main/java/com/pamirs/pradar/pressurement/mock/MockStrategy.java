@@ -46,6 +46,7 @@ public class MockStrategy implements ExecutionStrategy {
                     String scriptContent = config.getScriptContent();
                     ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
                     Object result = evaluator.evaluate(scriptContent, config.getArgs());
+                    Pradar.mockResponse(result);
                     ProcessController.returnImmediately(returnType, result);
                 } catch (ProcessControlException e) {
                     throw e;
@@ -75,6 +76,7 @@ public class MockStrategy implements ExecutionStrategy {
                     ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
                     Object result = evaluator.evaluate(scriptContent, config.getArgs());
                     Object callResult = call.call(result);
+                    Pradar.mockResponse(callResult);
                     ProcessController.returnImmediately(returnType, callResult);
                 } catch (ProcessControlException e) {
                     throw e;
@@ -103,7 +105,9 @@ public class MockStrategy implements ExecutionStrategy {
                     String scriptContent = config.getScriptContent();
                     ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
                     Object result = evaluator.evaluate(scriptContent, config.getArgs());
-                    return call.call(result);
+                    Object callResult = call.call(result);
+                    Pradar.mockResponse(callResult);
+                    return callResult;
                 } catch (ProcessControlException e) {
                     throw e;
                 } catch (Throwable e) {

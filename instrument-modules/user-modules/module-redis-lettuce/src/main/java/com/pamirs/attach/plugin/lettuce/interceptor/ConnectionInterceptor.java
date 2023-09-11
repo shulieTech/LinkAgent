@@ -16,13 +16,13 @@ package com.pamirs.attach.plugin.lettuce.interceptor;
 
 import com.pamirs.attach.plugin.dynamic.Attachment;
 import com.pamirs.attach.plugin.dynamic.ResourceManager;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.dynamic.template.RedisTemplate;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.utils.Version;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.RedisClusterClient;
@@ -49,7 +49,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
             }
             Object t = advice.getTarget();
             String nodes = null;
-            String password = null;
             Integer db = null;
 
             StringBuilder nodeBuilder = new StringBuilder();
@@ -57,15 +56,13 @@ public class ConnectionInterceptor extends AroundInterceptor {
             if ("io.lettuce.core.masterreplica.MasterReplica".equals(advice.getTarget().getClass().getName())) {
                 Boolean isSentinel = false;
                 RedisURI redisUri = (RedisURI) advice.getParameterArray()[1];
-                isSentinel = Reflect.on(advice.getTargetClass()).call("isSentinel", redisUri).get();
+                isSentinel = ReflectionUtils.invokeStatic(advice.getTargetClass(), "isSentinel", redisUri);
                 if (isSentinel) {
                     List<String> indexes = new ArrayList<String>();
                     String masterId = redisUri.getSentinelMasterId();
                     List<RedisURI> sentinels = redisUri.getSentinels();
                     StringBuilder builder = new StringBuilder();
                     for (RedisURI sentinel : sentinels) {
-                        password = sentinel.getPassword()
-                                == null ? null : new String(sentinel.getPassword());
                         db = sentinel.getDatabase();
                         String node = sentinel.getHost().concat(":").concat(String.valueOf(sentinel.getPort()));
                         indexes.add(node);
@@ -81,7 +78,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
                             .setMaster(masterId)
                             .setDatabase(db)
                             .setNodes(nodes)
-                            .setPassword(password)
                     ));
 
                 }
@@ -90,7 +86,7 @@ public class ConnectionInterceptor extends AroundInterceptor {
                  * 集群模式
                  */
                 RedisClusterClient client = (RedisClusterClient) t;
-                Iterable<RedisURI> iterable = Reflect.on(client).get("initialUris");
+                Iterable<RedisURI> iterable = ReflectionUtils.get(client,"initialUris");
                 Iterator iterator = iterable.iterator();
 
                 List<String> indexes = new ArrayList<String>();
@@ -102,7 +98,6 @@ public class ConnectionInterceptor extends AroundInterceptor {
                     indexes.add(node);
                     nodeBuilder.append(node)
                             .append(",");
-                    password = redisURI.getPassword() == null ? null : new String(redisURI.getPassword());
                     db = redisURI.getDatabase();
                 }
                 nodes = nodeBuilder.deleteCharAt(nodeBuilder.length() - 1).toString();
@@ -111,24 +106,21 @@ public class ConnectionInterceptor extends AroundInterceptor {
                         new String[]{"redis"},
                         new RedisTemplate.LettuceClusterTemplate()
                                 .setDatabase(db)
-                                .setNodes(nodes)
-                                .setPassword(password));
+                                .setNodes(nodes));
 
                 ResourceManager.set(attachment);
 
             } else if (RedisClient.class.isAssignableFrom(advice.getTarget().getClass())) {
                 RedisClient client = (RedisClient) t;
-                RedisURI redisURI = Reflect.on(client).get("redisURI");
+                RedisURI redisURI = ReflectionUtils.get(client,"redisURI");
                 nodes = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
                 String index = redisURI.getHost().concat(":").concat(String.valueOf(redisURI.getPort()));
-                password = redisURI.getPassword() == null ? null : new String(redisURI.getPassword());
                 db = redisURI.getDatabase();
                 Attachment attachment = new Attachment(index, "redis-lettuce",
                         new String[]{"redis"},
                         new RedisTemplate.LettuceSingleTemplate()
                                 .setDatabase(db)
-                                .setNodes(nodes)
-                                .setPassword(password));
+                                .setNodes(nodes));
                 ResourceManager.set(attachment);
             }
         } catch (Throwable t) {

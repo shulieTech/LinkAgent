@@ -1,4 +1,1 @@
-注意！！！！！
-每次更新插件请都更新内容到以下内容，
-ehcache 中间件支持模块，
-新增模块版本信息，初始版本为1.0.0，README.md为模块更新内容描述文件，
+2.0.0.2 修复spring-cache底层用ehcache报ClusterTestCacheWrapperKey加载不到问题

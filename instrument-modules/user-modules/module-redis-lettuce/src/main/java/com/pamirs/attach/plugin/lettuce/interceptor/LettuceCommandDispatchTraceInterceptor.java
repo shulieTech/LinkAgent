@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
-import com.pamirs.attach.plugin.dynamic.reflect.Reflect;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.attach.plugin.lettuce.utils.ParameterUtils;
@@ -13,6 +13,7 @@ import io.lettuce.core.protocol.CommandArgs;
 import io.lettuce.core.protocol.ProtocolKeyword;
 
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -34,7 +35,7 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
         Object target = advice.getTarget();
         SpanRecord spanRecord = new SpanRecord();
 //        appendEndPoint(target, spanRecord);
-        spanRecord.setService(((ProtocolKeyword)args[0]).name());
+        spanRecord.setService(((ProtocolKeyword) args[0]).name());
         spanRecord.setMethod(getMethodNameExt(args));
         spanRecord.setRequest(toArgs(args));
         spanRecord.setMiddlewareName(LettuceConstants.MIDDLEWARE_NAME);
@@ -76,7 +77,7 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
     private static Field keyField;
 
     private Object[] toArgs(Object[] args) {
-        List singularArguments = Reflect.on(args[2]).get("singularArguments");
+        List singularArguments = ReflectionUtils.get(args[2], "singularArguments");
         Object[] ret = new Object[singularArguments.size()];
         try {
             if (keyField == null) {
@@ -89,8 +90,8 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
             for (int i = 0; i < singularArguments.size(); i++) {
                 String v = new String((byte[]) keyField.get(singularArguments.get(i)));
                 // 第一个参数是key
-                if(i == 0){
-                    if(Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(v)){
+                if (i == 0) {
+                    if (Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(v)) {
                         v = Pradar.addClusterTestPrefix(v);
                     }
                 }
@@ -110,8 +111,12 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
             return "";
         }
         try {
-            String key = ParameterUtils.toString(200, Charset.forName("UTF-8").newDecoder().decode(((CommandArgs<byte[], byte[]>) args[2]).getFirstEncodedKey()));
-            if(Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(key)){
+            ByteBuffer firstEncodedKey = ((CommandArgs<byte[], byte[]>) args[2]).getFirstEncodedKey();
+            if (firstEncodedKey == null) {
+                return ParameterUtils.toString(200, args[2]);
+            }
+            String key = ParameterUtils.toString(200, Charset.forName("UTF-8").newDecoder().decode((firstEncodedKey)));
+            if (Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(key)) {
                 key = Pradar.addClusterTestPrefix(key);
             }
             return key;

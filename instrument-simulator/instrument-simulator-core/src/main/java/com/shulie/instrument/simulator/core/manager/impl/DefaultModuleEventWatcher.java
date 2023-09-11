@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -21,6 +21,7 @@ import com.shulie.instrument.simulator.api.listener.ext.Progress;
 import com.shulie.instrument.simulator.api.listener.ext.WatchCallback;
 import com.shulie.instrument.simulator.api.resource.DumpResult;
 import com.shulie.instrument.simulator.api.resource.ModuleEventWatcher;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import com.shulie.instrument.simulator.api.util.Sequencer;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.enhance.weaver.EventListenerHandler;
@@ -29,15 +30,11 @@ import com.shulie.instrument.simulator.core.manager.SimulatorClassFileTransforme
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.GroupMatcher;
 import com.shulie.instrument.simulator.core.util.matcher.Matcher;
-import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.shulie.instrument.simulator.api.filter.ExtFilterFactory.make;
 
@@ -58,6 +55,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     // 观察ID序列生成器
     private final Sequencer watchIdSequencer = new Sequencer();
     private EventListenerHandler eventListenerHandler;
+    private final boolean isEnableReTransform = !"0".equals(System.getProperty("simulator.delay"));
 
 
     DefaultModuleEventWatcher(final Instrumentation inst,
@@ -101,8 +99,10 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private void reTransformClasses(
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
-            final Progress progress) {
-        reTransformClasses(watchId, waitingReTransformClasses, progress, false);
+            final Progress progress,
+            SimulatorClassFileTransformer transformer) {
+
+        reTransformClasses(watchId, waitingReTransformClasses, progress, false, transformer);
     }
 
     /**
@@ -111,12 +111,13 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     private void reTransformClasses(
             final int watchId,
             final List<Class<?>> waitingReTransformClasses,
-            final Progress progress, boolean delete) {
+            final Progress progress, boolean delete,
+            SimulatorClassFileTransformer transformer) {
         // 需要形变总数
         final int total = waitingReTransformClasses.size();
 
         // 如果找不到需要被重新增强的类则直接返回
-        if (CollectionUtils.isEmpty(waitingReTransformClasses)) {
+        if (isEmpty(waitingReTransformClasses)) {
             logger.debug("SIMULATOR: reTransformClasses={};module={};watch={} not found any class;",
                     waitingReTransformClasses, coreModule.getModuleId(), watchId);
             return;
@@ -215,14 +216,19 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
     @Override
     public int watch(final Filter filter,
                      final Progress progress) {
-        return watch(new ExtFilterMatcher(make(filter)), progress);
+        return watch(new ExtFilterMatcher(make(filter)), progress, false);
     }
 
 
     @Override
     public int watch(final EventWatchCondition condition,
                      final Progress progress) {
-        return watch(ExtFilterMatcher.toOrGroupMatcher(condition.getOrFilterArray()), progress);
+        return watch(ExtFilterMatcher.toOrGroupMatcher(condition.getOrFilterArray()), progress, false);
+    }
+
+    @Override
+    public int watch(final EventWatchCondition condition, Progress progress, boolean needReTransformer) {
+        return watch(ExtFilterMatcher.toOrGroupMatcher(condition.getOrFilterArray()), progress, needReTransformer);
     }
 
 
@@ -254,7 +260,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         try {
 
             // 应用JVM
-            reTransformClasses(watchId, waitingReTransformClasses, progress);
+            reTransformClasses(watchId, waitingReTransformClasses, progress, null);
             // 计数
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
             effectMethodCount += proxy.getAffectStatistic().getEffectMethodCount();
@@ -274,28 +280,38 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
     // 这里是用matcher重制过后的watch
     private int watch(final Matcher matcher,
-                      final Progress progress) {
+                      final Progress progress,
+                      final boolean needReTransformer) {
+        SimulatorConfig simulatorConfig = coreModule.getSimulatorConfig();
+
         final int watchId = watchIdSequencer.next();
         // 给对应的模块追加ClassFileTransformer
-        final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(this,
+        final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(
                 watchId, coreModule, matcher, isEnableUnsafe);
 
-        SimulatorClassFileTransformer proxy = CostDumpTransformer.wrap(BytecodeDumpTransformer.wrap(transformer, coreModule.getSimulatorConfig()), coreModule.getSimulatorConfig());
+        Boolean costDumpEnable = simulatorConfig.getBooleanProperty(CostDumpTransformer.ENABLED_COST_DUMP, false);
+        SimulatorClassFileTransformer proxy = costDumpEnable ? CostDumpTransformer.wrap(transformer, simulatorConfig) : transformer;
+
         // 注册到CoreModule中
         coreModule.getSimulatorClassFileTransformers().add(proxy);
 
         //这里addTransformer后，接下来引起的类加载都会经过sandClassFileTransformer 每个enhanceTemplate.enhance都是单独的一个transformer
         inst.addTransformer(proxy, true);
 
-        // 查找需要渲染的类集合
-        final List<Class<?>> waitingReTransformClasses = classDataSource.findForReTransform(matcher);
-        if (isInfoEnabled) {
-            logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
-                    watchId,
-                    coreModule.getModuleId(),
-                    waitingReTransformClasses.size()
-            );
+
+        List<Class<?>> waitingReTransformClassesTemp = Collections.emptyList();
+        if (isEnableReTransform || needReTransformer) {
+            // 查找需要渲染的类集合
+            waitingReTransformClassesTemp = classDataSource.findForReTransform(matcher);
+            if (isInfoEnabled) {
+                logger.info("SIMULATOR: watch={} in module={} found {} classes for watch(ing).",
+                        watchId,
+                        coreModule.getModuleId(),
+                        waitingReTransformClassesTemp.size()
+                );
+            }
         }
+        final List<Class<?>> waitingReTransformClasses = waitingReTransformClassesTemp;
 
         int effectClassCount = 0, effectMethodCount = 0;
 
@@ -304,7 +320,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         try {
 
             // 应用JVM
-            reTransformClasses(watchId, waitingReTransformClasses, progress);
+            reTransformClasses(watchId, waitingReTransformClasses, progress, proxy);
 
             // 计数
             effectClassCount += proxy.getAffectStatistic().getEffectClassCount();
@@ -314,7 +330,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             // 激活增强类
             if (coreModule.isActivated()) {
                 List<BuildingForListeners> listeners = proxy.getAllListeners();
-                if (CollectionUtils.isNotEmpty(listeners)) {
+                if (!isEmpty(listeners)) {
                     for (BuildingForListeners buildingForListeners : listeners) {
                         eventListenerHandler.active(buildingForListeners.getListenerId(), proxy.getEventListeners().get(buildingForListeners.getListenerId()), buildingForListeners.getEventTypes());
                     }
@@ -344,7 +360,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
             if (watcherId == simulatorClassFileTransformer.getWatchId()) {
 
                 List<BuildingForListeners> listeners = simulatorClassFileTransformer.getAllListeners();
-                if (CollectionUtils.isNotEmpty(listeners)) {
+                if (!isEmpty(listeners)) {
                     for (BuildingForListeners buildingForListeners : listeners) {
                         // 冻结所有关联代码增强
                         eventListenerHandler.frozen(buildingForListeners.getListenerId());
@@ -383,7 +399,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         beginProgress(progress, waitingReTransformClasses.size());
         try {
             // 应用JVM
-            reTransformClasses(watcherId, waitingReTransformClasses, progress, true);
+            reTransformClasses(watcherId, waitingReTransformClasses, progress, true, null);
         } catch (Throwable e) {
             logger.error("delete transformer error. watcherId={}, waitingReTransformClasses={}", watcherId, waitingReTransformClasses, e);
         } finally {
@@ -415,7 +431,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                          final Progress wProgress,
                          final WatchCallback watchCb,
                          final Progress dProgress) throws Throwable {
-        final int watchId = watch(new ExtFilterMatcher(make(filter)), wProgress);
+        final int watchId = watch(new ExtFilterMatcher(make(filter)), wProgress, false);
         try {
             watchCb.watchCompleted();
         } finally {
@@ -423,4 +439,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
         }
     }
 
+    public static boolean isEmpty(Collection coll) {
+        return (coll == null || coll.isEmpty());
+    }
 }

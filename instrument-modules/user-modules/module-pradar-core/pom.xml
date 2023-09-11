@@ -12,81 +12,29 @@
     <artifactId>module-pradar-core</artifactId>
     <packaging>jar</packaging>
 
-
     <properties>
         <module-name>pradar-core</module-name>
+        <scope.prop>provided</scope.prop>
     </properties>
     <version>${pradar.core.version}</version>
 
     <dependencies>
         <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>simulator-bootstrap-api</artifactId>
-            <version>${simulator.bootstrap.api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>transmittable-thread-local</artifactId>
-            <version>2.12.1</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.shulie.instrument.module</groupId>
-            <artifactId>simulator-internal-bootstrap-api</artifactId>
-            <version>${simulator.internal.bootstrap.api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.shulie</groupId>
-            <artifactId>druid</artifactId>
-            <version>1.2.5.7</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.7.31</version>
-            <scope>provided</scope>
         </dependency>
-
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>30.1-jre</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
+        </dependency>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>4.3.27.RELEASE</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.72</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.2.1</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <artifactId>slf4j-api</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
         <dependency>
             <groupId>io.shulie</groupId>
             <artifactId>oshi-core</artifactId>
@@ -101,11 +49,37 @@
 
         <dependency>
             <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-bootstrap-api</artifactId>
+            <version>${simulator.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>transmittable-thread-local</artifactId>
+            <version>2.13.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.shulie.instrument.simulator</groupId>
+            <artifactId>simulator-internal-bootstrap-api</artifactId>
+            <version>${simulator.internal.bootstrap.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.shulie.instrument.simulator</groupId>
             <artifactId>instrument-simulator-debug-model</artifactId>
             <version>${simulator.version}</version>
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>4.3.27.RELEASE</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
@@ -114,15 +88,198 @@
         </dependency>
 
         <dependency>
-            <groupId>org.beanshell</groupId>
-            <artifactId>bsh</artifactId>
-            <version>2.0b5</version>
+            <groupId>io.shulie</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6.2</version>
+            <scope>${scope.prop}</scope>
         </dependency>
 
         <dependency>
-            <artifactId>slf4j-api</artifactId>
-            <groupId>org.slf4j</groupId>
-            <version>1.7.31</version>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>${scope.prop}</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.1</version>
+            <scope>${scope.prop}</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.beanshell</groupId>
+            <artifactId>bsh</artifactId>
+            <version>2.0b5-shulie</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+            <version>0.17.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-message-sdk</artifactId>
+            <version>2.0.4.7</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>takin-message-sdk-collector</artifactId>
+            <version>2.0.4.7</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.shulie.takin</groupId>
+            <artifactId>pinpoint-collector-client</artifactId>
+            <version>1.0.2</version>
+            <scope>${scope.prop}</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>slf4j-api</artifactId>
+                    <groupId>org.slf4j</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.11.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>5.2.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>5.2.0</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <artifactId>netty-handler</artifactId>
+            <groupId>io.netty</groupId>
+            <version>4.1.70.Final</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <artifactId>netty-transport-native-epoll</artifactId>
+            <groupId>io.netty</groupId>
+            <version>4.1.70.Final</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.5.9</version>
+            <scope>${scope.prop}</scope>
+        </dependency>
+
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <configuration>
+                    <relocations>
+                        <relocation>
+                            <!-- 修改 guava 包名 -->
+                            <pattern>com.google.common</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.com.google.common</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <!-- 修改 httpclient 包名 -->
+                            <pattern>org.apache.http</pattern>
+                            <shadedPattern>com.shulie.instrument.simulator.dependencies.org.apache.http</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <shadedArtifactAttached>true</shadedArtifactAttached>
+                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                    <outputDirectory>../../target/modules/${module-name}</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.shulie.instrument.module</groupId>
+                <artifactId>dependency-processor</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>ModuleConfigEdit</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <moduleHome>${project.basedir}</moduleHome>
+                    <includeArtifacts>guava</includeArtifacts>
+                    <excludeArtifacts>transmittable-thread-local</excludeArtifacts>
+                    <excludeGroups>ch.qos.logback,org.springframework,io.shulie.instrument.simulator</excludeGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

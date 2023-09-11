@@ -21,6 +21,7 @@ import com.pamirs.pradar.json.ResultSerializer;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.shulie.instrument.simulator.api.ThrowableUtils;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,22 @@ import java.util.Map;
  * @since 2020/7/8 5:26 下午
  */
 public final class ClusterTestUtils {
+
+    private static SimulatorConfig simulatorConfig;
+
     private final static Logger LOGGER = LoggerFactory.getLogger(ClusterTestUtils.class);
+
+    public static void initSimulatorConfig(SimulatorConfig simulatorConfig){
+        ClusterTestUtils.simulatorConfig = simulatorConfig;
+    }
+
+    public static boolean enableBizRequestMock(){
+        return "true".equals(simulatorConfig.getProperty("pradar.biz.mock.enable"));
+    }
+
+    public static boolean enableMock(){
+        return Pradar.isClusterTest() || enableBizRequestMock();
+    }
 
     /**
      * 判断是否是压测流量
@@ -45,7 +61,7 @@ public final class ClusterTestUtils {
                 || StringUtils.equals(value, Boolean.TRUE.toString())) {
             return true;
         }
-        return StringUtils.equals(value, Pradar.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX);
+        return StringUtils.equals(value, PradarService.PRADAR_CLUSTER_TEST_HTTP_USER_AGENT_SUFFIX);
     }
 
     /**
@@ -139,7 +155,7 @@ public final class ClusterTestUtils {
             /**
              * 如果是压测流量则需要验证 rpc 的白名单,不在白名单中则报错
              */
-            if (Pradar.isClusterTest()) {
+            if (enableMock()) {
                 return ArbiterHttpExit.shallWePassRpc(className, methodName);
             }
         } catch (PressureMeasureError e) {
@@ -232,7 +248,7 @@ public final class ClusterTestUtils {
     public final static MatchConfig httpClusterTest(String url) {
         validateClusterTest();
         try {
-            if (Pradar.isClusterTest()) {
+            if (enableMock()) {
                 return ArbiterHttpExit.shallWePassHttpString(url);
             }
         } catch (PressureMeasureError e) {

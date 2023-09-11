@@ -55,7 +55,7 @@ public class ExchangeFunInterceptor extends TraceInterceptorAdaptor {
 
     @Override
     public void beforeLast(Advice advice) throws ProcessControlException {
-        if (!Pradar.isClusterTest()) {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Object[] args = advice.getParameterArray();

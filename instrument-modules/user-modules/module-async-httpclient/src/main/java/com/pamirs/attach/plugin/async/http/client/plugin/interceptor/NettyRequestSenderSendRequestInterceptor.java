@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,15 +16,27 @@ package com.pamirs.attach.plugin.async.http.client.plugin.interceptor;
 
 
 import com.pamirs.attach.plugin.async.http.client.plugin.AsyncHttpClientConstants;
+import com.pamirs.attach.plugin.async.http.client.plugin.utils.DefaultListenableFuture;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
-import com.pamirs.pradar.interceptor.*;
+import com.pamirs.pradar.interceptor.ContextTransfer;
+import com.pamirs.pradar.interceptor.SpanRecord;
+import com.pamirs.pradar.interceptor.TraceInterceptorAdaptor;
+import com.pamirs.pradar.internal.adapter.ExecutionStrategy;
+import com.pamirs.pradar.internal.config.MatchConfig;
 import com.pamirs.pradar.pressurement.ClusterTestUtils;
+import com.pamirs.pradar.pressurement.mock.JsonMockStrategy;
+import com.pamirs.pradar.pressurement.mock.MockStrategy;
+import com.pamirs.pradar.script.ScriptEvaluator;
+import com.pamirs.pradar.script.ScriptManager;
 import com.pamirs.pradar.utils.InnerWhiteListCheckUtil;
+import com.shulie.instrument.simulator.api.ProcessControlException;
+import com.shulie.instrument.simulator.api.ProcessController;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.apache.commons.lang.StringUtils;
+import org.asynchttpclient.AsyncCompletionHandler;
 import org.asynchttpclient.Param;
 import org.asynchttpclient.Request;
 
@@ -33,6 +45,7 @@ import org.asynchttpclient.Request;
  * @date 2021/4/6 20:39
  */
 public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAdaptor {
+
     @Override
     public String getPluginName() {
         return AsyncHttpClientConstants.PLUGIN_NAME;
@@ -43,15 +56,62 @@ public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAd
         return AsyncHttpClientConstants.PLUGIN_TYPE;
     }
 
+    private JsonMockStrategy fixJsonStrategy = new JsonMockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            MatchConfig config = (MatchConfig) params;
+            Pradar.mockResponse(config.getScriptContent());
+            Object[] parameters = (Object[]) config.getArgs().get("parameters");
+            AsyncCompletionHandler handler = null;
+            if (parameters.length > 0 && parameters[1] instanceof AsyncCompletionHandler) {
+                handler = (AsyncCompletionHandler) parameters[1];
+            }
+            ProcessController.returnImmediately(new DefaultListenableFuture(config.getScriptContent(), handler));
+            return null;
+        }
+    };
+
+    private MockStrategy mockStrategy = new MockStrategy() {
+        @Override
+        public Object processBlock(Class returnType, ClassLoader classLoader, Object params) throws ProcessControlException {
+            MatchConfig config = (MatchConfig) params;
+            ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
+            Object result = evaluator.evaluate(config.getScriptContent(), config.getArgs());
+
+            Object[] parameters = (Object[]) config.getArgs().get("parameters");
+            AsyncCompletionHandler handler = null;
+            if (parameters.length > 0 && parameters[1] instanceof AsyncCompletionHandler) {
+                handler = (AsyncCompletionHandler) parameters[1];
+            }
+            Pradar.mockResponse(result);
+            ProcessController.returnImmediately(new DefaultListenableFuture(result, handler));
+            return null;
+        }
+    };
+
     @Override
-    public void beforeFirst(Advice advice) {
-        if (!Pradar.isClusterTest()) {
+    public void beforeLast(Advice advice) throws ProcessControlException {
+        if (!ClusterTestUtils.enableMock()) {
             return;
         }
         Request request = (Request) advice.getParameterArray()[0];
-        //白名单判断
-        ClusterTestUtils.validateHttpClusterTest(request.getUrl());
+        String url = request.getUri().getPath();
+        final MatchConfig config = ClusterTestUtils.httpClusterTest(url);
+        config.addArgs("url", url);
+        config.addArgs("request", request);
+        config.addArgs("method", "uri");
+        config.addArgs("isInterface", Boolean.FALSE);
+        config.addArgs("advice", advice);
+        config.addArgs("parameters", advice.getParameterArray());
 
+        ExecutionStrategy strategy = config.getStrategy();
+        if (strategy instanceof JsonMockStrategy) {
+            fixJsonStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        }
+        if (strategy instanceof MockStrategy) {
+            mockStrategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
+        }
+        strategy.processBlock(advice.getBehavior().getReturnType(), advice.getClassLoader(), config);
     }
 
     @Override
@@ -88,189 +148,6 @@ public class NettyRequestSenderSendRequestInterceptor extends TraceInterceptorAd
             record.setRequestSize(params.length());
         }
         record.setRequestSize(0);
-   /*     record.setContextInject(new ContextInject() {
-            @Override
-            public void injectContext(final Map<String, String> context) {
-                final AsyncHandler asyncHandler = (AsyncHandler) advice.getParameterArray()[1];
-                advice.changeParameter(1, new AsyncHandler() {
-                    @Override
-                    public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            return asyncHandler.onStatusReceived(responseStatus);
-                        }
-                        return State.CONTINUE;
-                    }
-
-                    @Override
-                    public State onHeadersReceived(HttpHeaders headers) throws Exception {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            return asyncHandler.onHeadersReceived(headers);
-                        }
-                        return State.CONTINUE;
-                    }
-
-                    @Override
-                    public State onBodyPartReceived(HttpResponseBodyPart bodyPart) throws Exception {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            return asyncHandler.onBodyPartReceived(bodyPart);
-                        }
-                        return State.CONTINUE;
-                    }
-
-                    @Override
-                    public void onThrowable(Throwable t) {
-                        Pradar.setInvokeContext(context);
-                        try {
-                            if (asyncHandler != null) {
-                                asyncHandler.onThrowable(t);
-                            }
-                        } finally {
-                            Pradar.response(t);
-                            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_FAILED, getPluginType());
-                        }
-                    }
-
-                    @Override
-                    public Object onCompleted() throws Exception {
-                        Pradar.setInvokeContext(context);
-                        Object result = null;
-                        try {
-                            if (asyncHandler != null) {
-                                result = asyncHandler.onCompleted();
-                            }
-                            return result;
-                        } finally {
-                            Pradar.response(result);
-                            Pradar.endClientInvoke(ResultCode.INVOKE_RESULT_SUCCESS, getPluginType());
-                        }
-                    }
-
-                    @Override
-                    public State onTrailingHeadersReceived(HttpHeaders headers) throws Exception {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            return asyncHandler.onTrailingHeadersReceived(headers);
-                        }
-                        return State.CONTINUE;
-                    }
-
-                    @Override
-                    public void onHostnameResolutionAttempt(String name) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onHostnameResolutionAttempt(name);
-                        }
-                    }
-
-                    @Override
-                    public void onHostnameResolutionSuccess(String name, List list) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onHostnameResolutionSuccess(name, list);
-                        }
-                    }
-
-                    @Override
-                    public void onHostnameResolutionFailure(String name, Throwable cause) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onHostnameResolutionFailure(name, cause);
-                        }
-                    }
-
-                    @Override
-                    public void onTcpConnectAttempt(InetSocketAddress remoteAddress) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onTcpConnectAttempt(remoteAddress);
-                        }
-                    }
-
-                    @Override
-                    public void onTcpConnectSuccess(InetSocketAddress remoteAddress, Channel connection) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onTcpConnectSuccess(remoteAddress, connection);
-                        }
-                    }
-
-                    @Override
-                    public void onTcpConnectFailure(InetSocketAddress remoteAddress, Throwable cause) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onTcpConnectFailure(remoteAddress, cause);
-                        }
-                    }
-
-                    @Override
-                    public void onTlsHandshakeAttempt() {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onTlsHandshakeAttempt();
-                        }
-                    }
-
-                    @Override
-                    public void onTlsHandshakeSuccess(SSLSession sslSession) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onTlsHandshakeSuccess(sslSession);
-                        }
-                    }
-
-                    @Override
-                    public void onTlsHandshakeFailure(Throwable cause) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onTlsHandshakeFailure(cause);
-                        }
-                    }
-
-                    @Override
-                    public void onConnectionPoolAttempt() {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onConnectionPoolAttempt();
-                        }
-                    }
-
-                    @Override
-                    public void onConnectionPooled(Channel connection) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onConnectionPooled(connection);
-                        }
-                    }
-
-                    @Override
-                    public void onConnectionOffer(Channel connection) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onConnectionOffer(connection);
-                        }
-                    }
-
-                    @Override
-                    public void onRequestSend(NettyRequest request) {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onRequestSend(request);
-                        }
-                    }
-
-                    @Override
-                    public void onRetry() {
-                        Pradar.setInvokeContext(context);
-                        if (asyncHandler != null) {
-                            asyncHandler.onRetry();
-                        }
-                    }
-                });
-            }
-        });*/
         return record;
     }
 

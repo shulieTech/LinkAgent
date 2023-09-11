@@ -14,15 +14,21 @@
  */
 package com.shulie.instrument.module.pradar.core;
 
-import javax.annotation.Resource;
-
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.PradarService;
 import com.pamirs.pradar.PradarSwitcher;
 import com.pamirs.pradar.common.ClassUtils;
 import com.pamirs.pradar.debug.DebugHelper;
+import com.pamirs.pradar.degrade.CombineResourceLimitDegradeDetect;
+import com.pamirs.pradar.degrade.action.ReduceSamplingRateDegradeAction;
+import com.pamirs.pradar.degrade.action.SilenceDegradeAction;
+import com.pamirs.pradar.degrade.resources.ContainerCpuUsageResourceDetector;
+import com.pamirs.pradar.degrade.resources.CpuUsageResourceDetector;
+import com.pamirs.pradar.degrade.resources.LoadResourceDetector;
+import com.pamirs.pradar.degrade.resources.MemoryResourceDetector;
 import com.pamirs.pradar.internal.GlobalConfigService;
 import com.pamirs.pradar.internal.PradarInternalService;
+import com.pamirs.pradar.pressurement.ClusterTestUtils;
 import com.pamirs.pradar.pressurement.agent.shared.exit.ArbiterHttpExit;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
@@ -47,6 +53,8 @@ import org.kohsuke.MetaInfServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Resource;
+
 /**
  * 用于公共依赖的模块
  * 需要在module.config文件中指定要导出的包列表, 给其他的模块依赖
@@ -65,8 +73,11 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
     @Resource
     private ModuleCommandInvoker moduleCommandInvoker;
 
+    private CombineResourceLimitDegradeDetect degradeDetect;
+
     @Override
     public boolean onActive() throws Throwable {
+        ClusterTestUtils.initSimulatorConfig(simulatorConfig);
         //将simulator home路径和plugin相关的配置全部导入到system property中
         String home = simulatorConfig.getSimulatorHome();
         if (home != null) {
@@ -92,6 +103,11 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
             System.setProperty("plugin.response.on", String.valueOf(responseOn));
         }
 
+        Boolean aborted = simulatorConfig.getAbortedWhenAppConfigPollFailed();
+        if (aborted) {
+            System.setProperty("poll.app.config.failed.aborted", aborted.toString());
+        }
+
         PradarService.registerPradarService(new DefaultPradarService());
         PradarInternalService.registerService(new DefaultPradarInternalService());
         DebugHelper.registerModuleCommandInvoker(moduleCommandInvoker);
@@ -115,9 +131,57 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
             Messager.registerExecutionTagSupplier(new DefaultExecutionTagSupplier());
         }
 
-        monitorCollector = MonitorCollector.getInstance();
+        monitorCollector = MonitorCollector.getInstance(simulatorConfig);
         monitorCollector.start();
+
+        if (simulatorConfig.getBooleanProperty("degrade.detect.enable", true)) {
+            startDegradeDetect();
+        }
+
         return true;
+    }
+
+    private void startDegradeDetect() {
+        boolean isDocker = Pradar.isRunningInsideDocker();
+        degradeDetect = new CombineResourceLimitDegradeDetect(
+                simulatorConfig.getIntProperty("degrade.detect.duration", 60),
+                simulatorConfig.getIntProperty("degrade.detect.period", 5));
+
+        if (isDocker) {
+            logger.info("current environment is docker, using container degrade strategy");
+            if (simulatorConfig.getBooleanProperty("degrade.container.cpu.usage.detect.enable", true)) {
+                try {
+                    ContainerCpuUsageResourceDetector resourceDetect = new ContainerCpuUsageResourceDetector();
+                    degradeDetect.addResourceDetect(resourceDetect);
+                    logger.info("[degrade] ContainerCpuUseageResourceDetect active max is {}",
+                            resourceDetect.threshold());
+                } catch (Throwable e) {
+                    logger.error("ContainerCpuUseageDegradeDetect init fail!, maybe is not docker container", e);
+                }
+            }
+        } else {
+            logger.info("current environment is not docker, using normal degrade strategy");
+            if (simulatorConfig.getBooleanProperty("degrade.load.detect.enable", true)) {
+                LoadResourceDetector resourceDetect = new LoadResourceDetector();
+                degradeDetect.addResourceDetect(resourceDetect);
+                logger.info("[degrade] LoadResourceDetect active ratio is {}", resourceDetect.threshold());
+            }
+
+            if (simulatorConfig.getBooleanProperty("degrade.cpu.usage.detect.enable", true)) {
+                CpuUsageResourceDetector resourceDetect = new CpuUsageResourceDetector();
+                degradeDetect.addResourceDetect(resourceDetect);
+                logger.info("[degrade] CpuUseageResourceDetect active max is {}", resourceDetect.threshold());
+            }
+        }
+
+        if (simulatorConfig.getBooleanProperty("degrade.oldgen.detect.enable", true)) {
+            MemoryResourceDetector resourceDetect = new MemoryResourceDetector();
+            degradeDetect.addResourceDetect(resourceDetect);
+            logger.info("[degrade] MemoryResourceDetect active max is {}", resourceDetect.threshold());
+        }
+
+        String strategy = simulatorConfig.getProperty("degrade.strategy", "sampling");
+        degradeDetect.startDetect("sampling".equals(strategy) ? ReduceSamplingRateDegradeAction.INSTANCE : SilenceDegradeAction.INSTANCE);
     }
 
     @Override
@@ -142,5 +206,6 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         ClassUtils.release();
         PradarSpringUtil.release();
         SqlMetadataParser.clear();
+        degradeDetect.stopDetect();
     }
 }

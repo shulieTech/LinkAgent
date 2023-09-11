@@ -14,8 +14,8 @@
  */
 package com.pamirs.pradar.upload;
 
-import com.alibaba.fastjson.JSON;
 import com.pamirs.pradar.common.HttpUtils;
+import com.pamirs.pradar.gson.GsonFactory;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,7 +120,7 @@ abstract class HttpUploader<T> implements IUploader {
         if (data instanceof String) {
             postData = (String) data;
         } else {
-            postData = JSON.toJSONString(data);
+            postData = GsonFactory.getGson().toJson(data);
         }
         return postData;
     }

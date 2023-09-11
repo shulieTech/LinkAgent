@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.common.datasource.trace;
 
 
+import com.pamirs.attach.plugin.common.datasource.utils.ProxyFlag;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;
@@ -81,6 +82,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
         String traceId = null;
         Integer logType = null;
         try {
+            ProxyFlag.enter();
             isStartSuccess = PradarHelper.startRpc(sqlMetaData);
             traceId = Pradar.getTraceId();
             rpcId = Pradar.getInvokeId();
@@ -105,6 +107,8 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
             isException = true;
             throw new SQLException(e);
         } finally {
+            boolean clusterTest = Pradar.isClusterTest();
+            ProxyFlag.exit();
             try {
                 if (isStartSuccess) {
                     PradarHelper.endRpc(sqlMetaData, ex);
@@ -115,6 +119,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
                     Pradar.endClientInvoke(isException ? ResultCode.INVOKE_RESULT_FAILED : ResultCode.INVOKE_RESULT_SUCCESS, MiddlewareType.TYPE_DB);
                 }
             }
+            Pradar.setClusterTest(clusterTest);
             recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), ex, "executeLast");
         }
     }
@@ -140,6 +145,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
         boolean isException = false;
         Object ex = null;
         try {
+            ProxyFlag.enter();
             ResultSet resultSet = targetStatement.executeQuery();
             ex = true;
             return resultSet;
@@ -152,6 +158,8 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
             isException = true;
             throw new SQLException(e);
         } finally {
+            boolean clusterTest = Pradar.isClusterTest();
+            ProxyFlag.exit();
             try {
                 if (isStartSuccess) {
                     PradarHelper.endRpc(sqlMetaData, ex);
@@ -162,6 +170,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
                     Pradar.endClientInvoke(isException ? ResultCode.INVOKE_RESULT_FAILED : ResultCode.INVOKE_RESULT_SUCCESS, MiddlewareType.TYPE_DB);
                 }
             }
+            Pradar.setClusterTest(clusterTest);
             recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), ex, "executeQueryLast");
         }
     }
@@ -188,6 +197,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
         boolean isException = false;
         Object ex = null;
         try {
+            ProxyFlag.enter();
             int result = targetStatement.executeUpdate();
             ex = result;
             return result;
@@ -200,6 +210,8 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
             isException = true;
             throw new SQLException(e);
         } finally {
+            boolean clusterTest = Pradar.isClusterTest();
+            ProxyFlag.exit();
             try {
                 if (isStartSuccess) {
                     PradarHelper.endRpc(sqlMetaData, ex);
@@ -210,6 +222,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
                     Pradar.endClientInvoke(isException ? ResultCode.INVOKE_RESULT_FAILED : ResultCode.INVOKE_RESULT_SUCCESS, MiddlewareType.TYPE_DB);
                 }
             }
+            Pradar.setClusterTest(clusterTest);
             recordDebugFlow(traceId, rpcId, logType, sqlMetaData.getParameters(), ex, "executeUpdateLast");
         }
     }
@@ -228,487 +241,722 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
 
     @Override
     public void setArray(int parameterIndex, Array x) throws SQLException {
-
-        targetStatement.setArray(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setArray(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        targetStatement.setAsciiStream(parameterIndex, x, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setAsciiStream(parameterIndex, x, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
-        targetStatement.setBigDecimal(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBigDecimal(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        targetStatement.setBinaryStream(parameterIndex, x, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "BinaryStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBinaryStream(parameterIndex, x, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "BinaryStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBlob(int i, Blob x) throws SQLException {
-        targetStatement.setBlob(i, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, i, "Blob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBlob(i, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, i, "Blob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBoolean(int parameterIndex, boolean x) throws SQLException {
-        targetStatement.setBoolean(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBoolean(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setByte(int parameterIndex, byte x) throws SQLException {
-        targetStatement.setByte(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setByte(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
-        targetStatement.setBytes(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBytes(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
-        targetStatement.setCharacterStream(parameterIndex, reader, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "CharacterStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setCharacterStream(parameterIndex, reader, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "CharacterStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setClob(int i, Clob x) throws SQLException {
-        targetStatement.setClob(i, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, i, "Clob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setClob(i, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, i, "Clob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setDate(int parameterIndex, Date x) throws SQLException {
-        targetStatement.setDate(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x == null ? null : x.toGMTString());
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setDate(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x == null ? null : x.toGMTString());
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
-        targetStatement.setDate(parameterIndex, x, cal);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setDate(parameterIndex, x, cal);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setDouble(int parameterIndex, double x) throws SQLException {
-        targetStatement.setDouble(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setDouble(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setFloat(int parameterIndex, float x) throws SQLException {
-        targetStatement.setFloat(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setFloat(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setInt(int parameterIndex, int x) throws SQLException {
-        targetStatement.setInt(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setInt(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setLong(int parameterIndex, long x) throws SQLException {
-        targetStatement.setLong(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setLong(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNull(int parameterIndex, int sqlType) throws SQLException {
-        targetStatement.setNull(parameterIndex, sqlType);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, null);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNull(parameterIndex, sqlType);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, null);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
-        targetStatement.setNull(parameterIndex, sqlType, typeName);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, null);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNull(parameterIndex, sqlType, typeName);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, null);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
-
     }
 
     @Override
     public void setObject(int parameterIndex, Object x) throws SQLException {
-        targetStatement.setObject(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setObject(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
-
     }
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType) throws SQLException {
-        targetStatement.setObject(parameterIndex, x, targetSqlType);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setObject(parameterIndex, x, targetSqlType);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
-
     }
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType, int scale) throws SQLException {
-        targetStatement.setObject(parameterIndex, x, targetSqlType, scale);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setObject(parameterIndex, x, targetSqlType, scale);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setRef(int i, Ref x) throws SQLException {
-        targetStatement.setRef(i, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, i, "Ref");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setRef(i, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, i, "Ref");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setShort(int parameterIndex, short x) throws SQLException {
-        targetStatement.setShort(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setShort(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setString(int parameterIndex, String x) throws SQLException {
-        targetStatement.setString(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setString(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setTime(int parameterIndex, Time x) throws SQLException {
-        targetStatement.setTime(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString());
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setTime(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString());
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
-        targetStatement.setTime(parameterIndex, x, cal);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString() + " " + cal.toString());
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setTime(parameterIndex, x, cal);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString() + " " + cal.toString());
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        targetStatement.setTimestamp(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString());
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setTimestamp(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString());
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        targetStatement.setTimestamp(parameterIndex, x, cal);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString() + " " + cal.toString());
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setTimestamp(parameterIndex, x, cal);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toGMTString() + " " + cal.toString());
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setURL(int parameterIndex, URL x) throws SQLException {
-        targetStatement.setURL(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toExternalForm());
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setURL(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, x.toExternalForm());
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     @Deprecated
     public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        targetStatement.setUnicodeStream(parameterIndex, x, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "UnicodeStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setUnicodeStream(parameterIndex, x, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "UnicodeStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setRowId(int parameterIndex, RowId x) throws SQLException {
-        targetStatement.setRowId(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "RowId");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setRowId(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "RowId");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNString(int parameterIndex, String value) throws SQLException {
-        targetStatement.setNString(parameterIndex, value);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, value);
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNString(parameterIndex, value);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, value);
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
-        targetStatement.setNCharacterStream(parameterIndex, value, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NCharacterStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNCharacterStream(parameterIndex, value, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NCharacterStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNClob(int parameterIndex, NClob value) throws SQLException {
-        targetStatement.setNClob(parameterIndex, value);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NClob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNClob(parameterIndex, value);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NClob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        targetStatement.setClob(parameterIndex, reader, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Clob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setClob(parameterIndex, reader, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Clob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
-
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
-        targetStatement.setBlob(parameterIndex, inputStream, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Blob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBlob(parameterIndex, inputStream, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Blob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        targetStatement.setNClob(parameterIndex, reader, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NClob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNClob(parameterIndex, reader, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NClob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
-        targetStatement.setSQLXML(parameterIndex, xmlObject);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "SQLXML");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setSQLXML(parameterIndex, xmlObject);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "SQLXML");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        targetStatement.setAsciiStream(parameterIndex, x, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "AsciiStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setAsciiStream(parameterIndex, x, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "AsciiStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        targetStatement.setBinaryStream(parameterIndex, x, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "BinaryStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBinaryStream(parameterIndex, x, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "BinaryStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
-        targetStatement.setCharacterStream(parameterIndex, reader, length);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "CharacterStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setCharacterStream(parameterIndex, reader, length);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "CharacterStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
-        targetStatement.setAsciiStream(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "AsciiStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setAsciiStream(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "AsciiStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
-        targetStatement.setBinaryStream(parameterIndex, x);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "BinaryStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBinaryStream(parameterIndex, x);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "BinaryStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
-        targetStatement.setCharacterStream(parameterIndex, reader);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "CharacterStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setCharacterStream(parameterIndex, reader);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "CharacterStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
-        targetStatement.setNCharacterStream(parameterIndex, value);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NCharacterStream");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNCharacterStream(parameterIndex, value);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NCharacterStream");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader) throws SQLException {
-        targetStatement.setClob(parameterIndex, reader);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Clob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setClob(parameterIndex, reader);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Clob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
-        targetStatement.setBlob(parameterIndex, inputStream);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Blob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setBlob(parameterIndex, inputStream);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "Blob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader) throws SQLException {
-        targetStatement.setNClob(parameterIndex, reader);
         try {
-            SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NClob");
-        } catch (Throwable e) {
-            InterceptorInvokerHelper.handleException(e);
+            ProxyFlag.enter();
+            targetStatement.setNClob(parameterIndex, reader);
+            try {
+                SqlTraceMetaData.checkAndAddParameter(sqlMetaData, parameterIndex, "NClob");
+            } catch (Throwable e) {
+                InterceptorInvokerHelper.handleException(e);
+            }
+        } finally {
+            ProxyFlag.exit();
         }
     }
 
@@ -898,6 +1146,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
         return false;
     }
 
+    @Override
     public void closeOnCompletion() throws SQLException {
         try {
             this.targetStatement.closeOnCompletion();
@@ -906,6 +1155,7 @@ public class CheckedTracePreparedStatement extends CheckedTraceStatement impleme
         }
     }
 
+    @Override
     public boolean isCloseOnCompletion() throws SQLException {
         try {
             return this.targetStatement.isCloseOnCompletion();

@@ -4,20 +4,15 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package com.shulie.instrument.simulator.agent.core.logback;
-
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.Map;
 
 import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.CoreConstants;
@@ -33,6 +28,11 @@ import com.shulie.instrument.simulator.agent.core.util.AddressUtils;
 import com.shulie.instrument.simulator.agent.core.util.ConfigUtils;
 import com.shulie.instrument.simulator.agent.core.util.CustomerReflectUtils;
 import org.apache.commons.lang.StringUtils;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
 
 import static ch.qos.logback.core.CoreConstants.CODES_URL;
 import static ch.qos.logback.core.CoreConstants.MORE_INFO_PREFIX;
@@ -106,7 +106,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
 
     private boolean checkForFileAndPatternCollisions() {
         if (triggeringPolicy instanceof RollingPolicyBase) {
-            final RollingPolicyBase base = (RollingPolicyBase)triggeringPolicy;
+            final RollingPolicyBase base = (RollingPolicyBase) triggeringPolicy;
             //            final FileNamePattern fileNamePattern = base.fileNamePattern;
             final FileNamePattern fileNamePattern = CustomerReflectUtils.getFileNamePattern(base);
             // no use checking if either fileName or fileNamePattern are null
@@ -121,11 +121,13 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     private boolean checkForCollisionsInPreviousRollingFileAppenders() {
         boolean collisionResult = false;
         if (triggeringPolicy instanceof RollingPolicyBase) {
-            final RollingPolicyBase base = (RollingPolicyBase)triggeringPolicy;
+            final RollingPolicyBase base = (RollingPolicyBase) triggeringPolicy;
             //            final FileNamePattern fileNamePattern = base.fileNamePattern;
             final FileNamePattern fileNamePattern = CustomerReflectUtils.getFileNamePattern(base);
             boolean collisionsDetected = innerCheckForFileNamePatternCollisionInPreviousRFA(fileNamePattern);
-            if (collisionsDetected) {collisionResult = true;}
+            if (collisionsDetected) {
+                collisionResult = true;
+            }
         }
         return collisionResult;
     }
@@ -133,8 +135,8 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     private boolean innerCheckForFileNamePatternCollisionInPreviousRFA(FileNamePattern fileNamePattern) {
         boolean collisionsDetected = false;
         @SuppressWarnings("unchecked")
-        Map<String, FileNamePattern> map = (Map<String, FileNamePattern>)context.getObject(
-            CoreConstants.RFA_FILENAME_PATTERN_COLLISION_MAP);
+        Map<String, FileNamePattern> map = (Map<String, FileNamePattern>) context.getObject(
+                CoreConstants.RFA_FILENAME_PATTERN_COLLISION_MAP);
         if (map == null) {
             return collisionsDetected;
         }
@@ -154,11 +156,17 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     public void stop() {
         super.stop();
 
-        if (rollingPolicy != null) {rollingPolicy.stop();}
-        if (triggeringPolicy != null) {triggeringPolicy.stop();}
+        if (rollingPolicy != null) {
+            rollingPolicy.stop();
+        }
+        if (triggeringPolicy != null) {
+            triggeringPolicy.stop();
+        }
 
         Map<String, FileNamePattern> map = ContextUtil.getFilenamePatternCollisionMap(context);
-        if (map != null && getName() != null) {map.remove(getName());}
+        if (map != null && getName() != null) {
+            map.remove(getName());
+        }
 
     }
 
@@ -263,7 +271,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
             } catch (NoSuchFieldException e) {
                 //ignore
             }
-            String errorMsg = ((LoggingEvent)event).getMessage();
+            String errorMsg = ((LoggingEvent) event).getFormattedMessage();
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append(AddressUtils.getLocalAddress()).append("|");
             stringBuilder.append(0).append("|");
@@ -271,11 +279,11 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
             // 新版本兼容老版本的控制台和大数据
             if (StringUtils.isNotBlank(ConfigUtils.getEnvCode())) {
                 stringBuilder.append(
-                    StringUtils.isBlank(ConfigUtils.getTenantAppKey()) ? "" : ConfigUtils.getTenantAppKey()).append(
-                    "|");
+                        StringUtils.isBlank(ConfigUtils.getTenantAppKey()) ? "" : ConfigUtils.getTenantAppKey()).append(
+                        "|");
                 stringBuilder.append(ConfigUtils.getEnvCode()).append("|");
                 stringBuilder.append(StringUtils.isBlank(ConfigUtils.getUserId()) ? "" : ConfigUtils.getUserId())
-                    .append("|");
+                        .append("|");
             }
 
             stringBuilder.append(ConfigUtils.getAgentId()).append("|");
@@ -284,7 +292,8 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
             try {
                 messageFiled.set(event, stringBuilder.toString());
                 formattedMessageFiled.set(event, stringBuilder.toString());
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
             //            ((LoggingEvent)event).setMessage(errorMsg);
         }
         return event;
@@ -309,7 +318,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     public void setRollingPolicy(RollingPolicy policy) {
         rollingPolicy = policy;
         if (rollingPolicy instanceof TriggeringPolicy) {
-            triggeringPolicy = (TriggeringPolicy<E>)policy;
+            triggeringPolicy = (TriggeringPolicy<E>) policy;
         }
 
     }
@@ -317,7 +326,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
     public void setTriggeringPolicy(TriggeringPolicy<E> policy) {
         triggeringPolicy = policy;
         if (policy instanceof RollingPolicy) {
-            rollingPolicy = (RollingPolicy)policy;
+            rollingPolicy = (RollingPolicy) policy;
         }
     }
 }

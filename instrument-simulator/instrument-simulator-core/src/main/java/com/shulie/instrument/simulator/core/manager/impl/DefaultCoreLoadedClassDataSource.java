@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -16,9 +16,12 @@ package com.shulie.instrument.simulator.core.manager.impl;
 
 import com.shulie.instrument.simulator.api.filter.Filter;
 import com.shulie.instrument.simulator.api.guard.SimulatorGuard;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesBuilder;
+import com.shulie.instrument.simulator.api.ignore.IgnoredTypesPredicate;
 import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.core.manager.CoreLoadedClassDataSource;
+import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
 import com.shulie.instrument.simulator.core.util.SimulatorClassUtils;
 import com.shulie.instrument.simulator.core.util.SimulatorStringUtils;
 import com.shulie.instrument.simulator.core.util.matcher.ExtFilterMatcher;
@@ -41,11 +44,14 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Instrumentation inst;
     private final boolean isEnableUnsafe;
+    private final IgnoredTypesPredicate ignoredTypesPredicate;
 
     public DefaultCoreLoadedClassDataSource(final Instrumentation inst,
-                                            final boolean isEnableUnsafe) {
+                                            final boolean isEnableUnsafe,
+                                            IgnoredTypesBuilder ignoredTypesBuilder) {
         this.inst = inst;
         this.isEnableUnsafe = isEnableUnsafe;
+        this.ignoredTypesPredicate = ignoredTypesBuilder.buildTransformIgnoredPredicate();
     }
 
     @Override
@@ -209,12 +215,14 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
 
             for (Class<?> clazz : getAllForLoadedClasses()) {
                 // 过滤掉对于JVM认为不可修改的类
-                if (isRemoveUnsupported
-                        && !inst.isModifiableClass(clazz)) {
+                if (isRemoveUnsupported && !inst.isModifiableClass(clazz)) {
                     logger.debug("SIMULATOR: remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                     continue;
                 }
                 try {
+                    if (!ignoredTypesPredicate.test(clazz.getClassLoader(), clazz.getName())) {
+                        continue;
+                    }
                     if (isRemoveUnsupported) {
                         if (isMatchedUnsupported(matcher, clazz)) {
                             classes.add(clazz);
@@ -237,6 +245,7 @@ public class DefaultCoreLoadedClassDataSource implements CoreLoadedClassDataSour
         }
 
     }
+
 
     /**
      * 这个地方匹配在加载类时有可能因为目标类依赖的其他类不存在而导致获取构造函数或者方法会

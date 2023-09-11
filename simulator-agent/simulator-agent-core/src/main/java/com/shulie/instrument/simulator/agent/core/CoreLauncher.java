@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -42,16 +42,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
-import java.io.File;
-import java.io.FileFilter;
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -62,7 +58,7 @@ import java.util.concurrent.TimeUnit;
  * @since 2020/11/16 8:50 下午
  */
 public class CoreLauncher {
-    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+    private final Logger LOGGER;
     private AgentLauncher launcher;
     private AgentScheduler agentScheduler;
     private final CoreConfig coreConfig;
@@ -71,6 +67,7 @@ public class CoreLauncher {
     private final Instrumentation instrumentation;
     private final ClassLoader classLoader;
     private final String tagName;
+    private final String agentHome;
 
     /**
      * agent 默认延迟时间设置5分钟
@@ -85,7 +82,8 @@ public class CoreLauncher {
     }
 
     public CoreLauncher(String agentHome, long attachId, String attachName, String tagName,
-        Instrumentation instrumentation, ClassLoader classLoader) {
+                        Instrumentation instrumentation, ClassLoader classLoader) {
+        this.agentHome = agentHome;
         this.coreConfig = new CoreConfig(agentHome);
         this.instrumentation = instrumentation;
         this.classLoader = classLoader;
@@ -96,6 +94,7 @@ public class CoreLauncher {
         System.setProperty("SIMULATOR_LOG_PATH", this.agentConfig.getLogPath());
         System.setProperty("SIMULATOR_LOG_LEVEL", this.agentConfig.getLogLevel());
         LogbackUtils.init(this.agentConfig.getLogConfigFile());
+        LOGGER = LoggerFactory.getLogger(getClass());
         this.launcher = new AgentLauncher(this.agentConfig, instrumentation, classLoader);
         this.externalAPI = new ExternalAPIImpl(this.agentConfig);
         initAgentLoader();
@@ -170,13 +169,13 @@ public class CoreLauncher {
     }
 
     private static Field[] getFieldsWithAnnotation(final Class<?> cls,
-        final Class<? extends Annotation> annotationCls) {
+                                                   final Class<? extends Annotation> annotationCls) {
         final List<Field> annotatedFieldsList = getFieldsListWithAnnotation(cls, annotationCls);
         return annotatedFieldsList.toArray(new Field[0]);
     }
 
     private static List<Field> getFieldsListWithAnnotation(final Class<?> cls,
-        final Class<? extends Annotation> annotationCls) {
+                                                           final Class<? extends Annotation> annotationCls) {
         final List<Field> allFields = getAllFieldsList(cls);
         final List<Field> annotatedFields = new ArrayList<Field>();
         for (final Field field : allFields) {
@@ -212,14 +211,43 @@ public class CoreLauncher {
                     RegisterFactory.init(agentConfig);
 
                     ApplicationUploader applicationUploader = new HttpApplicationUploader(agentConfig);
+
+                    Properties properties = readSimulatorConfigs();
+                    String key = "pradar.data.pusher.pinpoint.collector.address";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+                    key = "kafka.sdk.switch";
+                    System.setProperty(key, properties.getProperty(key, "false"));
+                    System.setProperty("register.name", properties.getProperty("register.name", "zookeeper"));
+
+                    key = "pradar.agent.expand";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
+                    key = "pradar.collector.push";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
+                    key = "pradar.snowflake.generate.create";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
+                    key = "pradar.data.pusher.pinpoint.collector.trace.chunksize";
+                    if (properties.containsKey(key)) {
+                        System.setProperty(key, properties.getProperty(key));
+                    }
+
                     applicationUploader.checkAndGenerateApp();
 
                     Register register = RegisterFactory.getRegister(
-                        agentConfig.getProperty("register.name", "zookeeper"));
+                            properties.getProperty("register.name", "zookeeper"));
                     RegisterOptions registerOptions = buildRegisterOptions(agentConfig);
                     register.init(registerOptions);
                     register.start();
-
 
 
                     agentScheduler.setAgentConfig(agentConfig);
@@ -245,17 +273,17 @@ public class CoreLauncher {
                         public CommandExecuteResponse execute(Command command) throws Throwable {
                             CommandExecuteResponse commandExecuteResponse = null;
                             if (command instanceof StartCommand) {
-                                launcher.startup(((StartCommand)command));
+                                launcher.startup(((StartCommand) command));
                             } else if (command instanceof StopCommand) {
-                                launcher.shutdown((StopCommand)command);
+                                launcher.shutdown((StopCommand) command);
                             } else if (command instanceof LoadModuleCommand) {
-                                launcher.loadModule(((LoadModuleCommand)command));
+                                launcher.loadModule(((LoadModuleCommand) command));
                             } else if (command instanceof UnloadModuleCommand) {
-                                launcher.unloadModule(((UnloadModuleCommand)command));
+                                launcher.unloadModule(((UnloadModuleCommand) command));
                             } else if (command instanceof ReloadModuleCommand) {
                                 launcher.reloadModule(((ReloadModuleCommand) command));
-                            } else if (command instanceof HeartCommand){
-                                commandExecuteResponse = launcher.commandModule((HeartCommand)command);
+                            } else if (command instanceof HeartCommand) {
+                                commandExecuteResponse = launcher.commandModule((HeartCommand) command);
                             }
                             return commandExecuteResponse;
                         }
@@ -292,6 +320,9 @@ public class CoreLauncher {
                 }
             }
         };
+        if (isStartSyncModule()) {
+            launcher.startupSyncModule();
+        }
         if (delay <= 0) {
             runnable.run();
         } else {
@@ -304,7 +335,7 @@ public class CoreLauncher {
                 LOGGER.warn("SIMULATOR: current can't found tag name. may be agent file is incomplete.");
             }
             LOGGER.info("SIMULATOR: agent will start {} {} later... please wait for a while moment.", delay,
-                unit.toString());
+                    unit.toString());
         }
         //有这个勾子的话，kill pid杀死应用，会卸载所有的模块，这时流量是还在的，就会漏数
 //        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -319,15 +350,23 @@ public class CoreLauncher {
 //        }));
     }
 
-    private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) {
+    private boolean isStartSyncModule() {
+        boolean syncEnable = "true".equals(coreConfig.getProperty("agent.sync.module.enable", "false"));
+        if (syncEnable && launcher.isUseAgentmain() && !launcher.isUsePremain()) {
+            LOGGER.error("enable sync module, but use agenmain to start!! need use premain, use simulator.use.premain=true!!");
+        }
+        return syncEnable;
+    }
+
+    private RegisterOptions buildRegisterOptions(AgentConfig agentConfig) throws Exception {
         RegisterOptions registerOptions = new RegisterOptions();
         registerOptions.setAppName(agentConfig.getAppName());
         registerOptions.setRegisterBasePath(
-            agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
+                agentConfig.getProperty("agent.status.zk.path", "/config/log/pradar/status"));
         registerOptions.setRegisterName(agentConfig.getProperty("simulator.hearbeat.register.name", "zookeeper"));
         registerOptions.setZkServers(agentConfig.getProperty("simulator.zk.servers", "localhost:2181"));
         registerOptions.setConnectionTimeoutMillis(
-            agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));
+                agentConfig.getIntProperty("simulator.zk.connection.timeout.ms", 30000));
         registerOptions.setSessionTimeoutMillis(agentConfig.getIntProperty("simulator.zk.session.timeout.ms", 60000));
         return registerOptions;
     }
@@ -341,4 +380,19 @@ public class CoreLauncher {
             this.unit = unit;
         }
     }
+
+    private Properties readSimulatorConfigs() throws Exception {
+        Properties properties = null;
+        String path = this.agentHome + File.separatorChar + "agent" + File.separator + "simulator" + File.separator + "config" + File.separator + "simulator.properties";
+        try {
+            InputStream in = new BufferedInputStream(new FileInputStream(path));
+            properties = new Properties();
+            properties.load(in);
+        } catch (Exception e) {
+            LOGGER.error("Read simulator.properties occur exception", e);
+            throw e;
+        }
+        return properties;
+    }
+
 }

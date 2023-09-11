@@ -19,6 +19,8 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.internal.OperationExecutor;
+import com.mongodb.internal.operation.AggregateOperation;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.internal.config.ShadowDatabaseConfig;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
@@ -57,7 +59,7 @@ public class Caches {
                     if (!Pradar.isClusterTestPrefix(ptDB)) {
                         ptDB = fetchShadowDatabase(shadowDatabaseConfig);
                     }
-                    if (Pradar.isShadowDatabaseWithShadowTable()) {
+                    if (shadowDatabaseConfig.isShadowDatabaseWithTable()) {
                         if (!Pradar.isClusterTestPrefix(ptCOL)) {
                             ptCOL = Pradar.addClusterTestPrefix(ptCOL);
                         }
@@ -73,6 +75,9 @@ public class Caches {
                     operationExecutorMap.put(key, executorModule);
                 }
             }
+        }
+        if(operation instanceof AggregateOperation){
+            operation = ReflectionUtils.get(operation, "wrapped");
         }
         operationAccessor.setMongoNamespace(operation, executorModule.getPtMongoNamespace());
         return executorModule.getOperationExecutor();

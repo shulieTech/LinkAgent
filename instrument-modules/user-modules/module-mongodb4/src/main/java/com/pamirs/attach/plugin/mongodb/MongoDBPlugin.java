@@ -14,10 +14,14 @@
  */
 package com.pamirs.attach.plugin.mongodb;
 
+import com.pamirs.attach.plugin.mongodb.interceptor.AggregateOperationImplInterceptor;
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorInterceptor;
 import com.pamirs.attach.plugin.mongodb.interceptor.DelegateOperationExecutorTraceInterceptor;
+import com.pamirs.attach.plugin.mongodb.listener.MongoDB4ShadowPreCheckEventListener;
+import com.pamirs.attach.plugin.mongodb.listener.MongoDb4ShadowDisableEventListener;
 import com.pamirs.attach.plugin.mongodb.utils.OperationAccessorFactory;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -39,7 +43,6 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
     @Override
     public boolean onActive() throws Throwable {
-
         /**
          * 因为这个插件与mongodb322插件冲突，所以当mongodb322插件启用时此插件禁用
          */
@@ -59,6 +62,8 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
             return false;
         }
 
+//        EventRouter.router().addListener(new MongoDB4ShadowPreCheckEventListener()).addListener(new MongoDb4ShadowDisableEventListener());
+
         enhanceTemplate.enhance(this, "com.mongodb.client.internal.MongoClientDelegate$DelegateOperationExecutor", new EnhanceCallback() {
             @Override
             public void doEnhance(InstrumentClass target) {
@@ -75,6 +80,15 @@ public class MongoDBPlugin extends ModuleLifecycleAdapter implements ExtensionMo
 
                 instrumentMethod_3.addInterceptor(Listeners.of(DelegateOperationExecutorInterceptor.class));
                 instrumentMethod_4.addInterceptor(Listeners.of(DelegateOperationExecutorInterceptor.class));
+            }
+        });
+
+        enhanceTemplate.enhance(this, "com.mongodb.internal.operation.AggregateOperationImpl", new EnhanceCallback() {
+            @Override
+            public void doEnhance(InstrumentClass target) {
+                target.getDeclaredMethods("defaultAggregateTarget")
+                        .addInterceptor(Listeners.of(AggregateOperationImplInterceptor.class, "DBCollection", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+
             }
         });
 

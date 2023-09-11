@@ -52,7 +52,7 @@ public final class ProcessControlException extends Exception {
      */
     private final boolean isIgnoreProcessEvent;
 
-    ProcessControlException(int state, Object result) {
+    public ProcessControlException(int state, Object result) {
         this(false, state, result);
     }
 

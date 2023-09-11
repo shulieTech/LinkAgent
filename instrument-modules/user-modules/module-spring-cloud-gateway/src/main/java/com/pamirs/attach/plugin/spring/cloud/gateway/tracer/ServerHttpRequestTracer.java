@@ -15,8 +15,15 @@
 package com.pamirs.attach.plugin.spring.cloud.gateway.tracer;
 
 import com.pamirs.attach.plugin.common.web.RequestTracer;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
+
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Description
@@ -52,7 +59,18 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
 
     @Override
     public void setAttribute(ServerHttpRequest request, String key, Object value) {
-        request.getHeaders().add(key, value.toString());
+        HttpHeaders headers = request.getHeaders();
+        try {
+            headers.add(key, value.toString());
+        }catch (UnsupportedOperationException exception){
+            //readOnlyHttpHeaders
+            HttpHeaders httpHeaders = new HttpHeaders();
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                httpHeaders.put(entry.getKey(),entry.getValue());
+            }
+            httpHeaders.add(key,value.toString());
+            ReflectionUtils.setField(getHeaders(request), request, httpHeaders);
+        }
     }
 
     @Override
@@ -83,7 +101,8 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
         if (response == null) {
             return "200";
         }
-        return String.valueOf(response.getStatusCode().value());
+        int code = response.getStatusCode() == null ? 200 : response.getStatusCode().value();
+        return String.valueOf(code);
     }
 
     @Override
@@ -91,7 +110,34 @@ public class ServerHttpRequestTracer extends RequestTracer<ServerHttpRequest, Se
         if (httpResponseInfo == null) {
             return;
         }
-        httpResponseInfo.getHeaders().add(key, String.valueOf(value));
+        HttpHeaders headers = httpResponseInfo.getHeaders();
+        try {
+            headers.add(key, String.valueOf(value));
+        }catch (UnsupportedOperationException exception){
+            //readOnlyHttpHeaders
+            HttpHeaders httpHeaders = new HttpHeaders();
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                httpHeaders.put(entry.getKey(),entry.getValue());
+            }
+            httpHeaders.add(key,String.valueOf(value));
+            ReflectionUtils.setField(getHeaders(httpResponseInfo),httpResponseInfo, httpHeaders );
+        }
+    }
+
+
+
+
+    private static final Map<Class, Field> headersMap = new ConcurrentHashMap<Class, Field>();
+
+
+    private Field getHeaders(Object target) {
+        Field field = headersMap.get(target.getClass());
+        if(field != null){
+            return field;
+        }
+        field = ReflectionUtils.findField(target.getClass(), "headers");
+        headersMap.put(target.getClass(),field);
+        return field;
     }
 
 }

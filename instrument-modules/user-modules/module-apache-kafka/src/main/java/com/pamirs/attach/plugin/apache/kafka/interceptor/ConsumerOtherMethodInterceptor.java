@@ -16,11 +16,10 @@ package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.origin.ConsumerProxy;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.CutOffResult;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 
 /**
  * @author jirenhe | jirenhe@shulie.io
@@ -32,8 +31,8 @@ public class ConsumerOtherMethodInterceptor extends AbstractProxiedConsumerInter
     @Override
     protected Object doCutoff(ConsumerProxy consumerProxy, Advice advice) {
         try {
-            return Reflect.on(consumerProxy).call(advice.getBehaviorName(), advice.getParameterArray()).get();
-        } catch (ReflectException e) {
+            return ReflectionUtils.invoke(consumerProxy,advice.getBehaviorName(), advice.getParameterArray());
+        } catch (Exception e) {
             return CutOffResult.passed();
         }
     }

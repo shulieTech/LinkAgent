@@ -15,7 +15,6 @@
 package com.shulie.instrument.simulator.core.util;
 
 import com.shulie.instrument.simulator.api.ModuleSpec;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.slf4j.Logger;
@@ -36,6 +35,8 @@ import java.util.zip.ZipEntry;
  */
 public final class ModuleSpecUtils {
     private final static Logger LOGGER = LoggerFactory.getLogger(ModuleSpecUtils.class);
+    private static final String SYNC_FETCH_TARGET = "simulator.module.syncfetch";
+    private static final String SYNC_FETCH_TARGET_INNER = "simulator.inner.module.syncfetch";
 
     public static ModuleSpec loadModuleSpec(File file, boolean isSystemModule) {
         if (file == null || file.isHidden()) {
@@ -49,8 +50,8 @@ public final class ModuleSpecUtils {
         return moduleSpec;
     }
 
-    public static List<ModuleSpec> loadModuleSpecs(List<File> files, boolean isSystemModule) {
-        if (CollectionUtils.isEmpty(files)) {
+    public static List<ModuleSpec> loadModuleSpecs(List<File> files, boolean isSystemModule, boolean isAsync) {
+        if (files == null || files.isEmpty()) {
             return Collections.EMPTY_LIST;
         }
         List<ModuleSpec> moduleSpecs = new ArrayList<ModuleSpec>();
@@ -80,7 +81,7 @@ public final class ModuleSpecUtils {
             }
         });
 
-        return moduleSpecs;
+        return filterAsync(moduleSpecs, isAsync);
     }
 
 
@@ -154,6 +155,8 @@ public final class ModuleSpecUtils {
                 String asyncStr = properties.getProperty("async");
                 boolean async = StringUtils.isNotBlank(asyncStr) ? Boolean.valueOf(asyncStr) : true;
 
+                String syncFetchTarget = properties.getProperty("sync-fetch-target");
+
                 ModuleSpec moduleSpec = new ModuleSpec();
                 moduleSpec.setMustUse(mustUse)
                         .setModuleId(moduleId)
@@ -164,9 +167,12 @@ public final class ModuleSpecUtils {
                         .setImportPackages(StringUtils.trim(properties.getProperty("import-package")))
                         .setExportResources(StringUtils.trim(properties.getProperty("export-resource")))
                         .setImportResources(StringUtils.trim(properties.getProperty("import-resource")))
+                        .setImportDependencyDir(StringUtils.trim(properties.getProperty("import-dependency-dir")))
+                        .setImportArtifacts(StringUtils.trim(properties.getProperty("import-artifacts")))
                         .setSinceVersion(sinceVersion)
                         .setUntilVersion(untilVersion)
-                        .setAsync(async);
+                        .setAsync(async)
+                        .setSyncFetchTarget(syncFetchTarget);
 
                 if (StringUtils.isNotBlank(middlewareModuleStr)) {
                     moduleSpec.setMiddlewareModule(Boolean.valueOf(middlewareModuleStr));
@@ -204,7 +210,7 @@ public final class ModuleSpecUtils {
     }
 
     public static Set<String> getAllModuleIds(List<ModuleSpec> moduleSpecs) {
-        if (CollectionUtils.isEmpty(moduleSpecs)) {
+        if (moduleSpecs == null || moduleSpecs.isEmpty()) {
             return Collections.EMPTY_SET;
         }
         Set<String> result = new HashSet<String>();
@@ -212,5 +218,29 @@ public final class ModuleSpecUtils {
             result.add(moduleSpec.getModuleId());
         }
         return result;
+    }
+
+
+    private static List<ModuleSpec> filterAsync(List<ModuleSpec> moduleSpecs, boolean isAsync) {
+        List<ModuleSpec> asyncList = new ArrayList<ModuleSpec>();
+        List<ModuleSpec> syncList = new ArrayList<ModuleSpec>();
+
+        StringBuilder syncFetchTarget = new StringBuilder(System.getProperty(SYNC_FETCH_TARGET, ""));
+        for (ModuleSpec userModuleSpec : moduleSpecs) {
+            if (StringUtils.isNotEmpty(userModuleSpec.getSyncFetchTarget())) {
+                syncFetchTarget.append(",").append(userModuleSpec.getSyncFetchTarget());
+            }
+            if (!userModuleSpec.isAsync()) {
+                if (userModuleSpec.getDependencies().isEmpty()) {
+                    syncList.add(userModuleSpec);
+                } else {
+                    LOGGER.error("SIMULATOR-sync: module {} is sync start, but has dependencies, will not start!!!", userModuleSpec.getModuleId());
+                }
+            }else {
+                asyncList.add(userModuleSpec);
+            }
+        }
+        System.setProperty(SYNC_FETCH_TARGET_INNER, syncFetchTarget.toString());
+        return isAsync ? asyncList : syncList;
     }
 }

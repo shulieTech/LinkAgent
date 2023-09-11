@@ -4,12 +4,12 @@ import java.lang.reflect.Field;
 
 import com.pamirs.attach.plugin.apache.rocketmq.common.OrderlyTraceContexts;
 import com.pamirs.attach.plugin.apache.rocketmq.hook.PushConsumeMessageHookImpl;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.exception.PradarException;
 import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
 import org.apache.rocketmq.client.hook.ConsumeMessageContext;
 import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
 import org.apache.rocketmq.common.message.MessageQueue;
@@ -95,35 +95,34 @@ public class OrderlyTraceContextInterceptor extends AroundInterceptor {
     }
 
     private MessageQueue getMessageQueue(Object target) {
-        return Reflect.on(target).get(getMessageQueueField(target));
+        return ReflectionUtils.getField(getMessageQueueField(target), target );
     }
 
     private Field getMessageQueueField(Object target) {
         if (messageQueueField == null) {
-            messageQueueField = Reflect.on(target).field0("messageQueue");
+            messageQueueField = ReflectionUtils.findField(target.getClass(), "messageQueue");
         }
         return messageQueueField;
     }
 
     private String getConsumeGroup(Object target) {
         Field consumeMessageServiceField = getThis$0Field(target);
-        Object consumeMessageService = Reflect.on(target).get(consumeMessageServiceField);
+        Object consumeMessageService = ReflectionUtils.getField(consumeMessageServiceField, target);
         Field defaultMQPushConsumerImplField = getDefaultMQPushConsumerImplField(consumeMessageService);
-        DefaultMQPushConsumerImpl defaultMQPushConsumer = Reflect.on(consumeMessageService).get(
-            defaultMQPushConsumerImplField);
+        DefaultMQPushConsumerImpl defaultMQPushConsumer = ReflectionUtils.getField(defaultMQPushConsumerImplField, consumeMessageService);
         return defaultMQPushConsumer.groupName();
     }
 
     private Field getDefaultMQPushConsumerImplField(Object target) {
         if (defaultMQPushConsumerImplField == null) {
-            defaultMQPushConsumerImplField = Reflect.on(target).field0("defaultMQPushConsumerImpl");
+            defaultMQPushConsumerImplField = ReflectionUtils.findField(target.getClass(), "defaultMQPushConsumerImpl");
         }
         return defaultMQPushConsumerImplField;
     }
 
     private Field getThis$0Field(Object target) {
         if (this$0Field == null) {
-            this$0Field = Reflect.on(target).field0("this$0");
+            this$0Field = ReflectionUtils.findField(target.getClass(), "this$0");
         }
         return this$0Field;
     }

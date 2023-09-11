@@ -14,13 +14,11 @@
  */
 package com.shulie.instrument.simulator.agent.core.zk.impl;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.shulie.instrument.simulator.agent.core.zk.ZkHeartbeatNode;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.utils.ZKPaths;
-import com.shulie.instrument.simulator.agent.core.zk.ZkHeartbeatNode;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -28,6 +26,8 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -120,7 +120,7 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
                 }
             }
             logger.info("heartbeat node is set alive, path={}", path);
-            client.checkExists().usingWatcher(watcher).forPath(path);
+            addWatcher();
             alive.set(true);
         }
     }
@@ -163,7 +163,19 @@ public class CuratorZkHeartbeatNode implements ZkHeartbeatNode {
                 } catch (Throwable e) {
                     logger.error("fail to reset in watch event, path={}", path, e);
                 }
+            }else {
+                //重置watcher
+                addWatcher();
             }
         }
     };
+
+
+    private void addWatcher(){
+        try {
+            client.checkExists().usingWatcher(watcher).forPath(path);
+        } catch (Exception e) {
+            logger.error("fail to add watcher for path={}", path, e);
+        }
+    }
 }

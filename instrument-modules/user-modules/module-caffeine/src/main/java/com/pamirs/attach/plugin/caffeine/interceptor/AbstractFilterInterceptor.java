@@ -16,7 +16,6 @@ package com.pamirs.attach.plugin.caffeine.interceptor;
 
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.interceptor.ModificationInterceptorAdaptor;
-import com.pamirs.pradar.interceptor.ParametersWrapperInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
 import org.apache.commons.lang.ArrayUtils;
 

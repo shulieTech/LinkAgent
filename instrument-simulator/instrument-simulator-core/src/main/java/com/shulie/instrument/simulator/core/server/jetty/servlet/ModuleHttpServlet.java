@@ -14,8 +14,9 @@
  */
 package com.shulie.instrument.simulator.core.server.jetty.servlet;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.shulie.instrument.simulator.api.CommandResponse;
 import com.shulie.instrument.simulator.api.annotation.Command;
 import com.shulie.instrument.simulator.api.resource.ReleaseResource;
@@ -23,7 +24,6 @@ import com.shulie.instrument.simulator.api.spi.DeploymentManager;
 import com.shulie.instrument.simulator.core.CoreConfigure;
 import com.shulie.instrument.simulator.core.CoreModule;
 import com.shulie.instrument.simulator.core.manager.CoreModuleManager;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.lang.StringUtils;
@@ -58,6 +58,7 @@ public class ModuleHttpServlet extends HttpServlet {
     private final CoreConfigure config;
     private final CoreModuleManager coreModuleManager;
     private final DeploymentManager deploymentManager;
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
     /**
      * 是否在销毁中
      */
@@ -96,7 +97,7 @@ public class ModuleHttpServlet extends HttpServlet {
         PrintWriter writer = resp.getWriter();
         try {
             if (Boolean.valueOf(useApi)) {
-                String json = JSON.toJSONString(content, SerializerFeature.DisableCircularReferenceDetect);
+                String json = gson.toJson(content);
                 resp.setContentType("application/json");
                 writer.write(json);
                 writer.flush();
@@ -213,7 +214,7 @@ public class ModuleHttpServlet extends HttpServlet {
             @Override
             public void release() {
                 final List<Closeable> list = get();
-                if (CollectionUtils.isEmpty(list)) {
+                if (list == null || list.isEmpty()) {
                     return;
                 }
                 for (final Closeable closeable : list) {

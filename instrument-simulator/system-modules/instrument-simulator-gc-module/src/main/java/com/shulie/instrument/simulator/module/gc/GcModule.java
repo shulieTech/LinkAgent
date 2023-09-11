@@ -40,6 +40,7 @@ public class GcModule extends ParamSupported implements ExtensionModule {
             "Copy",
             "ParNew",
             "PS Scavenge",
+            "G1 Young Generation",
             //JRockit
             "Garbage collection optimized for short pausetimes Young Collector",
             "Garbage collection optimized for throughput Young Collector",
@@ -51,6 +52,7 @@ public class GcModule extends ParamSupported implements ExtensionModule {
             "MarkSweepCompact",
             "PS MarkSweep",
             "ConcurrentMarkSweep",
+            "G1 Old Generation",
             //JRockit
             "Garbage collection optimized for short pausetimes Old Collector",
             "Garbage collection optimized for throughput Old Collector",

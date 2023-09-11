@@ -30,7 +30,6 @@ import org.elasticsearch.client.Node;
 import org.elasticsearch.client.RestClient;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -75,7 +74,6 @@ public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
             record.setPassedCheck(true);
         }
         return record;
-
     }
 
     private String toString(Collection<String> list) {
@@ -98,7 +96,6 @@ public class RestClientTraceInterceptor extends TraceInterceptorAdaptor {
         record.setRequest(args[0]);
         //record.setResponse(result);
         return record;
-
     }
 
     @Override

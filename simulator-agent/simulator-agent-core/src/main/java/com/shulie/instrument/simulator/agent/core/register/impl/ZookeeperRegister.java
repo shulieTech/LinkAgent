@@ -15,8 +15,9 @@
 package com.shulie.instrument.simulator.agent.core.register.impl;
 
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatus;
 import com.shulie.instrument.simulator.agent.core.register.AgentStatusListener;
 import com.shulie.instrument.simulator.agent.core.register.Register;
@@ -113,12 +114,13 @@ public class ZookeeperRegister implements Register {
     private final String pid = String.valueOf(PidUtils.getPid());
     private final String name = PidUtils.getName();
     private String agentId = null;
-    private static final String inputArgs = JSON.toJSONString(ManagementFactory.getRuntimeMXBean().getInputArguments());
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
+    private static final String inputArgs = gson.toJson(ManagementFactory.getRuntimeMXBean().getInputArguments());
 
     private String jvmArgsCheck = null;
 
     private byte[] getHeartbeatDatas() {
-        jvmArgsCheck = jvmArgsCheck == null ? JSON.toJSONString(
+        jvmArgsCheck = jvmArgsCheck == null ? gson.toJson(
                 JvmArgsCheckUtils.checkJvmArgs(System.getProperty("java.version"), inputArgs, agentConfig)) : jvmArgsCheck;
 
         Map<String, String> map = new HashMap<String, String>();
@@ -149,9 +151,9 @@ public class ZookeeperRegister implements Register {
         map.put("userId", agentConfig.getUserId());
 
         //设置agent配置文件参数
-        //        map.put("agentFileConfigs", JSON.toJSONString(agentConfig.getAgentFileConfigs()));
+        //        map.put("agentFileConfigs", GsonFactory.getGson().toJson(agentConfig.getAgentFileConfigs()));
         //参数比较
-        //        map.put("agentFileConfigsCheck", JSON.toJSONString(checkConfigs()));
+        //        map.put("agentFileConfigsCheck", GsonFactory.getGson().toJson(checkConfigs()));
         map.put("jvmArgsCheck", jvmArgsCheck);
         if (!JvmArgsCheckUtils.getCheckJvmArgsStatus()) {
             agentStatus = AgentStatus.INSTALL_FAILED;
@@ -169,7 +171,7 @@ public class ZookeeperRegister implements Register {
         map.put("agentStatus", agentStatus);
         map.put("errorMsg", errorMsg.toString());
 
-        String str = JSON.toJSONString(map);
+        String str = gson.toJson(map);
 
         try {
             return str.getBytes("UTF-8");
@@ -193,49 +195,6 @@ public class ZookeeperRegister implements Register {
             return String.format(JvmArgsConstants.simulatorLogPathCodeErrorMsg_2, simulatorLogPath);
         }
         return null;
-    }
-
-    /**
-     * 校验agent配置文件参数
-     *
-     * @return
-     */
-    private Map<String, String> checkConfigs() {
-        Map<String, String> result = new HashMap<String, String>(32, 1);
-        //当前agent使用配置文件的配置
-        Map<String, String> agentFileConfigs = agentConfig.getAgentFileConfigs();
-        Map<String, Object> agentConfigFromUrl =
-                ConfigUtils.getFixedAgentConfigFromUrl(agentConfig.getTroWebUrl(), agentConfig.getAppName()
-                        , agentConfig.getAgentVersion(), agentConfig.getHttpMustHeaders());
-        if (agentConfigFromUrl == null
-                || agentConfigFromUrl.get("success") == null
-                || !Boolean.parseBoolean(agentConfigFromUrl.get("success").toString())) {
-            result.put("status", "false");
-            result.put("errorMsg", "获取控制台配置信息失败,检查接口服务是否正常");
-            return result;
-        }
-        boolean status = true;
-        StringBuilder unEqualConfigs = new StringBuilder();
-
-        JSONObject jsonObject = (JSONObject) agentConfigFromUrl.get("data");
-        for (Map.Entry<String, String> entry : agentFileConfigs.entrySet()) {
-            String value = (String) jsonObject.get(entry.getKey());
-            if (entry.getValue().equals(value)) {
-                result.put(entry.getKey(), "true");
-            } else {
-                status = false;
-                result.put(entry.getKey(), "false");
-                unEqualConfigs.append("参数key:").append(entry.getKey()).append(",").append("本地参数值:").append(
-                        entry.getValue())
-                        .append(",").append("远程参数值:").append(value).append(",");
-            }
-        }
-        result.put("status", String.valueOf(result));
-        if (!status) {
-            result.put("errorMsg", unEqualConfigs.toString());
-        }
-        return result;
-
     }
 
     /**

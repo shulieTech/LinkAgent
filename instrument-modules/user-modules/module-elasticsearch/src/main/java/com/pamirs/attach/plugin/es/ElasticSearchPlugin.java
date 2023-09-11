@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -15,7 +15,11 @@
 package com.pamirs.attach.plugin.es;
 
 import com.pamirs.attach.plugin.es.interceptor.*;
+import com.pamirs.attach.plugin.es.listener.EsShadowActiveEventListener;
+import com.pamirs.attach.plugin.es.listener.EsShadowDisableEventListener;
+import com.pamirs.attach.plugin.es.listener.EsShadowPreCheckEventListener;
 import com.pamirs.pradar.interceptor.Interceptors;
+import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -40,6 +44,10 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
         System.setProperty("es.set.netty.runtime.available.processors", "false");
         addTransportClientInterceptor();
         addRestClientInterceptor();
+        /*EventRouter.router()
+                .addListener(new EsShadowPreCheckEventListener())
+                .addListener(new EsShadowDisableEventListener())
+                .addListener(new EsShadowActiveEventListener());*/
         return true;
     }
 
@@ -144,7 +152,7 @@ public class ElasticSearchPlugin extends ModuleLifecycleAdapter implements Exten
                 }
 
 
-                if (performRequestAsyncMethodLowVersionTrace != null){
+                if (performRequestAsyncMethodLowVersionTrace != null) {
                     performRequestAsyncMethodLowVersionTrace.addInterceptor(
                             Listeners.of(RestClientPerformAsyncLowVersionRequestTraceInterceptor.class, "SHADOW_SEARCH_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 }

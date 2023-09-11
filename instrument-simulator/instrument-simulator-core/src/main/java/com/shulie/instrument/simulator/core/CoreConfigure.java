@@ -14,8 +14,13 @@
  */
 package com.shulie.instrument.simulator.core;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
+import com.google.gson.reflect.TypeToken;
 import com.shulie.instrument.simulator.api.LoadMode;
 import com.shulie.instrument.simulator.core.util.FeatureCodec;
 import com.shulie.instrument.simulator.core.util.HttpUtils;
@@ -24,6 +29,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +38,8 @@ import java.lang.instrument.Instrumentation;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 内核启动配置
@@ -73,6 +81,8 @@ public class CoreConfigure {
     private static final String PROP_KEY_AGENT_VERSION = "agent.version";
     private static final String PROP_KEY_SIMULATOR_VERSION = "simulator.version";
 
+    private static final String PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED = "poll.app.config.failed.aborted";
+
     //模块仓库模块
     private static final String VAL_MODULE_REPOSITORY_MODE_LOCAL = "local";
     private static final String VAL_MODULE_REPOSITORY_MODE_REMOTE = "remote";
@@ -104,6 +114,7 @@ public class CoreConfigure {
 
     private final Map<String, String> featureMap = new LinkedHashMap<String, String>();
 
+    private static final Gson gson = new GsonBuilder().setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create();
 
     private final Map<String, String> simulatorFileConfigs = new LinkedHashMap<String, String>();
     private final Map<String, String> agentFileConfigs = new LinkedHashMap<String, String>();
@@ -112,6 +123,14 @@ public class CoreConfigure {
     private Map<String, List<String>> bizClassLoaderInjectURLs;
 
     private final Instrumentation instrumentation;
+
+    private LoadingCache<String, Optional<String>> cachePropertiesBuilder = CacheBuilder.newBuilder()
+            .maximumSize(300).expireAfterAccess(3 * 60, TimeUnit.SECONDS).build(new CacheLoader<String, Optional<String>>() {
+                @Override
+                public Optional<String> load(String key) throws Exception {
+                    return Optional.ofNullable(getPropertyInternal(key));
+                }
+            });
 
     /**
      * md5值
@@ -301,8 +320,7 @@ public class CoreConfigure {
         if (StringUtils.isBlank(result)) {
             throw new RuntimeException("SIMULATOR: can't get app properties config from url:" + propertiesUrl);
         }
-        return JSON.parseObject(result, new TypeReference<Map<String, String>>() {
-        }.getType());
+        return gson.fromJson(result, new TypeToken<Map<String, String>>() {}.getType());
     }
 
     private Map<String, String> toFilePropertiesMap(String propertiesFilePath) {
@@ -810,15 +828,22 @@ public class CoreConfigure {
      * @return 返回配置值
      */
     public String getProperty(String key, String defaultValue) {
+        String value = null;
+        try {
+            value = cachePropertiesBuilder.get(key).orElse(defaultValue);
+        } catch (ExecutionException e) {
+            LOGGER.warn("read value fail!", e);
+        }
+        return value;
+    }
+
+    public String getPropertyInternal(String key) {
         String value = System.getProperty(key);
         if (value == null) {
             value = featureMap.get(key);
         }
         if (value == null) {
             value = System.getenv(key);
-        }
-        if (value == null) {
-            return defaultValue;
         }
         return value;
     }
@@ -1006,6 +1031,15 @@ public class CoreConfigure {
 
     public Map<String, String> getAgentFileConfigs() {
         return agentFileConfigs;
+    }
+
+    /**
+     * 在拉取app config时报错是否阻塞
+     *
+     * @return
+     */
+    public String getAbortedWhenPollAppConfigFailed() {
+        return getProperty(PROP_KEY_POLL_APP_CONFIG_FAILED_ABORTED);
     }
 
 }

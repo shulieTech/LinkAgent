@@ -13,6 +13,8 @@ import oshi.software.os.FileSystem;
 import oshi.software.os.OSFileStore;
 import oshi.util.Util;
 
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -42,11 +44,10 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
     private static long lastErrorTime;
     private int printLogCount = 2;
 
+    private static GcSnapshot gcSnapshot;
+
     @Override
     public void run() {
-        if (!PradarSwitcher.isMonitorEnabled()) {
-            return;
-        }
         try {
             long timeStamp = System.currentTimeMillis() / 1000;
             String appName = AppNameUtils.appName();
@@ -93,6 +94,24 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
                     .append(diskUses != null ? diskUses[1] : "").append('|')
                     .append(diskReadWrites != null ? diskReadWrites[0] : "").append('|')
                     .append(diskReadWrites != null ? diskReadWrites[1] : "").append('|');
+
+            // 14版本增加gc次数及时间
+            if (Pradar.PRADAR_MONITOR_LOG_VERSION > 13) {
+                long youngGcCount = 0, youngGcCost = 0, oldGcCount = 0, oldGcCost = 0;
+                if (gcSnapshot == null) {
+                    gcSnapshot = buildGcSnapshot();
+                } else {
+                    GcSnapshot latest = buildGcSnapshot();
+                    youngGcCount = latest.youngGcCount - gcSnapshot.youngGcCount;
+                    youngGcCost = latest.youngGcCost - gcSnapshot.youngGcCost;
+                    oldGcCount = latest.oldGcCount - gcSnapshot.oldGcCount;
+                    oldGcCost = latest.oldGcCost - gcSnapshot.oldGcCost;
+                    gcSnapshot = latest;
+                }
+                stringBuilder.append(youngGcCount).append("|").append(youngGcCost).append("|")
+                        .append(oldGcCount).append("|").append(oldGcCost).append("|");
+            }
+
             if (StringUtils.isNotBlank(Pradar.PRADAR_ENV_CODE)) {
                 stringBuilder.append(0).append('|');
 
@@ -199,7 +218,7 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
                 readBytes += hwDiskStore.getReadBytes();
                 writeBytes += hwDiskStore.getWriteBytes();
             }
-            return new long[] {readBytes, writeBytes};
+            return new long[]{readBytes, writeBytes};
         } catch (Throwable e) {
             return null;
         }
@@ -216,7 +235,7 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
                 totalSpace += store.getTotalSpace();
                 useSpace += store.getUsableSpace();
             }
-            return new long[] {totalSpace, useSpace};
+            return new long[]{totalSpace, useSpace};
         } catch (Throwable e) {
             if (System.currentTimeMillis() - lastErrorTime > 600000) {
                 logger.warn("getFileSystem error! ", e);
@@ -224,6 +243,27 @@ public class OutsideContainerResourcesInfoCollector implements Runnable {
             }
             return null;
         }
+
+    }
+
+    private GcSnapshot buildGcSnapshot() {
+        List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        GcSnapshot snapshot = new GcSnapshot();
+        snapshot.youngGcCount = garbageCollectorMXBeans.get(0).getCollectionCount();
+        snapshot.youngGcCost = garbageCollectorMXBeans.get(0).getCollectionTime();
+        snapshot.oldGcCount = garbageCollectorMXBeans.get(1).getCollectionCount();
+        snapshot.oldGcCost = garbageCollectorMXBeans.get(1).getCollectionTime();
+        return snapshot;
+    }
+
+    private static class GcSnapshot {
+        /**
+         * gc次数和耗时
+         */
+        private long youngGcCount;
+        private long youngGcCost;
+        private long oldGcCount;
+        private long oldGcCost;
 
     }
 

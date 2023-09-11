@@ -14,25 +14,17 @@
  */
 package com.pamirs.attach.plugin.lettuce.interceptor;
 
-import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.annotation.Resource;
-
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.attach.plugin.lettuce.LettuceConstants;
 import com.pamirs.attach.plugin.lettuce.destroy.LettuceDestroy;
 import com.pamirs.pradar.interceptor.AroundInterceptor;
 import com.shulie.instrument.simulator.api.annotation.Destroyable;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
-import com.shulie.instrument.simulator.api.reflect.Reflect;
-import com.shulie.instrument.simulator.api.reflect.ReflectException;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
-import com.shulie.instrument.simulator.api.util.ReflectionUtils;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.cluster.RedisClusterClient;
+
+import javax.annotation.Resource;
+import java.lang.reflect.Proxy;
+import java.util.List;
 
 /**
  * @Description
@@ -53,7 +45,7 @@ public class StatefulRedisConnectionAttachRedisURIsInterceptor extends AroundInt
         final List<Object> list = manager.getDynamicField(target, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS);
         if(list != null && !list.isEmpty()) {
             if(result instanceof Proxy){
-                result = ReflectionUtils.getFieldValues(result,"h","asyncApi");
+                result = ReflectionUtils.getFieldValues(result, "h", "asyncApi");
             }
             manager.setDynamicField(result, LettuceConstants.DYNAMIC_FIELD_REDIS_URIS, list);
         }

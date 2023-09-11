@@ -85,6 +85,7 @@ public class AdviceAdapterListener extends EventListener implements Interruptabl
                         bEvent.getProcessId(),
                         bEvent.getInvokeId(),
                         bEvent.getJavaMethodName(),
+                        bEvent.getJavaMethodDesc(),
                         toBehavior(bEvent.getClazz(),bEvent.getJavaMethodName(),bEvent.getJavaMethodDesc()),
                         bEvent.getClazz(),
                         loader,

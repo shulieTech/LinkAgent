@@ -59,7 +59,11 @@ public class DbDruidMediatorDataSource extends WrappedDbMediatorDataSource<Druid
     public Connection getConnection() throws SQLException {
         if (Pradar.isClusterTest()) {
             try {
-                init();
+                if(!init.get()){
+                    synchronized (DbDruidMediatorDataSource.class){
+                        init();
+                    }
+                }
                 if (useTable) {
                     //影子表
                     if (dataSourceBusiness == null) {

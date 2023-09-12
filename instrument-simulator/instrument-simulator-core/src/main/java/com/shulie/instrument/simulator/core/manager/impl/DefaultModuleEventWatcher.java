@@ -286,8 +286,8 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
 
         final int watchId = watchIdSequencer.next();
         // 给对应的模块追加ClassFileTransformer
-        final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(this,
-                watchId, coreModule, matcher, isEnableUnsafe, isEnableReTransform);
+        final SimulatorClassFileTransformer transformer = new DefaultSimulatorClassFileTransformer(
+                watchId, coreModule, matcher, isEnableUnsafe);
 
         Boolean costDumpEnable = simulatorConfig.getBooleanProperty(CostDumpTransformer.ENABLED_COST_DUMP, false);
         SimulatorClassFileTransformer proxy = costDumpEnable ? CostDumpTransformer.wrap(transformer, simulatorConfig) : transformer;

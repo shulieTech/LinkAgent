@@ -32,10 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.ProtectionDomain;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
@@ -63,7 +60,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     /**
      * 目前需要被retransform 的 class
      */
-    private volatile Class retransformingClass;
+    private Set<String> listeningTypes;
 
     DefaultSimulatorClassFileTransformer(final DefaultModuleEventWatcher watcher,
                                          final int watchId,
@@ -81,6 +78,10 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             eventListeners.put(listener.getListenerId(), new LazyEventListenerProxy(coreModule, listener.getListeners()));
         }
         this.listeners = matcher.getAllListeners();
+        this.listeningTypes = new HashSet<String>();
+        for (String listeningType : matcher.getAllListeningTypes()) {
+            this.listeningTypes.add(listeningType.replace('.', '/'));
+        }
         this.typesPredicate = coreModule.getIgnoredTypesBuilder().buildTransformIgnoredPredicate();
     }
 
@@ -115,21 +116,19 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
             if (internalClassName == null) {
                 return null;
             }
-            // 确保是class retransform
-            if (classBeingRedefined != null && isEnableRetransform) {
-                // 确保只有对应的transformer能够被执行
-                if (retransformingClass == null || (retransformingClass != null && !retransformingClass.equals(classBeingRedefined))) {
-                    if (isDebugEnabled) {
-                        String className = matcher.getAllListeners().get(0).getListeners().getClassName();
-                        logger.debug("SIMULATOR: ignore apply transform for matcher className:{}", className);
-                    }
-                    return null;
-                }
-            }
-
+            // 排除已知的不需要增强的class
             if (!typesPredicate.test(loader, internalClassName)) {
                 if (isDebugEnabled) {
                     logger.debug("SIMULATOR: ignore class {} to being transformed. ", internalClassName);
+                }
+                return null;
+            }
+
+            // 确保只有对应的transformer能够被执行
+            if (!listeningTypes.isEmpty() && !listeningTypes.contains(internalClassName)) {
+                if (isDebugEnabled) {
+                    String className = matcher.getAllListeners().get(0).getListeners().getClassName();
+                    logger.debug("SIMULATOR: ignore apply transform for matcher className:{}", className);
                 }
                 return null;
             }
@@ -289,15 +288,5 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     @Override
     public AffectStatistic getAffectStatistic() {
         return affectStatistic;
-    }
-
-    @Override
-    public void markRetransformingClass(Class clazz) {
-        this.retransformingClass = clazz;
-    }
-
-    @Override
-    public void resetRetransformingClass() {
-        this.retransformingClass = null;
     }
 }

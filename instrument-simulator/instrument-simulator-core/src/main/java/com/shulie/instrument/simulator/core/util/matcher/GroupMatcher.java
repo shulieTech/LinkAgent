@@ -92,7 +92,7 @@ public abstract class GroupMatcher implements Matcher {
 
         @Override
         public Set<String> getAllListeningTypes() {
-            Set<String> types = new HashSet<>();
+            Set<String> types = new HashSet<String>();
             for (Matcher matcher : matcherArray) {
                 types.addAll(matcher.getAllListeningTypes());
             }
@@ -184,7 +184,7 @@ public abstract class GroupMatcher implements Matcher {
 
         @Override
         public Set<String> getAllListeningTypes() {
-            Set<String> types = new HashSet<>();
+            Set<String> types = new HashSet<String>();
             for (Matcher matcher : matcherArray) {
                 types.addAll(matcher.getAllListeningTypes());
             }

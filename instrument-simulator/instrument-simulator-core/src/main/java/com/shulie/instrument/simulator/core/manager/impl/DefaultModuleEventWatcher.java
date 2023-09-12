@@ -159,13 +159,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher {
                             index - 1, total
                     );
                 }
-                if(transformer != null){
-                    transformer.markRetransformingClass(waitingReTransformClass);
-                }
                 inst.retransformClasses(waitingReTransformClass);
-                if(transformer != null){
-                    transformer.resetRetransformingClass();
-                }
                 if (isInfoEnabled) {
                     logger.info("SIMULATOR: {}watch={} in module={} single reTransform {} success, at index={};total={};",
                             delete ? "successful delete reTransformClasses " : "",

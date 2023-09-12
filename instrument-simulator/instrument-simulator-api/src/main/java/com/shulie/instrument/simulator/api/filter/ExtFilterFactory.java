@@ -19,7 +19,9 @@ import com.shulie.instrument.simulator.api.annotation.IncludeBootstrap;
 import com.shulie.instrument.simulator.api.annotation.IncludeSubClasses;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 增强过滤器工厂类
@@ -70,6 +72,11 @@ public class ExtFilterFactory {
             @Override
             public List<BuildingForListeners> getAllListeners() {
                 return filter.getAllListeners();
+            }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
             }
         };
     }

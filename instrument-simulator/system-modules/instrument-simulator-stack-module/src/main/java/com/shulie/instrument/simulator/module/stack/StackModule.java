@@ -34,10 +34,7 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import org.kohsuke.MetaInfServices;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -130,6 +127,11 @@ public class StackModule extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public List<BuildingForListeners> getAllListeners() {
                 return Collections.EMPTY_LIST;
+            }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
             }
         }).isEmpty();
     }

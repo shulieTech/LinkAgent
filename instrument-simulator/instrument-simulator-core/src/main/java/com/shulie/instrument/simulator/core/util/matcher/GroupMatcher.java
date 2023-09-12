@@ -90,6 +90,15 @@ public abstract class GroupMatcher implements Matcher {
             return result;
         }
 
+        @Override
+        public Set<String> getAllListeningTypes() {
+            Set<String> types = new HashSet<>();
+            for (Matcher matcher : matcherArray) {
+                types.addAll(matcher.getAllListeningTypes());
+            }
+            return types;
+        }
+
     }
 
     public static final class And extends GroupMatcher {
@@ -171,6 +180,15 @@ public abstract class GroupMatcher implements Matcher {
                 result.getBehaviorStructureListMap().putAll(found);
             }
             return result;
+        }
+
+        @Override
+        public Set<String> getAllListeningTypes() {
+            Set<String> types = new HashSet<>();
+            for (Matcher matcher : matcherArray) {
+                types.addAll(matcher.getAllListeningTypes());
+            }
+            return types;
         }
 
     }

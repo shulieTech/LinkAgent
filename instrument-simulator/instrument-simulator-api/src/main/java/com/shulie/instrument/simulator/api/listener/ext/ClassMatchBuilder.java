@@ -27,6 +27,7 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
 import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
@@ -388,6 +389,11 @@ class ClassMatchBuilder implements IClassMatchBuilder {
                     listeners.addAll(buildingForBehavior.getListeners());
                 }
                 return listeners;
+            }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
             }
         };//filter
 

@@ -63,7 +63,7 @@ public class DefaultSimulatorClassFileTransformer extends SimulatorClassFileTran
     /**
      * 目前需要被retransform 的 class
      */
-    private Class retransformingClass;
+    private volatile Class retransformingClass;
 
     DefaultSimulatorClassFileTransformer(final DefaultModuleEventWatcher watcher,
                                          final int watchId,

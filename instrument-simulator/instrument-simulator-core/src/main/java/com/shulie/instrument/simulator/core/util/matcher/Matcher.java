@@ -18,6 +18,7 @@ import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.core.util.matcher.structure.ClassStructure;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 匹配器
@@ -48,5 +49,12 @@ public interface Matcher {
      * @return 匹配结果
      */
     MatchingResult matching(ClassStructure classStructure);
+
+    /**
+     * 获取所有在监听的class类型
+     *
+     * @return
+     */
+    Set<String> getAllListeningTypes();
 
 }

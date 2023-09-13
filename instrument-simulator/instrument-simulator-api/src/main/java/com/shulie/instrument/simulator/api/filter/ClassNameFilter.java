@@ -17,8 +17,7 @@ package com.shulie.instrument.simulator.api.filter;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * 类名称过滤器
@@ -69,5 +68,10 @@ public class ClassNameFilter implements ExtFilter {
     @Override
     public List<BuildingForListeners> getAllListeners() {
         return Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public Set<String> getAllListeningTypes() {
+        return new HashSet<String>(Arrays.asList(className));
     }
 }

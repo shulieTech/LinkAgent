@@ -22,6 +22,7 @@ import com.shulie.instrument.simulator.api.util.StringUtil;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 类名和方法名正则表达式匹配过滤器
@@ -86,6 +87,11 @@ public class SuperNameRegexFilter implements ExtFilter {
     @Override
     public List<BuildingForListeners> getAllListeners() {
         return Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public Set<String> getAllListeningTypes() {
+        return null;
     }
 
     @Override

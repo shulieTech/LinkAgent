@@ -182,6 +182,11 @@ public class HttpServletRequestImplStartAsyncInterceptor extends AroundIntercept
             public List<BuildingForListeners> getAllListeners() {
                 return Collections.EMPTY_LIST;
             }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
+            }
         });
         if (classSet.isEmpty()) {
             Pradar.WEB_SERVER_NAME = "undertow";

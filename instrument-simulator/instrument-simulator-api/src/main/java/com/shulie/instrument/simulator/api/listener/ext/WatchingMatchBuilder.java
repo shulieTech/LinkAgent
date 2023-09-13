@@ -194,6 +194,11 @@ class WatchingMatchBuilder implements IWatchingMatchBuilder {
                 }
                 return listeners;
             }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
+            }
         };//filter
 
     }

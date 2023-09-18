@@ -17,7 +17,9 @@ import com.pamirs.pradar.script.commons.InterpreterWrapper;
 
 import java.io.StringReader;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
@@ -42,21 +44,35 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
                         for (MockConfig mockConfig : ((MockConfigAddEvent) event).getTarget()) {
                             interpreterCaches.remove(mockConfig.getCodeScript());
                         }
-                    } else if(event instanceof MockConfigModifyEvent){
-                        for (MockConfig mockConfig : ((MockConfigModifyEvent) event).getTarget()) {
-                            String key = mockConfig.getKey();
-                            initScriptCache(mockConfig.getCodeScript());
-                            // 删除旧的
-                            for (MockConfig rawConfig : GlobalConfig.getInstance().getMockConfigs()) {
-                                if(key.equals(rawConfig.getKey())){
-                                    interpreterCaches.remove(rawConfig.getCodeScript());
-                                    break;
-                                }
+                    } else if (event instanceof MockConfigModifyEvent) {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+
+                        }
+
+                        Set<String> scripts = new HashSet<String>();
+                        for (MockConfig config : GlobalConfig.getInstance().getMockConfigs()) {
+                            scripts.add(config.getCodeScript());
+                        }
+                        for (String script : scripts) {
+                            if (!interpreterCaches.containsKey(script)) {
+                                initScriptCache(script);
                             }
                         }
 
+                        Set<String> removed = new HashSet<String>();
+                        for (String key : interpreterCaches.keySet()) {
+                            if (!scripts.contains(key)) {
+                                removed.add(key);
+                            }
+                        }
+                        for (String s : removed) {
+                            interpreterCaches.remove(s);
+                        }
 
-                    }else {
+
+                    } else {
                         return EventResult.IGNORE;
                     }
                     return EventResult.success("Mock config update successful.");

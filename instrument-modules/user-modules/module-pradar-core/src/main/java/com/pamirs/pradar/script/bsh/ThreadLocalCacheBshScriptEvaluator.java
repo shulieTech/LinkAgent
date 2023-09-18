@@ -21,13 +21,12 @@ import com.pamirs.pradar.script.ScriptEvaluator;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author xiaobin.zfb|xiaobin@shulie.io
  * @since 2021/6/18 2:35 下午
  */
-public class BshScriptEvaluator implements ScriptEvaluator {
+public class ThreadLocalCacheBshScriptEvaluator implements ScriptEvaluator {
     private ClassLoader classLoader;
 
     private ThreadLocal<Map<String, Interpreter>> tt = new ThreadLocal<Map<String, Interpreter>>();
@@ -35,7 +34,7 @@ public class BshScriptEvaluator implements ScriptEvaluator {
     /**
      * Construct a new BshScriptEvaluator.
      */
-    public BshScriptEvaluator() {
+    public ThreadLocalCacheBshScriptEvaluator() {
     }
 
     /**
@@ -43,7 +42,7 @@ public class BshScriptEvaluator implements ScriptEvaluator {
      *
      * @param classLoader the ClassLoader to use for the {@link Interpreter}
      */
-    public BshScriptEvaluator(ClassLoader classLoader) {
+    public ThreadLocalCacheBshScriptEvaluator(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 

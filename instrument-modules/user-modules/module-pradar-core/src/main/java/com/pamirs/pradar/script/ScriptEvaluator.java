@@ -29,6 +29,12 @@ public interface ScriptEvaluator {
     String getType();
 
     /**
+     *
+     * @param classLoader
+     */
+    void setClassLoader(ClassLoader classLoader);
+
+    /**
      * Evaluate the given script.
      *
      * @param script the ScriptSource for the script to evaluate

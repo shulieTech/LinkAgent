@@ -32,7 +32,6 @@ public class TtlAgentBootstrapper {
             return;
         }
         if (agentPath == null) {
-            System.err.println("[Instrument-Simulator]: can`t find simulator-launcher-instrument.jar from jvm arguments!");
             return;
         }
         try {

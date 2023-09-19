@@ -27,7 +27,7 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
     private Map<String, InterpreterWrapper[]> interpreterCaches = new HashMap<String, InterpreterWrapper[]>();
 
-    private int interceptorCacheNum = Integer.parseInt(System.getProperty("simulator.mock.interceptor.caches.num", "256"));
+    private int interceptorCacheNum = Integer.parseInt(System.getProperty("simulator.mock.interpreter.caches.num", "256"));
 
     /**
      * Construct a new BshScriptEvaluator.

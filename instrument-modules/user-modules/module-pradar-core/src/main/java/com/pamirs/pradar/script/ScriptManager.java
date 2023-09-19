@@ -36,7 +36,7 @@ public class ScriptManager {
     public ScriptManager() {
         this.evaluators = new HashMap<String, ScriptEvaluator>();
 
-        ScriptEvaluator bshScriptEvaluator = "global".equals(System.getProperty("simulator.mock.interceptor.caches"))
+        ScriptEvaluator bshScriptEvaluator = "global".equals(System.getProperty("simulator.mock.interpreter.caches"))
                 ? new GlobalCacheBshScriptEvaluator() : new ThreadLocalCacheBshScriptEvaluator();
         bshScriptEvaluator.setClassLoader(ScriptManager.class.getClassLoader());
         evaluators.put(bshScriptEvaluator.getType(), bshScriptEvaluator);

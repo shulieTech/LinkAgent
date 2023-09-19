@@ -27,6 +27,8 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
     private Map<String, InterpreterWrapper[]> interpreterCaches = new HashMap<String, InterpreterWrapper[]>();
 
+    private int interceptorCacheNum = Integer.parseInt(System.getProperty("simulator.mock.interceptor.caches.num", "256"));
+
     /**
      * Construct a new BshScriptEvaluator.
      */
@@ -144,7 +146,7 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
     private InterpreterWrapper fetchInterpreterWrapper(String script) {
         long id = Thread.currentThread().getId();
-        int mod = (int) (id % 256);
+        int mod = (int) (id % interceptorCacheNum);
         InterpreterWrapper[] caches = interpreterCaches.get(script);
         if (caches == null) {
             initScriptCache(script);
@@ -156,7 +158,7 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
         }
         while (true) {
             mod++;
-            if (mod == 256) {
+            if (mod == interceptorCacheNum) {
                 mod = 0;
             }
             wrapper = tryToHoldInterceptor(caches[mod]);
@@ -181,8 +183,8 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
 
     private synchronized void initScriptCache(String script) {
-        InterpreterWrapper[] caches = new InterpreterWrapper[256];
-        for (int i = 0; i < 256; i++) {
+        InterpreterWrapper[] caches = new InterpreterWrapper[interceptorCacheNum];
+        for (int i = 0; i < interceptorCacheNum; i++) {
             caches[i] = new InterpreterWrapper(new Interpreter(), false);
         }
         interpreterCaches.put(script, caches);

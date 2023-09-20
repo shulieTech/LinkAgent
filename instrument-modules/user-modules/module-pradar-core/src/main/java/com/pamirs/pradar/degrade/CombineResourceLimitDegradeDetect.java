@@ -2,6 +2,8 @@ package com.pamirs.pradar.degrade;
 
 import com.pamirs.pradar.degrade.action.DegradeAction;
 import com.pamirs.pradar.degrade.resources.ResourceDetector;
+import com.pamirs.pradar.pressurement.agent.shared.service.SimulatorDynamicConfig;
+import com.shulie.instrument.simulator.api.resource.SimulatorConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,9 +31,14 @@ public class CombineResourceLimitDegradeDetect implements DegradeDetector {
 
     private final int consecutiveConcurrences;
 
-    public CombineResourceLimitDegradeDetect(int duration, int period) {
+    private final List<ResourceDetector> resourceDetects = new ArrayList<ResourceDetector>();
+
+    private SimulatorConfig simulatorConfig;
+
+    public CombineResourceLimitDegradeDetect(int duration, int period, SimulatorConfig simulatorConfig) {
         this.period = period;
         this.consecutiveConcurrences = duration / period;
+        this.simulatorConfig = simulatorConfig;
     }
 
     @Override
@@ -39,6 +46,10 @@ public class CombineResourceLimitDegradeDetect implements DegradeDetector {
         scheduledThreadPoolExecutor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                if (!Boolean.parseBoolean(System.getProperty("degrade.detect.enable", "true"))) {
+                    SimulatorDynamicConfig.resetDegradeStatus();
+                    return;
+                }
                 boolean hasResource = true;
                 ResourceDetector resource = null;
                 for (ResourceDetector resourceDetect : resourceDetects) {
@@ -97,8 +108,6 @@ public class CombineResourceLimitDegradeDetect implements DegradeDetector {
     public void stopDetect() {
         scheduledThreadPoolExecutor.shutdown();
     }
-
-    private final List<ResourceDetector> resourceDetects = new ArrayList<ResourceDetector>();
 
     public void addResourceDetect(ResourceDetector resourceDetect) {
         resourceDetects.add(resourceDetect);

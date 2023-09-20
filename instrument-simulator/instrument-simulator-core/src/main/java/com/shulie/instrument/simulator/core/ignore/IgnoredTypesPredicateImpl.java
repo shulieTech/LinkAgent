@@ -23,7 +23,7 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
         public int hashCode() {
             return 1;
         }
-    };
+    }.getParent();
 
     private static HashBasedTable<ClassLoader, String, IgnoreAllow> ignoreCaches = HashBasedTable.create(256, 2 << 13);
 

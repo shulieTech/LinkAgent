@@ -74,7 +74,7 @@ public class ModuleClassLoader extends ModuleRoutingURLClassLoader {
     }
 
     public ModuleClassLoader(final ClassLoaderService classLoaderService, final File moduleJarFile, Set<String> importArtifacts, final String moduleId, final String bizClassLoader) throws IOException {
-        this(classLoaderService, moduleJarFile, copyToTempFile(moduleJarFile), importArtifacts, moduleId, bizClassLoader);
+        this(classLoaderService, moduleJarFile, moduleJarFile, importArtifacts, moduleId, bizClassLoader);
     }
 
     private ModuleClassLoader(final ClassLoaderService classLoaderService,

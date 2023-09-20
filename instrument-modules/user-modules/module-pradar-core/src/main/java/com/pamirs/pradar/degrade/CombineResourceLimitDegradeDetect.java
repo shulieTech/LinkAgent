@@ -33,12 +33,9 @@ public class CombineResourceLimitDegradeDetect implements DegradeDetector {
 
     private final List<ResourceDetector> resourceDetects = new ArrayList<ResourceDetector>();
 
-    private SimulatorConfig simulatorConfig;
-
-    public CombineResourceLimitDegradeDetect(int duration, int period, SimulatorConfig simulatorConfig) {
+    public CombineResourceLimitDegradeDetect(int duration, int period) {
         this.period = period;
         this.consecutiveConcurrences = duration / period;
-        this.simulatorConfig = simulatorConfig;
     }
 
     @Override

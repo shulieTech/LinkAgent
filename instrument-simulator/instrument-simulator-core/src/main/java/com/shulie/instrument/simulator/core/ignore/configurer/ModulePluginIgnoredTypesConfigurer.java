@@ -272,7 +272,6 @@ public class ModulePluginIgnoredTypesConfigurer implements IgnoredTypesConfigure
 
         //jdk-http
         builder.ignoreClass("sun.net.www.")
-                .allowClass("sun.net.www.protocol.http.HttpURLConnection")
                 .allowClass("sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection")
                 .allowClass("sun.net.www.http.HttpClient")
                 .allowClass("sun.net.www.protocol.http.HttpURLConnection");

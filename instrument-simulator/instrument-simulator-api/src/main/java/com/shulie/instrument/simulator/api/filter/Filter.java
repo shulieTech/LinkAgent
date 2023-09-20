@@ -17,6 +17,7 @@ package com.shulie.instrument.simulator.api.filter;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 类和方法过滤器
@@ -61,4 +62,11 @@ public interface Filter {
      * @return
      */
     List<BuildingForListeners> getAllListeners();
+
+    /**
+     * 获取所有在监听的class
+     *
+     * @return
+     */
+    Set<String> getAllListeningTypes();
 }

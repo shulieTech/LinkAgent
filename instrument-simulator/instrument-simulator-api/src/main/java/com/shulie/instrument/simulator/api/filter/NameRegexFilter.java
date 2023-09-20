@@ -17,8 +17,7 @@ package com.shulie.instrument.simulator.api.filter;
 import com.shulie.instrument.simulator.api.listener.ext.BuildingForListeners;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * 类名和方法名正则表达式匹配过滤器
@@ -83,6 +82,11 @@ public class NameRegexFilter implements ExtFilter {
     @Override
     public List<BuildingForListeners> getAllListeners() {
         return Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public Set<String> getAllListeningTypes() {
+        return isIncludeSubClasses ? Collections.EMPTY_SET : new HashSet<String>(Arrays.asList(javaNameRegex));
     }
 
     @Override

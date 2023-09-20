@@ -294,6 +294,11 @@ public class TraceListener extends AdviceListener {
                     public List<BuildingForListeners> getAllListeners() {
                         return Collections.EMPTY_LIST;
                     }
+
+                    @Override
+                    public Set<String> getAllListeningTypes() {
+                        return Collections.EMPTY_SET;
+                    }
                 });
                 if (CollectionUtils.isNotEmpty(classes)) {
                     /**
@@ -334,6 +339,11 @@ public class TraceListener extends AdviceListener {
                                         @Override
                                         public List<BuildingForListeners> getAllListeners() {
                                             return Collections.EMPTY_LIST;
+                                        }
+
+                                        @Override
+                                        public Set<String> getAllListeningTypes() {
+                                            return Collections.EMPTY_SET;
                                         }
                                     });
                                     for (Class implClass : implClasses) {

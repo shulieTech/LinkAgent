@@ -86,6 +86,11 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             public List<BuildingForListeners> getAllListeners() {
                 return Collections.EMPTY_LIST;
             }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
+            }
         });
     }
 
@@ -242,6 +247,11 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             public List<BuildingForListeners> getAllListeners() {
                 return Collections.EMPTY_LIST;
             }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
+            }
         });
     }
 
@@ -275,6 +285,11 @@ public class TraceModule extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public List<BuildingForListeners> getAllListeners() {
                 return Collections.EMPTY_LIST;
+            }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                return Collections.EMPTY_SET;
             }
         });
     }

@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -24,9 +24,7 @@ import com.shulie.instrument.simulator.api.util.ArrayUtils;
 import com.shulie.instrument.simulator.api.util.CollectionUtils;
 import com.shulie.instrument.simulator.api.util.StringUtil;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import static com.shulie.instrument.simulator.api.listener.ext.PatternType.REGEX;
 import static com.shulie.instrument.simulator.api.listener.ext.PatternType.WILDCARD;
@@ -388,6 +386,15 @@ class ClassMatchBuilder implements IClassMatchBuilder {
                     listeners.addAll(buildingForBehavior.getListeners());
                 }
                 return listeners;
+            }
+
+            @Override
+            public Set<String> getAllListeningTypes() {
+                // superClass和Interfaces类型增强不能确定实际的class名称
+                if (superPatterns != PATTERN_WILDCARD || !hasInterfaceTypes.isEmpty() || !hasAnnotationTypes.isEmpty()) {
+                    return Collections.EMPTY_SET;
+                }
+                return new HashSet<String>(Arrays.asList(pattern));
             }
         };//filter
 

@@ -145,7 +145,8 @@ public class PradarCoreModule extends ModuleLifecycleAdapter implements Extensio
         boolean isDocker = Pradar.isRunningInsideDocker();
         degradeDetect = new CombineResourceLimitDegradeDetect(
                 simulatorConfig.getIntProperty("degrade.detect.duration", 60),
-                simulatorConfig.getIntProperty("degrade.detect.period", 5));
+                simulatorConfig.getIntProperty("degrade.detect.period", 5),
+                simulatorConfig);
 
         if (isDocker) {
             logger.info("current environment is docker, using container degrade strategy");

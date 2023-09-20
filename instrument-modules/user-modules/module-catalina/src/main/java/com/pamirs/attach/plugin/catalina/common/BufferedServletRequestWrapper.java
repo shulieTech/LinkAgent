@@ -98,6 +98,7 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
                     traceContext.put(PradarService.PRADAR_TRACE_ID_KEY, rpcInfo[2]);
                     traceContext.put(PradarService.PRADAR_INVOKE_ID_KEY, rpcInfo[3]);
                     traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
+                    traceContext.put(PradarService.PRADAR_NODE_ID_KEY, rpcInfo[5]);
 
                     ReflectionUtils.set(Pradar.getInvokeContext(), "traceId", rpcInfo[2]);
 
@@ -107,7 +108,7 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
                         ReflectionUtils.set(Pradar.getInvokeContext(), "invokeId", rpcInfo[3]);
                     }
 
-                    Pradar.getInvokeContext().setClusterTest("true".equals(rpcInfo[5]));
+                    Pradar.getInvokeContext().setClusterTest("true".equals(rpcInfo[6]));
 
                     Pradar.getInvokeContextMap().putAll(traceContext);
                     this.buffer = businessParam.getBytes();

@@ -40,6 +40,7 @@ import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
 import com.pamirs.pradar.pressurement.agent.shared.service.ErrorReporter;
 import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
+import com.pamirs.pradar.script.ScriptManager;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -74,6 +75,7 @@ public class MockPlugin extends ModuleLifecycleAdapter implements ExtensionModul
 
     @Override
     public boolean onActive() throws Throwable {
+        ScriptManager.getInstance();
         try {
             this.watchers = new Hashtable<String, EventWatcher>();
             EventRouter.router().addListener(new PradarEventListener() {

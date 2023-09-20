@@ -65,5 +65,4 @@ public abstract class SimulatorClassFileTransformer implements ClassFileTransfor
     public Map<String, File> getDumpResult() {
         return null;
     }
-
 }

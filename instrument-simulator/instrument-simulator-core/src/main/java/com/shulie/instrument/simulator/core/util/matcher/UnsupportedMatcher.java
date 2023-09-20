@@ -163,6 +163,11 @@ public class UnsupportedMatcher implements Matcher {
         return result;
     }
 
+    @Override
+    public Set<String> getAllListeningTypes() {
+        return Collections.EMPTY_SET;
+    }
+
 
     /**
      * 构造AND关系的组匹配

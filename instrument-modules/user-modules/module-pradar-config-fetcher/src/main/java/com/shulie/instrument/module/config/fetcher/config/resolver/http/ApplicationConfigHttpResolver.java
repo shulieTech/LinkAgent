@@ -693,9 +693,9 @@ public class ApplicationConfigHttpResolver extends AbstractHttpResolver<Applicat
 
         JsonObject jsonObject = GsonFactory.getGson().fromJson(httpResult.getResult(), JsonObject.class);
         try {
-            Float maxRedisExpireTime = jsonObject.get(DATA).getAsFloat();
-            if (maxRedisExpireTime != null) {
-                applicationConfig.setPluginMaxRedisExpireTime(maxRedisExpireTime);
+            JsonElement element = jsonObject.get(DATA);
+            if(!element.isJsonNull()){
+                applicationConfig.setPluginMaxRedisExpireTime(element.getAsFloat());
             }
         } catch (Exception e) {
             logger.error("set pluginMaxRedisExpireTime error", e);

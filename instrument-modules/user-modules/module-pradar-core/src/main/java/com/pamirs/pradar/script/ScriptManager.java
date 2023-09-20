@@ -16,13 +16,12 @@ package com.pamirs.pradar.script;
 
 import bsh.EvalError;
 import bsh.Interpreter;
-import com.pamirs.pradar.script.bsh.BshScriptEvaluator;
-import org.checkerframework.checker.units.qual.C;
+import com.pamirs.pradar.script.bsh.GlobalCacheBshScriptEvaluator;
+import com.pamirs.pradar.script.bsh.ThreadLocalCacheBshScriptEvaluator;
 
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,7 +36,8 @@ public class ScriptManager {
     public ScriptManager() {
         this.evaluators = new HashMap<String, ScriptEvaluator>();
 
-        BshScriptEvaluator bshScriptEvaluator = new BshScriptEvaluator();
+        ScriptEvaluator bshScriptEvaluator = "global".equals(System.getProperty("simulator.mock.interpreter.caches"))
+                ? new GlobalCacheBshScriptEvaluator() : new ThreadLocalCacheBshScriptEvaluator();
         bshScriptEvaluator.setClassLoader(ScriptManager.class.getClassLoader());
         evaluators.put(bshScriptEvaluator.getType(), bshScriptEvaluator);
     }
@@ -107,7 +107,7 @@ public class ScriptManager {
 //        System.out.println("avg: " + ((System.nanoTime() - l1) / max) / 1000);
     }
 
-    private static void test1(int max, String scriptContent,Map<String, Object> binding,String value) {
+    private static void test1(int max, String scriptContent, Map<String, Object> binding, String value) {
         ScriptEvaluator evaluator = ScriptManager.getInstance().getScriptEvaluator("bsh");
         scriptContent = scriptContent.replace("aaa", value);
         Object result = evaluator.evaluate(classLoader, scriptContent, binding);

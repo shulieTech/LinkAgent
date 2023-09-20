@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import static com.shulie.instrument.simulator.api.filter.AccessFlags.*;
 import static com.shulie.instrument.simulator.core.util.SimulatorStringUtils.toInternalClassName;
@@ -137,6 +138,11 @@ public class ExtFilterMatcher implements Matcher {
             throw error;
         }
 
+    }
+
+    @Override
+    public Set<String> getAllListeningTypes() {
+        return extFilter.getAllListeningTypes();
     }
 
     private MatchingResult _matching(final ClassStructure classStructure) {

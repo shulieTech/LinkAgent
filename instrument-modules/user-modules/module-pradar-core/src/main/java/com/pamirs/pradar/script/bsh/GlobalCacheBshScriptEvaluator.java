@@ -195,8 +195,7 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
         }
     }
 
-
-    private synchronized void initScriptCache(String script) {
+    private void initScriptCache(String script) {
         if (interpreterCaches.containsKey(script)) {
             return;
         }

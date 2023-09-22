@@ -121,7 +121,11 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
         InterpreterWrapper wrapper = fetchInterpreterWrapper(script);
         Interpreter interpreter = wrapper.getInterpreter();
         try {
-            interpreter.setClassLoader(this.classLoader);
+            // 非必要不刷新ClassLoader
+            ClassLoader externalClassLoader = ReflectionUtils.get(interpreter.getClassManager(), "externalClassLoader");
+            if(externalClassLoader != this.classLoader){
+                interpreter.setClassLoader(this.classLoader);
+            }
             if (arguments != null) {
                 for (Map.Entry<String, Object> entry : arguments.entrySet()) {
                     interpreter.set(entry.getKey(), entry.getValue());

@@ -14,12 +14,14 @@ import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
 import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.script.ScriptEvaluator;
 import com.pamirs.pradar.script.commons.InterpreterWrapper;
+import com.shulie.instrument.simulator.api.executors.ExecutorServiceFactory;
 
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
@@ -28,6 +30,8 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
     private Map<String, InterpreterWrapper[]> interpreterCaches = new HashMap<String, InterpreterWrapper[]>();
 
     private int interceptorCacheNum = Integer.parseInt(System.getProperty("simulator.mock.interpreter.caches.num", "256"));
+
+    ExecutorService executorService = ExecutorServiceFactory.getFactory().getGlobalExecutorService();
 
     /**
      * Construct a new BshScriptEvaluator.
@@ -40,7 +44,12 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
                 synchronized (this) {
                     if (event instanceof MockConfigAddEvent) {
                         for (MockConfig mockConfig : ((MockConfigAddEvent) event).getTarget()) {
-                            initScriptCache(mockConfig.getCodeScript());
+                            executorService.submit(new Runnable() {
+                                @Override
+                                public void run() {
+                                    initScriptCache(mockConfig.getCodeScript());
+                                }
+                            });
                         }
                     } else if (event instanceof MockConfigRemoveEvent) {
                         for (MockConfig mockConfig : ((MockConfigAddEvent) event).getTarget()) {
@@ -59,7 +68,12 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
                         }
                         for (String script : scripts) {
                             if (!interpreterCaches.containsKey(script)) {
-                                initScriptCache(script);
+                                executorService.submit(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        initScriptCache(script);
+                                    }
+                                });
                             }
                         }
 
@@ -183,6 +197,9 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
 
     private synchronized void initScriptCache(String script) {
+        if (interpreterCaches.containsKey(script)) {
+            return;
+        }
         InterpreterWrapper[] caches = new InterpreterWrapper[interceptorCacheNum];
         for (int i = 0; i < interceptorCacheNum; i++) {
             caches[i] = new InterpreterWrapper(new Interpreter(), false);

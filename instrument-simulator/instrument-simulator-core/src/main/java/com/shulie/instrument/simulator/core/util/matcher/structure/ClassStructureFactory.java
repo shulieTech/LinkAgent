@@ -55,6 +55,7 @@ public class ClassStructureFactory {
                         enableCacheClassStructure = false;
                         classStructureCache.clear();
                         IgnoredTypesPredicateImpl.clearIgnoredTypesCache();
+                        break;
                     }
                     try {
                         Thread.sleep(60 * 1000);

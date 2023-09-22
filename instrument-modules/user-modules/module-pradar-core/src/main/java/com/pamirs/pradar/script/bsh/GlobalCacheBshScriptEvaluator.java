@@ -31,6 +31,8 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
     private int interceptorCacheNum = Integer.parseInt(System.getProperty("simulator.mock.interpreter.caches.num", "256"));
 
+    ExecutorService executorService = ExecutorServiceFactory.getFactory().getGlobalExecutorService();
+
     /**
      * Construct a new BshScriptEvaluator.
      */
@@ -41,7 +43,6 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
             public EventResult onEvent(IEvent event) {
                 synchronized (this) {
                     if (event instanceof MockConfigAddEvent) {
-                        ExecutorService executorService = ExecutorServiceFactory.getFactory().getGlobalExecutorService();
                         for (MockConfig mockConfig : ((MockConfigAddEvent) event).getTarget()) {
                             executorService.submit(new Runnable() {
                                 @Override
@@ -67,7 +68,12 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
                         }
                         for (String script : scripts) {
                             if (!interpreterCaches.containsKey(script)) {
-                                initScriptCache(script);
+                                executorService.submit(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        initScriptCache(script);
+                                    }
+                                });
                             }
                         }
 

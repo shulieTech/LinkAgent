@@ -1,6 +1,7 @@
 package io.shulie.instrument.module.messaging.ons;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.pamirs.pradar.common.HttpUtils;
@@ -37,7 +38,11 @@ public class OnsShadowClusterConfigure {
         }
         String json = httpResult.getResult();
         JsonObject jsonObject = GsonFactory.getGson().fromJson(json, JsonObject.class);
-        JsonArray data = jsonObject.get("data").getAsJsonArray();
+        JsonElement element = jsonObject.get("data");
+        if(element.isJsonNull()){
+            return StringUtils.EMPTY;
+        }
+        JsonArray data = element.getAsJsonArray();
         List<JsonObject> result = new ArrayList<JsonObject>();
         if (data == null) {
             config = StringUtils.EMPTY;

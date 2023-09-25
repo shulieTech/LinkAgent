@@ -12,21 +12,7 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
     private Trie<IgnoreAllow> ignoredTypesTrie;
     private Trie<IgnoreAllow> ignoredClassLoadersTrie;
 
-
-    private static ClassLoader nullClassloader = new ClassLoader() {
-        @Override
-        public Class<?> loadClass(String name) throws ClassNotFoundException {
-            return super.loadClass(name);
-        }
-
-        @Override
-        public int hashCode() {
-            return 1;
-        }
-    }.getParent();
-
-    private static HashBasedTable<ClassLoader, String, IgnoreAllow> ignoreCaches = HashBasedTable.create(256, 2 << 13);
-
+    private static HashBasedTable<String, String, IgnoreAllow> ignoreCaches = HashBasedTable.create(256, 2 << 13);
 
     public IgnoredTypesPredicateImpl(Trie<IgnoreAllow> ignoredTypesTrie, Trie<IgnoreAllow> ignoredClassLoadersTrie) {
         this.ignoredTypesTrie = ignoredTypesTrie;
@@ -35,19 +21,19 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
     @Override
     public boolean test(ClassLoader loader, String internalClassName) {
-        loader = loader == null ? nullClassloader : loader;
-        IgnoreAllow ignoreAllow = ignoreCaches.get(loader, internalClassName);
+        String classLoaderKey = loader == null ? "nullClassloader" : loader.getClass().getName();
+        IgnoreAllow ignoreAllow = ignoreCaches.get(classLoaderKey, internalClassName);
         if (ignoreAllow != null) {
             return ignoreAllow == IgnoreAllow.ALLOW;
         }
         boolean allow = true;
-        if (ignoredClassLoadersTrie.getOrNull(loader.getClass().getName()) == IgnoreAllow.IGNORE) {
+        if (ignoredClassLoadersTrie.getOrNull(classLoaderKey) == IgnoreAllow.IGNORE) {
             allow = false;
         }
         if (allow && (ignoredTypesTrie.getOrNull(internalClassName) == IgnoreAllow.IGNORE)) {
             allow = false;
         }
-        ignoreCaches.put(loader, internalClassName, allow ? IgnoreAllow.ALLOW : IgnoreAllow.IGNORE);
+        ignoreCaches.put(classLoaderKey, internalClassName, allow ? IgnoreAllow.ALLOW : IgnoreAllow.IGNORE);
         return allow;
     }
 

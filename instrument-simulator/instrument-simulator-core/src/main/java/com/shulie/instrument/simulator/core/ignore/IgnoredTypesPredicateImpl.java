@@ -21,7 +21,7 @@ public class IgnoredTypesPredicateImpl implements IgnoredTypesPredicate {
 
     @Override
     public boolean test(ClassLoader loader, String internalClassName) {
-        String classLoaderKey = loader == null ? "nullClassloader" : loader.getClass().getName();
+        String classLoaderKey = loader == null ? "bootstrapClassLoader" : loader.getClass().getName();
         IgnoreAllow ignoreAllow = ignoreCaches.get(classLoaderKey, internalClassName);
         if (ignoreAllow != null) {
             return ignoreAllow == IgnoreAllow.ALLOW;

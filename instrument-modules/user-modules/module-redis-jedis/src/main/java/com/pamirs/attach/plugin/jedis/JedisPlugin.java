@@ -152,7 +152,7 @@ public class JedisPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod sendCommand = target.getDeclaredMethods("sendCommand");
-                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandTraceInterceptor.class));
+                sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandTraceInterceptor.class, "JEDIS_COMMAND_TRACE_SCOPE", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                 sendCommand.addInterceptor(Listeners.of(JedisConnectionSendCommandInterceptor.class));
                 sendCommand.addInterceptor(Listeners.of(JedisSingleClientCutOffInterceptor.class));
             }

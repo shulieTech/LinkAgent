@@ -157,13 +157,13 @@ public class ConsumerManager {
     private static void doConsumerRegister(ConsumerRegisterModule consumerRegisterModule) {
         for (Map.Entry<String, SyncObject> entry : consumerRegisterModule.getSyncObjectMap().entrySet()) {
             for (SyncObjectData objectData : entry.getValue().getDatas()) {
+                //已经初始化过shadowConsumerExecute的就不需要重新初始化了
                 if (!consumerRegisterModule.getSyncObjectDataMap().containsKey(objectData)) {
                     try {
                         BizClassLoaderService.setBizClassLoader(objectData.getTarget().getClass().getClassLoader());
                         ShadowConsumerExecute shadowConsumerExecute = prepareShadowConsumerExecute(consumerRegisterModule, objectData);
                         List<ConsumerConfig> configList = shadowConsumerExecute.prepareConfig(objectData);
                         if (configList != null && !configList.isEmpty()) {
-                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
                             for (ConsumerConfig consumerConfig : configList) {
                                 if (!isValidConfig(consumerConfig)) {
                                     continue;
@@ -177,6 +177,11 @@ public class ConsumerManager {
                                 enhanceIsolationBytecode(consumerRegisterModule, bizTarget);
                                 addShadowServerModule(keyOfObj, consumerConfig, shadowConsumerExecute, bizTarget);
                             }
+                            //初始化成功的，添加到map中
+                            consumerRegisterModule.getSyncObjectDataMap().put(objectData, shadowConsumerExecute);
+                            logger.info("[messaging-common]success prepareConfig from: {}, key:{}", entry.getKey(), configList.stream().map(ConsumerConfig::keyOfConfig).collect(Collectors.joining(",")));
+                        } else {
+                            logger.warn("[messaging-common]fail prepareConfig from: {}, configList is empty!", entry.getKey());
                         }
                     } catch (Throwable e) {
                         logger.error("[messaging-common]prepare Config fail:" + consumerRegisterModule.getName(), e);
@@ -208,7 +213,6 @@ public class ConsumerManager {
             } catch (Throwable e) {
                 throw new MessagingRuntimeException("can not init shadowConsumerExecute:" + consumerRegisterModule.getName(), e);
             }
-            consumerRegisterModule.getSyncObjectDataMap().put(objectData, shadowConsumerExecute);
         }
         return shadowConsumerExecute;
     }
@@ -267,7 +271,6 @@ public class ConsumerManager {
     private static void refreshSyncObj(ConsumerRegisterModule consumerRegisterModule) {
         try {
             synchronized (consumerRegisterModule) {
-                boolean isRefreshed = false;
                 for (Map.Entry<String, SyncObject> entry : consumerRegisterModule.getSyncObjectMap().entrySet()) {
                     //当时获取不到的，重新再获取一次
                     if (entry.getValue() == EMPTY_SYNC_OBJECT) {
@@ -276,14 +279,11 @@ public class ConsumerManager {
                         if (newData != null) {
                             logger.info("[messaging-common]success fetch sync data from {}", key);
                             entry.setValue(newData);
-                            isRefreshed = true;
                         }
                     }
                 }
-                if (isRefreshed) {
-                    //有拿到新注册上来的信息， 重新做一次注册
-                    doConsumerRegister(consumerRegisterModule);
-                }
+                //刷新所有的配置，同一个 SyncObject 可能有新增的调用，这些新增调用都需要刷新
+                doConsumerRegister(consumerRegisterModule);
             }
         } catch (Throwable e) {
             logger.warn("start task fail,will try next time: {}", consumerRegisterModule.getName(), e);

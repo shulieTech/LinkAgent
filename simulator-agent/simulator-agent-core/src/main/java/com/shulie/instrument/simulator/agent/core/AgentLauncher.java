@@ -297,7 +297,7 @@ public class AgentLauncher {
     private String fetchConfig() {
         StringBuilder builder = new StringBuilder();
         if (StringUtils.isNotBlank(this.agentConfig.getAppName())) {
-            builder.append(";app.name=").append(encodeArg(this.agentConfig.getAppName()));
+            builder.append(";simulator.app.name=").append(encodeArg(this.agentConfig.getAppName()));
         }
         if (StringUtils.isNotBlank(this.agentConfig.getAgentId())) {
             builder.append(";agentId=").append(encodeArg(this.agentConfig.getAgentId()));

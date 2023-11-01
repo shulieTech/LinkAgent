@@ -289,7 +289,7 @@ public class CustomerRollingFileAppender<E> extends FileAppender<E> {
                 stringBuilder.append(System.getProperty("pradar.user.id")).append("|");
             }
             stringBuilder.append(System.getProperty("agentId")).append("|");
-            stringBuilder.append(System.getProperty("app_name")).append("|");
+            stringBuilder.append(System.getProperty("simulator.app.name")).append("|");
             stringBuilder.append(errorMsg);
             try {
                 messageFiled.set(event, stringBuilder.toString());

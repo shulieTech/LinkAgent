@@ -58,11 +58,11 @@ public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
             interpreter.setClassLoader(this.classLoader);
             if (arguments != null) {
                 for (Map.Entry<String, Object> entry : arguments.entrySet()) {
-                    interpreter.set(entry.getKey(), entry.getValue());
+                    ns.setVariable(entry.getKey(), entry.getValue(),false);
                 }
             }
             return interpreter.eval(script,ns);
-        } catch (EvalError ex) {
+        } catch (Exception ex) {
             throw new RuntimeException(script, ex);
         }
     }

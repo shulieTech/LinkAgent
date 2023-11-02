@@ -207,10 +207,6 @@ abstract class TraceInterceptor extends BaseInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
-        // 业务流量,且业务trace开关关闭,不执行trace interceptor
-        if (!Pradar.isClusterTest() && !PradarSwitcher.isSwitchSaveBusinessTrace()) {
-            return;
-        }
         ClusterTestUtils.validateClusterTest();
         Throwable throwable = null;
         try {

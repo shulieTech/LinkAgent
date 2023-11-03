@@ -30,32 +30,15 @@ public enum DbType {
         public SqlMetaData readMetaData(String url) {
             String mainUrl = getMainUrl(url);
             String dbName = null;
-
             if (mainUrl.contains("/")) {
                 dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
-                mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
             }
-
             try {
-                String host = null;
-                if (mainUrl.indexOf(':') != -1) {
-                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
-                    mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
-                } else {
-                    host = mainUrl;
-                    mainUrl = null;
-                }
-                String port = "3306";
-                if (null != mainUrl && !"".equals(mainUrl)) {
-                    try {
-                        port = mainUrl;
-                    } catch (NumberFormatException e) {
-                    }
-                }
+                Map.Entry<String, String> hostPortEntry = JdbcUrlParser.extractUrl(url, mainUrl, "3306");
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.MYSQL);
-                sqlMetaData.setHost(host);
-                sqlMetaData.setPort(port);
+                sqlMetaData.setHost(hostPortEntry.getKey());
+                sqlMetaData.setPort(hostPortEntry.getValue());
                 sqlMetaData.setDbName(StringUtils.lowerCase(dbName));
                 sqlMetaData.setUrl(url);
                 return sqlMetaData;
@@ -68,28 +51,13 @@ public enum DbType {
         @Override
         public SqlMetaData readMetaData(String url) {
             String mainUrl = getMainUrl(url);
+            Map.Entry<String, String> hostPortEntry = JdbcUrlParser.extractUrl(url, mainUrl, "2883");
             String dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
-            mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
             try {
-                String host = null;
-                if (mainUrl.indexOf(':') != -1) {
-                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
-                    mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
-                } else {
-                    host = mainUrl;
-                    mainUrl = null;
-                }
-                String port = "2883";
-                if (null != mainUrl && !"".equals(mainUrl)) {
-                    try {
-                        port = mainUrl;
-                    } catch (NumberFormatException e) {
-                    }
-                }
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.MYSQL);
-                sqlMetaData.setHost(host);
-                sqlMetaData.setPort(port);
+                sqlMetaData.setHost(hostPortEntry.getKey());
+                sqlMetaData.setPort(hostPortEntry.getValue());
                 sqlMetaData.setDbName(StringUtils.lowerCase(dbName));
                 sqlMetaData.setUrl(url);
                 return sqlMetaData;
@@ -190,13 +158,11 @@ public enum DbType {
             String mainUrl = getMainUrl(url);
             try {
                 String host = mainUrl.substring(0, mainUrl.indexOf(':'));
+                Map.Entry<String, String> hostPortEntry = JdbcUrlParser.extractUrl(url, host, "1433");
                 mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
-                String port = "1433";
                 if (mainUrl.charAt(0) != ';' && mainUrl.indexOf(';') != -1) {
-                    port = mainUrl.substring(0, mainUrl.indexOf(';'));
                     mainUrl = mainUrl.substring(mainUrl.indexOf(';') + 1);
                 } else if (mainUrl.contains("/")) {
-                    port = mainUrl.substring(0, mainUrl.indexOf("/"));
                     mainUrl = mainUrl.substring(mainUrl.indexOf("/") + 1);
                 }
 
@@ -226,8 +192,8 @@ public enum DbType {
 
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.SQLSERVER);
-                sqlMetaData.setHost(host);
-                sqlMetaData.setPort(port);
+                sqlMetaData.setHost(hostPortEntry.getKey());
+                sqlMetaData.setPort(hostPortEntry.getValue());
                 sqlMetaData.setDbName(org.apache.commons.lang.StringUtils.lowerCase(dbName));
                 sqlMetaData.setUrl(url);
                 return sqlMetaData;
@@ -244,7 +210,9 @@ public enum DbType {
                 String host = null;
                 String port = "50000";
                 if (mainUrl.indexOf(':') != -1) {
-                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
+                    Map.Entry<String, String> hostPortEntry = JdbcUrlParser.extractUrl(url, mainUrl, port);
+                    host = hostPortEntry.getKey();
+                    port = hostPortEntry.getValue();
                     mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
                 } else {
                     host = "";// PradarCoreUtils.getLocalAddress();
@@ -257,7 +225,6 @@ public enum DbType {
                     return sqlMetaData;
                 }
 
-                port = mainUrl.substring(0, mainUrl.indexOf('/'));
                 String dbName = mainUrl.substring(mainUrl.indexOf('/') + 1);
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.DB2);
@@ -279,7 +246,9 @@ public enum DbType {
                 String host = null;
                 String port = "5432";
                 if (mainUrl.indexOf(':') != -1) {
-                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
+                    Map.Entry<String, String> hostPortEntry = JdbcUrlParser.extractUrl(url, mainUrl, port);
+                    host = hostPortEntry.getKey();
+                    port = hostPortEntry.getValue();
                     mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
                 } else {
                     host = PradarCoreUtils.getLocalAddress();
@@ -292,7 +261,6 @@ public enum DbType {
                     return sqlMetaData;
                 }
 
-                port = mainUrl.substring(0, mainUrl.indexOf('/'));
                 String dbName = mainUrl.substring(mainUrl.indexOf('/') + 1);
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.POSTGRESQL);
@@ -313,25 +281,11 @@ public enum DbType {
             String dbName = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
             mainUrl = mainUrl.substring(0, mainUrl.lastIndexOf('/'));
             try {
-                String host = null;
-                if (mainUrl.indexOf(':') != -1) {
-                    host = mainUrl.substring(0, mainUrl.indexOf(':'));
-                    mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
-                } else {
-                    host = mainUrl;
-                    mainUrl = null;
-                }
-                String port = "1521";
-                if (null != mainUrl && !"".equals(mainUrl)) {
-                    try {
-                        port = mainUrl;
-                    } catch (NumberFormatException e) {
-                    }
-                }
+                Map.Entry<String, String> hostPostEntry = JdbcUrlParser.extractUrl(url, mainUrl, "1521");
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.POLARDB);
-                sqlMetaData.setHost(host);
-                sqlMetaData.setPort(port);
+                sqlMetaData.setHost(hostPostEntry.getKey());
+                sqlMetaData.setPort(hostPostEntry.getValue());
                 sqlMetaData.setDbName(StringUtils.lowerCase(dbName));
                 sqlMetaData.setUrl(url);
                 return sqlMetaData;
@@ -349,6 +303,9 @@ public enum DbType {
                 String port = "10000";
                 if (mainUrl.indexOf(':') != -1) {
                     host = mainUrl.substring(0, mainUrl.indexOf(':'));
+                    Map.Entry<String, String> hostPostEntry = JdbcUrlParser.extractUrl(url, host, "10000");
+                    host = hostPostEntry.getKey();
+                    port = hostPostEntry.getValue();
                     mainUrl = mainUrl.substring(mainUrl.indexOf(':') + 1);
                 } else {
                     host = "127.0.0.1";
@@ -361,7 +318,6 @@ public enum DbType {
                     return sqlMetaData;
                 }
 
-                port = mainUrl.substring(0, mainUrl.indexOf('/'));
                 String dbName = mainUrl.substring(mainUrl.indexOf('/') + 1);
                 SqlMetaData sqlMetaData = new SqlMetaData();
                 sqlMetaData.setDbType(DbType.HIVE);

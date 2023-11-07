@@ -1,6 +1,7 @@
 package com.shulie.instrument.simulator.agent.instrument;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.lang.instrument.Instrumentation;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
@@ -36,7 +37,11 @@ public class TtlAgentBootstrapper {
         }
         try {
             String agentHome = agentPath.substring("-javaagent:".length(), agentPath.length() - "simulator-launcher-instrument.jar".length() - 1);
-            String ttlAgentPath = agentHome + File.separator + "bootstrap" + File.separator + "transmittable-thread-local-2.12.1.jar";
+            File ttlAgentJarFile = findTtlAgentJarFile(agentHome);
+            if (ttlAgentJarFile == null) {
+                return;
+            }
+            String ttlAgentPath = agentHome + File.separator + "bootstrap" + File.separator + ttlAgentJarFile.getName();
             JarFile ttlJar = new JarFile((new File(ttlAgentPath)));
             instrumentation.appendToBootstrapClassLoaderSearch(ttlJar);
             instrumentation.appendToSystemClassLoaderSearch(ttlJar);
@@ -51,6 +56,19 @@ public class TtlAgentBootstrapper {
             t.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private static File findTtlAgentJarFile(String dir) {
+        File[] files = new File(dir + File.separator + "bootstrap").listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.getName().contains("transmittable-thread-local");
+            }
+        });
+        if (files.length == 0) {
+            return null;
+        }
+        return files[0];
     }
 
 

@@ -16,6 +16,7 @@ package com.pamirs.pradar.script.bsh;
 
 import bsh.EvalError;
 import bsh.Interpreter;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.script.ScriptEvaluator;
 
 import java.io.StringReader;
@@ -27,30 +28,14 @@ import java.util.Map;
  * @since 2021/6/18 2:35 下午
  */
 public class ThreadLocalCacheBshScriptEvaluator implements ScriptEvaluator {
+
     private ClassLoader classLoader;
 
     private ThreadLocal<Map<String, Interpreter>> tt = new ThreadLocal<Map<String, Interpreter>>();
 
-    /**
-     * Construct a new BshScriptEvaluator.
-     */
-    public ThreadLocalCacheBshScriptEvaluator() {
-    }
-
-    /**
-     * Construct a new BshScriptEvaluator.
-     *
-     * @param classLoader the ClassLoader to use for the {@link Interpreter}
-     */
-    public ThreadLocalCacheBshScriptEvaluator(ClassLoader classLoader) {
-        this.classLoader = classLoader;
-    }
-
-
     public void setClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
-
 
     @Override
     public String getType() {
@@ -66,7 +51,11 @@ public class ThreadLocalCacheBshScriptEvaluator implements ScriptEvaluator {
     public Object evaluate(String script, Map<String, Object> arguments) {
         try {
             Interpreter interpreter = fetchInterpreter(classLoader, script);
-            interpreter.setClassLoader(this.classLoader);
+            // 非必要不刷新ClassLoader
+            ClassLoader externalClassLoader = ReflectionUtils.get(interpreter.getClassManager(), "externalClassLoader");
+            if (externalClassLoader != this.classLoader) {
+                interpreter.setClassLoader(this.classLoader);
+            }
             if (arguments != null) {
                 for (Map.Entry<String, Object> entry : arguments.entrySet()) {
                     interpreter.set(entry.getKey(), entry.getValue());
@@ -82,8 +71,6 @@ public class ThreadLocalCacheBshScriptEvaluator implements ScriptEvaluator {
     public Object evaluate(ClassLoader classLoader, String script, Map<String, Object> arguments) {
         try {
             Interpreter interpreter = fetchInterpreter(classLoader, script);
-//            Interpreter interpreter = new Interpreter();
-//            interpreter.setClassLoader(classLoader);
             if (arguments != null) {
                 for (Map.Entry<String, Object> entry : arguments.entrySet()) {
                     interpreter.set(entry.getKey(), entry.getValue());

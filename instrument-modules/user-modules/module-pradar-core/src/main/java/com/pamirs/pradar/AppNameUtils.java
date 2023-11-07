@@ -19,10 +19,6 @@ public class AppNameUtils {
     private static final String DEFAULT = "default";
 
     public static final String appName() {
-        String appName = System.getProperty("simulator.app.name", "default");
-        if (DEFAULT.equals(appName)) {
-            appName = System.getProperty("app.name", "default");
-        }
-        return appName;
+        return System.getProperty("simulator.app.name", DEFAULT);
     }
 }

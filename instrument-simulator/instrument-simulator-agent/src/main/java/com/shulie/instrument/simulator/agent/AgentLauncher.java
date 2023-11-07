@@ -156,7 +156,7 @@ public class AgentLauncher {
     private static final String KEY_MONITOR_MAX_FILE_SIZE = "monitorFileSize";
     private static final String DEFAULT_MONITOR_MAX_FILE_SIZE = "";
 
-    private static final String KEY_APP_NAME = "app.name";
+    private static final String KEY_APP_NAME = "simulator.app.name";
     private static final String DEFAULT_APP_NAME = "";
 
     private static final String KEY_AGENT_ID = "agentId";

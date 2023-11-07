@@ -610,9 +610,15 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                         continue;
                     }
                     if (StringUtils.indexOf(str, ":") == -1) {
+                        if (StringUtils.isNumeric(str)){
+                            return str;
+                        }
                         builder.append(str).append(',');
                     } else {
                         String[] arr = StringUtils.split(str, ':');
+                        if (!"".equals(getNumPort(arr))){
+                            return getNumPort(arr);
+                        }
                         builder.append(arr[0]).append(',');
                     }
                 }
@@ -631,9 +637,15 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
             StringBuilder builder = new StringBuilder();
             if (StringUtils.isNotBlank(masterAddress)) {
                 if (StringUtils.indexOf(masterAddress, ":") == -1) {
+                    if (StringUtils.isNumeric(masterAddress)){
+                        return masterAddress;
+                    }
                     builder.append(masterAddress).append(',');
                 } else {
                     String[] arr = StringUtils.split(masterAddress, ':');
+                    if (!"".equals(getNumPort(arr))){
+                        return getNumPort(arr);
+                    }
                     builder.append(arr[0]).append(',');
                 }
             }
@@ -646,9 +658,15 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                         continue;
                     }
                     if (StringUtils.indexOf(str, ":") == -1) {
+                        if (StringUtils.isNumeric(str)){
+                            return str;
+                        }
                         builder.append(str).append(',');
                     } else {
                         String[] arr = StringUtils.split(str, ':');
+                        if (!"".equals(getNumPort(arr))){
+                            return getNumPort(arr);
+                        }
                         builder.append(arr[0]).append(',');
                     }
                 }
@@ -669,7 +687,7 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                     return address;
                 } else {
                     String[] arr = StringUtils.split(address, ':');
-                    return StringUtils.trim(arr[0]);
+                    return getNumPort(arr);
                 }
             }
         }
@@ -685,9 +703,15 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                         continue;
                     }
                     if (StringUtils.indexOf(str, ":") == -1) {
+                        if (StringUtils.isNumeric(str)){
+                            return str;
+                        }
                         builder.append(str).append(',');
                     } else {
                         String[] arr = StringUtils.split(str, ':');
+                        if (!"".equals(getNumPort(arr))){
+                            return getNumPort(arr);
+                        }
                         builder.append(arr[0]).append(',');
                     }
                 }
@@ -710,9 +734,15 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
                     continue;
                 }
                 if (StringUtils.indexOf(str, ":") == -1) {
+                    if (StringUtils.isNumeric(str)){
+                        return str;
+                    }
                     builder.append(str).append(',');
                 } else {
                     String[] arr = StringUtils.split(str, ':');
+                    if (!"".equals(getNumPort(arr))){
+                        return getNumPort(arr);
+                    }
                     builder.append(arr[0]).append(',');
                 }
             }
@@ -743,5 +773,15 @@ public abstract class BaseRedissonTimeSeriesMethodInterceptor extends TraceInter
             }
         }
         return ret;
+    }
+
+    private String getNumPort(String[] args){
+        for (String s : args){
+            String str = s.trim();
+            if (StringUtils.isNumeric(str)){
+                return str;
+            }
+        }
+        return "";
     }
 }

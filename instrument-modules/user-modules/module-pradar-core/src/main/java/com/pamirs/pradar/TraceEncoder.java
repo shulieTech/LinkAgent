@@ -82,7 +82,7 @@ class TraceInvokeContextEncoder extends TraceEncoder {
                         ResultSerializer.serializeRequest(ctx.getRequest() == null ? "" : ctx.getRequest(),
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(PradarCoreUtils.makeLogSafe(
-                        ResultSerializer.serializeRequest(ctx.getMockResponse() != null ? ctx.getMockResponse() : ctx.getResponse() != null ? ctx.getResponse() : "" ,
+                        ResultSerializer.serializeRequest(ctx.getMockResponse() != null ? ctx.getMockResponse() : ctx.getResponse() != null ? ctx.getResponse() : "",
                                 Pradar.getPluginRequestSize()))).append('|')
                 .append(TraceCoreUtils.combineString(ctx.isClusterTest(), ctx.isDebug(),
                         "0".equals(ctx.invokeId),
@@ -247,8 +247,12 @@ class TraceCollectorInvokeEncoder extends TraceEncoder {
         traceData.setServer(TraceCoreUtils.isServer(ctx));
         traceData.setUpAppName(ctx.upAppName);
         traceData.setRemoteIp(ctx.remoteIp);
-        traceData.setPort(StringUtils.isBlank(ctx.getPort()) ? 0 : Integer.parseInt(ctx.getPort()));
-        if (ctx.attributes != null && ctx.attributes.containsKey(PradarService.PRADAR_TRACE_NODE_KEY)){
+        try {
+            traceData.setPort(StringUtils.isBlank(ctx.getPort()) ? 0 : Integer.parseInt(ctx.getPort()));
+        } catch (Exception e) {
+            traceData.setPort(0);
+        }
+        if (ctx.attributes != null && ctx.attributes.containsKey(PradarService.PRADAR_TRACE_NODE_KEY)) {
             traceData.setEntranceId(ctx.attributes.get(PradarService.PRADAR_TRACE_NODE_KEY));
         }
 

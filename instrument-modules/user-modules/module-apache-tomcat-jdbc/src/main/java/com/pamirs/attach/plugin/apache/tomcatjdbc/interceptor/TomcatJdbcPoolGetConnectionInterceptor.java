@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.apache.tomcatjdbc.interceptor;
 
-import com.pamirs.attach.plugin.common.datasource.utils.JdbcUrlParser;
+import com.pamirs.pradar.pressurement.datasource.util.JdbcUrlParser;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;
 import com.pamirs.pradar.ResultCode;

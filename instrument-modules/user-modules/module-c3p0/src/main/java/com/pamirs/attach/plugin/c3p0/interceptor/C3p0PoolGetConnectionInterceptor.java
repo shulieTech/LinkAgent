@@ -1,6 +1,6 @@
 package com.pamirs.attach.plugin.c3p0.interceptor;
 
-import com.pamirs.attach.plugin.common.datasource.utils.JdbcUrlParser;
+import com.pamirs.pradar.pressurement.datasource.util.JdbcUrlParser;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.pamirs.pradar.MiddlewareType;
 import com.pamirs.pradar.Pradar;

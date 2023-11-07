@@ -61,6 +61,8 @@ public class KafkaRegister implements Register {
         agentHeartbeatData.setTenantAppKey(Pradar.PRADAR_TENANT_KEY);
         agentHeartbeatData.setEnvCode(Pradar.PRADAR_ENV_CODE);
         agentHeartbeatData.setAppName(appName);
+        agentHeartbeatData.setAgentVersion(simulatorConfig.getAgentVersion());
+        agentHeartbeatData.setSimulatorVersion(simulatorConfig.getSimulatorVersion());
         try {
             agentHeartbeatData.setUserId(Long.parseLong(Pradar.PRADAR_USER_ID));
         } catch (Exception e) {
@@ -69,7 +71,6 @@ public class KafkaRegister implements Register {
 
         if (sendCount.get() <= 5){
             sendCount.incrementAndGet();
-            agentHeartbeatData.setSimulatorVersion(simulatorConfig.getSimulatorVersion());
             agentHeartbeatData.setAddress(PradarCoreUtils.getLocalAddress());
             agentHeartbeatData.setPid(RuntimeUtils.getPid());
             agentHeartbeatData.setAgentLanguage("JAVA");
@@ -77,7 +78,6 @@ public class KafkaRegister implements Register {
             agentHeartbeatData.setJvmArgs(inputArgs);
             agentHeartbeatData.setHost(PradarCoreUtils.getHostName());
             agentHeartbeatData.setName(RuntimeUtils.getName());
-            agentHeartbeatData.setAgentVersion(simulatorConfig.getAgentVersion());
             agentHeartbeatData.setMd5(md5);
 
             //设置jdk版本

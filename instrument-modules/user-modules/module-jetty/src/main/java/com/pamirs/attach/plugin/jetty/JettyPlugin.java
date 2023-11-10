@@ -15,6 +15,7 @@
 package com.pamirs.attach.plugin.jetty;
 
 import com.pamirs.attach.plugin.jetty.interceptor.*;
+import com.pamirs.pradar.interceptor.Interceptors;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -22,6 +23,7 @@ import com.shulie.instrument.simulator.api.instrument.EnhanceCallback;
 import com.shulie.instrument.simulator.api.instrument.InstrumentClass;
 import com.shulie.instrument.simulator.api.instrument.InstrumentMethod;
 import com.shulie.instrument.simulator.api.listener.Listeners;
+import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 
 /**
@@ -42,7 +44,7 @@ public class JettyPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             public void doEnhance(InstrumentClass target) {
                 // 7.x ~ 9.x
                 final InstrumentMethod handleMethod = target.getDeclaredMethod("handle", "java.lang.String", "org.eclipse.jetty.server.Request", "javax.servlet.http.HttpServletRequest", "javax.servlet.http.HttpServletResponse");
-                handleMethod.addInterceptor(Listeners.of(JettyServerHandleInterceptor.class));
+                handleMethod.addInterceptor(Listeners.of(JettyServerHandleInterceptor.class,"JETTY_SERVER", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
 
@@ -51,7 +53,7 @@ public class JettyPlugin extends ModuleLifecycleAdapter implements ExtensionModu
             @Override
             public void doEnhance(InstrumentClass target) {
                 InstrumentMethod handleMethod = target.getDeclaredMethod("handle", "java.lang.String", "javax.servlet.http.HttpServletRequest", "javax.servlet.http.HttpServletResponse", "int");
-                handleMethod.addInterceptor(Listeners.of(Jetty6xServerHandleInterceptor.class));
+                handleMethod.addInterceptor(Listeners.of(Jetty6xServerHandleInterceptor.class,"JETTY_SERVER", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
             }
         });
 

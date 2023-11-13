@@ -44,6 +44,7 @@ import java.io.InputStream;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -190,7 +191,7 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
             }
         } catch (IOException e) {
         }
-        return new String(os.toByteArray());
+        return new String(os.toByteArray(), Charset.forName("UTF-8"));
     }
 
     private Map getParameters(HttpRequest httpRequest) {
@@ -211,7 +212,7 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
             InputStream in = null;
             try {
                 in = httpEntity.getContent();
-                parameters.putAll(toMap(toString(in)));
+                parameters.put("httpEntity",toString(in));
             } catch (Throwable t) {
             } finally {
                 if (in != null) {
@@ -231,7 +232,7 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
             InputStream in = null;
             try {
                 in = httpEntity.getContent();
-                parameters.putAll(toMap(toString(in)));
+                parameters.put("httpEntity",toString(in));
             } catch (Throwable t) {
             } finally {
                 if (in != null) {
@@ -271,7 +272,7 @@ public class HttpClientv5MethodInterceptor1 extends TraceInterceptorAdaptor {
             InputStream in = null;
             try {
                 in = httpEntity.getContent();
-                parameters.putAll(toMap(toString(in)));
+                parameters.put("httpEntity",toString(in));
             } catch (Throwable t) {
             } finally {
                 if (in != null) {

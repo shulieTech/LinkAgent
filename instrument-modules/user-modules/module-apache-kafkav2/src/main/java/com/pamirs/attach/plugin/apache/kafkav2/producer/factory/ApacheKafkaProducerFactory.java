@@ -1,5 +1,6 @@
 package com.pamirs.attach.plugin.apache.kafkav2.producer.factory;
 
+import com.pamirs.pradar.Pradar;
 import com.shulie.instrument.simulator.api.reflect.Reflect;
 import io.shulie.instrument.module.isolation.resource.ShadowResourceLifecycle;
 import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
@@ -7,6 +8,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serializer;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -27,8 +29,13 @@ public class ApacheKafkaProducerFactory implements ShadowResourceProxyFactory {
         Map originals = Reflect.on(producerConfig).field("originals").get();
         Serializer keySerializer = Reflect.on(bizProducer).field("keySerializer").get();
         Serializer valueSerializer = Reflect.on(bizProducer).field("valueSerializer").get();
-
-        KafkaProducer producer = new KafkaProducer(originals, keySerializer, valueSerializer);
+        HashMap<Object, Object> config = new HashMap<>(originals);
+        if(config.get("transactional.id") != null){
+            String txId = config.get("transactional.id").toString();
+            String shadowTxId = Pradar.getClusterTestPrefix() + txId;
+            config.put("transactional.id",shadowTxId);
+        }
+        KafkaProducer producer = new KafkaProducer(config, keySerializer, valueSerializer);
         resource.setKafkaProducer(producer);
         return resource;
     }

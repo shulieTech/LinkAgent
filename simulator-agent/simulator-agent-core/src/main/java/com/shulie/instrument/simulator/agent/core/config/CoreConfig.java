@@ -355,9 +355,6 @@ public class CoreConfig {
         if (StringUtils.isBlank(value)) {
             value = getPropertyInAll("pradar.project.name");
         }
-        if (StringUtils.isBlank(value)) {
-            value = getPropertyInAll("app.name");
-        }
         return value != null ? value : "default";
     }
 

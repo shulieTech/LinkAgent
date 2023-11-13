@@ -26,7 +26,7 @@ public class PropertyUtil {
     public static String appName() {
         String appName = System.getProperty("simulator.app.name", "default");
         if (DEFAULT.equals(appName)) {
-            appName = System.getProperty("app.name", "default");
+            appName = System.getProperty("pradar.project.name", "default");
         }
         return appName;
     }

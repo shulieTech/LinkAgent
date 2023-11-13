@@ -1,4 +1,4 @@
-package com.pamirs.attach.plugin.common.datasource.utils;
+package com.pamirs.pradar.pressurement.datasource.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +30,20 @@ public class JdbcUrlParser {
             logger.error("parse jdbc url host/ip occur exception for url:{}", jdbc, e);
         }
         return new AbstractMap.SimpleEntry<String, String>("unknown", "unknown");
+    }
+
+    public static Map.Entry<String, String> extractUrl(String jdbc, String defaultHost, String defaultPort) {
+        Map.Entry<String, String> stringStringEntry = extractUrl(jdbc);
+        String host = stringStringEntry.getKey();
+        if (stringStringEntry.getKey() == null || "unknown".equals(stringStringEntry.getKey()) || "".equals(stringStringEntry.getKey())) {
+            host = defaultHost;
+        }
+
+        String port = stringStringEntry.getValue();
+        if (stringStringEntry.getValue() == null || "unknown".equals(stringStringEntry.getValue()) || "".equals(stringStringEntry.getValue())) {
+            port = defaultPort;
+        }
+        return new AbstractMap.SimpleEntry<String, String>(host, port);
     }
 
     private static String getPort(String url, int start) {

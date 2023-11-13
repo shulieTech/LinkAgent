@@ -66,10 +66,9 @@ public class CoreConfigure {
     private static final String KEY_ZK_SESSION_TIMEOUT = "zk_session_timeout";
     private static final String KEY_PROVIDER_LIB_PATH = "provider";
     private static final String KEY_CONFIG_LIB_PATH = "config";
-    private static final String KEY_APP_NAME = "app_name";
     private static final String KEY_AGENT_VERSION = "agent_version";
+    private static final String KEY_APP_NAME = "pradar.project.name";
     private static final String KEY1_APP_NAME = "simulator.app.name";
-    private static final String KEY2_APP_NAME = "app.name";
     private static final String KEY_AGENT_ID = "agentId";
     private static final String VAL_LAUNCH_MODE_AGENT = "agent";
     private static final String VAL_LAUNCH_MODE_ATTACH = "attach";
@@ -160,9 +159,11 @@ public class CoreConfigure {
         this.agentLauncherClass = agentLauncherClass;
         this.codec = new FeatureCodec(';', '=');
         final Map<String, String> featureMap = toFeatureMap(featureString);
-        String appName = getProperty(featureMap, KEY_APP_NAME, KEY1_APP_NAME, KEY2_APP_NAME);
+        String appName = getProperty(featureMap, KEY1_APP_NAME);
         if (appName == null) {
             appName = getAppName();
+            //全局除了getAppName，其他地方都使用KEY1_APP_NAME的数据
+            System.setProperty(KEY1_APP_NAME, appName);
         }
         if (StringUtils.isBlank(appName)) {
             throw new RuntimeException("SIMULATOR: appName can't not be empty.");
@@ -746,7 +747,7 @@ public class CoreConfigure {
      * @return 返回应用名称
      */
     public String getAppName() {
-        String appName = getProperty(KEY_APP_NAME, getProperty(KEY1_APP_NAME, getProperty(KEY2_APP_NAME)));
+        String appName =  getProperty(KEY1_APP_NAME, getProperty(KEY_APP_NAME));
         return appName != null ? appName : "default";
     }
 

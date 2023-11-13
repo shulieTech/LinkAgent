@@ -1,1 +1,1 @@
-2.0.2.1 gson版本升级到2.10.1
+endInvoke中重复设置请求体，httpClient请求体在afterTrace中获取

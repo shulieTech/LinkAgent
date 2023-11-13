@@ -448,6 +448,13 @@ abstract class TraceInterceptor extends BaseInterceptor {
             if (Pradar.isResponseOn()) {
                 invokeContext.setResponse(response);
             }
+            //重复设置请求体，httpClient请求体在afterTrace中获取
+            if (record.getRequestSize() != 0) {
+                invokeContext.setRequestSize(record.getRequestSize());
+            }
+            if (Pradar.isRequestOn() && record.getRequest() != null) {
+                invokeContext.setRequest(record.getRequest());
+            }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
                 invokeContext.setRemoteIp(record.getRemoteIp());
             }
@@ -557,6 +564,13 @@ abstract class TraceInterceptor extends BaseInterceptor {
             }
             if (Pradar.isResponseOn()) {
                 invokeContext.setResponse(response);
+            }
+            //重复设置请求体，httpClient请求体在afterTrace中获取
+            if (record.getRequestSize() != 0) {
+                invokeContext.setRequestSize(record.getRequestSize());
+            }
+            if (Pradar.isRequestOn() && record.getRequest() != null) {
+                invokeContext.setRequest(record.getRequest());
             }
             if (StringUtils.isNotBlank(record.getRemoteIp())) {
                 invokeContext.setRemoteIp(record.getRemoteIp());

@@ -6,6 +6,7 @@ import io.shulie.instrument.module.isolation.resource.ShadowResourceLifecycle;
 import io.shulie.instrument.module.isolation.resource.ShadowResourceProxyFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.internals.TransactionManager;
 import org.apache.kafka.common.serialization.Serializer;
 
 import java.util.HashMap;
@@ -37,6 +38,17 @@ public class ApacheKafkaProducerFactory implements ShadowResourceProxyFactory {
         }
         KafkaProducer producer = new KafkaProducer(config, keySerializer, valueSerializer);
         resource.setKafkaProducer(producer);
+        TransactionManager transactionManager = (TransactionManager) Reflect.on(producer).field("transactionManager").get();
+        if(transactionManager == null){
+            //无事务 忽略
+            return resource;
+
+        }
+        Object transState = Reflect.on(transactionManager).field("currentState").get();
+        if("UNINITIALIZED".equals(transState.toString())){
+            //初始化
+            producer.initTransactions();
+        }
         return resource;
     }
 

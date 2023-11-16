@@ -71,7 +71,7 @@ public class ConsumerRecordEntryPointInterceptor2 extends TraceInterceptorAdapto
      */
     @Override
     public boolean isClient(Advice advice) {
-        return false;
+        return true;
     }
 
     @Override

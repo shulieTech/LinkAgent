@@ -74,7 +74,7 @@ public abstract class AbstractRestClientDefinition implements RestClientDefiniti
     protected void assembleBuilder(RestClient target, RestClientBuilder builder) {
         List<Header> headers = reflectSilence(target, "defaultHeaders");
         if (headers != null) {
-            Header[] defaultHeaders = (Header[]) headers.toArray();
+            Header[] defaultHeaders = (Header[]) headers.toArray(new Header[0]);
             builder.setDefaultHeaders(defaultHeaders);
         }
         String pathPrefix = reflectSilence(target, "pathPrefix");

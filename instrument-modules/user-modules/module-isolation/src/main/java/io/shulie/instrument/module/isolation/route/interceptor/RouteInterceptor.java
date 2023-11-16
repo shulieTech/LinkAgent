@@ -6,6 +6,9 @@ import com.pamirs.pradar.exception.PressureMeasureError;
 import com.pamirs.pradar.gson.GsonFactory;
 import com.pamirs.pradar.interceptor.CutoffInterceptorAdaptor;
 import com.shulie.instrument.simulator.api.listener.ext.Advice;
+import com.shulie.instrument.simulator.api.reflect.Reflect;
+import io.shulie.instrument.module.isolation.common.ShadowResourceLifecycleModule;
+import io.shulie.instrument.module.isolation.common.ShadowTargetCache;
 import io.shulie.instrument.module.isolation.proxy.ShadowProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +44,34 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
                 throw new PressureMeasureError("execute shadow proxy fail", t);
             }
         }
+        //处理资源关闭方法，关闭可能是任务触发，无压测标
+        if(isCloseAction(advice) && shadowProxy.needRoute(advice.getTarget())){
+            //业务和代理均需执行
+            Reflect.on(advice.getTarget()).call(advice.getBehaviorName(),advice.getParameterArray());
+            ShadowResourceLifecycleModule lifecycleModule = ShadowTargetCache.remove(advice.getTarget());
+            if(lifecycleModule  == null){
+                return CutOffResult.passed();
+            }
+            lifecycleModule.getShadowResourceLifecycle().destroy(60L);
+        }
         return CutOffResult.passed();
     }
+
+
+    /**
+     * 方法是否为关闭资源方法
+     * @param advice
+     * @return
+     */
+    private boolean isCloseAction(Advice advice){
+        String behaviorName = advice.getBehaviorName();
+        if("close".equals(behaviorName)){
+            return true;
+        }
+        return false;
+    }
+
+
+
+
 }

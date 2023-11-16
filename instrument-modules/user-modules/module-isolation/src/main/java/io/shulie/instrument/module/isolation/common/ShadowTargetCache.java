@@ -69,4 +69,9 @@ public class ShadowTargetCache {
         shadowTargetMap.clear();
     }
 
+
+    public static ShadowResourceLifecycleModule remove(Object obj){
+        return shadowTargetMap.remove(obj);
+    }
+
 }

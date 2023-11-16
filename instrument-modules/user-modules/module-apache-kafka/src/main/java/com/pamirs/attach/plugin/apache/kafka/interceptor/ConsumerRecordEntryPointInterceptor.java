@@ -14,13 +14,6 @@
  */
 package com.pamirs.attach.plugin.apache.kafka.interceptor;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.apache.kafka.KafkaConstants;
 import com.pamirs.attach.plugin.apache.kafka.destroy.KafkaDestroy;
 import com.pamirs.attach.plugin.apache.kafka.header.HeaderProcessor;
@@ -47,6 +40,12 @@ import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Resource;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @Author <a href="tangyuhan@shulie.io">yuhan.tang</a>
@@ -83,7 +82,7 @@ public class ConsumerRecordEntryPointInterceptor extends TraceInterceptorAdaptor
      */
     @Override
     public boolean isClient(Advice advice) {
-        return false;
+        return true;
     }
 
     @Override

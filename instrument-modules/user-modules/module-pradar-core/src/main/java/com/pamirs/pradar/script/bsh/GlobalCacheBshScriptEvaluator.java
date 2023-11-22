@@ -1,28 +1,13 @@
 package com.pamirs.pradar.script.bsh;
 
-import bsh.EvalError;
 import bsh.Interpreter;
 import bsh.NameSpace;
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
-import com.pamirs.pradar.internal.config.MockConfig;
-import com.pamirs.pradar.pressurement.agent.event.IEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.MockConfigAddEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.MockConfigModifyEvent;
-import com.pamirs.pradar.pressurement.agent.event.impl.MockConfigRemoveEvent;
-import com.pamirs.pradar.pressurement.agent.listener.EventResult;
-import com.pamirs.pradar.pressurement.agent.listener.PradarEventListener;
-import com.pamirs.pradar.pressurement.agent.shared.service.EventRouter;
-import com.pamirs.pradar.pressurement.agent.shared.service.GlobalConfig;
 import com.pamirs.pradar.script.ScriptEvaluator;
-import com.pamirs.pradar.script.commons.InterpreterWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.StringReader;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 

@@ -17,7 +17,6 @@ package com.pamirs.pradar.script;
 import bsh.EvalError;
 import bsh.Interpreter;
 import com.pamirs.pradar.script.bsh.GlobalCacheBshScriptEvaluator;
-import com.pamirs.pradar.script.bsh.ThreadLocalCacheBshScriptEvaluator;
 
 import java.io.StringReader;
 import java.util.HashMap;
@@ -36,8 +35,7 @@ public class ScriptManager {
     public ScriptManager() {
         this.evaluators = new HashMap<String, ScriptEvaluator>();
 
-        ScriptEvaluator bshScriptEvaluator = "global".equals(System.getProperty("simulator.mock.interpreter.caches"))
-                ? new GlobalCacheBshScriptEvaluator() : new ThreadLocalCacheBshScriptEvaluator();
+        ScriptEvaluator bshScriptEvaluator = new GlobalCacheBshScriptEvaluator();
         bshScriptEvaluator.setClassLoader(ScriptManager.class.getClassLoader());
         evaluators.put(bshScriptEvaluator.getType(), bshScriptEvaluator);
     }

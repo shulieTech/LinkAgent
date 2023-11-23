@@ -3,6 +3,7 @@ package com.pamirs.attach.plugin.lettuce.utils;
 
 import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
 import com.shulie.instrument.simulator.api.resource.DynamicFieldManager;
+import io.lettuce.core.protocol.RedisCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +48,11 @@ public class InvalidatedResourcesEvictor {
             if (key.getClass().getSimpleName().startsWith("StatefulRedis")) {
                 boolean isOpen = ReflectionUtils.invoke(key, "isOpen");
                 if (!isOpen) {
+                    needRemoved.add(key);
+                }
+            }
+            if(key instanceof RedisCommand){
+                if(((RedisCommand<?, ?, ?>) key).isDone()){
                     needRemoved.add(key);
                 }
             }

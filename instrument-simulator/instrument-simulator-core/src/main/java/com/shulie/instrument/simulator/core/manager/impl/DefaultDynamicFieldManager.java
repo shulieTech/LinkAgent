@@ -141,7 +141,12 @@ public class DefaultDynamicFieldManager implements DynamicFieldManager {
             return null;
         }
 
-        return (T) field.removeField(fieldName);
+        T removed = (T) field.removeField(fieldName);
+
+        if(field.isEmpty()){
+            dynamicFields.remove(target);
+        }
+        return removed;
     }
 
     @Override

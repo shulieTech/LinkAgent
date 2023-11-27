@@ -31,6 +31,9 @@ import com.shulie.instrument.simulator.api.scope.ExecutionPolicy;
 import org.kohsuke.MetaInfServices;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @MetaInfServices(ExtensionModule.class)
 @ModuleInfo(id = LettuceConstants.MODULE_NAME, version = "1.0.0", author = "xiaobin@shulie.io", description = "redis 的 lettuce 客户端")
@@ -172,6 +175,59 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
     @Override
     public boolean onActive() throws Throwable {
         AbstractRedisServerFactory.setDynamicFieldManager(manager);
+
+
+        //io.lettuce.core.RedisChannelWriter 实现的接口
+        List<String> list = new ArrayList<String>(9);
+        list.add("io.lettuce.core.cluster.ClusterDistributionChannelWriter");
+        list.add("io.lettuce.core.cluster.ClusterNodeEndpoint");
+        list.add("io.lettuce.core.protocol.CommandExpiryWriter");
+        list.add("io.lettuce.core.CommandListenerWriter");
+        list.add("io.lettuce.core.protocol.DefaultEndpoint");
+        list.add("io.lettuce.core.masterreplica.MasterReplicaChannelWriter");
+        list.add("io.lettuce.core.masterslave.MasterSlaveChannelWriter");
+        list.add("io.lettuce.core.cluster.PubSubClusterEndpoint");
+        list.add("io.lettuce.core.pubsub.PubSubEndpoint");
+
+        for (final String enhanceClass : list) {
+            this.enhanceTemplate.enhance(this, enhanceClass, new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod executeMethod_1 = target.getDeclaredMethod("write", "io.lettuce.core.protocol.RedisCommand");
+
+                    executeMethod_1.addInterceptor(Listeners.of(RedisChannelWriterWriteInterceptor.class, "Redis_Channel_Writer_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                }
+            });
+        }
+
+        //异步
+        for (String s : Arrays.asList("io.lettuce.core.protocol.TransactionalCommand",
+                "io.lettuce.core.protocol.CommandWrapper",
+                "io.lettuce.core.CommandListenerWriter$RedisCommandListenerCommand",
+                "io.lettuce.core.protocol.TimedAsyncCommand",
+                "io.lettuce.core.protocol.PristineFallbackCommand", "io.lettuce.core.protocol.AsyncCommand",
+                "io.lettuce.core.protocol.LatencyMeteredCommand", "io.lettuce.core.protocol.TracedCommand",
+                "io.lettuce.core.protocol.DefaultEndpoint$ActivationCommand")) {
+            this.enhanceTemplate.enhance(this, s, new EnhanceCallback() {
+                @Override
+                public void doEnhance(InstrumentClass target) {
+                    final InstrumentMethod completeMethod = target.getDeclaredMethod("complete");
+                    final InstrumentMethod cancelMethod = target.getDeclaredMethod("cancel");
+                    final InstrumentMethod completeExceptionally = target.getDeclaredMethod("completeExceptionally", "java.lang.Throwable");
+
+                    completeMethod.addInterceptor(
+                            Listeners.of(RedisCommandResultInterceptor.class, "Redis_Command_Result_Scope",
+                                    ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    cancelMethod.addInterceptor(
+                            Listeners.of(RedisCommandResultInterceptor.class, "Redis_Command_Result_Scope",
+                                    ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                    completeExceptionally.addInterceptor(
+                            Listeners.of(RedisCommandResultInterceptor.class, "Redis_Command_Result_Scope",
+                                    ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                }
+            });
+        }
+
 
         addRedisClient();
         addDefaultConnectionFuture();
@@ -412,8 +468,8 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
     private EnhanceCallback callback = new EnhanceCallback() {
         @Override
         public void doEnhance(InstrumentClass target) {
-            InstrumentMethod method0 = target.getDeclaredMethods(EXCLUDE_METHOD_NAMES).withNot();
-            method0.addInterceptor(Listeners.of(LettuceMethodInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+            //InstrumentMethod method0 = target.getDeclaredMethods(EXCLUDE_METHOD_NAMES).withNot();
+            //method0.addInterceptor(Listeners.of(LettuceMethodInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
 
             InstrumentMethod method = target.getDeclaredMethods(FIRST_ARGS_INCLUDE_METHODS);
             method.addInterceptor(Listeners.of(LettuceMethodClusterTestFirstArgsInterceptor.class, "Lettuce_Scope", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
@@ -759,7 +815,7 @@ public class LettucePlugin extends ModuleLifecycleAdapter implements ExtensionMo
                     @Override
                     public void doEnhance(InstrumentClass target) {
                         final InstrumentMethod closeMethod = target.getDeclaredMethod("dispatch", "io.lettuce.core.protocol.ProtocolKeyword", "io.lettuce.core.output.CommandOutput", "io.lettuce.core.protocol.CommandArgs");
-                        closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchTraceInterceptor.class, "Lettuce_Commands_Trace", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
+                       // closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchTraceInterceptor.class, "Lettuce_Commands_Trace", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                         closeMethod.addInterceptor(Listeners.of(LettuceCommandDispatchClusterTestInterceptor.class, "Lettuce_Commands_Cluster", ExecutionPolicy.BOUNDARY, Interceptors.SCOPE_CALLBACK));
                     }
                 });

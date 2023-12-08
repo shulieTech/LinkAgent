@@ -19,7 +19,6 @@ import com.pamirs.attach.plugin.apache.kafkav2.producer.factory.ApacheKafkaProdu
 import com.pamirs.attach.plugin.apache.kafkav2.producer.factory.KafkaProducerFactory;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.JavaApiProducerSendProxy;
 import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendMethodProxy;
-import com.pamirs.attach.plugin.apache.kafkav2.producer.proxy.SendOffsetsToTransactionMethodProxy;
 import com.shulie.instrument.simulator.api.ExtensionModule;
 import com.shulie.instrument.simulator.api.ModuleInfo;
 import com.shulie.instrument.simulator.api.ModuleLifecycleAdapter;
@@ -62,19 +61,14 @@ public class KafkaV2Plugin extends ModuleLifecycleAdapter implements ExtensionMo
                                 return new SendMethodProxy();
                             }
                         }, "org.apache.kafka.clients.producer.ProducerRecord", "org.apache.kafka.clients.producer.Callback")
-                        .addEnhanceMethod("sendOffsetsToTransaction", new ResourceInit<ShadowMethodProxy>() {
-                            @Override
-                            public ShadowMethodProxy init() {
-                                return new SendOffsetsToTransactionMethodProxy();
-                            }
-                        })
                         .addEnhanceMethod("partitionsFor", new ResourceInit<ShadowMethodProxy>() {
                             @Override
                             public ShadowMethodProxy init() {
                                 return new AddClusterRouteShadowMethodProxy(0);
                             }
                         })
-                        .addEnhanceMethods("abortTransaction", "beginTransaction", "close", "close", "commitTransaction", "flush", "initTransactions", "metrics"))
+                        //无需增强initTransactions，创建时，若有事务，直接初始化
+                        .addEnhanceMethods("abortTransaction", "beginTransaction", "sendOffsetsToTransaction", "close", "commitTransaction", "flush", "metrics"))
                 .addEnhance(new EnhanceClass("kafka.javaapi.producer.Producer")
                         .setFactoryResourceInit(new ResourceInit<ShadowResourceProxyFactory>() {
                             @Override

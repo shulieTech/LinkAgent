@@ -61,4 +61,7 @@ public interface LettuceConstants {
     };
 
     String ADDRESS_UNKNOW = "unknow";
+
+
+    String INVOKE_CONTENT = "redis-lettuce-invoke-content";
 }

@@ -66,7 +66,7 @@ public class ConsumerMultiRecordEntryPointInterceptor2 extends TraceInterceptorA
      */
     @Override
     public boolean isClient(Advice advice) {
-        return false;
+        return true;
     }
 
     @Override

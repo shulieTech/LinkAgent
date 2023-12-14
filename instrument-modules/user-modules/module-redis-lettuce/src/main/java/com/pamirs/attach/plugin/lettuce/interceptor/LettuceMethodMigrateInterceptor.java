@@ -204,8 +204,8 @@ public class LettuceMethodMigrateInterceptor extends ParametersWrapperIntercepto
         if (ignore(whiteList, str)) {
             return str;
         }
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
 
@@ -217,8 +217,8 @@ public class LettuceMethodMigrateInterceptor extends ParametersWrapperIntercepto
             return key;
         }
         String str = key;
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
     }
@@ -231,8 +231,8 @@ public class LettuceMethodMigrateInterceptor extends ParametersWrapperIntercepto
             if (ignore(whiteList, str)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(str)) {
-                str = Pradar.addClusterTestPrefix(str);
+            if (!Pradar.isClusterTestByConfig(str)) {
+                str = Pradar.addClusterTestByConfig(str);
             }
             datas[i] = str.toCharArray();
         }
@@ -245,8 +245,8 @@ public class LettuceMethodMigrateInterceptor extends ParametersWrapperIntercepto
         if (ignore(whiteList, str)) {
             return key;
         }
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str.toCharArray();
     }
@@ -259,8 +259,8 @@ public class LettuceMethodMigrateInterceptor extends ParametersWrapperIntercepto
             if (ignore(whiteList, str)) {
                 continue;
             }
-            if (!Pradar.isClusterTestPrefix(str)) {
-                str = Pradar.addClusterTestPrefix(str);
+            if (!Pradar.isClusterTestByConfig(str)) {
+                str = Pradar.addClusterTestByConfig(str);
             }
             datas[i] = str.getBytes();
         }
@@ -285,8 +285,8 @@ public class LettuceMethodMigrateInterceptor extends ParametersWrapperIntercepto
             return key;
         }
 
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str.getBytes();
     }

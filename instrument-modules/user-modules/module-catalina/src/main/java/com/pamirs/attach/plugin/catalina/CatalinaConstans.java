@@ -17,4 +17,9 @@ package com.pamirs.attach.plugin.catalina;
 public class CatalinaConstans {
 
     public static String PLUGIN_NAME = "catalina";
+
+    /**
+     * 内网穿透invokeId是否重置
+     */
+    public static String INTRANET_CROSS_INVOKE_ID_RESET_KEY = "intranet.cross.invokeId.reset";
 }

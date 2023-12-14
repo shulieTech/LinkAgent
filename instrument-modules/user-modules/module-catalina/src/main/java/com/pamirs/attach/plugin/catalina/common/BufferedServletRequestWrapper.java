@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
@@ -14,7 +14,12 @@
  */
 package com.pamirs.attach.plugin.catalina.common;
 
+import com.pamirs.attach.plugin.catalina.CatalinaConstans;
+import com.pamirs.attach.plugin.catalina.utils.Constants;
 import com.pamirs.attach.plugin.common.web.IBufferedServletRequestWrapper;
+import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
+import com.pamirs.pradar.Pradar;
+import com.pamirs.pradar.PradarService;
 import org.apache.catalina.Context;
 import org.apache.catalina.Host;
 import org.apache.catalina.Session;
@@ -24,15 +29,14 @@ import org.apache.catalina.core.AsyncContextImpl;
 import org.apache.catalina.mapper.MappingData;
 import org.apache.tomcat.util.buf.MessageBytes;
 import org.apache.tomcat.util.http.ServerCookies;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
 import java.security.Principal;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Request 包装类
@@ -44,10 +48,15 @@ import java.util.Map;
  */
 public class BufferedServletRequestWrapper extends Request implements IBufferedServletRequestWrapper {
 
+    private final static Logger logger = LoggerFactory.getLogger(BufferedServletRequestWrapper.class);
+
     private byte[] buffer;
     private final Request request;
     protected RequestFacade facade;
     private ServletInputStream inputStream;
+
+    private boolean isClusterTest = false;
+    private Map<String, String> traceContext = new HashMap<String, String>(8, 1);
 
 
     public BufferedServletRequestWrapper(Request request) {
@@ -60,16 +69,72 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
         try {
             InputStream is = request.getInputStream();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            byte buff[] = new byte[1024];
+            byte[] buff = new byte[1024];
             int read;
-            while ((read = is.read(buff)) > 0) {
+            while ((read = is.read(buff)) != -1) {
                 baos.write(buff, 0, read);
             }
-            this.buffer = baos.toByteArray();
+            byte[] reqBuffer = baos.toByteArray();
+
+            if (reqBuffer != null && reqBuffer.length > 0) {
+                String paramData = new String(reqBuffer);
+//                logger.info("[gw-catalina] http request body:{}", paramData);
+                if (paramData.contains(com.pamirs.attach.plugin.catalina.utils.Constants.PRADAR_CLUSTER_FLAG_GW)) {
+                    isClusterTest = true;
+                    int startIndex = paramData.indexOf(Constants.PRADAR_CLUSTER_FLAG_GW);
+                    int endIndex = paramData.indexOf(Constants.extendParamEnd);
+
+                    String agentParam = paramData.substring(startIndex + Constants.PRADAR_CLUSTER_FLAG_GW.length(), endIndex);
+
+                    String businessParam = paramData.substring(0, startIndex) + paramData.substring(endIndex + Constants.extendParamEnd.length());
+//                    logger.info("[gw-catalina] businessParam: {}", businessParam);
+
+                    businessParam = restoreParamData(businessParam);
+//                    logger.info("[gw-catalina] restored businessParam: {}", businessParam);
+
+                    String[] rpcInfo = agentParam.split(",");
+                    traceContext.put(PradarService.PRADAR_TRACE_APPNAME_KEY, rpcInfo[0]);
+                    traceContext.put(PradarService.PRADAR_UPSTREAM_APPNAME_KEY, rpcInfo[1]);
+                    traceContext.put(PradarService.PRADAR_TRACE_ID_KEY, rpcInfo[2]);
+                    traceContext.put(PradarService.PRADAR_INVOKE_ID_KEY, rpcInfo[3]);
+                    traceContext.put(PradarService.PRADAR_TRACE_NODE_KEY, rpcInfo[4]);
+                    traceContext.put(PradarService.PRADAR_NODE_ID_KEY, rpcInfo[5]);
+
+                    ReflectionUtils.set(Pradar.getInvokeContext(), "traceId", rpcInfo[2]);
+
+                    // 内网的invokeId是否重置
+                    String property = System.getProperty(CatalinaConstans.INTRANET_CROSS_INVOKE_ID_RESET_KEY);
+                    if ("false".equals(property)) {
+                        ReflectionUtils.set(Pradar.getInvokeContext(), "invokeId", rpcInfo[3]);
+                    }
+
+                    Pradar.getInvokeContext().setClusterTest("true".equals(rpcInfo[6]));
+
+                    Pradar.getInvokeContextMap().putAll(traceContext);
+                    this.buffer = businessParam.getBytes();
+                } else {
+                    this.buffer = reqBuffer;
+                }
+            } else {
+                this.buffer = reqBuffer;
+            }
         } catch (IOException e) {
             //ignore
         }
     }
+
+    /**
+     * 如果paramData是一个数组，还原成对象
+     *
+     * @return
+     */
+    private String restoreParamData(String businessParam) {
+        if (businessParam.startsWith("[")) {
+            return businessParam.substring(1, businessParam.length() - 1);
+        }
+        return businessParam;
+    }
+
 
     @Override
     public void setAsyncSupported(boolean asyncSupported) {
@@ -787,5 +852,13 @@ public class BufferedServletRequestWrapper extends Request implements IBufferedS
 
         }
 
+    }
+
+    public boolean isClusterTest() {
+        return isClusterTest;
+    }
+
+    public Map<String, String> getTraceContext() {
+        return traceContext;
     }
 }

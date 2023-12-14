@@ -14,11 +14,6 @@
  */
 package com.pamirs.attach.plugin.redisson.interceptor;
 
-import java.util.Collection;
-import java.util.Iterator;
-
-import javax.annotation.Resource;
-
 import com.pamirs.attach.plugin.redisson.RedissonConstants;
 import com.pamirs.attach.plugin.redisson.destroy.RedissonDestroy;
 import com.pamirs.pradar.Pradar;
@@ -35,6 +30,10 @@ import org.redisson.RedissonRx;
 import org.redisson.config.Config;
 import org.redisson.reactive.RedissonBatchReactive;
 import org.redisson.rx.RedissonBatchRx;
+
+import javax.annotation.Resource;
+import java.util.Collection;
+import java.util.Iterator;
 
 /**
  * @Description org.redisson.Redisson增强
@@ -65,10 +64,10 @@ public class RedissonMethodInterceptor extends ModificationInterceptorAdaptor {
             return args;
         }
         String name = (String) args[0];
-        if (Pradar.isClusterTestPrefix(name)) {
+        if (Pradar.isClusterTestByConfig(name)) {
             return args;
         }
-        args[0] = Pradar.addClusterTestPrefix(name);
+        args[0] = Pradar.addClusterTestByConfig(name);
 
         return args;
     }

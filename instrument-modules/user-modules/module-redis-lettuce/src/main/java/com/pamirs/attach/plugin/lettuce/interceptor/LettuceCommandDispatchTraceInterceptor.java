@@ -91,8 +91,8 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
                 String v = new String((byte[]) keyField.get(singularArguments.get(i)));
                 // 第一个参数是key
                 if (i == 0) {
-                    if (Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(v)) {
-                        v = Pradar.addClusterTestPrefix(v);
+                    if (Pradar.isClusterTest() && !Pradar.isClusterTestByConfig(v)) {
+                        v = Pradar.addClusterTestByConfig(v);
                     }
                 }
                 ret[i] = v;
@@ -116,8 +116,8 @@ public class LettuceCommandDispatchTraceInterceptor extends LettuceMethodInterce
                 return ParameterUtils.toString(200, args[2]);
             }
             String key = ParameterUtils.toString(200, Charset.forName("UTF-8").newDecoder().decode((firstEncodedKey)));
-            if (Pradar.isClusterTest() && !Pradar.isClusterTestPrefix(key)) {
-                key = Pradar.addClusterTestPrefix(key);
+            if (Pradar.isClusterTest() && !Pradar.isClusterTestByConfig(key)) {
+                key = Pradar.addClusterTestByConfig(key);
             }
             return key;
         } catch (CharacterCodingException e) {

@@ -95,8 +95,8 @@ public class LettuceCommandDispatchClusterTestInterceptor extends ParametersWrap
             return key;
         }
         String str = key;
-        if (!Pradar.isClusterTestPrefix(str)) {
-            str = Pradar.addClusterTestPrefix(str);
+        if (!Pradar.isClusterTestByConfig(str)) {
+            str = Pradar.addClusterTestByConfig(str);
         }
         return str;
     }

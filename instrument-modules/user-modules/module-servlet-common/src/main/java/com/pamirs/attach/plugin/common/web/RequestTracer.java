@@ -286,9 +286,27 @@ public abstract class RequestTracer<REQ, RESP> {
         if (!PradarSwitcher.USE_LOCAL_IP) {
             ip = getRemoteAddress(request);
         }
-        String traceId = getTraceId(request);
 
-        boolean isClusterTestRequest = isClusterTestRequest(request);
+        boolean instanceofB = request instanceof BufferedServletRequestWrapper;
+
+
+        String traceId = null;
+        Boolean isClusterTestRequest = isClusterTestRequest(request);
+        Map<String, String> traceContext = null;
+        if (!instanceofB) {
+            traceId = getTraceId(request);
+        } else {
+            if (!isClusterTestRequest){
+                isClusterTestRequest = ((BufferedServletRequestWrapper)request).isClusterTest();
+            }
+            if (((BufferedServletRequestWrapper)request).isClusterTest()){
+                traceContext = ((BufferedServletRequestWrapper)request).getTraceContext();
+                traceId = traceContext.get(PradarService.PRADAR_TRACE_ID_KEY);
+            }
+        }
+
+
+
         boolean isDebug = isDebugRequest(request);
 
         ClusterTestUtils.validateClusterTest(isClusterTestRequest);
@@ -317,7 +335,12 @@ public abstract class RequestTracer<REQ, RESP> {
         }
 
         if (!isTraceIdBlank) {
-            Map<String, String> context = getContext(request);
+            Map<String, String> context;
+            if (traceContext != null && traceContext.size() > 0) {
+                context = traceContext;
+            } else {
+                context = getContext(request);
+            }
             if (context != null) {
                 context.put(PradarService.PRADAR_TRACE_ID_KEY, traceId);
                 context.put(PradarService.PRADAR_CLUSTER_TEST_KEY, String.valueOf(isClusterTestRequest));

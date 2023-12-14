@@ -32,7 +32,7 @@ public class ConstructorInterceptor extends AroundInterceptor {
 
     @Override
     public void doBefore(Advice advice) throws Throwable {
-        manager.setDynamicField(advice.getTarget(), HystrixConstants.DYNAMIC_FILED_INVOKE_CONTEXT, Pradar.getInvokeContextMap());
+        manager.setDynamicField(advice.getTarget(), HystrixConstants.DYNAMIC_FILED_INVOKE_CONTEXT, Pradar.getInvokeContext());
         manager.setDynamicField(advice.getTarget(), HystrixConstants.DYNAMIC_FILED_THREAD_ID, Thread.currentThread().getId());
     }
 }

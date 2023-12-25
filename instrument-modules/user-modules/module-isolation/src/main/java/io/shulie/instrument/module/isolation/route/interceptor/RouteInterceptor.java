@@ -65,7 +65,12 @@ public class RouteInterceptor extends CutoffInterceptorAdaptor {
      */
     private boolean isCloseAction(Advice advice){
         String behaviorName = advice.getBehaviorName();
+        //kafka rocket
         if("close".equals(behaviorName)){
+            return true;
+        }
+        //activemq
+        if("dispose".equals(behaviorName)){
             return true;
         }
         return false;

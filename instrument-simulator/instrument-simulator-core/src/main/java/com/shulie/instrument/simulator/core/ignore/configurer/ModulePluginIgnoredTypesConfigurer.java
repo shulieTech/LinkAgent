@@ -13,6 +13,12 @@ public class ModulePluginIgnoredTypesConfigurer implements IgnoredTypesConfigure
                 .allowClass("com.aerospike.client.AerospikeClient")
                 .allowClass("com.aerospike.client.async.AsyncClient");
 
+        //activemq
+        builder.ignoreClass("org.apache.activemq.")
+                .allowClass("org.apache.activemq.ActiveMQSession")
+                .allowClass("org.apache.activemq.ActiveMQMessageConsumer")
+                .allowClass("org.apache.activemq.ActiveMQMessageProducer");
+
         //akka
 
         //alibaba-druid

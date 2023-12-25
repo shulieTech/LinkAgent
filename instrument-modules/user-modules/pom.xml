@@ -104,6 +104,8 @@
         <module>module-shadow-preparation</module>
         <module>module-tomcat-dbcp</module>
         <module>module-cus-trace</module>
+        <module>module-activemq</module>
+        <module>module-activemqv2</module>
     </modules>
 
     <build>

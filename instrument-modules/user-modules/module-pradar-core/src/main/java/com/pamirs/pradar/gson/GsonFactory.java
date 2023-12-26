@@ -1,11 +1,10 @@
 package com.pamirs.pradar.gson;
 
-import com.google.gson.*;
-import com.pamirs.attach.plugin.dynamic.reflect.ReflectionUtils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 
-import java.lang.reflect.Type;
 import java.util.Date;
-import java.util.List;
 
 public class GsonFactory {
 
@@ -16,6 +15,8 @@ public class GsonFactory {
     static {
         GSON_BUILDER.setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE);
         GSON_BUILDER.registerTypeAdapter(Date.class, new FastjsonDateToGsonTypeAdapter());
+        GSON_BUILDER.addDeserializationExclusionStrategy(new SuperclassExclusionStrategy());
+        GSON_BUILDER.addSerializationExclusionStrategy(new SuperclassExclusionStrategy());
         gson = GSON_BUILDER.create();
     }
 

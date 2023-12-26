@@ -11,7 +11,7 @@ import java.util.Map;
 
 public class GlobalCacheBshScriptEvaluator implements ScriptEvaluator {
 
-    private final static Logger logger = LoggerFactory.getLogger("ThreadLocalScriptEvaluator-LOGGER");
+    private final static Logger logger = LoggerFactory.getLogger("GlobalCacheBshScriptEvaluator-LOGGER");
 
     private ClassLoader classLoader;
 

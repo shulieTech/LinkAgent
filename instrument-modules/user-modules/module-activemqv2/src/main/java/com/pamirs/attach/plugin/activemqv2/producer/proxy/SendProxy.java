@@ -16,12 +16,13 @@ public class SendProxy extends ModifyParamShadowMethodProxy {
     public Object[] fetchParam(Object shadowTarget, Method method, Object... args) {
 
         //若参数中包含Destination 需判断是否为影子queue
-        for (Object arg : args) {
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
             if(!(arg instanceof ActiveMQDestination)){
                 continue;
             }
             ActiveMQDestination destination = (ActiveMQDestination) arg;
-            arg = ActiveMQDestinationUtil.mappingShadowDestination(destination);
+            args[i] = ActiveMQDestinationUtil.getInstance().mappingShadowDestination(destination);
         }
         return args;
     }

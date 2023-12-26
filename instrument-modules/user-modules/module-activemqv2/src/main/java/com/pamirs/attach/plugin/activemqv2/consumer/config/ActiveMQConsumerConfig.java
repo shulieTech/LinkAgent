@@ -72,4 +72,13 @@ public class ActiveMQConsumerConfig  extends ConsumerConfig {
     public Object[] getConstructArgs() {
         return constructArgs;
     }
+
+    public void setBizConsumer(ActiveMQMessageConsumer bizConsumer) {
+        this.bizConsumer = bizConsumer;
+    }
+
+    public ActiveMQMessageConsumer getBizConsumer() {
+        return bizConsumer;
+    }
+
 }

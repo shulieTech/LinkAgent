@@ -106,6 +106,7 @@
         <module>module-cus-trace</module>
         <module>module-activemq</module>
         <module>module-activemqv2</module>
+        <module>module-sentinel</module>
     </modules>
 
     <build>

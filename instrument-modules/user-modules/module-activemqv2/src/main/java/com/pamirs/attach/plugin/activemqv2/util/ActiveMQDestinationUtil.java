@@ -10,8 +10,21 @@ import org.apache.activemq.command.ActiveMQDestination;
 public class ActiveMQDestinationUtil {
 
 
+    private static class ActiveMQDestinationUtilHolder {
+        private static final ActiveMQDestinationUtil INSTANCE = new ActiveMQDestinationUtil();
+    }
 
-    public static ActiveMQDestination mappingShadowDestination(ActiveMQDestination origin){
+    private ActiveMQDestinationUtil (){
+
+    }
+
+
+    public static final ActiveMQDestinationUtil getInstance() {
+        return ActiveMQDestinationUtilHolder.INSTANCE;
+    }
+
+
+    public ActiveMQDestination mappingShadowDestination(ActiveMQDestination origin){
         String qualifiedName = origin.getQualifiedName();
         if(qualifiedName.contains(Pradar.getClusterTestPrefix())){
             //已是影子queue

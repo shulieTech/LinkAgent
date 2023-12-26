@@ -20,15 +20,15 @@ public class ShadowProducerFactory implements ShadowResourceProxyFactory {
         if (!(bizTarget instanceof ActiveMQMessageProducer)) {
             return null;
         }
-        ActiveMQMessageProducer bizProducer = (ActiveMQMessageProducer) bizTarget;
-        ActiveMQSession session = Reflect.on(bizProducer).field("session").get();
 
-        ActiveMQDestination destination = null;
         try {
-            destination = (ActiveMQDestination) bizProducer.getDestination();
-            ActiveMQDestination shadowDestination = ActiveMQDestinationUtil.mappingShadowDestination(destination);
-            ActiveMQMessageProducer producer = (ActiveMQMessageProducer) session.createProducer(shadowDestination);
-            return new ActiveMQProducerResource(producer);
+            ActiveMQMessageProducer bizProducer = (ActiveMQMessageProducer) bizTarget;
+            ActiveMQSession session = Reflect.on(bizProducer).field("session").get();
+            ActiveMQDestination destination =  (ActiveMQDestination) bizProducer.getDestination();
+            ActiveMQDestination shadowDestination = ActiveMQDestinationUtil.getInstance().mappingShadowDestination(destination);
+            //ActiveMQMessageProducer producer = (ActiveMQMessageProducer) session.createProducer(shadowDestination);
+            ActiveMQMessageProducer shadowProducer = Reflect.on(session).call("createProducer", shadowDestination).get();
+            return new ActiveMQProducerResource(shadowProducer);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

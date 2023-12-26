@@ -13,6 +13,7 @@ import org.apache.activemq.ActiveMQMessageConsumer;
 import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ConsumerId;
 
+import javax.jms.MessageListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public class ActiveMQShadowConsumerExecute implements ShadowConsumerExecute {
     @Override
     public List<ConsumerConfig> prepareConfig(SyncObjectData syncObjectData) {
         Object[] args = syncObjectData.getArgs();
-        ActiveMQMessageConsumer bizConsumer = (ActiveMQMessageConsumer) syncObjectData.getReturnObj();
+        ActiveMQMessageConsumer bizConsumer = (ActiveMQMessageConsumer) syncObjectData.getTarget();
         ActiveMQConsumerConfig consumerConfig = new ActiveMQConsumerConfig(args,bizConsumer);
         List<ConsumerConfig> configs = new ArrayList<ConsumerConfig>();
         configs.add(consumerConfig);
@@ -41,21 +42,26 @@ public class ActiveMQShadowConsumerExecute implements ShadowConsumerExecute {
         ActiveMQConsumerConfig consumerConfig = (ActiveMQConsumerConfig) data.getConsumerConfig();
         Object[] constructArgs = consumerConfig.getConstructArgs();
         //替换入参为影子配置
-        for (Object arg : constructArgs) {
+        for (int i = 0; i < constructArgs.length; i++) {
+            Object arg = constructArgs[i];
             if(arg instanceof ConsumerId){
                 ConsumerId origin = (ConsumerId) arg;
                 ConsumerId shadow = new ConsumerId(origin);
                 shadow.setValue(10000+origin.getValue());
-                arg = shadow;
+                constructArgs[i] = shadow;
             }
             if(arg instanceof ActiveMQDestination){
                 ActiveMQDestination origin = (ActiveMQDestination) arg;
-                arg = ActiveMQDestinationUtil.mappingShadowDestination(origin);
+                constructArgs[i] = ActiveMQDestinationUtil.getInstance().mappingShadowDestination(origin);
             }
         }
         ActiveMQMessageConsumer shadowConsumer = Reflect.on(ActiveMQMessageConsumer.class).create(constructArgs).get();
+        try {
+            MessageListener messageListener = consumerConfig.getBizConsumer().getMessageListener();
+            shadowConsumer.setMessageListener(messageListener);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
         return new ActiveMQShadowServer(shadowConsumer);
-
-
     }
 }

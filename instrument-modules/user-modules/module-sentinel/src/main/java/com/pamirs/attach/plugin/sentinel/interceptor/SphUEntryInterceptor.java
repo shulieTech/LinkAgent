@@ -46,8 +46,8 @@ public class SphUEntryInterceptor extends AroundInterceptor {
         boolean flow = FlowRuleManager.hasConfig(resource);
         boolean degrade = DegradeRuleManager.hasConfig(resource);
 
-        invokeContext.putLocalAttribute("hasFlowRule", flow ? "1" : "0");
-        invokeContext.putLocalAttribute("hasDegradeRule", degrade ? "1" : "0");
+        invokeContext.putLocalAttribute("sentinel.hasFlowRule", flow ? "1" : "0");
+        invokeContext.putLocalAttribute("sentinel.hasDegradeRule", degrade ? "1" : "0");
     }
 
     @Override
